@@ -9,6 +9,9 @@
 #ifdef HAVE_PTHREADS
 	#include "c11threads_posix.h"
 #endif
+#ifdef HAVE_WIN32_THREADS
+	#include "c11threads_win32.h"
+#endif
 
 #define APS_READOUT_TYPES_NUM 2
 #define APS_READOUT_RESET  0

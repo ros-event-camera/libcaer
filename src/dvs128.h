@@ -9,6 +9,9 @@
 #ifdef HAVE_PTHREADS
 	#include "c11threads_posix.h"
 #endif
+#ifdef HAVE_WIN32_THREADS
+	#include "c11threads_win32.h"
+#endif
 
 #define DVS_DEVICE_NAME "DVS128"
 
