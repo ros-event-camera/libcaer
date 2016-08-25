@@ -297,7 +297,7 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
 
 void caerFrameUtilsOpenCVWhiteBalance(caerFrameEventPacket framePacket,
 	enum caer_frame_utils_opencv_white_balance whiteBalanceType) {
-
+	// TODO: implement OpenCV auto white-balance.
 }
 
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent) {
