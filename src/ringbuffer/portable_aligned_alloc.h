@@ -7,7 +7,7 @@
 	static inline void *portable_aligned_alloc(size_t alignment, size_t size) {
 		return (aligned_alloc(alignment, size));
 	}
-#elif (_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600)
+#elif ((defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L) || (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 600))
 	#include <stdlib.h>
 
 	static inline void *portable_aligned_alloc(size_t alignment, size_t size) {
