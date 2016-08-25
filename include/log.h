@@ -16,6 +16,16 @@ extern "C" {
 
 #include <stdint.h>
 
+#if defined(__GNUC__) || defined(__clang__)
+	#if defined(__USE_MINGW_ANSI_STDIO)
+		#define ATTRIBUTE_FORMAT __attribute__ ((format (gnu_printf, 3, 4)))
+	#else
+		#define ATTRIBUTE_FORMAT __attribute__ ((format (printf, 3, 4)))
+	#endif
+#else
+	#define ATTRIBUTE_FORMAT
+#endif
+
 //@{
 /**
  * Log levels for caerLog() logging function.
@@ -80,7 +90,7 @@ void caerLogFileDescriptorsSet(int fd1, int fd2);
  * @param format the message format string (see printf()).
  * @param ... the parameters to be formatted according to the format string (see printf()).
  */
-void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
+void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT;
 
 #ifdef __cplusplus
 }
