@@ -31,6 +31,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_imu9_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
@@ -56,7 +57,7 @@ struct caer_imu9_event {
 	float comp_y;
 	/// Magnetometer Z axis, measured in µT (magnetic flux density).
 	float comp_z;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to IMU 9-axes event data structure.
@@ -69,12 +70,13 @@ typedef struct caer_imu9_event *caerIMU9Event;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
+PACKED_STRUCT(
 struct caer_imu9_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_imu9_event events[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to IMU 9-axes event packet data structure.

@@ -42,6 +42,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_point1d_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
@@ -49,7 +50,7 @@ struct caer_point1d_event {
 	float x;
 	/// Event timestamp.
 	int32_t timestamp;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to Point1D event data structure.
@@ -62,12 +63,13 @@ typedef struct caer_point1d_event *caerPoint1DEvent;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
+PACKED_STRUCT(
 struct caer_point1d_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_point1d_event events[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to Point1D event packet data structure.

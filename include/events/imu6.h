@@ -29,6 +29,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_imu6_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
@@ -48,7 +49,7 @@ struct caer_imu6_event {
 	float gyro_z;
 	/// Temperature, measured in °C.
 	float temp;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to IMU 6-axes event data structure.
@@ -61,12 +62,13 @@ typedef struct caer_imu6_event *caerIMU6Event;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
+PACKED_STRUCT(
 struct caer_imu6_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_imu6_event events[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to IMU 6-axes event packet data structure.

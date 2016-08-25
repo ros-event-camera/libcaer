@@ -34,6 +34,7 @@ extern "C" {
  * Signed integers are used for compatibility with languages that
  * do not have unsigned ones, such as Java.
  */
+PACKED_STRUCT(
 struct caer_event_packet_container {
 	/// Smallest event timestamp contained in this packet container.
 	int64_t lowestEventTimestamp;
@@ -47,7 +48,7 @@ struct caer_event_packet_container {
 	int32_t eventPacketsNumber;
 	/// Array of pointers to the actual event packets.
 	caerEventPacketHeader eventPackets[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to EventPacketContainer data structure.

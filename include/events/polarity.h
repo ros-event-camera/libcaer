@@ -42,12 +42,13 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_polarity_event {
 	/// Event data. First because of valid mark.
 	uint32_t data;
 	/// Event timestamp.
 	int32_t timestamp;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to polarity event data structure.
@@ -60,12 +61,13 @@ typedef struct caer_polarity_event *caerPolarityEvent;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
+PACKED_STRUCT(
 struct caer_polarity_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_polarity_event events[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to polarity event packet data structure.

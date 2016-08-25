@@ -78,6 +78,7 @@ enum caer_frame_event_color_filter {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_frame_event {
 	/// Event information (ROI region, color channels, color filter). First because of valid mark.
 	uint32_t info;
@@ -101,7 +102,7 @@ struct caer_frame_event {
 	/// The pixel array is laid out row by row (increasing X axis), going
 	/// from top to bottom (increasing Y axis).
 	uint16_t pixels[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to frame event data structure.
@@ -116,13 +117,14 @@ typedef struct caer_frame_event *caerFrameEvent;
  * array is not possible for Frame events. To calculate position
  * offsets, use the 'eventSize' field in the packet header.
  */
+PACKED_STRUCT(
 struct caer_frame_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
-/// All events follow here. Direct access to the events
-/// array is not possible. To calculate position, use the
-/// 'eventSize' field in the packetHeader.
-}__attribute__((__packed__));
+	/// All events follow here. Direct access to the events
+	/// array is not possible. To calculate position, use the
+	/// 'eventSize' field in the packetHeader.
+});
 
 /**
  * Type for pointer to frame event packet data structure.

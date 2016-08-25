@@ -42,6 +42,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
+PACKED_STRUCT(
 struct caer_configuration_event {
 	/// Configuration module address. First (also) because of valid mark.
 	uint8_t moduleAddress;
@@ -51,7 +52,7 @@ struct caer_configuration_event {
 	uint32_t parameter;
 	/// Event timestamp.
 	int32_t timestamp;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to configuration event data structure.
@@ -64,12 +65,13 @@ typedef struct caer_configuration_event *caerConfigurationEvent;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
+PACKED_STRUCT(
 struct caer_configuration_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_configuration_event events[];
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to configuration event packet data structure.
