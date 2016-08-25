@@ -2600,7 +2600,7 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 static inline void initContainerCommitTimestamp(davisState state) {
 	if (state->currentPacketContainerCommitTimestamp == -1) {
 		state->currentPacketContainerCommitTimestamp = state->currentTimestamp
-			+ atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed) - 1;
+			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
 	}
 }
 
@@ -3752,8 +3752,8 @@ static void davisEventTranslator(davisHandle handle, uint8_t *buffer, size_t byt
 			if (containerTimeCommit) {
 				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
 					> state->currentPacketContainerCommitTimestamp) {
-					state->currentPacketContainerCommitTimestamp += atomic_load_explicit(
-						&state->maxPacketContainerInterval, memory_order_relaxed);
+					state->currentPacketContainerCommitTimestamp += I32T(atomic_load_explicit(
+						&state->maxPacketContainerInterval, memory_order_relaxed));
 				}
 			}
 
