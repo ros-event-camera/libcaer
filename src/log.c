@@ -111,33 +111,26 @@ void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) {
 			break;
 	}
 
-	// Copy all strings into one and ensure NUL termination.
-	size_t logLength = (size_t) snprintf(NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,
-		format);
-	char logString[logLength + 1];
-	snprintf(logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, format);
+	// Cap full log message length at 2048 bytes.
+	char logMessageString[2048];
 
 	va_list argptr;
+	va_start(argptr, format);
+	vsnprintf(logMessageString, 2048, format, argptr);
+	va_end(argptr);
+
+	// Copy all strings into one and ensure NUL termination.
+	size_t logLength = (size_t) snprintf(NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,
+		logMessageString);
+	char logString[logLength + 1];
+	snprintf(logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,
+		logMessageString);
 
 	if (logFileDescriptor1 >= 0) {
-		va_start(argptr, format);
-#if defined(OS_WINDOWS)
-		FILE *logFilePointer1 = fdopen(logFileDescriptor1, "a");
-		vfprintf(logFilePointer1, logString, argptr);
-#else
-		vdprintf(logFileDescriptor1, logString, argptr);
-#endif
-		va_end(argptr);
+		write(logFileDescriptor1, logString, logLength);
 	}
 
 	if (logFileDescriptor2 >= 0) {
-		va_start(argptr, format);
-#if defined(OS_WINDOWS)
-		FILE *logFilePointer2 = fdopen(logFileDescriptor2, "a");
-		vfprintf(logFilePointer2, logString, argptr);
-#else
-		vdprintf(logFileDescriptor2, logString, argptr);
-#endif
-		va_end(argptr);
+		write(logFileDescriptor2, logString, logLength);
 	}
 }
