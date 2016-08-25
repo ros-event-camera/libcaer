@@ -17,6 +17,14 @@ extern "C" {
 
 #include "../libcaer.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+	#define PACKED_STRUCT(STRUCT_DECLARATION) STRUCT_DECLARATION __attribute__((__packed__))
+#elif defined(_MSC_VER)
+	#define PACKED_STRUCT(STRUCT_DECLARATION) __pragma(pack(push, 1)) STRUCT_DECLARATION __pragma(pack(pop))
+#else
+	#error "Unable to ensure structures are properly packed."
+#endif
+
 /**
  * Generic validity mark:
  * this bit is used to mark whether an event is still
@@ -81,6 +89,7 @@ enum caer_default_event_types {
  * Signed integers are used for compatibility with languages that
  * do not have unsigned ones, such as Java.
  */
+PACKED_STRUCT(
 struct caer_event_packet_header {
 	/// Numerical type ID, unique to each event type (see 'enum caer_default_event_types').
 	int16_t eventType;
@@ -98,7 +107,7 @@ struct caer_event_packet_header {
 	int32_t eventNumber;
 	/// Total number of valid events present in this packet.
 	int32_t eventValid;
-}__attribute__((__packed__));
+});
 
 /**
  * Type for pointer to EventPacket header data structure.
