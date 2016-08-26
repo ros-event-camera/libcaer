@@ -50,26 +50,32 @@ void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) {
 	// First prepend the time.
 	time_t currentTimeEpoch = time(NULL);
 
+#if defined(OS_WINDOWS)
+	// localtime() is thread-safe on Windows (and there is no localtime_r() at all).
+	struct tm *currentTime = localtime(&currentTimeEpoch);
+
+	// Windows doesn't support %z (numerical timezone), so no TZ info here.
+	// Following time format uses exactly 19 characters (5 separators/punctuation,
+	// 4 year, 2 month, 2 day, 2 hours, 2 minutes, 2 seconds).
+	size_t currentTimeStringLength = 19;
+	char currentTimeString[currentTimeStringLength + 1]; // + 1 for terminating NUL byte.
+	strftime(currentTimeString, currentTimeStringLength + 1, "%Y-%m-%d %H:%M:%S", currentTime);
+#else
 	// From localtime_r() man-page: "According to POSIX.1-2004, localtime()
 	// is required to behave as though tzset(3) was called, while
 	// localtime_r() does not have this requirement."
 	// So we make sure to call it here, to be portable.
 	tzset();
 
-#if defined(OS_WINDOWS)
-	// localtime() is thread-safe on Windows (and there is no localtime_r() at all).
-	struct tm *currentTime = localtime(&currentTimeEpoch);
-#else
-	struct tm currentTimeStruct;
-	struct tm *currentTime = &currentTimeStruct;
-	localtime_r(&currentTimeEpoch, currentTime);
-#endif
+	struct tm currentTime;
+	localtime_r(&currentTimeEpoch, &currentTime);
 
 	// Following time format uses exactly 29 characters (8 separators/punctuation,
 	// 4 year, 2 month, 2 day, 2 hours, 2 minutes, 2 seconds, 2 'TZ', 5 timezone).
 	size_t currentTimeStringLength = 29;
 	char currentTimeString[currentTimeStringLength + 1]; // + 1 for terminating NUL byte.
-	strftime(currentTimeString, currentTimeStringLength + 1, "%Y-%m-%d %H:%M:%S (TZ%z)", currentTime);
+	strftime(currentTimeString, currentTimeStringLength + 1, "%Y-%m-%d %H:%M:%S (TZ%z)", &currentTime);
+#endif
 
 	// Prepend debug level as a string to format.
 	const char *logLevelString;
