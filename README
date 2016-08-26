@@ -6,9 +6,11 @@ such as the Dynamic Vision Sensor (DVS) or DAVIS cameras.
 
 REQUIREMENTS:
 
+Linux, MacOS X or Windows (for Windows build instructions see README.Windows)
 cmake >= 2.6
 gcc >= 4.9 or clang >= 3.6
 libusb >= 1.0.17
+Optional: OpenCV >= 3.1
 
 Please make sure that you have the various development packages installed
 for the above dependencies. They are usually called PKG-dev or PKG-devel.
@@ -18,6 +20,8 @@ INSTALLATION:
 1) configure:
 
 $ cmake -DCMAKE_INSTALL_PREFIX=/usr .
+Optional: add -DENABLE_OPENCV=1 to enable better support for frame enhancement
+(demoisaicing for color, contrast, white-balance) via OpenCV.
 
 2) build:
 
