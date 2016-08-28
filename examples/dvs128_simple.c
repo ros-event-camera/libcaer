@@ -14,11 +14,18 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 int main(void) {
-#if defined(_WIN32)
-	signal(SIGTERM, globalShutdownSignalHandler);
-	signal(SIGINT, globalShutdownSignalHandler);
-#else
 	// Install signal handler for global shutdown.
+#if defined(_WIN32)
+	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
+		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
+		return (EXIT_FAILURE);
+	}
+
+	if (signal(SIGINT, &globalShutdownSignalHandler) == SIG_ERR) {
+		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGINT. Error: %d.", errno);
+		return (EXIT_FAILURE);
+	}
+#else
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
