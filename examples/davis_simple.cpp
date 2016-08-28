@@ -16,9 +16,9 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 int main(void) {
-#ifdef _WIN32
+#if defined(_WIN32)
 	signal(SIGTERM, globalShutdownSignalHandler);
-	signal(SIGINT, globalShutdownSignalHandler);    
+	signal(SIGINT, globalShutdownSignalHandler);
 #else
 	// Install signal handler for global shutdown.
 	struct sigaction shutdownAction;

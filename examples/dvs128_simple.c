@@ -14,6 +14,10 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 int main(void) {
+#if defined(_WIN32)
+	signal(SIGTERM, globalShutdownSignalHandler);
+	signal(SIGINT, globalShutdownSignalHandler);
+#else
 	// Install signal handler for global shutdown.
 	struct sigaction shutdownAction;
 
@@ -32,6 +36,7 @@ int main(void) {
 		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGINT. Error: %d.", errno);
 		return (EXIT_FAILURE);
 	}
+#endif
 
 	// Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
 	caerDeviceHandle dvs128_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);

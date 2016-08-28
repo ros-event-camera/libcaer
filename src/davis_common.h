@@ -6,7 +6,7 @@
 #include <stdatomic.h>
 #include <libusb.h>
 
-#ifdef HAVE_PTHREADS
+#if defined(HAVE_PTHREADS)
 	#include "c11threads_posix.h"
 #endif
 
