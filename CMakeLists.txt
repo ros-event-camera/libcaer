@@ -67,6 +67,22 @@ IF (WIN32 AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	ADD_DEFINITIONS(-DOS_WINDOWS=1)
 ENDIF()
 
+# Check GNU compiler version, atomic are needed
+if (CMAKE_COMPILER_IS_GNUCC)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                    OUTPUT_VARIABLE GCC_VERSION)
+    string(REGEX MATCHALL "[0-9]+" GCC_VERSION_COMPONENTS ${GCC_VERSION})
+    list(GET GCC_VERSION_COMPONENTS 0 GCC_MAJOR)
+    list(GET GCC_VERSION_COMPONENTS 1 GCC_MINOR)
+
+    if(${GCC_MAJOR} LESS 4)
+        MESSAGE(FATAL_ERROR "GNUCC version found is " ${GCC_MAJOR}-${GCC_MINOR} ". Required >= 4.9")
+    endif()
+    if(${GCC_MINOR} LESS 9)
+        MESSAGE(FATAL_ERROR "GNUCC version found is " ${GCC_MAJOR}-${GCC_MINOR} ". Required >= 4.9")
+    endif()
+endif()
+
 # Test if we are on a big-endian architecture
 INCLUDE(TestBigEndian)
 TEST_BIG_ENDIAN(SYSTEM_BIGENDIAN)
