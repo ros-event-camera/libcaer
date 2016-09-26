@@ -67,21 +67,19 @@ IF (WIN32 AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	ADD_DEFINITIONS(-DOS_WINDOWS=1)
 ENDIF()
 
-# Check GNU compiler version, atomic are needed
-if (CMAKE_COMPILER_IS_GNUCC)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
-                    OUTPUT_VARIABLE GCC_VERSION)
-    string(REGEX MATCHALL "[0-9]+" GCC_VERSION_COMPONENTS ${GCC_VERSION})
-    list(GET GCC_VERSION_COMPONENTS 0 GCC_MAJOR)
-    list(GET GCC_VERSION_COMPONENTS 1 GCC_MINOR)
+# Check GCC compiler version, 4.9 is needed at least for atomics support.
+IF (CC_GCC)
+	IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "4.9.0")
+		MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 4.9.0.")
+	ENDIF()
+ENDIF()
 
-    if(${GCC_MAJOR} LESS 4)
-        MESSAGE(FATAL_ERROR "GNUCC version found is " ${GCC_MAJOR}-${GCC_MINOR} ". Required >= 4.9")
-    endif()
-    if(${GCC_MINOR} LESS 9)
-        MESSAGE(FATAL_ERROR "GNUCC version found is " ${GCC_MAJOR}-${GCC_MINOR} ". Required >= 4.9")
-    endif()
-endif()
+# Check Clang compiler version, 3.6 is needed at least for atomics support.
+IF (CC_CLANG)
+	IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "3.6.0")
+		MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 3.6.0.")
+	ENDIF()
+ENDIF()
 
 # Test if we are on a big-endian architecture
 INCLUDE(TestBigEndian)
