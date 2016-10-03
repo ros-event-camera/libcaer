@@ -18,6 +18,31 @@
  * All integers are in their native host format, as this is a purely
  * internal, in-memory data structure, never meant for exchange between
  * different systems (and different endianness).
+ *
+ * == Packet Containers and Input Modules ==
+ * The "packeting system" works in this way: events are accumulated by
+ * type in a packet, and that packet is part of a packet container, by
+ * an input module.
+ * The packet container is then sent out for processing when either the
+ * configured time limit or the size limit are hit.
+ * The time limit is always active, in microseconds, and basically tells
+ * you the time-span an event packet covers. This enables regular, constant
+ * delivery of packets, that cover a period of time.
+ * The size limit is an addon to prevent packets to grow to immense sizes
+ * (like if the time limit is high and there is lots of activity). As soon
+ * as a packet hits the number of events in the size limit, it is sent out.
+ * The regular time limit is not reset in this case. This size limit can
+ * be disabled by setting it to 0.
+ * The cAER DVS128/DAVIS/File/Network input modules call these two
+ * configuration variables "PacketContainerInterval" and "PacketContainerMaxPacketSize".
+ * Too small packet sizes or intervals simply mean more packets, which may
+ * negatively affect performance. It's usually a good idea to set the size
+ * to something around 4-8K, and the time to a good value based on the
+ * application you're building, so if you need ms-reaction-time, you probably
+ * want to set it to 1000µs, so that you do get new data every ms. If on the
+ * other hand you're looking at a static scene and just want to detect that
+ * something is passing by once every while, a higher number like 100ms
+ * might also be perfectly appropriate.
  */
 
 #ifndef LIBCAER_EVENTS_PACKETCONTAINER_H_
