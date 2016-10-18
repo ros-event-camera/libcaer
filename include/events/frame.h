@@ -14,11 +14,11 @@
 #ifndef LIBCAER_EVENTS_FRAME_H_
 #define LIBCAER_EVENTS_FRAME_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * Shift and mask values for the color channels number, the color

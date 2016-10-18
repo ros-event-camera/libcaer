@@ -11,10 +11,11 @@
 
 #include <cstdint>
 
-extern "C" {
-#endif
+#else
 
 #include <stdint.h>
+
+#endif
 
 #if defined(__GNUC__) || defined(__clang__)
 	#if defined(__USE_MINGW_ANSI_STDIO)
@@ -24,6 +25,10 @@ extern "C" {
 	#endif
 #else
 	#define ATTRIBUTE_FORMAT
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 //@{

@@ -7,15 +7,15 @@
 #ifndef LIBCAER_DEVICES_DAVIS_H_
 #define LIBCAER_DEVICES_DAVIS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "usb.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
 #include "../events/frame.h"
 #include "../events/imu6.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Device type definition for iniLabs DAVIS FX2-based boards, like DAVIS240a/b/c.

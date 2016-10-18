@@ -9,11 +9,11 @@
 #ifndef LIBCAER_FRAME_UTILS_H_
 #define LIBCAER_FRAME_UTILS_H_
 
+#include "events/frame.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "events/frame.h"
 
 caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket);
 void caerFrameUtilsContrast(caerFrameEventPacket framePacket);

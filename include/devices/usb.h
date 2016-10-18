@@ -9,12 +9,12 @@
 #ifndef LIBCAER_DEVICES_USB_H_
 #define LIBCAER_DEVICES_USB_H_
 
+#include "../libcaer.h"
+#include "../events/packetContainer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "../libcaer.h"
-#include "../events/packetContainer.h"
 
 /**
  * Reference to an open device on which to operate.

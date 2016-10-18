@@ -7,13 +7,13 @@
 #ifndef LIBCAER_DEVICES_DVS128_H_
 #define LIBCAER_DEVICES_DVS128_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "usb.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Device type definition for iniLabs DVS128.

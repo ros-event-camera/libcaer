@@ -12,11 +12,11 @@
 #ifndef LIBCAER_EVENTS_IMU9_H_
 #define LIBCAER_EVENTS_IMU9_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * IMU 9-axes event data structure definition.

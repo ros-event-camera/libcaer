@@ -11,11 +11,11 @@
 #ifndef LIBCAER_EVENTS_EAR_H_
 #define LIBCAER_EVENTS_EAR_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * Shift and mask values for the ear event values coming from

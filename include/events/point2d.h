@@ -12,11 +12,11 @@
 #ifndef LIBCAER_EVENTS_POINT2D_H_
 #define LIBCAER_EVENTS_POINT2D_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * Shift and mask values for type and scale information

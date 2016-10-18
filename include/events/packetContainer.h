@@ -48,11 +48,11 @@
 #ifndef LIBCAER_EVENTS_PACKETCONTAINER_H_
 #define LIBCAER_EVENTS_PACKETCONTAINER_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * EventPacketContainer data structure definition.

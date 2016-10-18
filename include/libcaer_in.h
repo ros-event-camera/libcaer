@@ -14,30 +14,36 @@
 
 #ifdef __cplusplus
 
+#include <cstddef>
+#include <cstdlib>
 #include <cstdio>
 #include <cstdint>
 #include <cinttypes>
 #include <cstring>
 #include <cerrno>
 
-extern "C" {
-#endif
+#else
 
-// Common includes, useful for everyone.
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
+
+#endif
 
 // Use portable endian conversion functions.
 #include "portable_endian.h"
 
 // Include libcaer's log headers always.
 #include "log.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * libcaer version (MAJOR * 10000 + MINOR * 100 + PATCH).

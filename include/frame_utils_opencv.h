@@ -8,11 +8,11 @@
 #ifndef LIBCAER_FRAME_UTILS_OPENCV_H_
 #define LIBCAER_FRAME_UTILS_OPENCV_H_
 
+#include "events/frame.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "events/frame.h"
 
 enum caer_frame_utils_opencv_demosaic {
 	DEMOSAIC_NORMAL, DEMOSAIC_EDGE_AWARE, // DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.

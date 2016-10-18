@@ -11,10 +11,6 @@
 #ifndef LIBCAER_EVENTS_COMMON_H_
 #define LIBCAER_EVENTS_COMMON_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "../libcaer.h"
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -23,6 +19,10 @@ extern "C" {
 	#define PACKED_STRUCT(STRUCT_DECLARATION) __pragma(pack(push, 1)) STRUCT_DECLARATION __pragma(pack(pop))
 #else
 	#error "Unable to ensure structures are properly packed."
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /**

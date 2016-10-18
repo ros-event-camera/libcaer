@@ -9,11 +9,11 @@
 #ifndef LIBCAER_EVENTS_SPECIAL_H_
 #define LIBCAER_EVENTS_SPECIAL_H_
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "common.h"
 
 /**
  * Shift and mask values for the type and data portions
