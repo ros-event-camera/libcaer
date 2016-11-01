@@ -8,7 +8,7 @@
 /**
  * Number of devices supported by this library.
  */
-#define SUPPORTED_DEVICES_NUMBER 3
+#define SUPPORTED_DEVICES_NUMBER 4
 
 // Supported devices and their functions.
 static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
