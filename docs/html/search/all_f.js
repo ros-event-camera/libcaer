@@ -14,6 +14,14 @@ var searchData=
   ['single_5fdiode',['SINGLE_DIODE',['../davis_8h.html#adaaabaf729ab9cd47057bfd4f5a0a560a7fd90d5e1029554fed1335783cb214b8',1,'davis.h']]],
   ['special_2eh',['special.h',['../special_8h.html',1,'']]],
   ['special_5fevent',['SPECIAL_EVENT',['../common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019ac2115298b1621497af2e8682814e131f',1,'common.h']]],
+  ['spike_2eh',['spike.h',['../spike_8h.html',1,'']]],
+  ['spike_5fchip_5fid_5fmask',['SPIKE_CHIP_ID_MASK',['../spike_8h.html#aa6cc41fce4dc70366436c4b052ab026b',1,'spike.h']]],
+  ['spike_5fchip_5fid_5fshift',['SPIKE_CHIP_ID_SHIFT',['../spike_8h.html#a57e98082aec3d5fab4561186db9fe87a',1,'spike.h']]],
+  ['spike_5fevent',['SPIKE_EVENT',['../common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019a2fd1412674c048e4cc8efd84910278cb',1,'common.h']]],
+  ['spike_5fneuron_5fid_5fmask',['SPIKE_NEURON_ID_MASK',['../spike_8h.html#a7fe56472eadd56e100d2530b20d75af1',1,'spike.h']]],
+  ['spike_5fneuron_5fid_5fshift',['SPIKE_NEURON_ID_SHIFT',['../spike_8h.html#a7018c8e7a88625a2f1e803bd7828fb94',1,'spike.h']]],
+  ['spike_5fsource_5fcore_5fid_5fmask',['SPIKE_SOURCE_CORE_ID_MASK',['../spike_8h.html#abed15ed759d9d23c53932369c85b4e96',1,'spike.h']]],
+  ['spike_5fsource_5fcore_5fid_5fshift',['SPIKE_SOURCE_CORE_ID_SHIFT',['../spike_8h.html#a60f5f500f1e025447aab45b3f30f239b',1,'spike.h']]],
   ['split_5fgate',['SPLIT_GATE',['../davis_8h.html#adaaabaf729ab9cd47057bfd4f5a0a560a6a299f3a0aecf6774821bdce2a14d1d6',1,'davis.h']]],
   ['swap_5fvar',['SWAP_VAR',['../libcaer_8h.html#a2f1cf713cd2378bec0320a7e24c8fe18',1,'libcaer.h']]]
 ];

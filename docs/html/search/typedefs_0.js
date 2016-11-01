@@ -26,5 +26,7 @@ var searchData=
   ['caersampleevent',['caerSampleEvent',['../sample_8h.html#a74e2061fec44275cfd61a204a248f0f6',1,'sample.h']]],
   ['caersampleeventpacket',['caerSampleEventPacket',['../sample_8h.html#a79c48e0a8ba501e9fc2a9d4cd0fc5b85',1,'sample.h']]],
   ['caerspecialevent',['caerSpecialEvent',['../special_8h.html#a1a5267acf24fba20ce586cd28be9b568',1,'special.h']]],
-  ['caerspecialeventpacket',['caerSpecialEventPacket',['../special_8h.html#a246241e70921f0134423d9c3a6e8d126',1,'special.h']]]
+  ['caerspecialeventpacket',['caerSpecialEventPacket',['../special_8h.html#a246241e70921f0134423d9c3a6e8d126',1,'special.h']]],
+  ['caerspikeevent',['caerSpikeEvent',['../spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f',1,'spike.h']]],
+  ['caerspikeeventpacket',['caerSpikeEventPacket',['../spike_8h.html#aa01ad8caea52af8386ee956d99997a5f',1,'spike.h']]]
 ];
