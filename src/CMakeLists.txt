@@ -7,7 +7,8 @@ SET(LIBCAER_SRC_FILES
 	dvs128.c
 	davis_common.c
 	davis_fx2.c
-	davis_fx3.c)
+	davis_fx3.c
+	dynapse.c)
 
 IF (ENABLE_OPENCV)
 	# Add C++ OpenCV file and its C wrapper.

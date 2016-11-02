@@ -9,6 +9,7 @@
 
 #include "usb.h"
 #include "../events/spike.h"
+#include "../events/special.h"
 
 #ifdef __cplusplus
 extern "C" {

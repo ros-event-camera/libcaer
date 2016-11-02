@@ -264,8 +264,8 @@ static inline void caerSpikeEventSetChipID(caerSpikeEvent event, uint8_t chipID)
  *
  * @return the Spike's neuron ID.
  */
-static inline uint8_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
-	return U8T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK));
+static inline uint32_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
+	return U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK));
 }
 
 /**
@@ -274,7 +274,7 @@ static inline uint8_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
  * @param event a valid SpikeEvent pointer. Cannot be NULL.
  * @param neuronID the Spike's neuron ID.
  */
-static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint8_t neuronID) {
+static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neuronID) {
 	CLEAR_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK);
 	SET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK, neuronID);
 }
