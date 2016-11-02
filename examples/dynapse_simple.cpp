@@ -47,6 +47,8 @@ int main(void) {
 	}
 #endif
 
+	//caerLogLevelSet(CAER_LOG_DEBUG);	set debug level
+
 	// Open the communication with Dynap-se, give it a device ID of 1, and don't care about USB bus or SN restrictions.
 	caerDeviceHandle usb_handle = caerDeviceOpen(1, CAER_DEVICE_DYNAPSE, 0, 0, NULL);
 	if (usb_handle == NULL) {
@@ -54,10 +56,10 @@ int main(void) {
 	}
 
 	// Let's take a look at the information we have on the device.
-	struct caer_dynapse_info davis_info = caerDynapseInfoGet(usb_handle);
+	struct caer_dynapse_info dynapse_info = caerDynapseInfoGet(usb_handle);
 
-	printf("%s --- ID: %d, Master: %d,  Logic: %d.\n", caer_dynapse_info.deviceString,
-			caer_dynapse_info.deviceID, caer_dynapse_info.deviceIsMaster,  caer_dynapse_info.logicVersion);
+	printf("%s --- ID: %d, Master: %d,  Logic: %d.\n",   dynapse_info.deviceString,
+			dynapse_info.deviceID, dynapse_info.deviceIsMaster,  dynapse_info.logicVersion);
 
 
 	// Now let's get start getting some data from the device. We just loop, no notification needed.
@@ -65,6 +67,21 @@ int main(void) {
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
 	caerDeviceConfigSet(usb_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+
+
+	//set configurations chip
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, true);
+
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, 0); // send config to core 0
+
+
+
+
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, 57); // monitor neuron 1
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, 312); // 256
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, 568);  // 256*3
+
+	caerDeviceConfigSet(usb_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, false);
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
 		caerEventPacketContainer packetContainer = caerDeviceDataGet(usb_handle);
@@ -87,17 +104,20 @@ int main(void) {
 				caerEventPacketHeaderGetEventNumber(packetHeader));
 
 			if (i == SPIKE_EVENT) {
-				caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
 
-				// Get full timestamp and addresses of first event.
-				/*caerPolarityEvent firstEvent = caerSp(polarity, 0);
+				caerSpikeEventPacket evts = (caerSpikeEventPacket) packetHeader;
 
-				int32_t ts = caerPolarityEventGetTimestamp(firstEvent);
-				uint16_t x = caerPolarityEventGetX(firstEvent);
-				uint16_t y = caerPolarityEventGetY(firstEvent);
-				bool pol = caerPolarityEventGetPolarity(firstEvent);
+				// read all events
+				CAER_SPIKE_ITERATOR_ALL_START(evts)
 
-				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);*/
+					uint64_t ts = caerSpikeEventGetTimestamp(caerSpikeIteratorElement);
+					uint64_t neuronId = caerSpikeEventGetNeuronID(caerSpikeIteratorElement);
+					uint64_t sourcecoreId = caerSpikeEventGetSourceCoreID(caerSpikeIteratorElement); // which core is from
+					uint64_t coreId = caerSpikeEventGetChipID(caerSpikeIteratorElement);			 // destination core (used as chip id)
+
+					printf("SPIKE: %d , neuronID: %d , sourcecoreID: %d, coreID: %d\n", ts, neuronId, sourcecoreId, coreId);
+
+				CAER_SPIKE_ITERATOR_ALL_END
 			}
 		}
 
