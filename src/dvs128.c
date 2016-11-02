@@ -134,7 +134,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString = usbInfo.deviceString;
 	handle->info.logicVersion = 1; // TODO: real logic revision, once that information is exposed by new logic.
-	handle->info.deviceIsMaster = true; // TODO: master/slave support.
+	handle->info.deviceIsMaster = true;
 	handle->info.dvsSizeX = DVS_ARRAY_SIZE_X;
 	handle->info.dvsSizeY = DVS_ARRAY_SIZE_Y;
 
