@@ -19,7 +19,7 @@ caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	// Set main deviceType correctly right away.
 	handle->h.deviceType = CAER_DEVICE_DAVIS_FX3;
 
-	bool openRetVal = davisCommonOpen((davisHandle) handle, DAVIS_FX3_DEVICE_VID, DAVIS_FX3_DEVICE_PID,
+	bool openRetVal = davisCommonOpen((davisHandle) handle, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID,
 	DAVIS_FX3_DEVICE_DID_TYPE, DAVIS_FX3_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict,
 		serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
 		DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
@@ -96,7 +96,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 		}
 
 		// Initialize Transfer.
-		handle->debugTransfers[i]->dev_handle = handle->h.state.deviceHandle;
+		handle->debugTransfers[i]->dev_handle = handle->h.state.usbState.deviceHandle;
 		handle->debugTransfers[i]->endpoint = DEBUG_ENDPOINT;
 		handle->debugTransfers[i]->type = LIBUSB_TRANSFER_TYPE_INTERRUPT;
 		handle->debugTransfers[i]->callback = &libUsbDebugCallback;
@@ -145,7 +145,7 @@ static void deallocateDebugTransfers(davisFX3Handle handle) {
 	struct timeval te = { .tv_sec = 0, .tv_usec = 100000 };
 
 	while (handle->activeDebugTransfers > 0) {
-		libusb_handle_events_timeout(handle->h.state.deviceContext, &te);
+		libusb_handle_events_timeout(handle->h.state.usbState.deviceContext, &te);
 	}
 }
 

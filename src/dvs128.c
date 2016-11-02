@@ -1,12 +1,6 @@
 #include "dvs128.h"
 
-static libusb_device_handle *dvs128DeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
-	uint8_t devType, uint8_t busNumber, uint8_t devAddress, const char *serialNumber, uint16_t requiredFirmwareVersion);
-static void dvs128DeviceClose(libusb_device_handle *devHandle);
-static void dvs128AllocateTransfers(dvs128Handle handle, uint32_t bufferNum, uint32_t bufferSize);
-static void dvs128DeallocateTransfers(dvs128Handle handle);
-static void LIBUSB_CALL dvs128LibUsbCallback(struct libusb_transfer *transfer);
-static void dvs128EventTranslator(dvs128Handle handle, uint8_t *buffer, size_t bytesSent);
+static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
 static int dvs128DataAcquisitionThread(void *inPtr);
 static void dvs128DataAcquisitionThreadConfig(dvs128Handle handle);
@@ -99,7 +93,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	originalThreadName[15] = '\0';
 
 	thrd_set_name(state->deviceThreadName);
-	int res = libusb_init(&state->deviceContext);
+	int res = libusb_init(&state->usbState.deviceContext);
 
 	thrd_set_name(originalThreadName);
 
@@ -110,65 +104,43 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	}
 
 	// Try to open a DVS128 device on a specific USB port.
-	state->deviceHandle = dvs128DeviceOpen(state->deviceContext, DVS_DEVICE_VID, DVS_DEVICE_PID, DVS_DEVICE_DID_TYPE,
-		busNumberRestrict, devAddressRestrict, serialNumberRestrict,
-		DVS_REQUIRED_FIRMWARE_VERSION);
-	if (state->deviceHandle == NULL) {
-		libusb_exit(state->deviceContext);
+	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID,
+	DVS_DEVICE_DID_TYPE, busNumberRestrict, devAddressRestrict, serialNumberRestrict, -1,
+	DVS_REQUIRED_FIRMWARE_VERSION);
+	if (state->usbState.deviceHandle == NULL) {
+		libusb_exit(state->usbState.deviceContext);
 		free(handle);
 
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to open %s device.", DVS_DEVICE_NAME);
 		return (NULL);
 	}
 
-	// At this point we can get some more precise data on the device and update
-	// the logging string to reflect that and be more informative.
-	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
-	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
+	state->usbState.userData = handle;
+	state->usbState.userCallback = &dvs128EventTranslator;
 
-	char serialNumber[8 + 1] = { 0 };
-	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
-		8 + 1);
-
-	// Check serial number success and length.
-	if (getStringDescResult < 0 || getStringDescResult > 8) {
-		dvs128DeviceClose(state->deviceHandle);
-		libusb_exit(state->deviceContext);
+	struct usb_info usbInfo = usbGenerateInfo(state->usbState.deviceHandle, DVS_DEVICE_NAME, deviceID);
+	if (usbInfo.deviceString == NULL) {
+		usbDeviceClose(state->usbState.deviceHandle);
+		libusb_exit(state->usbState.deviceContext);
 		free(handle);
 
-		caerLog(CAER_LOG_CRITICAL, __func__, "Unable to get serial number for %s device.", DVS_DEVICE_NAME);
 		return (NULL);
 	}
-
-	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-	DVS_DEVICE_NAME, deviceID, serialNumber, busNumber, devAddress);
-
-	char *fullLogString = malloc(fullLogStringLength + 1);
-	if (fullLogString == NULL) {
-		dvs128DeviceClose(state->deviceHandle);
-		libusb_exit(state->deviceContext);
-		free(handle);
-
-		caerLog(CAER_LOG_CRITICAL, __func__, "Unable to allocate memory for %s device info string.", DVS_DEVICE_NAME);
-		return (NULL);
-	}
-
-	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", DVS_DEVICE_NAME,
-		deviceID, serialNumber, busNumber, devAddress);
 
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, serialNumber, 8 + 1);
-	handle->info.deviceUSBBusNumber = busNumber;
-	handle->info.deviceUSBDeviceAddress = devAddress;
-	handle->info.deviceString = fullLogString;
+	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, 8 + 1);
+	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
+	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
+	handle->info.deviceString = usbInfo.deviceString;
 	handle->info.logicVersion = 1; // TODO: real logic revision, once that information is exposed by new logic.
 	handle->info.deviceIsMaster = true; // TODO: master/slave support.
 	handle->info.dvsSizeX = DVS_ARRAY_SIZE_X;
 	handle->info.dvsSizeY = DVS_ARRAY_SIZE_Y;
 
-	caerLog(CAER_LOG_DEBUG, fullLogString, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		busNumber, devAddress);
+	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
+		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
+		usbInfo.devAddress);
 
 	return ((caerDeviceHandle) handle);
 }
@@ -180,10 +152,10 @@ bool dvs128Close(caerDeviceHandle cdh) {
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutting down ...");
 
 	// Finally, close the device fully.
-	dvs128DeviceClose(state->deviceHandle);
+	usbDeviceClose(state->usbState.deviceHandle);
 
 	// Destroy libusb context.
-	libusb_exit(state->deviceContext);
+	libusb_exit(state->usbState.deviceContext);
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
 
@@ -306,7 +278,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
 					if (param && !atomic_load(&state->dvsRunning)) {
-						if (libusb_control_transfer(state->deviceHandle,
+						if (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_START_TRANSFER, 0, 0, NULL, 0, 0) != 0) {
 							return (false);
@@ -315,7 +287,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 						atomic_store(&state->dvsRunning, true);
 					}
 					else if (!param && atomic_load(&state->dvsRunning)) {
-						if (libusb_control_transfer(state->deviceHandle,
+						if (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_STOP_TRANSFER, 0, 0, NULL, 0, 0) != 0) {
 							return (false);
@@ -327,7 +299,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 				case DVS128_CONFIG_DVS_TIMESTAMP_RESET:
 					if (param) {
-						if (libusb_control_transfer(state->deviceHandle,
+						if (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_RESET_TS, 0, 0, NULL, 0, 0) != 0) {
 							return (false);
@@ -337,7 +309,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 				case DVS128_CONFIG_DVS_ARRAY_RESET:
 					if (param) {
-						if (libusb_control_transfer(state->deviceHandle,
+						if (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_RESET_ARRAY, 0, 0, NULL, 0, 0) != 0) {
 							return (false);
@@ -346,7 +318,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					break;
 
 				case DVS128_CONFIG_DVS_TS_MASTER:
-					if (libusb_control_transfer(state->deviceHandle,
+					if (libusb_control_transfer(state->usbState.deviceHandle,
 						LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 						VENDOR_REQUEST_TS_MASTER, (param & 0x01), 0, NULL, 0, 0) != 0) {
 						return (false);
@@ -652,256 +624,6 @@ caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 	return (NULL);
 }
 
-static libusb_device_handle *dvs128DeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
-	uint8_t devType, uint8_t busNumber, uint8_t devAddress, const char *serialNumber, uint16_t requiredFirmwareVersion) {
-	libusb_device_handle *devHandle = NULL;
-	libusb_device **devicesList;
-
-	ssize_t result = libusb_get_device_list(devContext, &devicesList);
-
-	if (result >= 0) {
-		// Cycle thorough all discovered devices and find a match.
-		for (size_t i = 0; i < (size_t) result; i++) {
-			struct libusb_device_descriptor devDesc;
-
-			if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
-				continue;
-			}
-
-			// Check if this is the device we want (VID/PID).
-			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID
-				&& U8T((devDesc.bcdDevice & 0xFF00) >> 8) == devType) {
-				// Verify device firmware version.
-				if (U8T(devDesc.bcdDevice & 0x00FF) < requiredFirmwareVersion) {
-					caerLog(CAER_LOG_CRITICAL, __func__,
-						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
-						U8T(devDesc.bcdDevice & 0x00FF), requiredFirmwareVersion);
-
-					continue;
-				}
-
-				// If a USB port restriction is given, honor it.
-				if (busNumber > 0 && libusb_get_bus_number(devicesList[i]) != busNumber) {
-					caerLog(CAER_LOG_INFO, __func__,
-						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						busNumber, libusb_get_bus_number(devicesList[i]));
-
-					continue;
-				}
-
-				if (devAddress > 0 && libusb_get_device_address(devicesList[i]) != devAddress) {
-					caerLog(CAER_LOG_INFO, __func__,
-						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						devAddress, libusb_get_device_address(devicesList[i]));
-
-					continue;
-				}
-
-				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
-					devHandle = NULL;
-
-					continue;
-				}
-
-				// Check the serial number restriction, if any is present.
-				if (serialNumber != NULL && !caerStrEquals(serialNumber, "")) {
-					char deviceSerialNumber[8 + 1] = { 0 };
-					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
-						(unsigned char *) deviceSerialNumber, 8 + 1);
-
-					// Check serial number success and length.
-					if (getStringDescResult < 0 || getStringDescResult > 8) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						continue;
-					}
-
-					// Now check if the Serial Number matches.
-					if (!caerStrEquals(serialNumber, deviceSerialNumber)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						caerLog(CAER_LOG_INFO, __func__,
-							"USB serial number restriction is present (%s), this device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						continue;
-					}
-				}
-
-				// Check that the active configuration is set to number 1. If not, do so.
-				int activeConfiguration;
-				if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
-
-				if (activeConfiguration != 1) {
-					if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						continue;
-					}
-				}
-
-				// Claim interface 0 (default).
-				if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
-
-				// TODO: check logic revision, once that information is exposed by new logic.
-
-				// Found and configured it!
-				break;
-			}
-		}
-
-		libusb_free_device_list(devicesList, true);
-	}
-
-	return (devHandle);
-}
-
-static void dvs128DeviceClose(libusb_device_handle *devHandle) {
-	// Release interface 0 (default).
-	libusb_release_interface(devHandle, 0);
-
-	libusb_close(devHandle);
-}
-
-static void dvs128AllocateTransfers(dvs128Handle handle, uint32_t bufferNum, uint32_t bufferSize) {
-	dvs128State state = &handle->state;
-
-	// Set number of transfers and allocate memory for the main transfer array.
-	state->dataTransfers = calloc(bufferNum, sizeof(struct libusb_transfer *));
-	if (state->dataTransfers == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-			"Failed to allocate memory for %" PRIu32 " libusb transfers. Error: %d.", bufferNum, errno);
-		return;
-	}
-	state->dataTransfersLength = bufferNum;
-
-	// Allocate transfers and set them up.
-	for (size_t i = 0; i < bufferNum; i++) {
-		state->dataTransfers[i] = libusb_alloc_transfer(0);
-		if (state->dataTransfers[i] == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to allocate further libusb transfers (%zu of %" PRIu32 ").", i, bufferNum);
-			continue;
-		}
-
-		// Create data buffer.
-		state->dataTransfers[i]->length = (int) bufferSize;
-		state->dataTransfers[i]->buffer = malloc(bufferSize);
-		if (state->dataTransfers[i]->buffer == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to allocate buffer for libusb transfer %zu. Error: %d.", i, errno);
-
-			libusb_free_transfer(state->dataTransfers[i]);
-			state->dataTransfers[i] = NULL;
-
-			continue;
-		}
-
-		// Initialize Transfer.
-		state->dataTransfers[i]->dev_handle = state->deviceHandle;
-		state->dataTransfers[i]->endpoint = DVS_DATA_ENDPOINT;
-		state->dataTransfers[i]->type = LIBUSB_TRANSFER_TYPE_BULK;
-		state->dataTransfers[i]->callback = &dvs128LibUsbCallback;
-		state->dataTransfers[i]->user_data = handle;
-		state->dataTransfers[i]->timeout = 0;
-		state->dataTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
-
-		if ((errno = libusb_submit_transfer(state->dataTransfers[i])) == LIBUSB_SUCCESS) {
-			state->activeDataTransfers++;
-		}
-		else {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to submit libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
-
-			// The transfer buffer is freed automatically here thanks to
-			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
-			libusb_free_transfer(state->dataTransfers[i]);
-			state->dataTransfers[i] = NULL;
-
-			continue;
-		}
-	}
-
-	if (state->activeDataTransfers == 0) {
-		// Didn't manage to allocate any USB transfers, free array memory and log failure.
-		free(state->dataTransfers);
-		state->dataTransfers = NULL;
-		state->dataTransfersLength = 0;
-
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Unable to allocate any libusb transfers.");
-	}
-}
-
-static void dvs128DeallocateTransfers(dvs128Handle handle) {
-	dvs128State state = &handle->state;
-
-	// Cancel all current transfers first.
-	for (size_t i = 0; i < state->dataTransfersLength; i++) {
-		if (state->dataTransfers[i] != NULL) {
-			errno = libusb_cancel_transfer(state->dataTransfers[i]);
-			if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Unable to cancel libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
-				// Proceed with trying to cancel all transfers regardless of errors.
-			}
-		}
-	}
-
-	// Wait for all transfers to go away (0.1 seconds timeout).
-	struct timeval te = { .tv_sec = 0, .tv_usec = 100000 };
-
-	while (state->activeDataTransfers > 0) {
-		libusb_handle_events_timeout(state->deviceContext, &te);
-	}
-
-	// The buffers and transfers have been deallocated in the callback.
-	// Only the transfers array remains, which we free here.
-	free(state->dataTransfers);
-	state->dataTransfers = NULL;
-	state->dataTransfersLength = 0;
-}
-
-static void LIBUSB_CALL dvs128LibUsbCallback(struct libusb_transfer *transfer) {
-	dvs128Handle handle = transfer->user_data;
-	dvs128State state = &handle->state;
-
-	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
-		// Handle data.
-		dvs128EventTranslator(handle, transfer->buffer, (size_t) transfer->actual_length);
-	}
-
-	if (transfer->status != LIBUSB_TRANSFER_CANCELLED && transfer->status != LIBUSB_TRANSFER_NO_DEVICE) {
-		// Submit transfer again.
-		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
-			return;
-		}
-	}
-
-	// Cannot recover (cancelled, no device, or other critical error).
-	// Signal this by adjusting the counter, free and exit.
-	state->activeDataTransfers--;
-	for (size_t i = 0; i < state->dataTransfersLength; i++) {
-		// Remove from list, so we don't try to cancel it later on.
-		if (state->dataTransfers[i] == transfer) {
-			state->dataTransfers[i] = NULL;
-		}
-	}
-	libusb_free_transfer(transfer);
-}
-
 #define DVS128_TIMESTAMP_WRAP_MASK 0x80
 #define DVS128_TIMESTAMP_RESET_MASK 0x40
 #define DVS128_POLARITY_SHIFT 0
@@ -924,7 +646,8 @@ static inline void initContainerCommitTimestamp(dvs128State state) {
 	}
 }
 
-static void dvs128EventTranslator(dvs128Handle handle, uint8_t *buffer, size_t bytesSent) {
+static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+	dvs128Handle handle = vhd;
 	dvs128State state = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
@@ -1152,8 +875,8 @@ static void dvs128EventTranslator(dvs128Handle handle, uint8_t *buffer, size_t b
 			if (containerTimeCommit) {
 				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
 					> state->currentPacketContainerCommitTimestamp) {
-					state->currentPacketContainerCommitTimestamp += I32T(atomic_load_explicit(
-						&state->maxPacketContainerInterval, memory_order_relaxed));
+					state->currentPacketContainerCommitTimestamp += I32T(
+						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
 				}
 			}
 
@@ -1240,7 +963,7 @@ static void dvs128EventTranslator(dvs128Handle handle, uint8_t *buffer, size_t b
 static bool dvs128SendBiases(dvs128State state) {
 	// Biases are already stored in an array with the same format as expected by
 	// the device, we can thus send it directly.
-	return (libusb_control_transfer(state->deviceHandle,
+	return (libusb_control_transfer(state->usbState.deviceHandle,
 		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 		VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->biases, (BIAS_NUMBER * BIAS_LENGTH), 0)
 		== (BIAS_NUMBER * BIAS_LENGTH));
@@ -1265,8 +988,8 @@ static int dvs128DataAcquisitionThread(void *inPtr) {
 	}
 
 	// Create buffers as specified in config file.
-	dvs128AllocateTransfers(handle, U32T(atomic_load(&state->usbBufferNumber)),
-		U32T(atomic_load(&state->usbBufferSize)));
+	usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
+		U32T(atomic_load(&state->usbBufferSize)), DVS_DATA_ENDPOINT);
 
 	// Signal data thread ready back to start function.
 	atomic_store(&state->dataAcquisitionThreadRun, true);
@@ -1277,19 +1000,19 @@ static int dvs128DataAcquisitionThread(void *inPtr) {
 	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
 
 	while (atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)
-		&& state->activeDataTransfers > 0) {
+		&& state->usbState.activeDataTransfers > 0) {
 		// Check config refresh, in this case to adjust buffer sizes.
 		if (atomic_load_explicit(&state->dataAcquisitionThreadConfigUpdate, memory_order_relaxed) != 0) {
 			dvs128DataAcquisitionThreadConfig(handle);
 		}
 
-		libusb_handle_events_timeout(state->deviceContext, &te);
+		libusb_handle_events_timeout(state->usbState.deviceContext, &te);
 	}
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "shutting down data acquisition thread ...");
 
 	// Cancel all transfers and handle them.
-	dvs128DeallocateTransfers(handle);
+	usbDeallocateTransfers(&state->usbState);
 
 	// Ensure shutdown is stored and notified, could be because of all data transfers going away!
 	atomic_store(&state->dataAcquisitionThreadRun, false);
@@ -1312,8 +1035,8 @@ static void dvs128DataAcquisitionThreadConfig(dvs128Handle handle) {
 
 	if ((configUpdate >> 0) & 0x01) {
 		// Do buffer size change: cancel all and recreate them.
-		dvs128DeallocateTransfers(handle);
-		dvs128AllocateTransfers(handle, U32T(atomic_load(&state->usbBufferNumber)),
-			U32T(atomic_load(&state->usbBufferSize)));
+		usbDeallocateTransfers(&state->usbState);
+		usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
+			U32T(atomic_load(&state->usbBufferSize)), DVS_DATA_ENDPOINT);
 	}
 }

@@ -3,6 +3,7 @@ SET(LIBCAER_SRC_FILES
 	log.c
 	events.c
 	frame_utils.c
+	usb_utils.c
 	device.c
 	dvs128.c
 	davis_common.c

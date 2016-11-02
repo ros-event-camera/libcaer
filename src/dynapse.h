@@ -3,16 +3,15 @@
 
 #include "devices/dynapse.h"
 #include "ringbuffer/ringbuffer.h"
+#include "usb_utils.h"
 #include <stdatomic.h>
-#include <libusb.h>
 
 #if defined(HAVE_PTHREADS)
-#include "c11threads_posix.h"
+	#include "c11threads_posix.h"
 #endif
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"
 
-#define DYNAPSE_DEVICE_VID 0x152A
 #define DYNAPSE_DEVICE_PID 0x841D
 #define DYNAPSE_DEVICE_DID_TYPE 0x00
 
@@ -24,11 +23,6 @@
 
 #define DYNAPSE_SPIKE_DEFAULT_SIZE 4096
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
-
-#define DYNAPSE_DATA_ENDPOINT 0x82
-
-#define VENDOR_REQUEST_FPGA_CONFIG          0xBF
-#define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
 
 struct dynapse_state {
 	// Data Acquisition Thread -> Mainloop Exchange
@@ -44,8 +38,7 @@ struct dynapse_state {
 	void *dataShutdownUserPtr;
 	// USB Device State
 	char deviceThreadName[15 + 1]; // +1 for terminating NUL character.
-	libusb_context *deviceContext;
-	libusb_device_handle *deviceHandle;
+	struct usb_state usbState;
 	// USB Transfer Settings
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
@@ -53,9 +46,6 @@ struct dynapse_state {
 	thrd_t dataAcquisitionThread;
 	atomic_bool dataAcquisitionThreadRun;
 	atomic_uint_fast32_t dataAcquisitionThreadConfigUpdate;
-	struct libusb_transfer **dataTransfers;
-	size_t dataTransfersLength;
-	size_t activeDataTransfers;
 	// Timestamp fields
 	int32_t wrapOverflow;
 	int32_t wrapAdd;

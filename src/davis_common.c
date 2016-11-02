@@ -1,15 +1,6 @@
 #include "davis_common.h"
 
-static bool spiConfigSend(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
-static bool spiConfigReceive(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
-static libusb_device_handle *davisDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
-	uint8_t devType, uint8_t busNumber, uint8_t devAddress, const char *serialNumber, uint16_t requiredLogicRevision,
-	uint16_t requiredFirmwareVersion);
-static void davisDeviceClose(libusb_device_handle *devHandle);
-static void davisAllocateTransfers(davisHandle handle, uint32_t bufferNum, uint32_t bufferSize);
-static void davisDeallocateTransfers(davisHandle handle);
-static void LIBUSB_CALL davisLibUsbCallback(struct libusb_transfer *transfer);
-static void davisEventTranslator(davisHandle handle, uint8_t *buffer, size_t bytesSent);
+static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static int davisDataAcquisitionThread(void *inPtr);
 static void davisDataAcquisitionThreadConfig(davisHandle handle);
 
@@ -200,7 +191,7 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID
 	originalThreadName[15] = '\0';
 
 	thrd_set_name(state->deviceThreadName);
-	int res = libusb_init(&state->deviceContext);
+	int res = libusb_init(&state->usbState.deviceContext);
 
 	thrd_set_name(originalThreadName);
 
@@ -210,95 +201,79 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID
 	}
 
 	// Try to open a DAVIS device on a specific USB port.
-	state->deviceHandle = davisDeviceOpen(state->deviceContext, VID, PID, DID_TYPE, busNumberRestrict,
+	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext, VID, PID, DID_TYPE, busNumberRestrict,
 		devAddressRestrict, serialNumberRestrict, requiredLogicRevision, requiredFirmwareVersion);
-	if (state->deviceHandle == NULL) {
-		libusb_exit(state->deviceContext);
+	if (state->usbState.deviceHandle == NULL) {
+		libusb_exit(state->usbState.deviceContext);
 
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to open %s device.", deviceName);
 		return (false);
 	}
 
-	// At this point we can get some more precise data on the device and update
-	// the logging string to reflect that and be more informative.
-	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
-	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
+	state->usbState.userData = handle;
+	state->usbState.userCallback = &davisEventTranslator;
 
-	char serialNumber[8 + 1] = { 0 };
-	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
-		8 + 1);
+	struct usb_info usbInfo = usbGenerateInfo(state->usbState.deviceHandle, deviceName, deviceID);
+	if (usbInfo.deviceString == NULL) {
+		usbDeviceClose(state->usbState.deviceHandle);
+		libusb_exit(state->usbState.deviceContext);
 
-	// Check serial number success and length.
-	if (getStringDescResult < 0 || getStringDescResult > 8) {
-		davisDeviceClose(state->deviceHandle);
-		libusb_exit(state->deviceContext);
-
-		caerLog(CAER_LOG_CRITICAL, __func__, "Unable to get serial number for %s device.", deviceName);
 		return (false);
 	}
-
-	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-		deviceName, deviceID, serialNumber, busNumber, devAddress);
-
-	char *fullLogString = malloc(fullLogStringLength + 1);
-	if (fullLogString == NULL) {
-		davisDeviceClose(state->deviceHandle);
-		libusb_exit(state->deviceContext);
-
-		caerLog(CAER_LOG_CRITICAL, __func__, "Unable to allocate memory for %s device info string.", deviceName);
-		return (false);
-	}
-
-	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
-		deviceID, serialNumber, busNumber, devAddress);
 
 	// Populate info variables based on data from device.
 	uint32_t param32 = 0;
 
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, serialNumber, 8 + 1);
-	handle->info.deviceUSBBusNumber = busNumber;
-	handle->info.deviceUSBDeviceAddress = devAddress;
-	handle->info.deviceString = fullLogString;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
+	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, 8 + 1);
+	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
+	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
+	handle->info.deviceString = usbInfo.deviceString;
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER,
+		&param32);
 	handle->info.deviceIsMaster = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
 	handle->info.logicClock = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
 	handle->info.adcClock = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER,
+		&param32);
 	handle->info.chipID = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
 	handle->info.dvsHasPixelFilter = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER,
+		&param32);
 	handle->info.dvsHasBackgroundActivityFilter = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR,
+		&param32);
 	handle->info.dvsHasTestEventGenerator = param32;
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
 	handle->info.apsColorFilter = U8T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
 	handle->info.apsHasGlobalShutter = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_QUAD_ROI, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_QUAD_ROI, &param32);
 	handle->info.apsHasQuadROI = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC, &param32);
 	handle->info.apsHasExternalADC = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_INTERNAL_ADC, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_INTERNAL_ADC, &param32);
 	handle->info.apsHasInternalADC = param32;
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR,
+		&param32);
 	handle->info.extInputHasGenerator = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS,
+		&param32);
 	handle->info.extInputHasExtraDetectors = param32;
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
 	state->dvsSizeX = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
 	state->dvsSizeY = I16T(param32);
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
 	state->dvsInvertXY = U16T(param32) & 0x04;
 
 	if (state->dvsInvertXY) {
@@ -310,12 +285,12 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID
 		handle->info.dvsSizeY = state->dvsSizeY;
 	}
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
 	state->apsSizeX = I16T(param32);
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
 	state->apsSizeY = I16T(param32);
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
 	uint16_t apsOrientationInfo = U16T(param32);
 	state->apsInvertXY = apsOrientationInfo & 0x04;
 	state->apsFlipX = apsOrientationInfo & 0x02;
@@ -330,8 +305,9 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID
 		handle->info.apsSizeY = state->apsSizeY;
 	}
 
-	caerLog(CAER_LOG_DEBUG, fullLogString, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		busNumber, devAddress);
+	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
+		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
+		usbInfo.devAddress);
 
 	return (true);
 }
@@ -340,10 +316,10 @@ bool davisCommonClose(davisHandle handle) {
 	davisState state = &handle->state;
 
 	// Finally, close the device fully.
-	davisDeviceClose(state->deviceHandle);
+	usbDeviceClose(state->usbState.deviceHandle);
 
 	// Destroy libusb context.
-	libusb_exit(state->deviceContext);
+	libusb_exit(state->usbState.deviceContext);
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
 
@@ -850,7 +826,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RESET: {
@@ -873,7 +849,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						spiMultiConfig[10] = 0x00;
 						spiMultiConfig[11] = 0x00;
 
-						return (libusb_control_transfer(state->deviceHandle,
+						return (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0)
 							== sizeof(spiMultiConfig));
@@ -897,7 +873,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_DVS_FILTER_ROW_ONLY_EVENTS:
 				case DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW:
@@ -911,10 +887,11 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.dvsHasPixelFilter) {
 						if (handle->state.dvsInvertXY) {
 							// Convert to column if X/Y inverted.
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr + 1), param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr + 1),
+								param));
 						}
 						else {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 						}
 					}
 					else {
@@ -933,10 +910,11 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.dvsHasPixelFilter) {
 						if (handle->state.dvsInvertXY) {
 							// Convert to row if X/Y inverted.
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr - 1), param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr - 1),
+								param));
 						}
 						else {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 						}
 					}
 					else {
@@ -947,7 +925,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -956,7 +934,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
 					if (handle->info.dvsHasTestEventGenerator) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -975,7 +953,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_RESET_READ:
 				case DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_APS_ROW_SETTLE:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_APS_RESET_SETTLE:
@@ -983,7 +961,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
 					if (!IS_DAVISRGB(handle->info.chipID)) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -994,10 +972,10 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 					if (state->apsInvertXY) {
 						// Convert to row if X/Y inverted.
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1), param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1), param));
 					}
 					else {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					break;
 
@@ -1005,10 +983,10 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_END_ROW_0:
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1), param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1), param));
 					}
 					else {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					break;
 
@@ -1016,19 +994,19 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_FRAME_DELAY:
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr,
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr,
 						param * U16T(handle->info.adcClock)));
 					break;
 
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
 						// Keep in sync with chip config module GlobalShutter parameter.
-						if (!spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER,
-							param)) {
+						if (!spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP,
+							DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
 							return (false);
 						}
 
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1045,10 +1023,11 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.apsHasQuadROI) {
 						if (state->apsInvertXY) {
 							// Convert to row if X/Y inverted.
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1), param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1),
+								param));
 						}
 						else {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 						}
 					}
 					else {
@@ -1065,10 +1044,11 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.apsHasQuadROI) {
 						if (state->apsInvertXY) {
 							// Convert to column if X/Y inverted.
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1), param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1),
+								param));
 						}
 						else {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 						}
 					}
 					else {
@@ -1083,7 +1063,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_RAMP_SHORT_RESET:
 				case DAVIS_CONFIG_APS_ADC_TEST_MODE:
 					if (handle->info.apsHasInternalADC) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1098,7 +1078,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVISRGB_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
 					if (IS_DAVISRGB(handle->info.chipID)) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1125,7 +1105,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						spiMultiConfig[10] = 0x00;
 						spiMultiConfig[11] = 0x00;
 
-						return (libusb_control_transfer(state->deviceHandle,
+						return (libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 							VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0)
 							== sizeof(spiMultiConfig));
@@ -1151,7 +1131,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_IMU, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
 				default:
@@ -1168,7 +1148,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
@@ -1179,7 +1159,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1199,7 +1179,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2:
 					if (handle->info.extInputHasExtraDetectors) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1218,7 +1198,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				if (IS_DAVIS240(handle->info.chipID)) {
 					// DAVIS240 uses the old bias generator with 22 branches, and uses all of them.
 					if (paramAddr < 22) {
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 					}
 				}
 				else if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
@@ -1253,13 +1233,13 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS128_CONFIG_BIAS_SSP:
 						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						case DAVIS346_CONFIG_BIAS_ADCTESTVOLTAGE:
 							// Only supported by DAVIS346 and DAVIS640 chips.
 							if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
-								return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1269,7 +1249,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVIS208_CONFIG_BIAS_REFSSBN:
 							// Only supported by DAVIS208 chips.
 							if (IS_DAVIS208(handle->info.chipID)) {
-								return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1315,7 +1295,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVISRGB_CONFIG_BIAS_BIASBUFFER:
 						case DAVISRGB_CONFIG_BIAS_SSP:
 						case DAVISRGB_CONFIG_BIAS_SSN:
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						default:
@@ -1341,13 +1321,13 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
-						return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS240_CONFIG_CHIP_SPECIALPIXELCONTROL:
 						// Only supported by DAVIS240 A/B chips.
 						if (IS_DAVIS240A(handle->info.chipID) || IS_DAVIS240B(handle->info.chipID)) {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1355,12 +1335,12 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						// Only supported by some chips.
 						if (handle->info.apsHasGlobalShutter) {
 							// Keep in sync with APS module GlobalShutter parameter.
-							if (!spiConfigSend(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER,
-								param)) {
+							if (!spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+								DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
 								return (false);
 							}
 
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1369,7 +1349,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						if (IS_DAVIS128(
 							handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
 							|| IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1377,7 +1357,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(
 							handle->info.chipID) || IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1386,7 +1366,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1394,7 +1374,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVIS208_CONFIG_CHIP_SELECTHIGHPASS:
 						// Only supported by DAVIS208.
 						if (IS_DAVIS208(handle->info.chipID)) {
-							return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1416,7 +1396,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			switch (paramAddr) {
 				case DAVIS_CONFIG_USB_RUN:
 				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigSend(state->deviceHandle, DAVIS_CONFIG_USB, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -1502,7 +1482,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RESET:
@@ -1532,7 +1512,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER:
 				case DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER:
 				case DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW:
@@ -1546,10 +1526,11 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.dvsHasPixelFilter) {
 						if (handle->state.dvsInvertXY) {
 							// Convert to column if X/Y inverted.
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr + 1), param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr + 1),
+								param));
 						}
 						else {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 						}
 					}
 					else {
@@ -1568,10 +1549,11 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.dvsHasPixelFilter) {
 						if (handle->state.dvsInvertXY) {
 							// Convert to row if X/Y inverted.
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr - 1), param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, U8T(paramAddr - 1),
+								param));
 						}
 						else {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 						}
 					}
 					else {
@@ -1582,7 +1564,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1591,7 +1573,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
 					if (handle->info.dvsHasTestEventGenerator) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1618,17 +1600,18 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_HAS_QUAD_ROI:
 				case DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC:
 				case DAVIS_CONFIG_APS_HAS_INTERNAL_ADC:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_APS_START_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 					if (state->apsInvertXY) {
 						// Convert to row if X/Y inverted.
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1), param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1),
+							param));
 					}
 					else {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					break;
 
@@ -1636,10 +1619,11 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_END_ROW_0:
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1), param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1),
+							param));
 					}
 					else {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					break;
 
@@ -1648,7 +1632,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
 					if (!IS_DAVISRGB(handle->info.chipID)) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1660,7 +1644,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					// Exposure and Frame Delay are in µs, must be converted from native FPGA cycles
 					// by dividing with ADC clock value.
 					uint32_t cyclesValue = 0;
-					if (!spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, &cyclesValue)) {
+					if (!spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, &cyclesValue)) {
 						return (false);
 					}
 
@@ -1672,7 +1656,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1688,10 +1672,11 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.apsHasQuadROI) {
 						if (state->apsInvertXY) {
 							// Convert to row if X/Y inverted.
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1), param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1),
+								param));
 						}
 						else {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 						}
 					}
 					else {
@@ -1708,10 +1693,11 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.apsHasQuadROI) {
 						if (state->apsInvertXY) {
 							// Convert to column if X/Y inverted.
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1), param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1),
+								param));
 						}
 						else {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 						}
 					}
 					else {
@@ -1726,7 +1712,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_RAMP_SHORT_RESET:
 				case DAVIS_CONFIG_APS_ADC_TEST_MODE:
 					if (handle->info.apsHasInternalADC) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1741,7 +1727,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVISRGB_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
 					if (IS_DAVISRGB(handle->info.chipID)) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1771,7 +1757,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_IMU, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
 				default:
@@ -1790,7 +1776,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
 				case DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR:
 				case DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
@@ -1801,7 +1787,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1821,7 +1807,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2:
 					if (handle->info.extInputHasExtraDetectors) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1840,7 +1826,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				if (IS_DAVIS240(handle->info.chipID)) {
 					// DAVIS240 uses the old bias generator with 22 branches, and uses all of them.
 					if (paramAddr < 22) {
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 					}
 				}
 				else if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
@@ -1875,13 +1861,14 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS128_CONFIG_BIAS_SSP:
 						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						case DAVIS346_CONFIG_BIAS_ADCTESTVOLTAGE:
 							// Only supported by DAVIS346 and DAVIS640 chips.
 							if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
-								return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr,
+									param));
 							}
 							break;
 
@@ -1891,7 +1878,8 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVIS208_CONFIG_BIAS_REFSSBN:
 							// Only supported by DAVIS208 chips.
 							if (IS_DAVIS208(handle->info.chipID)) {
-								return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr,
+									param));
 							}
 							break;
 
@@ -1937,7 +1925,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						case DAVISRGB_CONFIG_BIAS_BIASBUFFER:
 						case DAVISRGB_CONFIG_BIAS_SSP:
 						case DAVISRGB_CONFIG_BIAS_SSN:
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						default:
@@ -1963,20 +1951,20 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
-						return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+						return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS240_CONFIG_CHIP_SPECIALPIXELCONTROL:
 						// Only supported by DAVIS240 A/B chips.
 						if (IS_DAVIS240A(handle->info.chipID) || IS_DAVIS240B(handle->info.chipID)) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
 					case DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER:
 						// Only supported by some chips.
 						if (handle->info.apsHasGlobalShutter) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1985,7 +1973,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						if (IS_DAVIS128(
 							handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
 							|| IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1993,7 +1981,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(
 							handle->info.chipID) || IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -2002,7 +1990,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -2010,7 +1998,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					case DAVIS208_CONFIG_CHIP_SELECTHIGHPASS:
 						// Only supported by DAVIS208.
 						if (IS_DAVIS208(handle->info.chipID)) {
-							return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -2030,7 +2018,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER:
 				case DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK:
 				case DAVIS_CONFIG_SYSINFO_ADC_CLOCK:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, paramAddr, param));
 					break;
 
 				default:
@@ -2043,7 +2031,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			switch (paramAddr) {
 				case DAVIS_CONFIG_USB_RUN:
 				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_USB, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -2158,24 +2146,24 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	// Default IMU settings (for event parsing).
 	uint32_t param32 = 0;
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE, &param32);
 	state->imuAccelScale = calculateIMUAccelScale(U8T(param32));
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, &param32);
 	state->imuGyroScale = calculateIMUGyroScale(U8T(param32));
 
 	// Default APS settings (for event parsing).
 	uint32_t param32start = 0;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, &param32start);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, &param32start);
 
 	// If StartColumn0 is bigger or equal to APS size X, disable ROI region 0.
 	if (param32start < U32T(state->apsSizeX)) {
-		spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, &param32);
+		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, &param32);
 
 		state->apsROISizeX[0] = U16T(param32 + 1 - param32start);
 		state->apsROIPositionX[0] = U16T(param32start);
 
-		spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, &param32start);
-		spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, &param32);
+		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, &param32start);
+		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, &param32);
 
 		state->apsROISizeY[0] = U16T(param32 + 1 - param32start);
 		state->apsROIPositionY[0] = U16T(param32start);
@@ -2186,9 +2174,9 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 		state->apsROISizeY[0] = state->apsROIPositionY[0] = 0;
 	}
 
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, &param32);
 	state->apsGlobalShutter = param32;
-	spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
 	state->apsResetRead = param32;
 
 	if ((errno = thrd_create(&state->dataAcquisitionThread, &davisDataAcquisitionThread, handle)) != thrd_success) {
@@ -2293,304 +2281,6 @@ caerEventPacketContainer davisCommonDataGet(caerDeviceHandle cdh) {
 	return (NULL);
 }
 
-static bool spiConfigSend(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (libusb_control_transfer(devHandle,
-		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) == sizeof(spiConfig));
-}
-
-static bool spiConfigReceive(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	if (libusb_control_transfer(devHandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-	VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
-		return (false);
-	}
-
-	*param = 0;
-	*param |= U32T(spiConfig[0] << 24);
-	*param |= U32T(spiConfig[1] << 16);
-	*param |= U32T(spiConfig[2] << 8);
-	*param |= U32T(spiConfig[3] << 0);
-
-	return (true);
-}
-
-static libusb_device_handle *davisDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
-	uint8_t devType, uint8_t busNumber, uint8_t devAddress, const char *serialNumber, uint16_t requiredLogicRevision,
-	uint16_t requiredFirmwareVersion) {
-	libusb_device_handle *devHandle = NULL;
-	libusb_device **devicesList;
-
-	ssize_t result = libusb_get_device_list(devContext, &devicesList);
-
-	if (result >= 0) {
-		// Cycle thorough all discovered devices and find a match.
-		for (size_t i = 0; i < (size_t) result; i++) {
-			struct libusb_device_descriptor devDesc;
-
-			if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
-				continue;
-			}
-
-			// Check if this is the device we want (VID/PID).
-			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID
-				&& U8T((devDesc.bcdDevice & 0xFF00) >> 8) == devType) {
-				// Verify device firmware version.
-				if (U8T(devDesc.bcdDevice & 0x00FF) < requiredFirmwareVersion) {
-					caerLog(CAER_LOG_CRITICAL, __func__,
-						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
-						U8T(devDesc.bcdDevice & 0x00FF), requiredFirmwareVersion);
-
-					continue;
-				}
-
-				// If a USB port restriction is given, honor it.
-				if (busNumber > 0 && libusb_get_bus_number(devicesList[i]) != busNumber) {
-					caerLog(CAER_LOG_INFO, __func__,
-						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						busNumber, libusb_get_bus_number(devicesList[i]));
-
-					continue;
-				}
-
-				if (devAddress > 0 && libusb_get_device_address(devicesList[i]) != devAddress) {
-					caerLog(CAER_LOG_INFO, __func__,
-						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						devAddress, libusb_get_device_address(devicesList[i]));
-
-					continue;
-				}
-
-				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
-					devHandle = NULL;
-
-					continue;
-				}
-
-				// Check the serial number restriction, if any is present.
-				if (serialNumber != NULL && !caerStrEquals(serialNumber, "")) {
-					char deviceSerialNumber[8 + 1] = { 0 };
-					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
-						(unsigned char *) deviceSerialNumber, 8 + 1);
-
-					// Check serial number success and length.
-					if (getStringDescResult < 0 || getStringDescResult > 8) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						continue;
-					}
-
-					// Now check if the Serial Number matches.
-					if (!caerStrEquals(serialNumber, deviceSerialNumber)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						caerLog(CAER_LOG_INFO, __func__,
-							"USB serial number restriction is present (%s), this device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						continue;
-					}
-				}
-
-				// Check that the active configuration is set to number 1. If not, do so.
-				int activeConfiguration;
-				if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
-
-				if (activeConfiguration != 1) {
-					if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						continue;
-					}
-				}
-
-				// Claim interface 0 (default).
-				if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
-
-				// Communication with device open, get logic version information.
-				uint32_t param32 = 0;
-
-				spiConfigReceive(devHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
-				uint16_t logicVersion = U16T(param32);
-
-				// Verify device logic version.
-				if (logicVersion < requiredLogicRevision) {
-					libusb_release_interface(devHandle, 0);
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					caerLog(CAER_LOG_CRITICAL, __func__,
-						"Device logic revision too old. You have revision %" PRIu16 "; but at least revision %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
-						logicVersion, requiredLogicRevision);
-
-					continue;
-				}
-
-				// Found and configured it!
-				break;
-			}
-		}
-
-		libusb_free_device_list(devicesList, true);
-	}
-
-	return (devHandle);
-}
-
-static void davisDeviceClose(libusb_device_handle *devHandle) {
-	// Release interface 0 (default).
-	libusb_release_interface(devHandle, 0);
-
-	libusb_close(devHandle);
-}
-
-static void davisAllocateTransfers(davisHandle handle, uint32_t bufferNum, uint32_t bufferSize) {
-	davisState state = &handle->state;
-
-	// Set number of transfers and allocate memory for the main transfer array.
-	state->dataTransfers = calloc(bufferNum, sizeof(struct libusb_transfer *));
-	if (state->dataTransfers == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-			"Failed to allocate memory for %" PRIu32 " libusb transfers. Error: %d.", bufferNum, errno);
-		return;
-	}
-	state->dataTransfersLength = bufferNum;
-
-	// Allocate transfers and set them up.
-	for (size_t i = 0; i < bufferNum; i++) {
-		state->dataTransfers[i] = libusb_alloc_transfer(0);
-		if (state->dataTransfers[i] == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to allocate further libusb transfers (%zu of %" PRIu32 ").", i, bufferNum);
-			continue;
-		}
-
-		// Create data buffer.
-		state->dataTransfers[i]->length = (int) bufferSize;
-		state->dataTransfers[i]->buffer = malloc(bufferSize);
-		if (state->dataTransfers[i]->buffer == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to allocate buffer for libusb transfer %zu. Error: %d.", i, errno);
-
-			libusb_free_transfer(state->dataTransfers[i]);
-			state->dataTransfers[i] = NULL;
-
-			continue;
-		}
-
-		// Initialize Transfer.
-		state->dataTransfers[i]->dev_handle = state->deviceHandle;
-		state->dataTransfers[i]->endpoint = DAVIS_DATA_ENDPOINT;
-		state->dataTransfers[i]->type = LIBUSB_TRANSFER_TYPE_BULK;
-		state->dataTransfers[i]->callback = &davisLibUsbCallback;
-		state->dataTransfers[i]->user_data = handle;
-		state->dataTransfers[i]->timeout = 0;
-		state->dataTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
-
-		if ((errno = libusb_submit_transfer(state->dataTransfers[i])) == LIBUSB_SUCCESS) {
-			state->activeDataTransfers++;
-		}
-		else {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Unable to submit libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
-
-			// The transfer buffer is freed automatically here thanks to
-			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
-			libusb_free_transfer(state->dataTransfers[i]);
-			state->dataTransfers[i] = NULL;
-
-			continue;
-		}
-	}
-
-	if (state->activeDataTransfers == 0) {
-		// Didn't manage to allocate any USB transfers, free array memory and log failure.
-		free(state->dataTransfers);
-		state->dataTransfers = NULL;
-		state->dataTransfersLength = 0;
-
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Unable to allocate any libusb transfers.");
-	}
-}
-
-static void davisDeallocateTransfers(davisHandle handle) {
-	davisState state = &handle->state;
-
-	// Cancel all current transfers first.
-	for (size_t i = 0; i < state->dataTransfersLength; i++) {
-		if (state->dataTransfers[i] != NULL) {
-			errno = libusb_cancel_transfer(state->dataTransfers[i]);
-			if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Unable to cancel libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
-				// Proceed with trying to cancel all transfers regardless of errors.
-			}
-		}
-	}
-
-	// Wait for all transfers to go away (0.1 seconds timeout).
-	struct timeval te = { .tv_sec = 0, .tv_usec = 100000 };
-
-	while (state->activeDataTransfers > 0) {
-		libusb_handle_events_timeout(state->deviceContext, &te);
-	}
-
-	// The buffers and transfers have been deallocated in the callback.
-	// Only the transfers array remains, which we free here.
-	free(state->dataTransfers);
-	state->dataTransfers = NULL;
-	state->dataTransfersLength = 0;
-}
-
-static void LIBUSB_CALL davisLibUsbCallback(struct libusb_transfer *transfer) {
-	davisHandle handle = transfer->user_data;
-	davisState state = &handle->state;
-
-	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
-		// Handle data.
-		davisEventTranslator(handle, transfer->buffer, (size_t) transfer->actual_length);
-	}
-
-	if (transfer->status != LIBUSB_TRANSFER_CANCELLED && transfer->status != LIBUSB_TRANSFER_NO_DEVICE) {
-		// Submit transfer again.
-		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
-			return;
-		}
-	}
-
-	// Cannot recover (cancelled, no device, or other critical error).
-	// Signal this by adjusting the counter, free and exit.
-	state->activeDataTransfers--;
-	for (size_t i = 0; i < state->dataTransfersLength; i++) {
-		// Remove from list, so we don't try to cancel it later on.
-		if (state->dataTransfers[i] == transfer) {
-			state->dataTransfers[i] = NULL;
-		}
-	}
-	libusb_free_transfer(transfer);
-}
-
 #define TS_WRAP_ADD 0x8000
 
 static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestamp) {
@@ -2604,7 +2294,8 @@ static inline void initContainerCommitTimestamp(davisState state) {
 	}
 }
 
-static void davisEventTranslator(davisHandle handle, uint8_t *buffer, size_t bytesSent) {
+static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+	davisHandle handle = vhd;
 	davisState state = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
@@ -3752,8 +3443,8 @@ static void davisEventTranslator(davisHandle handle, uint8_t *buffer, size_t byt
 			if (containerTimeCommit) {
 				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
 					> state->currentPacketContainerCommitTimestamp) {
-					state->currentPacketContainerCommitTimestamp += I32T(atomic_load_explicit(
-						&state->maxPacketContainerInterval, memory_order_relaxed));
+					state->currentPacketContainerCommitTimestamp += I32T(
+						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
 				}
 			}
 
@@ -3862,8 +3553,8 @@ static int davisDataAcquisitionThread(void *inPtr) {
 	}
 
 	// Create buffers as specified in config file.
-	davisAllocateTransfers(handle, U32T(atomic_load(&state->usbBufferNumber)),
-		U32T(atomic_load(&state->usbBufferSize)));
+	usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
+		U32T(atomic_load(&state->usbBufferSize)), USB_DEFAULT_DATA_ENDPOINT);
 
 	// Signal data thread ready back to start function.
 	atomic_store(&state->dataAcquisitionThreadRun, true);
@@ -3874,19 +3565,19 @@ static int davisDataAcquisitionThread(void *inPtr) {
 	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
 
 	while (atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)
-		&& state->activeDataTransfers > 0) {
+		&& state->usbState.activeDataTransfers > 0) {
 		// Check config refresh, in this case to adjust buffer sizes.
 		if (atomic_load_explicit(&state->dataAcquisitionThreadConfigUpdate, memory_order_relaxed) != 0) {
 			davisDataAcquisitionThreadConfig(handle);
 		}
 
-		libusb_handle_events_timeout(state->deviceContext, &te);
+		libusb_handle_events_timeout(state->usbState.deviceContext, &te);
 	}
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "shutting down data acquisition thread ...");
 
 	// Cancel all transfers and handle them.
-	davisDeallocateTransfers(handle);
+	usbDeallocateTransfers(&state->usbState);
 
 	// Ensure shutdown is stored and notified, could be because of all data transfers going away!
 	atomic_store(&state->dataAcquisitionThreadRun, false);
@@ -3909,9 +3600,9 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 
 	if ((configUpdate >> 0) & 0x01) {
 		// Do buffer size change: cancel all and recreate them.
-		davisDeallocateTransfers(handle);
-		davisAllocateTransfers(handle, U32T(atomic_load(&state->usbBufferNumber)),
-			U32T(atomic_load(&state->usbBufferSize)));
+		usbDeallocateTransfers(&state->usbState);
+		usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
+			U32T(atomic_load(&state->usbBufferSize)), USB_DEFAULT_DATA_ENDPOINT);
 	}
 
 	if ((configUpdate >> 1) & 0x01) {
@@ -3919,7 +3610,8 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 		// inside asynchronous callback.
 		uint32_t param32 = 0;
 
-		spiConfigReceive(state->deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER,
+			&param32);
 
 		atomic_thread_fence(memory_order_seq_cst);
 		handle->info.deviceIsMaster = param32;

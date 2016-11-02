@@ -3,8 +3,8 @@
 
 #include "devices/dvs128.h"
 #include "ringbuffer/ringbuffer.h"
+#include "usb_utils.h"
 #include <stdatomic.h>
-#include <libusb.h>
 
 #if defined(HAVE_PTHREADS)
 	#include "c11threads_posix.h"
@@ -12,7 +12,6 @@
 
 #define DVS_DEVICE_NAME "DVS128"
 
-#define DVS_DEVICE_VID 0x152A
 #define DVS_DEVICE_PID 0x8400
 #define DVS_DEVICE_DID_TYPE 0x00
 
@@ -53,8 +52,7 @@ struct dvs128_state {
 	void *dataShutdownUserPtr;
 	// USB Device State
 	char deviceThreadName[15 + 1]; // +1 for terminating NUL character.
-	libusb_context *deviceContext;
-	libusb_device_handle *deviceHandle;
+	struct usb_state usbState;
 	// USB Transfer Settings
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
@@ -62,9 +60,6 @@ struct dvs128_state {
 	thrd_t dataAcquisitionThread;
 	atomic_bool dataAcquisitionThreadRun;
 	atomic_uint_fast32_t dataAcquisitionThreadConfigUpdate;
-	struct libusb_transfer **dataTransfers;
-	size_t dataTransfersLength;
-	size_t activeDataTransfers;
 	// Timestamp fields
 	int32_t wrapOverflow;
 	int32_t wrapAdd;
