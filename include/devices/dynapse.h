@@ -220,6 +220,128 @@ extern "C" {
  */
 #define DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY 1
 
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_BIAS:
+ * DYNAPSE chip biases.
+ * Bias configuration values must be generated using the proper
+ * functions, which are:
+ * - convertBias() for coarse-fine (current) biases.
+ * See 'http://inilabs.com/support/biasing/' for more details.
+ */
+#define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P             	0
+#define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_S_N            2
+#define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_F_N            4
+#define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_S_N         	6
+#define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_F_N        	8
+#define DYNAPSE_CONFIG_BIAS_C0_IF_RFR_N          			10
+#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU1_N         			12
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTAU_N           		14
+#define DYNAPSE_CONFIG_BIAS_C0_IF_CASC_N 					16
+#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU2_N         			18
+#define DYNAPSE_CONFIG_BIAS_C0_IF_BUF_P               		20
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N             		22
+#define DYNAPSE_CONFIG_BIAS_C0_IF_THR_N            			24
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_S_P             	26
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P            	38
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_F_P      			30
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P            	32
+#define DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N            		34
+#define DYNAPSE_CONFIG_BIAS_C0_IF_DC_P           			36
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHW_P          			38
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_S_P          		40
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_F_P 				42
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_F_P         		44
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_S_P               46
+#define DYNAPSE_CONFIG_BIAS_C0_R2R_P               			48
+
+#define DYNAPSE_CONFIG_BIAS_C1_PULSE_PWLK_P             	1
+#define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_S_N            3
+#define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_F_N            5
+#define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_S_N         	7
+#define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_F_N        	9
+#define DYNAPSE_CONFIG_BIAS_C1_IF_RFR_N          			11
+#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU1_N         			13
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTAU_N           		15
+#define DYNAPSE_CONFIG_BIAS_C1_IF_CASC_N 					17
+#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU2_N         			19
+#define DYNAPSE_CONFIG_BIAS_C1_IF_BUF_P               		21
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTHR_N             		23
+#define DYNAPSE_CONFIG_BIAS_C1_IF_THR_N            			25
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_S_P             	27
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_F_P            	29
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_F_P      			31
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_S_P            	33
+#define DYNAPSE_CONFIG_BIAS_C1_IF_NMDA_N            		35
+#define DYNAPSE_CONFIG_BIAS_C1_IF_DC_P           			37
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHW_P          			39
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_S_P          		41
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_F_P 				43
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_F_P         		45
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_S_P               47
+#define DYNAPSE_CONFIG_BIAS_C1_R2R_P               			49
+
+#define DYNAPSE_CONFIG_BIAS_U_BUFFER         				50
+#define DYNAPSE_CONFIG_BIAS_U_SSP               			51
+#define DYNAPSE_CONFIG_BIAS_U_SSN               			52
+
+#define DYNAPSE_CONFIG_BIAS_C2_PULSE_PWLK_P             	64
+#define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_S_N            66
+#define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_F_N            68
+#define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_S_N         	70
+#define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_F_N        	72
+#define DYNAPSE_CONFIG_BIAS_C2_IF_RFR_N          			74
+#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU1_N         			76
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTAU_N           		78
+#define DYNAPSE_CONFIG_BIAS_C2_IF_CASC_N 					80
+#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU2_N         			82
+#define DYNAPSE_CONFIG_BIAS_C2_IF_BUF_P               		84
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTHR_N             		86
+#define DYNAPSE_CONFIG_BIAS_C2_IF_THR_N            			88
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_S_P             	90
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_F_P            	92
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_F_P      			94
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_S_P            	96
+#define DYNAPSE_CONFIG_BIAS_C2_IF_NMDA_N            		98
+#define DYNAPSE_CONFIG_BIAS_C2_IF_DC_P           			100
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHW_P          			102
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_S_P          		104
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_F_P 				106
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_F_P         		108
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_S_P               110
+#define DYNAPSE_CONFIG_BIAS_C2_R2R_P               			112
+
+#define DYNAPSE_CONFIG_BIAS_C3_PULSE_PWLK_P             	65
+#define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_INH_S_N            67
+#define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_INH_F_N            69
+#define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_EXC_S_N         	71
+#define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_EXC_F_N        	73
+#define DYNAPSE_CONFIG_BIAS_C3_IF_RFR_N          			75
+#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU1_N         			77
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTAU_N           		79
+#define DYNAPSE_CONFIG_BIAS_C3_IF_CASC_N 					81
+#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU2_N         			83
+#define DYNAPSE_CONFIG_BIAS_C3_IF_BUF_P               		85
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTHR_N             		87
+#define DYNAPSE_CONFIG_BIAS_C3_IF_THR_N            			89
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_S_P             	91
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_F_P            	93
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_F_P      			95
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_S_P            	97
+#define DYNAPSE_CONFIG_BIAS_C3_IF_NMDA_N            		99
+#define DYNAPSE_CONFIG_BIAS_C3_IF_DC_P           			101
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHW_P          			103
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_S_P          		105
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_F_P 				107
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_F_P         		109
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_S_P               111
+#define DYNAPSE_CONFIG_BIAS_C3_R2R_P               			113
+
+#define DYNAPSE_CONFIG_BIAS_D_BUFFER         				114
+#define DYNAPSE_CONFIG_BIAS_D_SSP               			115
+#define DYNAPSE_CONFIG_BIAS_D_SSN               			116
+
+
 /**
  * Dynap-se device-related information.
  */
