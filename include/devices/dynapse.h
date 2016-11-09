@@ -253,14 +253,16 @@ struct caer_dynapse_info {
  	uint8_t coarseValue;
  	/// Fine current, from 0 to 255, creates small variations in output current.
  	uint8_t fineValue;
- 	/// Bias current level: true for 'Normal, false for 'Low'.
+ 	/// Bias current level: true for 'HighBias, false for 'LowBias'.
  	bool BiasLowHi;
  	/// Bias type: true for 'Normal', false for 'Cascode'.
  	bool currentLevel;
- 	/// Bias sex: true for 'N' type, false for 'P' type.
+ 	/// Bias sex: true for 'NBias' type, false for 'PBias' type.
  	bool sex;
  	/// Whether this bias is enabled or not.
  	bool enabled;
+ 	/// whether this is a special bias.
+ 	bool special;
  };
 
 /**
