@@ -245,6 +245,25 @@ struct caer_dynapse_info {
 };
 
 /**
+  * On-chip coarse-fine bias current configuration.
+  * See 'http://inilabs.com/support/biasing/' for more details.
+ */
+ struct caer_bias_dynapse {
+ 	/// Coarse current, from 0 to 7, creates big variations in output current.
+ 	uint8_t coarseValue;
+ 	/// Fine current, from 0 to 255, creates small variations in output current.
+ 	uint8_t fineValue;
+ 	/// Bias current level: true for 'Normal, false for 'Low'.
+ 	bool BiasLowHi;
+ 	/// Bias type: true for 'Normal', false for 'Cascode'.
+ 	bool currentLevel;
+ 	/// Bias sex: true for 'N' type, false for 'P' type.
+ 	bool sex;
+ 	/// Whether this bias is enabled or not.
+ 	bool enabled;
+ };
+
+/**
  * Return basic information on the device, such as its ID, the logic
  * version, and so on. See the 'struct caer_dynapse_info' documentation
  * for more details.
