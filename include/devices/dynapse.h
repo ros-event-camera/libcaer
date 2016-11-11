@@ -220,6 +220,22 @@ extern "C" {
  */
 #define DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY 1
 
+/**
+ * Parameter address for module DYNAPSE_CONFIG_USB:
+ * the time delay after which a packet of data is committed to
+ * USB, even if it is not full yet (short USB packet).
+ * The value is in 125µs time-slices, corresponding to how
+ * USB schedules its operations (a value of 4 for example
+ * would mean waiting at most 0.5ms until sending a short
+ * USB packet to the host).
+ */
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
+
+#define DYNAPSE_CONFIG_DYNAPSE_U2	4
+#define DYNAPSE_CONFIG_DYNAPSE_U0	3
+#define DYNAPSE_CONFIG_DYNAPSE_U1	2
+#define DYNAPSE_CONFIG_DYNAPSE_U3	1
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_BIAS:
@@ -340,7 +356,6 @@ extern "C" {
 #define DYNAPSE_CONFIG_BIAS_D_BUFFER         				114
 #define DYNAPSE_CONFIG_BIAS_D_SSP               			115
 #define DYNAPSE_CONFIG_BIAS_D_SSN               			116
-
 
 /**
  * Dynap-se device-related information.
