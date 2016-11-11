@@ -237,6 +237,13 @@ extern "C" {
 #define DYNAPSE_CONFIG_DYNAPSE_U1	2
 #define DYNAPSE_CONFIG_DYNAPSE_U3	1
 
+#define DYNAPSE_CONFIG_NUMNEURONS		1024
+#define DYNAPSE_CONFIG_NUMCORES			4
+#define DYNAPSE_CONFIG_XCHIPSIZE   		32
+#define DYNAPSE_CONFIG_YCHIPSIZE   		32
+
+
+
 /**
  * Parameter address for module DYNAPSE_CONFIG_BIAS:
  * DYNAPSE chip biases.
