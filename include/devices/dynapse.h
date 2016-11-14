@@ -61,6 +61,27 @@ extern "C" {
  * the USB chip, usually a Cypress FX2 or FX3.
  */
 #define DYNAPSE_CONFIG_USB      9
+/**
+ * Clear CAM content
+ * Output USB data packets in streams of 512 bytes using libusb
+ * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_CLEAR_CAM, 0, 0); //0,0 not used
+ */
+#define DYNAPSE_CONFIG_CLEAR_CAM 10
+/**
+ * Clear SRAM content, use one SRAM cell to monitor neurons
+ * Output USB data packets in streams of 512 bytes using libusb
+ * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
+ */
+#define DYNAPSE_CONFIG_DEFAULT_SRAM 11
+/*
+ * Used to monitor neurons , example usage:
+ * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 0);  // core 1 neuron 0
+ *
+ * */
+#define DYNAPSE_CONFIG_MONITOR_NEU 12
+
+
+
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_MUX:
@@ -130,6 +151,8 @@ extern "C" {
  * DYNAPSE_CONFIG_AER_RUN has to be turned off for this to work.
  */
 #define DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL   10
+
+
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_CHIP:
@@ -232,16 +255,26 @@ extern "C" {
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
 
-#define DYNAPSE_CONFIG_DYNAPSE_U2	4
 #define DYNAPSE_CONFIG_DYNAPSE_U0	3
 #define DYNAPSE_CONFIG_DYNAPSE_U1	2
+#define DYNAPSE_CONFIG_DYNAPSE_U2	4
 #define DYNAPSE_CONFIG_DYNAPSE_U3	1
 
-#define DYNAPSE_CONFIG_NUMNEURONS		1024
-#define DYNAPSE_CONFIG_NUMCORES			4
-#define DYNAPSE_CONFIG_XCHIPSIZE   		32
-#define DYNAPSE_CONFIG_YCHIPSIZE   		32
+#define DYNAPSE_CONFIG_NUMNEURONS			1024
+#define DYNAPSE_CONFIG_NUMNEURONS_CORE	 	256
+#define DYNAPSE_CONFIG_NUMCORES				4
+#define DYNAPSE_CONFIG_NUMSRAM_NEU	    	4
+#define DYNAPSE_CONFIG_XCHIPSIZE   			32
+#define DYNAPSE_CONFIG_YCHIPSIZE   			32
 
+/*
+ *  libusb max 512 bytes per single transfer
+ * */
+#define DYNAPSE_CONFIG_MAX_USB_TRANSFER 512
+/*
+ *  maximum number of 6 bytes configuration parameters, it needs to fit in 512
+ * */
+#define DYNAPSE_CONFIG_MAX_PARAM_SIZE 85
 
 
 /**
