@@ -515,7 +515,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 
 	case DYNAPSE_CONFIG_DEFAULT_SRAM: {
 
-		uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS_CORE * DYNAPSE_CONFIG_NUMSRAM_NEU* 6] = { 0 };
+		uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS_CORE * DYNAPSE_CONFIG_NUMSRAM_NEU* 6] = { 0 }; // 6 pieces made of 8 bytes each
 		uint32_t numConfig = 0;
 		uint32_t idxConfig = 0;
 		uint32_t bits;
@@ -533,7 +533,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			case DYNAPSE_CONFIG_DYNAPSE_U1:
 				return(false);
 			case DYNAPSE_CONFIG_DYNAPSE_U2:
-
+				// route all neurons to the output south interface with 
+				// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2 
 				// all cores
 				for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 					// all rows
