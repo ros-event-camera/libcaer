@@ -266,6 +266,8 @@ extern "C" {
 #define DYNAPSE_CONFIG_NUMSRAM_NEU	    	4
 #define DYNAPSE_CONFIG_XCHIPSIZE   			32
 #define DYNAPSE_CONFIG_YCHIPSIZE   			32
+#define DYNAPSE_CONFIG_NEUROW				16
+#define DYNAPSE_CONFIG_NEUCOL				16
 
 /*
  *  libusb max 512 bytes per single transfer

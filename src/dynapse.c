@@ -480,8 +480,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 											"Failed to monitor neuron, neuron id: %d is invalid.", neuid);
 			return(false);
 		}else{
-			col = dynapseCalculateCoordinatesNeuX(neuid, DYNAPSE_CONFIG_XCHIPSIZE, DYNAPSE_CONFIG_YCHIPSIZE);
-			row = dynapseCalculateCoordinatesNeuY(neuid, DYNAPSE_CONFIG_XCHIPSIZE, DYNAPSE_CONFIG_YCHIPSIZE);
+			col = dynapseCalculateCoordinatesNeuX(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
+			row = dynapseCalculateCoordinatesNeuY(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
+			caerLog(CAER_LOG_WARNING, handle->info.deviceString,
+													"Neuron ID %d results in neu at col: %d row: %d.",
+													neuid, col, row);
 			bits = param << 8 | 0 << 10 | 0 << 11 | 0 << 12 | 0 << 13 | 0 << 16 | 0 << 17 | row << 4 | col;
 
 		}
