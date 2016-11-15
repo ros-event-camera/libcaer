@@ -64,22 +64,27 @@ extern "C" {
 /**
  * Clear CAM content
  * Output USB data packets in streams of 512 bytes using libusb
- * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_CLEAR_CAM, 0, 0); //0,0 not used
+ * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_CLEAR_CAM, 0, 0); //0,0 not used
  */
 #define DYNAPSE_CONFIG_CLEAR_CAM 10
 /**
  * Clear SRAM content, use one SRAM cell to monitor neurons
  * Output USB data packets in streams of 512 bytes using libusb
- * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
+ * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
 /*
  * Used to monitor neurons , example usage:
- * es: dynapseConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 0);  // core 1 neuron 0
+ * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 0);  // core 1 neuron 0
  *
  * */
 #define DYNAPSE_CONFIG_MONITOR_NEU 12
-
+/**
+ * Clear SRAM content, route nothing outside
+ * Output USB data packets in streams of 512 bytes using libusb
+ * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
+ */
+#define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
 
 
@@ -268,6 +273,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_YCHIPSIZE   			32
 #define DYNAPSE_CONFIG_NEUROW				16
 #define DYNAPSE_CONFIG_NEUCOL				16
+#define DYNAPSE_CONFIG_CAMNUM				16
 
 /*
  *  libusb max 512 bytes per single transfer
