@@ -425,7 +425,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 
 	case DYNAPSE_CONFIG_CLEAR_CAM: {
 		uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES
-				* DYNAPSE_CONFIG_NUMNEURONS * 6] = { 0 };
+				* DYNAPSE_CONFIG_NUMNEURONS * 6] = { 0 };//* DYNAPSE_CONFIG_CAMCOL] = { 0 };
 		uint32_t numConfig = 0;
 		uint32_t idxConfig = 0;
 
@@ -434,19 +434,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			// all rows
 			for (size_t row = 0; row < DYNAPSE_CONFIG_NUMNEURONS; row++) {
 
-				//for(size_t col = 0; col < 2; col){
+				//for(size_t col = 0; col < DYNAPSE_CONFIG_CAMCOL; col){
 
-				uint32_t bits = row << 5 | core << 15 | 1 << 17;
+					uint32_t bits = row << 5 | core << 15 | 1 << 17;
 
-				spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
-				spiMultiConfig[(numConfig * 6) + 1] =
-				DYNAPSE_CONFIG_CHIP_CONTENT;
-				spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-				spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-				spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-				spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+					spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+					spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+					spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
+					spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
+					spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
+					spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
 
-				numConfig++;
+					numConfig++;
 				//}
 
 			}
@@ -471,7 +470,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			idxConfig += configSize;
 		}
 	}
-		break;
+	break;
 
 	case DYNAPSE_CONFIG_MONITOR_NEU: {
 		uint32_t neuid = (uint32_t) param;
@@ -531,10 +530,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 		}
 
 	}
+	break;
 
 	case DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY: {
 		uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES
-				* DYNAPSE_CONFIG_NUMNEURONS_CORE * DYNAPSE_CONFIG_NUMSRAM_NEU
+				* DYNAPSE_CONFIG_SRAMROW * DYNAPSE_CONFIG_NUMSRAM_NEU
 				* 6] = { 0 }; // 6 pieces made of 8 bytes each
 		uint32_t numConfig = 0;
 		uint32_t idxConfig = 0;
@@ -549,9 +549,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 		switch (paramAddr) {
 
 		case DYNAPSE_CONFIG_DYNAPSE_U0:
-			return (false);
 		case DYNAPSE_CONFIG_DYNAPSE_U1:
-			return (false);
+		case DYNAPSE_CONFIG_DYNAPSE_U3:
 		case DYNAPSE_CONFIG_DYNAPSE_U2:
 			// route all neurons to the output south interface with
 			// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
@@ -559,7 +558,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 				// all rows
 				for (uint32_t row_neuronid = 0;
-						row_neuronid < DYNAPSE_CONFIG_NUMNEURONS_CORE;
+						row_neuronid < DYNAPSE_CONFIG_SRAMROW;
 						row_neuronid++) {
 					for (uint8_t row_sram = 0;
 							row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
@@ -607,9 +606,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				numConfig -= configNum;
 				idxConfig += configSize;
 			}
-
 		}
 	}
+	break;
 
 	case DYNAPSE_CONFIG_DEFAULT_SRAM: {
 
@@ -629,10 +628,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 		switch (paramAddr) {
 
 		case DYNAPSE_CONFIG_DYNAPSE_U0:
-			return (false);
 		case DYNAPSE_CONFIG_DYNAPSE_U1:
-			return (false);
 		case DYNAPSE_CONFIG_DYNAPSE_U2:
+		case DYNAPSE_CONFIG_DYNAPSE_U3:
 			// route all neurons to the output south interface with
 			// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 			// all cores
@@ -699,10 +697,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				idxConfig += configSize;
 			}
 
-		case DYNAPSE_CONFIG_DYNAPSE_U3:
-			return (false);
 		}
 	}
+	break;
 
 	default:
 		return (false);
