@@ -375,12 +375,26 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_CHIP_RUN:
 				case DYNAPSE_CONFIG_CHIP_ID:
-				case DYNAPSE_CONFIG_CHIP_CONTENT:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
 					return (spiConfigSend(state->usbState.deviceHandle,
 					DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
+
+				case DYNAPSE_CONFIG_CHIP_CONTENT: {
+					uint8_t spiConfig[4] = { 0 };
+
+					spiConfig[0] = U8T(param >> 24);
+					spiConfig[1] = U8T(param >> 16);
+					spiConfig[2] = U8T(param >> 8);
+					spiConfig[3] = U8T(param >> 0);
+
+					return (libusb_control_transfer(state->usbState.deviceHandle,
+						LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						VENDOR_REQUEST_FPGA_CONFIG_AER, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, spiConfig,
+						sizeof(spiConfig), 0) == sizeof(spiConfig));
+					break;
+				}
 
 				default:
 					return (false);
@@ -440,7 +454,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 				int result = libusb_control_transfer(state->usbState.deviceHandle,
 					LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-					VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
+					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
 				if (result != configSize) {
 					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 						"Failed to clear CAM, USB transfer failed with error %d.", result);
@@ -497,7 +511,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			//usb send
 			int result = libusb_control_transfer(state->usbState.deviceHandle,
 				LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-				VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0);
+				VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0);
 			if (result != sizeof(spiMultiConfig)) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 					"Failed to clear CAM, USB transfer failed with error %d.", result);
@@ -558,8 +572,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize,
-							0);
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
+							configSize, 0);
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to clear CAM, USB transfer failed with error %d.", result);
@@ -635,8 +649,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize,
-							0);
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
+							configSize, 0);
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to clear CAM, USB transfer failed with error %d.", result);
