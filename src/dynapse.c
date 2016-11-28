@@ -438,7 +438,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_CLEAR_CAM: {
-			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS * 6] = { 0 };//* DYNAPSE_CONFIG_CAMCOL] = { 0 };
+			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS * 6] = { 0 };
 			uint32_t numConfig = 0;
 			uint32_t idxConfig = 0;
 
@@ -723,6 +723,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				}
 					break;
 				case DYNAPSE_CONFIG_DYNAPSE_U1:
+					break;
 				case DYNAPSE_CONFIG_DYNAPSE_U2: {
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
