@@ -393,12 +393,22 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 						VENDOR_REQUEST_FPGA_CONFIG_AER, DYNAPSE_CONFIG_CHIP,
 						DYNAPSE_CONFIG_CHIP_CONTENT, spiConfig, sizeof(spiConfig), 0);
-
 					if (result != sizeof(spiConfig)) {
 						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 							"Failed to send chip config, USB transfer failed with error %d.", result);
 						return (false);
 					}
+
+					uint8_t check[2] = { 0 };
+					result = libusb_control_transfer(state->usbState.deviceHandle,
+						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						VENDOR_REQUEST_FPGA_CONFIG_AER, 0, 0, check, sizeof(check), 0);
+					if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER || check[1] != 0) {
+						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							"Failed to send chip config, USB transfer failed on verification.");
+						return (false);
+					}
+
 					break;
 				}
 
@@ -467,6 +477,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					return (false);
 				}
 
+				uint8_t check[2] = { 0 };
+				result = libusb_control_transfer(state->usbState.deviceHandle,
+					LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+				if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+						"Failed to clear CAM, USB transfer failed on verification.");
+					return (false);
+				}
+
 				numConfig -= configNum;
 				idxConfig += configSize;
 			}
@@ -520,7 +541,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0);
 			if (result != sizeof(spiMultiConfig)) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Failed to clear CAM, USB transfer failed with error %d.", result);
+					"Failed to monitor neuron, USB transfer failed with error %d.", result);
+				return (false);
+			}
+
+			uint8_t check[2] = { 0 };
+			result = libusb_control_transfer(state->usbState.deviceHandle,
+				LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+				VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+			if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+					"Failed to monitor neuron, USB transfer failed on verification.");
 				return (false);
 			}
 			break;
@@ -582,7 +614,19 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							configSize, 0);
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to clear CAM, USB transfer failed with error %d.", result);
+								"Failed to clear SRAM, USB transfer failed with error %d.", result);
+							return (false);
+						}
+
+						uint8_t check[2] = { 0 };
+						result = libusb_control_transfer(state->usbState.deviceHandle,
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
+							|| check[1] != 0) {
+							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+								"Failed to clear SRAM, USB transfer failed on verification.");
 							return (false);
 						}
 
@@ -656,7 +700,19 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							configSize, 0);
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to clear CAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed with error %d.", result);
+							return (false);
+						}
+
+						uint8_t check[2] = { 0 };
+						result = libusb_control_transfer(state->usbState.deviceHandle,
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
+							|| check[1] != 0) {
+							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
 
@@ -714,7 +770,19 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							configSize, 0);
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to clear CAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed with error %d.", result);
+							return (false);
+						}
+
+						uint8_t check[2] = { 0 };
+						result = libusb_control_transfer(state->usbState.deviceHandle,
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
+							|| check[1] != 0) {
+							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
 
@@ -772,6 +840,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						if (result != configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to clear CAM, USB transfer failed with error %d.", result);
+							return (false);
+						}
+
+						uint8_t check[2] = { 0 };
+						result = libusb_control_transfer(state->usbState.deviceHandle,
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
+							|| check[1] != 0) {
+							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
 
