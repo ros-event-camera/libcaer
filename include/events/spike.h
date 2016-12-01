@@ -277,7 +277,6 @@ static inline uint32_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
 static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neuronID) {
 	CLEAR_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK);
 	SET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK, neuronID);
- 	U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK));
 }
 
 /**
