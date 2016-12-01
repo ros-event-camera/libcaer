@@ -277,7 +277,53 @@ static inline uint32_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
 static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neuronID) {
 	CLEAR_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK);
 	SET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK, neuronID);
+ 	U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK));
 }
+
+/**
+ * Get the Y (column) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event Y address.
+ */
+static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
+	uint8_t chipid = U8T(GET_NUMBITS32(event->data, SPIKE_CHIP_ID_SHIFT, SPIKE_CHIP_ID_MASK)); // chipid	
+	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
+	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
+
+	
+	uint16_t colid = (neuronid & 0x0F);
+	bool addcol = (coreid) & 1;
+	bool addcolchip =  (chipid) & (1<<(2));
+	colid = colid + (addcol)*16 + (addcolchip)*32;
+
+	return(colid);
+}
+
+/**
+ * Get the X (column) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event X address.
+ */
+static inline uint16_t caerSpikeEventGetX(caerSpikeEvent event) {
+	uint8_t chipid = U8T(GET_NUMBITS32(event->data, SPIKE_CHIP_ID_SHIFT, SPIKE_CHIP_ID_MASK)); // chipid	
+	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
+	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
+
+	
+	uint16_t rowid = ((neuronid >> 4) & 0x0F); 
+	bool addrow =  (coreid) & (1<<(1));
+	bool addrowchip =  (chipid) & (1<<(3));
+	rowid = rowid + (addrow)*16 + (addrowchip)*32;
+
+	return(rowid);
+}
+
 
 /**
  * Iterator over all Spike events in a packet.
