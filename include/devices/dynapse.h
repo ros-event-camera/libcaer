@@ -259,8 +259,19 @@ extern "C" {
  */
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
-#define DYNAPSE_CONFIG_SRAM_SIGN_POS 0
-#define DYNAPSE_CONFIG_SRAM_SIGN_NEG 0
+
+
+/**
+ * Parameter address for module DYNAPSE_X4BOARD_NEUX:
+ * Number of neurons in the x direction of the board
+ */
+#define DYNAPSE_X4BOARD_NEUX 64
+/**
+ * Parameter address for module DYNAPSE_X4BOARD_NEUY:
+ * Number of neurons in the x direction of the board
+ */
+#define DYNAPSE_X4BOARD_NEUY 64
+
 
 
 #define DYNAPSE_CONFIG_DYNAPSE_U0	0
