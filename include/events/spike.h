@@ -292,7 +292,6 @@ static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
 	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
 	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
 
-	
 	uint16_t colid = (neuronid & 0x0F);
 	bool addcol = (coreid) & 1;
 	bool addcolchip =  (chipid) & (1<<(2));
@@ -314,8 +313,7 @@ static inline uint16_t caerSpikeEventGetX(caerSpikeEvent event) {
 	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
 	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
 
-	
-	uint16_t rowid = ((neuronid >> 4) & 0x0F); 
+	uint16_t rowid = ((neuronid >> 4) & 0x0F);
 	bool addrow =  (coreid) & (1<<(1));
 	bool addrowchip =  (chipid) & (1<<(3));
 	rowid = rowid + (addrow)*16 + (addrowchip)*32;

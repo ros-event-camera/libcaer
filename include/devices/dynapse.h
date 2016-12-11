@@ -271,7 +271,16 @@ extern "C" {
  * Number of neurons in the x direction of the board
  */
 #define DYNAPSE_X4BOARD_NEUY 64
-
+/**
+ * Parameter address for module DYNAPSE_X4BOARD_COREX:
+ * Number of cores in the x direction of the board
+ */
+#define DYNAPSE_X4BOARD_COREX 4
+/**
+ * Parameter address for module DYNAPSE_X4BOARD_COREY:
+ * Number of cores in the x direction of the board
+ */
+#define DYNAPSE_X4BOARD_COREY 4
 
 
 #define DYNAPSE_CONFIG_DYNAPSE_U0	0
