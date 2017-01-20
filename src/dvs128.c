@@ -105,8 +105,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 
 	// Try to open a DVS128 device on a specific USB port.
 	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID,
-	DVS_DEVICE_DID_TYPE, busNumberRestrict, devAddressRestrict, serialNumberRestrict, -1,
-	DVS_REQUIRED_FIRMWARE_VERSION);
+		busNumberRestrict, devAddressRestrict, serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION);
 	if (state->usbState.deviceHandle == NULL) {
 		libusb_exit(state->usbState.deviceContext);
 		free(handle);

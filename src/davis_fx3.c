@@ -20,9 +20,8 @@ caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	handle->h.deviceType = CAER_DEVICE_DAVIS_FX3;
 
 	bool openRetVal = davisCommonOpen((davisHandle) handle, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID,
-	DAVIS_FX3_DEVICE_DID_TYPE, DAVIS_FX3_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict,
-		serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
-		DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
+	DAVIS_FX3_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
+		DAVIS_FX3_REQUIRED_LOGIC_REVISION, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
 	if (!openRetVal) {
 		free(handle);
 

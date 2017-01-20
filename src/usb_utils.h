@@ -36,7 +36,7 @@ struct usb_info {
 struct usb_info usbGenerateInfo(libusb_device_handle *devHandle, const char *deviceName, uint16_t deviceID);
 bool spiConfigSend(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 bool spiConfigReceive(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
-libusb_device_handle *usbDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID, uint8_t devType,
+libusb_device_handle *usbDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
 	uint8_t busNumber, uint8_t devAddress, const char *serialNumber, int32_t requiredLogicRevision,
 	int32_t requiredFirmwareVersion);
 void usbDeviceClose(libusb_device_handle *devHandle);

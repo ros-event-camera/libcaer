@@ -158,8 +158,8 @@ static inline void freeAllDataMemory(davisState state) {
 	}
 }
 
-bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID_TYPE, const char *deviceName,
-	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict,
+bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char *deviceName, uint16_t deviceID,
+	uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict,
 	uint16_t requiredLogicRevision, uint16_t requiredFirmwareVersion) {
 	davisState state = &handle->state;
 
@@ -201,7 +201,7 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, uint8_t DID
 	}
 
 	// Try to open a DAVIS device on a specific USB port.
-	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext, VID, PID, DID_TYPE, busNumberRestrict,
+	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext, VID, PID, busNumberRestrict,
 		devAddressRestrict, serialNumberRestrict, requiredLogicRevision, requiredFirmwareVersion);
 	if (state->usbState.deviceHandle == NULL) {
 		libusb_exit(state->usbState.deviceContext);

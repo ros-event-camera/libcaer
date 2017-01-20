@@ -105,9 +105,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 
 	// Try to open a Dynap-se device on a specific USB port.
 	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext,
-	USB_DEFAULT_DEVICE_VID,
-	DYNAPSE_DEVICE_PID,
-	DYNAPSE_DEVICE_DID_TYPE, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
+	USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
 	DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION);
 	if (state->usbState.deviceHandle == NULL) {
 		libusb_exit(state->usbState.deviceContext);
@@ -667,7 +665,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 								// use first sram for monitoring
 								if (row_sram == 0) {
-									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U0+1;			// same as chip id
+									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U0 + 1;			// same as chip id
 									sign = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG; // -1
 									distance = 2;
 									sourcecoreid = core;
@@ -743,7 +741,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 									sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 									sourcecoreid = core;
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
-										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22 | sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
+										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22
+										| sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
 								}
 								else {
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4; // init content to zero
@@ -883,7 +882,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 									sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 									sourcecoreid = core;
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
-										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22 | sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
+										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22
+										| sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
 								}
 								else {
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4; // init content to zero
@@ -937,7 +937,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 				}
 					break;
-		}
+			}
 		}
 		default:
 			return (false);
