@@ -300,6 +300,9 @@ extern "C" {
 #define DYNAPSE_CONFIG_NEUCOL				16
 #define DYNAPSE_CONFIG_CAMNUM				16
 
+
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	262114	//max usb data that user can send in one usb transaction
+
 /*
  *  libusb max 512 bytes per single transfer
  * */
@@ -486,6 +489,18 @@ struct caer_dynapse_info {
  *         an empty structure (all zeros) on failure.
  */
 struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
+
+/*
+* @param handle a valid device handle.
+*  Copy DYNAPSE_SPIKE_DEFAULT_SIZE (4096) int data
+*  into usb buffer, and send them via usb.
+*
+*  Make sure that data has max size data[4096]
+*
+* @return true on success, false otherwise
+*/
+bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig);
+
 
 #ifdef __cplusplus
 }
