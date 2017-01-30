@@ -300,6 +300,8 @@ extern "C" {
 #define DYNAPSE_CONFIG_NEUCOL				16
 #define DYNAPSE_CONFIG_CAMNUM				16
 
+#define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
+
 
 #define DYNAPSE_MAX_USER_USB_PACKET_SIZE	262114	//max usb data that user can send in one usb transaction
 
@@ -500,6 +502,25 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 * @return true on success, false otherwise
 */
 bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig);
+
+/*
+* @param handle a valid device handle.
+*  Write a single CAM
+*
+* @return true on success, false otherwise
+*/
+bool caerDynapseWriteCam(caerDeviceHandle handle,uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+
+/*
+* @param handle a valid device handle.
+*  Return addres for writing CAM
+*
+*  preNeuron, postNeuron, camId, synapseType as input
+*
+* @return bits that would make the connection
+*/
+uint32_t caerDynapseWriteCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+
 
 
 #ifdef __cplusplus

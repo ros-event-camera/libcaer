@@ -178,9 +178,12 @@ bool dynapseClose(caerDeviceHandle cdh) {
 	return (true);
 }
 
+
 bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
+
+	caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "init %d.", numConfig);
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
@@ -198,6 +201,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 	if(DYNAPSE_MAX_USER_USB_PACKET_SIZE < numConfig){
 		return(false);
 	}
+
+	caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "NumConfig %d.", numConfig);
 
 	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE] = { 0 };
 	uint32_t idxConfig = 0;
@@ -1773,3 +1778,56 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 		atomic_thread_fence(memory_order_seq_cst);
 	}
 }
+
+bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
+	dynapseHandle handle = (dynapseHandle) cdh;
+	dynapseState state = &handle->state;
+
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		return (false);
+	}
+
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		return (false);
+	}
+
+	uint32_t bits;
+	uint32_t ei = (synapseType & 0x2) >> 1;
+	uint32_t fs = synapseType & 0x1;
+	uint32_t address = preNeuronAddr & 0xff;
+	uint32_t source_core = (preNeuronAddr & 0x300) >> 8;
+	uint32_t coreId = (postNeuronAddr & 0x300) >> 8;
+	uint32_t neuron_row = (postNeuronAddr & 0xf0) >> 4;
+	uint32_t synapse_row = camId;
+	uint32_t row = neuron_row << 6 | synapse_row;
+	uint32_t column = postNeuronAddr & 0xf;
+	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
+			| coreId << 15 | row << 5 | column;
+
+	caerDeviceConfigSet(handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
+
+	return(true);
+}
+
+uint32_t caerDynapseWriteCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
+
+	uint32_t bits;
+	uint32_t ei = (synapseType & 0x2) >> 1;
+	uint32_t fs = synapseType & 0x1;
+	uint32_t address = preNeuronAddr & 0xff;
+	uint32_t source_core = (preNeuronAddr & 0x300) >> 8;
+	uint32_t coreId = (postNeuronAddr & 0x300) >> 8;
+	uint32_t neuron_row = (postNeuronAddr & 0xf0) >> 4;
+	uint32_t synapse_row = camId;
+	uint32_t row = neuron_row << 6 | synapse_row;
+	uint32_t column = postNeuronAddr & 0xf;
+	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
+			| coreId << 15 | row << 5 | column;
+
+	return(bits);
+}
+
