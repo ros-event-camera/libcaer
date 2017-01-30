@@ -183,8 +183,6 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
-	caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "init %d.", numConfig);
-
 	// Check if the pointer is valid.
 	if (handle == NULL) {
 		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
@@ -201,8 +199,6 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 	if(DYNAPSE_MAX_USER_USB_PACKET_SIZE < numConfig){
 		return(false);
 	}
-
-	caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "NumConfig %d.", numConfig);
 
 	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE] = { 0 };
 	uint32_t idxConfig = 0;
@@ -245,7 +241,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 		idxConfig += configSize;
 	}
 
-	// Return a copy of the device information.
+	// return true
 	return (true);
 }
 
@@ -1813,7 +1809,7 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 	return(true);
 }
 
-uint32_t caerDynapseWriteCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
+uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
 
 	uint32_t bits;
 	uint32_t ei = (synapseType & 0x2) >> 1;
