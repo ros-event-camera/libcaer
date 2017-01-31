@@ -303,7 +303,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
 
 
-#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	4096	//max usb data that user can send in one usb transaction
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	512	//max usb data that user can send in one usb transaction
 
 /*
  *  libusb max 512 bytes per single transfer
@@ -337,7 +337,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N             		22
 #define DYNAPSE_CONFIG_BIAS_C0_IF_THR_N            			24
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_S_P             	26
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P            	38
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P            	28
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_F_P      			30
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P            	32
 #define DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N            		34
