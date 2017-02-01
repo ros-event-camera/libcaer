@@ -303,7 +303,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
 
 
-#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	512	//max usb data that user can send in one usb transaction
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	4096	//max usb data that user can send in one usb transaction
 
 /*
  *  libusb max 512 bytes per single transfer
@@ -511,7 +511,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig
 *	usb_handle, preNeuron, postNeuron, camId, synapseType
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteCam(caerDeviceHandle handle,uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
 
 /*
 * @param handle a valid device handle.
