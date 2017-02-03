@@ -24,7 +24,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-r03701472c913c547a88c15e2d287b3729f798d31</span>
+   &#160;<span id="projectnumber">2.0.0-rb699db04e3f49314050167879600480c4399a6a5</span>
    </div>
   </td>
  </tr>
@@ -158,10 +158,14 @@ Functions</h2></td></tr>
 <tr class="separator:afe8fb9d8fbf9a533772063e58d5b584c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae64090d44ebc696251c97b6d5f485b6f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#ae64090d44ebc696251c97b6d5f485b6f">caerSpikeEventSetChipID</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event, uint8_t chipID)</td></tr>
 <tr class="separator:ae64090d44ebc696251c97b6d5f485b6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0bb1058f88e52d46a38ee993f7eda632"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#a0bb1058f88e52d46a38ee993f7eda632">caerSpikeEventGetNeuronID</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event)</td></tr>
-<tr class="separator:a0bb1058f88e52d46a38ee993f7eda632"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b93a2d6eccf9ec82e5036c86c1d3201"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#a7b93a2d6eccf9ec82e5036c86c1d3201">caerSpikeEventSetNeuronID</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event, uint8_t neuronID)</td></tr>
-<tr class="separator:a7b93a2d6eccf9ec82e5036c86c1d3201"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa2752f726dafe0a69ab84bfb570680f1"><td class="memItemLeft" align="right" valign="top">static uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#aa2752f726dafe0a69ab84bfb570680f1">caerSpikeEventGetNeuronID</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event)</td></tr>
+<tr class="separator:aa2752f726dafe0a69ab84bfb570680f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2048537ec6714e81e96cb2ee3b8118e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#ac2048537ec6714e81e96cb2ee3b8118e">caerSpikeEventSetNeuronID</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event, uint32_t neuronID)</td></tr>
+<tr class="separator:ac2048537ec6714e81e96cb2ee3b8118e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a78b26959d4152e786875ea40201e2114"><td class="memItemLeft" align="right" valign="top">static uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#a78b26959d4152e786875ea40201e2114">caerSpikeEventGetY</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event)</td></tr>
+<tr class="separator:a78b26959d4152e786875ea40201e2114"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9790d526512b16483f0041ba09ad986"><td class="memItemLeft" align="right" valign="top">static uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="spike_8h.html#aa9790d526512b16483f0041ba09ad986">caerSpikeEventGetX</a> (<a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a> event)</td></tr>
+<tr class="separator:aa9790d526512b16483f0041ba09ad986"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>THIS EVENT DEFINITIONS IS STILL TO BE CONSIDERED EXPERIMENTAL AND IS SUBJECT TO FUTURE CHANGES AND REVISIONS!</p>
@@ -374,7 +378,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a0bb1058f88e52d46a38ee993f7eda632"></a>
+<a class="anchor" id="aa2752f726dafe0a69ab84bfb570680f1"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -382,7 +386,7 @@ Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">static uint8_t caerSpikeEventGetNeuronID </td>
+          <td class="memname">static uint32_t caerSpikeEventGetNeuronID </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a>&#160;</td>
           <td class="paramname"><em>event</em></td><td>)</td>
@@ -510,6 +514,70 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>this event's 64bit microsecond timestamp. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="aa9790d526512b16483f0041ba09ad986"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static uint16_t caerSpikeEventGetX </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a>&#160;</td>
+          <td class="paramname"><em>event</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the X (column) address for a spike event, in pixels. The (0, 0) address is in the upper left corner.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">event</td><td>a valid SpikeEvent pointer. Cannot be NULL.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the event X address. </dd></dl>
+
+</div>
+</div>
+<a class="anchor" id="a78b26959d4152e786875ea40201e2114"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static uint16_t caerSpikeEventGetY </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="spike_8h.html#ac20db444e2d9ee3a5f9b7f274db1bb4f">caerSpikeEvent</a>&#160;</td>
+          <td class="paramname"><em>event</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the Y (column) address for a spike event, in pixels. The (0, 0) address is in the upper left corner.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">event</td><td>a valid SpikeEvent pointer. Cannot be NULL.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the event Y address. </dd></dl>
 
 </div>
 </div>
@@ -714,7 +782,7 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a7b93a2d6eccf9ec82e5036c86c1d3201"></a>
+<a class="anchor" id="ac2048537ec6714e81e96cb2ee3b8118e"></a>
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
@@ -730,7 +798,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>neuronID</em>&#160;</td>
         </tr>
         <tr>

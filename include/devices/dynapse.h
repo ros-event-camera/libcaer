@@ -302,9 +302,10 @@ extern "C" {
 
 #define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
 
-
-#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	4096	//max usb data that user can send in one usb transaction
-
+/*
+*  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
+* */
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	4096
 /*
  *  libusb max 512 bytes per single transfer
  * */

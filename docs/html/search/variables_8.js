@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['sexn',['sexN',['../structcaer__bias__coarsefine.html#aa81be1b9ee32ddff23948d8b36664ca5',1,'caer_bias_coarsefine']]]
+  ['refvalue',['refValue',['../structcaer__bias__shiftedsource.html#a034960fdec68f2a98e64959afb049479',1,'caer_bias_shiftedsource']]],
+  ['regvalue',['regValue',['../structcaer__bias__shiftedsource.html#a13c2f14a804d5daab8544814a0f56c71',1,'caer_bias_shiftedsource']]]
 ];

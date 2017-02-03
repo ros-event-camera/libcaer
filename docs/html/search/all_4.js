@@ -4,7 +4,7 @@ var searchData=
   ['ear_5fevent',['EAR_EVENT',['../common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019aca319969aeea92cf36ab6a72d138cc90',1,'common.h']]],
   ['ear_5fmask',['EAR_MASK',['../ear_8h.html#a3e0f6044a66ff58c3c84965b225ad6db',1,'ear.h']]],
   ['ear_5fshift',['EAR_SHIFT',['../ear_8h.html#a044b122a0c9a7d196058d812dd98e049',1,'ear.h']]],
-  ['enabled',['enabled',['../structcaer__bias__coarsefine.html#a92685e53e60cf126228ffea626ed09e0',1,'caer_bias_coarsefine']]],
+  ['enabled',['enabled',['../structcaer__bias__coarsefine.html#a92685e53e60cf126228ffea626ed09e0',1,'caer_bias_coarsefine::enabled()'],['../structcaer__bias__dynapse.html#a5a609efd269d4b463989c15da2922055',1,'caer_bias_dynapse::enabled()']]],
   ['external_5fgenerator_5ffalling_5fedge',['EXTERNAL_GENERATOR_FALLING_EDGE',['../special_8h.html#a3b365217e8b0362edd9681f8667e2825a5933373ab89f63a41fab2deca744a004',1,'special.h']]],
   ['external_5fgenerator_5frising_5fedge',['EXTERNAL_GENERATOR_RISING_EDGE',['../special_8h.html#a3b365217e8b0362edd9681f8667e2825abb6d78293eaa3c67e528e9c8e0b0b5ce',1,'special.h']]],
   ['external_5finput1_5ffalling_5fedge',['EXTERNAL_INPUT1_FALLING_EDGE',['../special_8h.html#a3b365217e8b0362edd9681f8667e2825a8a15f05e333e1032d6098c23a675e434',1,'special.h']]],
