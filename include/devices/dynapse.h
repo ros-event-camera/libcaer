@@ -305,7 +305,7 @@ extern "C" {
 /*
 *  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
 * */
-#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	4096
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	8192
 /*
  *  libusb max 512 bytes per single transfer
  * */
