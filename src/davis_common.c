@@ -2152,6 +2152,8 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	state->imuGyroScale = calculateIMUGyroScale(U8T(param32));
 
 	// Default APS settings (for event parsing).
+	state->apsADCShift = (16 - APS_ADC_DEPTH);
+
 	uint32_t param32start = 0;
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, &param32start);
 
@@ -3136,9 +3138,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 #endif
 						}
 
-						// Normalize the ADC value to 16bit generic depth and check for underflow.
+						// Check for underflow.
 						pixelValue = (pixelValue < 0) ? (0) : (pixelValue);
-						pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
+
+						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
+						pixelValue = pixelValue << state->apsADCShift;
 
 						caerFrameEventGetPixelArrayUnsafe(state->currentFrameEvent[0])[pixelPosition] = htole16(
 							U16T(pixelValue));
@@ -3300,6 +3304,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Jump to next type of APS info (col->row, start->end).
 							state->apsROIUpdate++;
 
+							break;
+						}
+
+						case 3: {
+							// APS ADC depth info, use directly as ADC depth.
+							state->apsADCShift = U16T(16 - misc8Data);
 							break;
 						}
 
