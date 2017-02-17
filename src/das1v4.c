@@ -3,7 +3,6 @@
 static void das1v4EventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
 static int das1v4DataAcquisitionThread(void *inPtr);
 static void das1v4DataAcquisitionThreadConfig(das1v4Handle handle);
-uint32_t das1v4CalculateIndexNeu(uint32_t columns, uint32_t, uint32_t y);
 
 static inline void checkStrictMonotonicTimestamp(das1v4Handle handle) {
 	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
@@ -103,7 +102,7 @@ caerDeviceHandle das1v4Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 		return (NULL);
 	}
 
-	// Try to open a Dynap-se device on a specific USB port.
+	// Try to open a device on a specific USB port.
 	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext,
 	USB_DEFAULT_DEVICE_VID, DAS1V4_DEVICE_PID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
 	DAS1V4_REQUIRED_LOGIC_REVISION, DAS1V4_REQUIRED_FIRMWARE_VERSION);
@@ -178,72 +177,6 @@ bool das1v4Close(caerDeviceHandle cdh) {
 	return (true);
 }
 
-
-bool caerDas1v4SendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig) {
-	das1v4Handle handle = (das1v4Handle) cdh;
-	das1v4State state = &handle->state;
-
-	// Check if the pointer is valid.
-	if (handle == NULL) {
-		struct caer_das1v4_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
-
-	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DAS1V4) {
-		struct caer_das1v4_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
-
-	// if array exceeds max size don't send anything
-	if(DAS1V4_MAX_USER_USB_PACKET_SIZE < numConfig){
-		return(false);
-	}
-
-	uint8_t spiMultiConfig[DAS1V4_MAX_USER_USB_PACKET_SIZE] = { 0 };
-	uint32_t idxConfig = 0;
-
-	// all cores
-	for(size_t i=0; i<numConfig; i++){
-			spiMultiConfig[(i * 6) + 0] = DAS1V4_CONFIG_CHIP;
-			spiMultiConfig[(i * 6) + 1] =
-			DAS1V4_CONFIG_CHIP_CONTENT;
-			spiMultiConfig[(i * 6) + 2] = (pointer[i] >> 24) & 0x0FF;
-			spiMultiConfig[(i * 6) + 3] = (pointer[i] >> 16) & 0x0FF;
-			spiMultiConfig[(i * 6) + 4] = (pointer[i] >> 8) & 0x0FF;
-			spiMultiConfig[(i * 6) + 5] = (pointer[i] >> 0) & 0x0FF;
-	}
-	while (numConfig > 0) {
-		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
-		size_t configSize = configNum * 6;
-
-		int result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
-		if (result != configSize) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed with error %d.", result);
-			return (false);
-		}
-
-		uint8_t check[2] = { 0 };
-		result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
-
-		if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed on verification.");
-			return (false);
-		}
-
-		numConfig -= configNum;
-		idxConfig += configSize;
-	}
-
-	// return true
-	return (true);
-}
 
 struct caer_das1v4_info caerDas1v4InfoGet(caerDeviceHandle cdh) {
 	das1v4Handle handle = (das1v4Handle) cdh;

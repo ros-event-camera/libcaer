@@ -1,7 +1,7 @@
 /**
  * @file DAS1V4.h
  *
- * Dynap-se specific configuration defines and information structures.
+ * DAS1V4 specific configuration defines and information structures.
  */
 
 #ifndef LIBCAER_DEVICES_DAS1V4_H_
@@ -226,7 +226,7 @@ extern "C" {
 /*
 *  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
 * */
-#define DAS1V4_MAX_USER_USB_PACKET_SIZE	8192
+#define DAS1V4_MAX_USER_USB_PACKET_SIZE	1024
 /*
  *  libusb max 512 bytes per single transfer
  * */
