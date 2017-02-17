@@ -200,7 +200,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 		return(false);
 	}
 
-	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE] = { 0 };
+	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE*6] = { 0 };
 	uint32_t idxConfig = 0;
 
 	// all cores
