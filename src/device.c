@@ -5,11 +5,12 @@
 #include "davis_fx2.h"
 #include "davis_fx3.h"
 #include "dynapse.h"
+#include "das1v4.h"
 
 /**
  * Number of devices supported by this library.
  */
-#define SUPPORTED_DEVICES_NUMBER 4
+#define SUPPORTED_DEVICES_NUMBER 5
 
 // Supported devices and their functions.
 static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
@@ -17,21 +18,24 @@ static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t devic
 		[CAER_DEVICE_DVS128] = &dvs128Open,
 		[CAER_DEVICE_DAVIS_FX2] = &davisFX2Open,
 		[CAER_DEVICE_DAVIS_FX3] = &davisFX3Open,
-		[CAER_DEVICE_DYNAPSE] = &dynapseOpen
+		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
+		[CAER_DEVICE_DAS1V4] = &das1v4Open
 };
 
 static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128Close,
 	[CAER_DEVICE_DAVIS_FX2] = &davisFX2Close,
 	[CAER_DEVICE_DAVIS_FX3] = &davisFX3Close,
-	[CAER_DEVICE_DYNAPSE] = &dynapseClose
+	[CAER_DEVICE_DYNAPSE] = &dynapseClose,
+	[CAER_DEVICE_DAS1V4] = &das1v4Close
 };
 
 static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128SendDefaultConfig,
 	[CAER_DEVICE_DAVIS_FX2] = &davisFX2SendDefaultConfig,
 	[CAER_DEVICE_DAVIS_FX3] = &davisFX3SendDefaultConfig,
-	[CAER_DEVICE_DYNAPSE] = &dynapseSendDefaultConfig
+	[CAER_DEVICE_DYNAPSE] = &dynapseSendDefaultConfig,
+	[CAER_DEVICE_DAS1V4] = &das1v4SendDefaultConfig
 };
 
 static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -39,7 +43,8 @@ static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DVS128] = &dvs128ConfigSet,
 		[CAER_DEVICE_DAVIS_FX2] = &davisFX2ConfigSet,
 		[CAER_DEVICE_DAVIS_FX3] = &davisFX3ConfigSet,
-		[CAER_DEVICE_DYNAPSE] = &dynapseConfigSet
+		[CAER_DEVICE_DYNAPSE] = &dynapseConfigSet,
+		[CAER_DEVICE_DAS1V4] = &das1v4ConfigSet
 };
 
 static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -47,7 +52,8 @@ static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DVS128] = &dvs128ConfigGet,
 		[CAER_DEVICE_DAVIS_FX2] = &davisFX2ConfigGet,
 		[CAER_DEVICE_DAVIS_FX3] = &davisFX3ConfigGet,
-		[CAER_DEVICE_DYNAPSE] = &dynapseConfigGet
+		[CAER_DEVICE_DYNAPSE] = &dynapseConfigGet,
+		[CAER_DEVICE_DAS1V4] = &das1v4ConfigGet
 };
 
 static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
@@ -56,21 +62,24 @@ static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, v
 		[CAER_DEVICE_DVS128] = &dvs128DataStart,
 		[CAER_DEVICE_DAVIS_FX2] = &davisCommonDataStart,
 		[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataStart,
-		[CAER_DEVICE_DYNAPSE] = &dynapseDataStart
+		[CAER_DEVICE_DYNAPSE] = &dynapseDataStart,
+		[CAER_DEVICE_DAS1V4] = &das1v4DataStart
 };
 
 static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128DataStop,
 	[CAER_DEVICE_DAVIS_FX2] = &davisCommonDataStop,
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataStop,
-	[CAER_DEVICE_DYNAPSE] = &dynapseDataStop
+	[CAER_DEVICE_DYNAPSE] = &dynapseDataStop,
+	[CAER_DEVICE_DAS1V4] = &das1v4DataStop
 };
 
 static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128DataGet,
 	[CAER_DEVICE_DAVIS_FX2] = &davisCommonDataGet,
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataGet,
-	[CAER_DEVICE_DYNAPSE] = &dynapseDataGet
+	[CAER_DEVICE_DYNAPSE] = &dynapseDataGet,
+	[CAER_DEVICE_DAS1V4] = &das1v4DataGet
 };
 
 struct caer_device_handle {
