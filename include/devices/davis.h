@@ -12,6 +12,7 @@
 #include "../events/special.h"
 #include "../events/frame.h"
 #include "../events/imu6.h"
+#include "../events/sample.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -156,6 +157,13 @@ extern "C" {
  * documentation for more details on what information is available.
  */
 #define DAVIS_CONFIG_SYSINFO  6
+/**
+ * Module address: device-side microphone configuration.
+ * The Microphone module enables the use of InvenSense stereo
+ * microphones to capture samples of sound from devices that
+ * support is, such as the miniDAVIS346.
+ */
+#define DAVIS_CONFIG_MICROPHONE 7
 /**
  * Module address: device-side USB output configuration.
  * The USB output module forwards the data from the device and the FPGA/CPLD to
@@ -1202,6 +1210,24 @@ extern "C" {
  * documentation to get this information.
  */
 #define DAVIS_CONFIG_SYSINFO_ADC_CLOCK        4
+
+/**
+ * Parameter address for module DAVIS_CONFIG_MICROPHONE:
+ * enable the Microphone module, which provides stereo samples
+ * of sound recorded by on-board InvenSense microphones.
+ */
+#define DAVIS_CONFIG_MICROPHONE_RUN              0
+/**
+ * Parameter address for module DAVIS_CONFIG_MICROPHONE:
+ * allows setting the sample frequency of the stereo microphones,
+ * by specifying the length of an SCK clock cycle in LogicClock cycles.
+ * Value can be between 30 and 215 inclusive.
+ * The desired value can be calculated in the following way:
+ * floor(100'000'000/64/<desired freq in Hz>)
+ * For example for 48 KHz sampling frequency, this would be 32.
+ * For 44.1 KHz it would be 35, and for 16 KHz it would be 97.
+ */
+#define DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY 1
 
 /**
  * Parameter address for module DAVIS_CONFIG_USB:

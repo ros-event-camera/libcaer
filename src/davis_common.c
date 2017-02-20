@@ -457,6 +457,9 @@ bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint3
 	(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY, true);
 	(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH, U32T(handle->info.logicClock)); // in cycles @ LogicClock
 
+	(*configSet)(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false); // Microphones disabled by default.
+	(*configSet)(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32); // 48 KHz sampling frequency.
+
 	if (handle->info.extInputHasGenerator) {
 		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
 		(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR, false);
@@ -1196,6 +1199,19 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			}
 			break;
 
+		case DAVIS_CONFIG_MICROPHONE:
+			switch (paramAddr) {
+				case DAVIS_CONFIG_MICROPHONE_RUN:
+				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -1824,6 +1840,19 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			}
 			break;
 
+		case DAVIS_CONFIG_MICROPHONE:
+			switch (paramAddr) {
+				case DAVIS_CONFIG_MICROPHONE_RUN:
+				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -2208,6 +2237,9 @@ bool davisCommonDataStop(caerDeviceHandle cdh) {
 	// Stop data acquisition thread.
 	if (atomic_load(&state->dataExchangeStopProducers)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
+		davisCommonConfigSet(handle, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false);
+		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
+		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
@@ -3579,6 +3611,8 @@ static int davisDataAcquisitionThread(void *inPtr) {
 		davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, true);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, true);
+		// Do NOT enable additional ExtInput detectors, those are always user controlled.
+		// Do NOT enable microphones by default.
 
 		// Enable data transfer only after enabling the data producers, so that the chip
 		// has time to start up and we avoid the initial data flood.
