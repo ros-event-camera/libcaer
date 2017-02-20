@@ -139,6 +139,15 @@ static inline void freeAllDataMemory(davisState state) {
 		}
 	}
 
+	if (state->currentSamplePacket != NULL) {
+		free(&state->currentSamplePacket->packetHeader);
+		state->currentSamplePacket = NULL;
+
+		if (state->currentPacketContainer != NULL) {
+			caerEventPacketContainerSetEventPacket(state->currentPacketContainer, DAVIS_SAMPLE_POSITION, NULL);
+		}
+	}
+
 	if (state->currentPacketContainer != NULL) {
 		caerEventPacketContainerFree(state->currentPacketContainer);
 		state->currentPacketContainer = NULL;
@@ -2167,6 +2176,14 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 		return (false);
 	}
 
+	state->currentSamplePacket = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	if (state->currentSamplePacket == NULL) {
+		freeAllDataMemory(state);
+
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+		return (false);
+	}
+
 	state->apsCurrentResetFrame = calloc((size_t) (state->apsSizeX * state->apsSizeY * APS_ADC_CHANNELS),
 		sizeof(uint16_t));
 	if (state->apsCurrentResetFrame == NULL) {
@@ -2280,6 +2297,7 @@ bool davisCommonDataStop(caerDeviceHandle cdh) {
 	state->currentSpecialPacketPosition = 0;
 	state->currentFramePacketPosition = 0;
 	state->currentIMU6PacketPosition = 0;
+	state->currentSamplePacketPosition = 0;
 
 	// Reset private composite events. 'currentFrameEvent' is taken care of in freeAllDataMemory().
 	memset(&state->currentIMU6Event, 0, sizeof(struct caer_imu6_event));
@@ -2448,6 +2466,28 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			}
 
 			state->currentIMU6Packet = grownPacket;
+		}
+
+		if (state->currentSamplePacket == NULL) {
+			state->currentSamplePacket = caerSampleEventPacketAllocate(
+			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			if (state->currentSamplePacket == NULL) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+				return;
+			}
+		}
+		else if (state->currentSamplePacketPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSamplePacket)) {
+			// If not committed, let's check if any of the packets has reached its maximum
+			// capacity limit. If yes, we grow them to accomodate new events.
+			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerGenericEventPacketGrow(
+				(caerEventPacketHeader) state->currentSamplePacket, state->currentSamplePacketPosition * 2);
+			if (grownPacket == NULL) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow Sample event packet.");
+				return;
+			}
+
+			state->currentSamplePacket = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -3363,7 +3403,56 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 						case 3: {
 							// APS ADC depth info, use directly as ADC depth.
+							// 16 bits is the maximum supported depth for APS.
 							state->apsADCShift = U16T(16 - misc8Data);
+							break;
+						}
+
+						case 4: {
+							// Microphone FIRST RIGHT.
+							state->micRight = true;
+							state->micCount = 1;
+							state->micTmpData = misc8Data;
+							break;
+						}
+
+						case 5: {
+							// Microphone FIRST LEFT.
+							state->micRight = false;
+							state->micCount = 1;
+							state->micTmpData = misc8Data;
+							break;
+						}
+
+						case 6: {
+							// Microphone SECOND.
+							if (state->micCount != 1) {
+								// Ignore incomplete samples.
+								break;
+							}
+
+							state->micCount = 2;
+							state->micTmpData = U16T((state->micTmpData << 8) | misc8Data);
+							break;
+						}
+
+						case 7: {
+							// Microphone THIRD.
+							if (state->micCount != 2) {
+								// Ignore incomplete samples.
+								break;
+							}
+
+							state->micCount = 0;
+							uint32_t micData = U32T((state->micTmpData << 8) | misc8Data);
+
+							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentSamplePacket,
+								state->currentSamplePacketPosition);
+							caerSampleEventSetType(micSample, state->micRight);
+							caerSampleEventSetSample(micSample, micData);
+							caerSampleEventSetTimestamp(micSample, state->currentTimestamp);
+							caerSampleEventValidate(micSample, state->currentSamplePacket);
+							state->currentSamplePacketPosition++;
 							break;
 						}
 
@@ -3441,7 +3530,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentFramePacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize));
+				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize)
+				|| (state->currentSamplePacketPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
 			> state->currentPacketContainerCommitTimestamp;
@@ -3486,6 +3576,15 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 				state->currentIMU6Packet = NULL;
 				state->currentIMU6PacketPosition = 0;
+				emptyContainerCommit = false;
+			}
+
+			if (state->currentSamplePacketPosition > 0) {
+				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, DAVIS_SAMPLE_POSITION,
+					(caerEventPacketHeader) state->currentSamplePacket);
+
+				state->currentSamplePacket = NULL;
+				state->currentSamplePacketPosition = 0;
 				emptyContainerCommit = false;
 			}
 
