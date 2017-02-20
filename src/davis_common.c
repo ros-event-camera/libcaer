@@ -372,6 +372,7 @@ bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint3
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
+	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL, false);
 
 	(*configSet)(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4); // in cycles @ LogicClock
 	(*configSet)(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0); // in cycles @ LogicClock
@@ -842,6 +843,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1511,6 +1513,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 

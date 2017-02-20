@@ -229,6 +229,12 @@ extern "C" {
  * them pile up at the input FIFOs.
  */
 #define DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL 7
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * drop Microphone sample events if the USB output FIFO is full, instead of having
+ * them pile up at the input FIFOs.
+ */
+#define DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL      8
 
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
