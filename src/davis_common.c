@@ -3432,7 +3432,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							}
 
 							state->micCount = 2;
-							state->micTmpData = U16T((state->micTmpData << 8) | misc8Data);
+							state->micTmpData = U16T(U32T(state->micTmpData << 8) | misc8Data);
 							break;
 						}
 
@@ -3444,7 +3444,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							}
 
 							state->micCount = 0;
-							uint32_t micData = U32T((state->micTmpData << 8) | misc8Data);
+							uint32_t micData = U32T(U32T(state->micTmpData << 8) | misc8Data);
 
 							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentSamplePacket,
 								state->currentSamplePacketPosition);
