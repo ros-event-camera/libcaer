@@ -97,6 +97,9 @@ struct davis_state {
 	uint16_t apsROIPositionY[APS_ROI_REGIONS_MAX];
 	// IMU specific fields
 	bool imuIgnoreEvents;
+	bool imuFlipX;
+	bool imuFlipY;
+	bool imuFlipZ;
 	uint8_t imuCount;
 	uint8_t imuTmpData;
 	float imuAccelScale;

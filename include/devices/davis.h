@@ -247,7 +247,9 @@ extern "C" {
  * read-only parameter, contains information on the orientation
  * of the X/Y axes, whether they should be inverted or not on
  * the host when parsing incoming events.
- * Bit 0: dvsInvertXY
+ * Bit 2: dvsInvertXY
+ * Bit 1: reserved
+ * Bit 0: reserved
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get proper size information that already
@@ -917,6 +919,19 @@ extern "C" {
  * 3 - +- 2000 °/s
  */
 #define DAVIS_CONFIG_IMU_GYRO_FULL_SCALE         9
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * read-only parameter, contains information on the orientation
+ * of the X/Y/Z axes, whether they should be flipped or not on
+ * the host when parsing incoming IMU data samples.
+ * Bit 2: imuFlipX
+ * Bit 1: imuFlipY
+ * Bit 0: imuFlipZ
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Generated IMU events are already
+ * properly flipped when returned to the user.
+ */
+#define DAVIS_CONFIG_IMU_ORIENTATION_INFO        10
 
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:

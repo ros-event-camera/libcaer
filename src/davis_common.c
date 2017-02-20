@@ -274,7 +274,7 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	state->dvsSizeY = I16T(param32);
 
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
-	state->dvsInvertXY = U16T(param32) & 0x04;
+	state->dvsInvertXY = param32 & 0x04;
 
 	if (state->dvsInvertXY) {
 		handle->info.dvsSizeX = state->dvsSizeY;
@@ -291,10 +291,9 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	state->apsSizeY = I16T(param32);
 
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
-	uint16_t apsOrientationInfo = U16T(param32);
-	state->apsInvertXY = apsOrientationInfo & 0x04;
-	state->apsFlipX = apsOrientationInfo & 0x02;
-	state->apsFlipY = apsOrientationInfo & 0x01;
+	state->apsInvertXY = param32 & 0x04;
+	state->apsFlipX = param32 & 0x02;
+	state->apsFlipY = param32 & 0x01;
 
 	if (state->apsInvertXY) {
 		handle->info.apsSizeX = state->apsSizeY;
@@ -304,6 +303,11 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 		handle->info.apsSizeX = state->apsSizeX;
 		handle->info.apsSizeY = state->apsSizeY;
 	}
+
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
+	state->imuFlipX = param32 & 0x04;
+	state->imuFlipY = param32 & 0x02;
+	state->imuFlipZ = param32 & 0x01;
 
 	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
 		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
@@ -3213,18 +3217,27 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								case 2: {
 									int16_t accelX = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipX) {
+										accelX = I16T(-accelX);
+									}
 									caerIMU6EventSetAccelX(&state->currentIMU6Event, accelX / state->imuAccelScale);
 									break;
 								}
 
 								case 4: {
 									int16_t accelY = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipY) {
+										accelY = I16T(-accelY);
+									}
 									caerIMU6EventSetAccelY(&state->currentIMU6Event, accelY / state->imuAccelScale);
 									break;
 								}
 
 								case 6: {
 									int16_t accelZ = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipZ) {
+										accelZ = I16T(-accelZ);
+									}
 									caerIMU6EventSetAccelZ(&state->currentIMU6Event, accelZ / state->imuAccelScale);
 									break;
 								}
@@ -3239,18 +3252,27 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								case 10: {
 									int16_t gyroX = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipX) {
+										gyroX = I16T(-gyroX);
+									}
 									caerIMU6EventSetGyroX(&state->currentIMU6Event, gyroX / state->imuGyroScale);
 									break;
 								}
 
 								case 12: {
 									int16_t gyroY = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipY) {
+										gyroY = I16T(-gyroY);
+									}
 									caerIMU6EventSetGyroY(&state->currentIMU6Event, gyroY / state->imuGyroScale);
 									break;
 								}
 
 								case 14: {
 									int16_t gyroZ = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipZ) {
+										gyroZ = I16T(-gyroZ);
+									}
 									caerIMU6EventSetGyroZ(&state->currentIMU6Event, gyroZ / state->imuGyroScale);
 									break;
 								}
