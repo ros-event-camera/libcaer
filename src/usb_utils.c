@@ -72,7 +72,7 @@ bool spiConfigReceive(libusb_device_handle *devHandle, uint8_t moduleAddr, uint8
 	return (true);
 }
 
-libusb_device_handle *usbDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID, uint8_t devType,
+libusb_device_handle *usbDeviceOpen(libusb_context *devContext, uint16_t devVID, uint16_t devPID,
 	uint8_t busNumber, uint8_t devAddress, const char *serialNumber, int32_t requiredLogicRevision,
 	int32_t requiredFirmwareVersion) {
 	libusb_device_handle *devHandle = NULL;
@@ -90,8 +90,7 @@ libusb_device_handle *usbDeviceOpen(libusb_context *devContext, uint16_t devVID,
 			}
 
 			// Check if this is the device we want (VID/PID).
-			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID
-				&& U8T((devDesc.bcdDevice & 0xFF00) >> 8) == devType) {
+			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID) {
 				// Verify device firmware version.
 				if (requiredFirmwareVersion >= 0 && U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion)) {
 					caerLog(CAER_LOG_CRITICAL, __func__,

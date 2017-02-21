@@ -400,8 +400,14 @@ extern "C" {
 #define DYNAPSE_CONFIG_YCHIPSIZE   			32
 #define DYNAPSE_CONFIG_NEUROW				16
 #define DYNAPSE_CONFIG_NEUCOL				16
-#define DYNAPSE_CONFIG_CAMNUM				16
+#define DYNAPSE_CONFIG_NUMCAM				64
 
+#define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
+
+/*
+*  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
+* */
+#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	8192
 /*
  *  libusb max 512 bytes per single transfer
  * */
@@ -434,7 +440,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N             		22
 #define DYNAPSE_CONFIG_BIAS_C0_IF_THR_N            			24
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_S_P             	26
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P            	38
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P            	28
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_F_P      			30
 #define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P            	32
 #define DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N            		34
@@ -589,7 +595,44 @@ struct caer_dynapse_info {
  */
 struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
+/*
+* @param cdh a valid device handle
+* Transfer numWords 16 bit words from *data to SRAM start at 
+* address baseAddr in SRAM.
+* @return true on success, false otherwise
+*/
 bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+/*
+* @param handle a valid device handle.
+*  Copy DYNAPSE_SPIKE_DEFAULT_SIZE (4096) int data
+*  into usb buffer, and send them via usb.
+*
+*  Make sure that data has max size data[4096]
+*
+* @return true on success, false otherwise
+*/
+bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig);
+
+/*
+* @param handle a valid device handle.
+*  Write a single CAM
+*
+*  parameters:
+*	usb_handle, preNeuron, postNeuron, camId, synapseType
+* @return true on success, false otherwise
+*/
+bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+
+/*
+* @param handle a valid device handle.
+*  Return addres for writing CAM
+*
+*  parameters:
+*   preNeuron, postNeuron, camId, synapseType
+*
+* @return bits that would make the connection
+*/
+uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
 
 #ifdef __cplusplus
 }

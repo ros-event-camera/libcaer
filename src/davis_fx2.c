@@ -15,9 +15,8 @@ caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	handle->h.deviceType = CAER_DEVICE_DAVIS_FX2;
 
 	bool openRetVal = davisCommonOpen((davisHandle) handle, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID,
-	DAVIS_FX2_DEVICE_DID_TYPE, DAVIS_FX2_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict,
-		serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
-		DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
+	DAVIS_FX2_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
+		DAVIS_FX2_REQUIRED_LOGIC_REVISION, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
 	if (!openRetVal) {
 		free(handle);
 
