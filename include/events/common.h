@@ -381,7 +381,7 @@ static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader head
  * Use free() to reclaim this memory afterwards.
  *
  * @param packet the current events packet.
- * @param eventCapacity the new maximum number of events this packet will hold.
+ * @param newEventCapacity the new maximum number of events this packet will hold.
  *
  * @return a valid event packet handle or NULL on error.
  * On success, the old packet handle is to be considered invalid and not to be
