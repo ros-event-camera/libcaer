@@ -73,7 +73,7 @@ extern "C" {
  * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
-/*
+ /**
  * Used to monitor neurons , example usage:
  * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 0);  // core 1 neuron 0
  *
@@ -86,7 +86,109 @@ extern "C" {
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
+/**
+ * Module address: device side SRAM controller configuration.
+ * The module supports holds an address, a word to be written to SRAM
+ * the most recent word read using a read command, and a read/write command.
+ * Reads/writes are triggered when the address field is changed
+ * ex: caerDynapseWriteSRAM(moduleData->moduleState, SRAMData, baseAddr, numWords);
+ * Writes numWords words from array SRAMData to the SRAM, starting at baseAddr.
+ */
 
+#define DYNAPSE_CONFIG_SRAM 14
+
+/**
+* Module address: Device side Synapse Reconfiguration module configuration.
+* Provides run control, selection between using a single kernel for
+* all neurons and reading per-neuron kernels from SRAM, programming of the
+* global kernel, as well as target output chip ID selection and SRAM kernel 
+* table base address.
+*/
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG 15
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
+* Run control. Starts and stops handshaking with DVS.
+*/    
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG_RUN 0
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+* Bits 16 downto 12 select the address in the global kernel table
+* and bits 11 downto 0 specify the data. 
+* The 12 data bits are split into 4*3 synaptic weight bits which map 
+* onto positive/negative polarity events from 2 DVS pixels.
+*/
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG_GLOBALKERNEL 1
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+* Boolean parameter for selecting between using kernels stored in
+* SRAM or the global kernel table. 1 for SRAM, 0 for global kernel table
+*/
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG_USESRAMKERNELS 2
+
+/**
+* Parameter address for moudle DYNAPSE_CONFIG_SYNAPSERECONFIG
+* Output chip select using chip identifiers from this document 
+*/
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT 3
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+* SRAM base address configuration in increments of 32 Kib.
+* Setting this to N will place the SRAM kernel LUT in the range [N*2^15,(N+1)*2^15-1]
+*/
+#define DYNAPSE_CONFIG_SYNAPSERECONFIG_SRAMBASEADDR 4
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_SRAM:
+ * Holds the address that will be used for the next read/write.
+ * Writing or reading this field will trigger the command contained
+ * in the command register to be executed.
+ */
+#define DYNAPSE_CONFIG_SRAM_ADDRESS 1
+
+/**
+ *Parameter address for module DYNAPSE_CONFIG_SRAM:
+ * Holds the most recently read data from the SRAM.
+ * Read only parameter.
+ */
+#define DYNAPSE_CONFIG_SRAM_READDATA 2
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_SRAM:
+ * Holds the data that will be written on the next write.
+ * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, wData);
+ *     caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ *     caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, wAddr);
+ * Writes wData to the address specified by wAddr.
+ */
+#define DYNAPSE_CONFIG_SRAM_WRITEDATA 3
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_SRAM:
+ * Holds the command that will be executed when the address field is written to.
+ * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ * Sets the SRAM controller up for doing writes.
+ */
+#define DYNAPSE_CONFIG_SRAM_RWCOMMAND 4
+
+/**
+ * Command for module DYNAPSE_CONFIG_SRAM:
+ * Write command for the RWCOMMAND field.
+ * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ * Sets the SRAM controller up for doing writes.
+ */
+#define DYNAPSE_CONFIG_SRAM_WRITE 1
+
+/**
+ * Command for module DYNAPSE_CONFIG_SRAM:
+ * Read command for the RWCOMMAND field.
+ * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_READ);
+ * Sets the SRAM controller up for doing reads.
+ */
+#define DYNAPSE_CONFIG_SRAM_READ 0
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_MUX:
@@ -494,6 +596,13 @@ struct caer_dynapse_info {
 struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
 /*
+* @param cdh a valid device handle
+* Transfer numWords 16 bit words from *data to SRAM start at 
+* address baseAddr in SRAM.
+* @return true on success, false otherwise
+*/
+bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+/*
 * @param handle a valid device handle.
 *  Copy DYNAPSE_SPIKE_DEFAULT_SIZE (4096) int data
 *  into usb buffer, and send them via usb.
@@ -524,7 +633,6 @@ bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32
 * @return bits that would make the connection
 */
 uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
-
 
 #ifdef __cplusplus
 }
