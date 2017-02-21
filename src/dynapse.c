@@ -309,6 +309,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					break;
 			}
 			break;
+		case DYNAPSE_CONFIG_SRAM:
+			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
+			break;
+		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
+		    return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
 
 		case DYNAPSE_CONFIG_MUX:
 			switch (paramAddr) {
@@ -1028,6 +1033,12 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					break;
 			}
 			break;
+		case DYNAPSE_CONFIG_SRAM:
+			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
+			break;
+		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
+			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			break;
 
 		case DYNAPSE_CONFIG_AER:
 			switch (paramAddr) {
@@ -1706,4 +1717,64 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 		handle->info.deviceIsMaster = param32;
 		atomic_thread_fence(memory_order_seq_cst);
 	}
+}
+
+    
+
+bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
+	dynapseHandle handle = (dynapseHandle) cdh;
+	dynapseState state = &handle->state;
+	uint32_t idxConfig = 0;
+	int numConfig = numWords * 2;
+	//we need malloc because allocating dynamically sized arrays on the stack is not allowed.
+	uint8_t *spiMultiConfig = malloc(numConfig*6*sizeof(*spiMultiConfig)); 
+
+	if ( spiMultiConfig == NULL ) {
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+			"Failed to malloc spiMultiConfigArray" );
+		return false; // No memory allocated, don't need to free.
+	}
+
+	for( uint32_t i = 0; i<numWords; i++ ) {
+		// Data word configuration
+		spiMultiConfig[i*12+0] = DYNAPSE_CONFIG_SRAM;
+		spiMultiConfig[i*12+1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
+		spiMultiConfig[i*12+2] = 0;
+		spiMultiConfig[i*12+3] = 0;
+		spiMultiConfig[i*12+4] = (data[i] >> 8) & 0x0FF;
+		spiMultiConfig[i*12+5] = (data[i] >> 0) & 0x0FF;
+		// Address configuration
+		spiMultiConfig[i*12+6] = DYNAPSE_CONFIG_SRAM;
+		spiMultiConfig[i*12+7] = DYNAPSE_CONFIG_SRAM_ADDRESS; 
+		spiMultiConfig[i*12+8] = 0;
+		spiMultiConfig[i*12+9] = ((baseAddr+i) >> 16) & 0x0FF;
+		spiMultiConfig[i*12+10] = ((baseAddr+i) >> 8) & 0x0FF;
+		spiMultiConfig[i*12+11] = ((baseAddr+i) >> 0) & 0x0FF;
+	}
+
+
+	// Prepare the SRAM controller for writing
+	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+
+	// Start writing data
+	while ( numConfig > 0 ) {
+		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
+		size_t configSize = configNum * 6;
+		int result = libusb_control_transfer(state->usbState.deviceHandle,
+						    LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						    VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
+		if ( result != configSize ) {
+			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+				"Failed to send chip config, USB transfer failed with error %d.", result);
+			free(spiMultiConfig);
+			return (false);
+		}
+
+		numConfig -= configNum;
+		idxConfig += configSize;
+	}
+
+	free(spiMultiConfig);
+
+	return true;
 }
