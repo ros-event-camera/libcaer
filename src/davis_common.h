@@ -33,12 +33,14 @@
 #define IMU6_COUNT 15
 #define IMU9_COUNT 21
 
-#define DAVIS_EVENT_TYPES 4
+#define DAVIS_EVENT_TYPES 5
+#define DAVIS_SAMPLE_POSITION 4
 
 #define DAVIS_POLARITY_DEFAULT_SIZE 4096
 #define DAVIS_SPECIAL_DEFAULT_SIZE 128
 #define DAVIS_FRAME_DEFAULT_SIZE 4
 #define DAVIS_IMU_DEFAULT_SIZE 64
+#define DAVIS_SAMPLE_DEFAULT_SIZE 512
 
 struct davis_state {
 	// Data Acquisition Thread -> Mainloop Exchange
@@ -97,10 +99,17 @@ struct davis_state {
 	uint16_t apsROIPositionY[APS_ROI_REGIONS_MAX];
 	// IMU specific fields
 	bool imuIgnoreEvents;
+	bool imuFlipX;
+	bool imuFlipY;
+	bool imuFlipZ;
 	uint8_t imuCount;
 	uint8_t imuTmpData;
 	float imuAccelScale;
 	float imuGyroScale;
+	// Microphone specific fields
+	bool micRight;
+	uint8_t micCount;
+	uint16_t micTmpData;
 	// Packet Container state
 	caerEventPacketContainer currentPacketContainer;
 	atomic_uint_fast32_t maxPacketContainerPacketSize;
@@ -118,6 +127,9 @@ struct davis_state {
 	// Special Packet state
 	caerSpecialEventPacket currentSpecialPacket;
 	int32_t currentSpecialPacketPosition;
+	// Microphone Sample Packet state
+	caerSampleEventPacket currentSamplePacket;
+	int32_t currentSamplePacketPosition;
 	// Current composite events, for later copy, to not loose them on commits.
 	caerFrameEvent currentFrameEvent[APS_ROI_REGIONS_MAX];
 	struct caer_imu6_event currentIMU6Event;

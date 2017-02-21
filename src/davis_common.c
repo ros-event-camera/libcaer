@@ -139,6 +139,15 @@ static inline void freeAllDataMemory(davisState state) {
 		}
 	}
 
+	if (state->currentSamplePacket != NULL) {
+		free(&state->currentSamplePacket->packetHeader);
+		state->currentSamplePacket = NULL;
+
+		if (state->currentPacketContainer != NULL) {
+			caerEventPacketContainerSetEventPacket(state->currentPacketContainer, DAVIS_SAMPLE_POSITION, NULL);
+		}
+	}
+
 	if (state->currentPacketContainer != NULL) {
 		caerEventPacketContainerFree(state->currentPacketContainer);
 		state->currentPacketContainer = NULL;
@@ -274,7 +283,7 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	state->dvsSizeY = I16T(param32);
 
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
-	state->dvsInvertXY = U16T(param32) & 0x04;
+	state->dvsInvertXY = param32 & 0x04;
 
 	if (state->dvsInvertXY) {
 		handle->info.dvsSizeX = state->dvsSizeY;
@@ -291,10 +300,9 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	state->apsSizeY = I16T(param32);
 
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
-	uint16_t apsOrientationInfo = U16T(param32);
-	state->apsInvertXY = apsOrientationInfo & 0x04;
-	state->apsFlipX = apsOrientationInfo & 0x02;
-	state->apsFlipY = apsOrientationInfo & 0x01;
+	state->apsInvertXY = param32 & 0x04;
+	state->apsFlipX = param32 & 0x02;
+	state->apsFlipY = param32 & 0x01;
 
 	if (state->apsInvertXY) {
 		handle->info.apsSizeX = state->apsSizeY;
@@ -304,6 +312,11 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 		handle->info.apsSizeX = state->apsSizeX;
 		handle->info.apsSizeY = state->apsSizeY;
 	}
+
+	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
+	state->imuFlipX = param32 & 0x04;
+	state->imuFlipY = param32 & 0x02;
+	state->imuFlipZ = param32 & 0x01;
 
 	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
 		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
@@ -359,6 +372,7 @@ bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint3
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
+	(*configSet)(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL, false);
 
 	(*configSet)(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4); // in cycles @ LogicClock
 	(*configSet)(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0); // in cycles @ LogicClock
@@ -452,6 +466,9 @@ bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint3
 	(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSES, true);
 	(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY, true);
 	(*configSet)(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH, U32T(handle->info.logicClock)); // in cycles @ LogicClock
+
+	(*configSet)(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false); // Microphones disabled by default.
+	(*configSet)(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32); // 48 KHz sampling frequency.
 
 	if (handle->info.extInputHasGenerator) {
 		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
@@ -826,6 +843,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1192,6 +1210,19 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			}
 			break;
 
+		case DAVIS_CONFIG_MICROPHONE:
+			switch (paramAddr) {
+				case DAVIS_CONFIG_MICROPHONE_RUN:
+				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
+					return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -1482,6 +1513,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1820,6 +1852,19 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			}
 			break;
 
+		case DAVIS_CONFIG_MICROPHONE:
+			switch (paramAddr) {
+				case DAVIS_CONFIG_MICROPHONE_RUN:
+				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
+					return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -2134,6 +2179,14 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 		return (false);
 	}
 
+	state->currentSamplePacket = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	if (state->currentSamplePacket == NULL) {
+		freeAllDataMemory(state);
+
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+		return (false);
+	}
+
 	state->apsCurrentResetFrame = calloc((size_t) (state->apsSizeX * state->apsSizeY * APS_ADC_CHANNELS),
 		sizeof(uint16_t));
 	if (state->apsCurrentResetFrame == NULL) {
@@ -2204,6 +2257,9 @@ bool davisCommonDataStop(caerDeviceHandle cdh) {
 	// Stop data acquisition thread.
 	if (atomic_load(&state->dataExchangeStopProducers)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
+		davisCommonConfigSet(handle, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false);
+		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
+		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
@@ -2244,6 +2300,7 @@ bool davisCommonDataStop(caerDeviceHandle cdh) {
 	state->currentSpecialPacketPosition = 0;
 	state->currentFramePacketPosition = 0;
 	state->currentIMU6PacketPosition = 0;
+	state->currentSamplePacketPosition = 0;
 
 	// Reset private composite events. 'currentFrameEvent' is taken care of in freeAllDataMemory().
 	memset(&state->currentIMU6Event, 0, sizeof(struct caer_imu6_event));
@@ -2412,6 +2469,28 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			}
 
 			state->currentIMU6Packet = grownPacket;
+		}
+
+		if (state->currentSamplePacket == NULL) {
+			state->currentSamplePacket = caerSampleEventPacketAllocate(
+			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			if (state->currentSamplePacket == NULL) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+				return;
+			}
+		}
+		else if (state->currentSamplePacketPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSamplePacket)) {
+			// If not committed, let's check if any of the packets has reached its maximum
+			// capacity limit. If yes, we grow them to accomodate new events.
+			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerGenericEventPacketGrow(
+				(caerEventPacketHeader) state->currentSamplePacket, state->currentSamplePacketPosition * 2);
+			if (grownPacket == NULL) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow Sample event packet.");
+				return;
+			}
+
+			state->currentSamplePacket = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -3213,18 +3292,27 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								case 2: {
 									int16_t accelX = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipX) {
+										accelX = I16T(-accelX);
+									}
 									caerIMU6EventSetAccelX(&state->currentIMU6Event, accelX / state->imuAccelScale);
 									break;
 								}
 
 								case 4: {
 									int16_t accelY = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipY) {
+										accelY = I16T(-accelY);
+									}
 									caerIMU6EventSetAccelY(&state->currentIMU6Event, accelY / state->imuAccelScale);
 									break;
 								}
 
 								case 6: {
 									int16_t accelZ = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipZ) {
+										accelZ = I16T(-accelZ);
+									}
 									caerIMU6EventSetAccelZ(&state->currentIMU6Event, accelZ / state->imuAccelScale);
 									break;
 								}
@@ -3239,18 +3327,27 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								case 10: {
 									int16_t gyroX = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipX) {
+										gyroX = I16T(-gyroX);
+									}
 									caerIMU6EventSetGyroX(&state->currentIMU6Event, gyroX / state->imuGyroScale);
 									break;
 								}
 
 								case 12: {
 									int16_t gyroY = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipY) {
+										gyroY = I16T(-gyroY);
+									}
 									caerIMU6EventSetGyroY(&state->currentIMU6Event, gyroY / state->imuGyroScale);
 									break;
 								}
 
 								case 14: {
 									int16_t gyroZ = I16T((state->imuTmpData << 8) | misc8Data);
+									if (state->imuFlipZ) {
+										gyroZ = I16T(-gyroZ);
+									}
 									caerIMU6EventSetGyroZ(&state->currentIMU6Event, gyroZ / state->imuGyroScale);
 									break;
 								}
@@ -3309,7 +3406,56 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 						case 3: {
 							// APS ADC depth info, use directly as ADC depth.
+							// 16 bits is the maximum supported depth for APS.
 							state->apsADCShift = U16T(16 - misc8Data);
+							break;
+						}
+
+						case 4: {
+							// Microphone FIRST RIGHT.
+							state->micRight = true;
+							state->micCount = 1;
+							state->micTmpData = misc8Data;
+							break;
+						}
+
+						case 5: {
+							// Microphone FIRST LEFT.
+							state->micRight = false;
+							state->micCount = 1;
+							state->micTmpData = misc8Data;
+							break;
+						}
+
+						case 6: {
+							// Microphone SECOND.
+							if (state->micCount != 1) {
+								// Ignore incomplete samples.
+								break;
+							}
+
+							state->micCount = 2;
+							state->micTmpData = U16T(U32T(state->micTmpData << 8) | misc8Data);
+							break;
+						}
+
+						case 7: {
+							// Microphone THIRD.
+							if (state->micCount != 2) {
+								// Ignore incomplete samples.
+								break;
+							}
+
+							state->micCount = 0;
+							uint32_t micData = U32T(U32T(state->micTmpData << 8) | misc8Data);
+
+							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentSamplePacket,
+								state->currentSamplePacketPosition);
+							caerSampleEventSetType(micSample, state->micRight);
+							caerSampleEventSetSample(micSample, micData);
+							caerSampleEventSetTimestamp(micSample, state->currentTimestamp);
+							caerSampleEventValidate(micSample, state->currentSamplePacket);
+							state->currentSamplePacketPosition++;
 							break;
 						}
 
@@ -3387,7 +3533,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentFramePacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize));
+				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize)
+				|| (state->currentSamplePacketPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
 			> state->currentPacketContainerCommitTimestamp;
@@ -3432,6 +3579,15 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 				state->currentIMU6Packet = NULL;
 				state->currentIMU6PacketPosition = 0;
+				emptyContainerCommit = false;
+			}
+
+			if (state->currentSamplePacketPosition > 0) {
+				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, DAVIS_SAMPLE_POSITION,
+					(caerEventPacketHeader) state->currentSamplePacket);
+
+				state->currentSamplePacket = NULL;
+				state->currentSamplePacketPosition = 0;
 				emptyContainerCommit = false;
 			}
 
@@ -3557,6 +3713,8 @@ static int davisDataAcquisitionThread(void *inPtr) {
 		davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, true);
 		davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, true);
+		// Do NOT enable additional ExtInput detectors, those are always user controlled.
+		// Do NOT enable microphones by default.
 
 		// Enable data transfer only after enabling the data producers, so that the chip
 		// has time to start up and we avoid the initial data flood.
