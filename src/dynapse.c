@@ -1895,7 +1895,7 @@ uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronA
 	return(bits);
 }
 
-bool caerDynapseWriteSRAM(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
 
 	uint32_t bits =  neuronId << 7 | sramId << 5 | coreId << 15 | 1 << 17 | 1 << 4
 								| destinationCore << 18 | sy << 27 | dy << 25 | dx << 22 | sx << 24 | virtualCoreId << 28;

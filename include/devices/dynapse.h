@@ -609,7 +609,7 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 * address baseAddr in SRAM.
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteSRAMWords(caerDeviceHandle handle, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+bool caerDynapseWriteSramWords(caerDeviceHandle handle, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
 
 /*
  *
@@ -625,7 +625,7 @@ bool caerDynapseWriteSRAMWords(caerDeviceHandle handle, uint16_t *data, uint32_t
 *
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteSRAM(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore);
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore);
 
 /*
  * Remember to Select the chip before calling this function
