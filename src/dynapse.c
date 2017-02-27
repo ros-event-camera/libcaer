@@ -1786,7 +1786,7 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 	}
 }
 
-bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
+bool caerDynapseWriteSRAMWords(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 	uint32_t idxConfig = 0;
@@ -1797,7 +1797,7 @@ bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAdd
 	if ( spiMultiConfig == NULL ) {
 		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 			"Failed to malloc spiMultiConfigArray" );
-		return false; // No memory allocated, don't need to free.
+		return(false); // No memory allocated, don't need to free.
 	}
 
 	for( uint32_t i = 0; i<numWords; i++ ) {
@@ -1841,7 +1841,7 @@ bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAdd
 
 	free(spiMultiConfig);
 
-	return true;
+	return(true);
 }
 
 bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
@@ -1894,5 +1894,15 @@ uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronA
 			| coreId << 15 | row << 5 | column;
 
 	return(bits);
+}
+
+bool caerDynapseWriteSRAM(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
+
+	uint32_t bits = neuronId << 7 | sramId << 5 | coreId << 15 | 1 << 17 | 1 << 4
+								| destinationCore << 18 | sy << 27 | dy << 25 | dx << 22 | sx << 24 | coreId << 28;
+
+	caerDeviceConfigSet(handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
+
+	return(true);
 }
 
