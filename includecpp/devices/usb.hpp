@@ -9,6 +9,8 @@ namespace devices {
 
 class usb {
 protected:
+	caerDeviceHandle handle;
+
 	usb(uint16_t deviceID, uint16_t deviceType) :
 		usb(deviceID, deviceType, 0, 0, std::string()) {
 	}
@@ -82,9 +84,6 @@ public:
 	caerEventPacketContainer dataGet() {
 		return (caerDeviceDataGet(handle));
 	}
-
-protected:
-	caerDeviceHandle handle;
 };
 
 }
