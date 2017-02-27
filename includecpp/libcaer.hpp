@@ -5,8 +5,7 @@ namespace libcaer {
 
 #include <libcaer/libcaer.h>
 
-class log {
-public:
+namespace log {
 	enum class logLevel {
 		EMERGENCY = 0, ALERT = 1, CRITICAL = 2, ERROR = 3, WARNING = 4, NOTICE = 5, INFO = 6, DEBUG = 7
 	};
@@ -33,7 +32,7 @@ public:
 	void logVA(logLevel l, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA {
 		caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, args);
 	}
-};
+}
 
 }
 
