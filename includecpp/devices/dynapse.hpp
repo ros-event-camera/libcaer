@@ -11,19 +11,37 @@ namespace devices {
 
 class dynapse: public usb {
 public:
+	dynapse(uint16_t deviceID) :
+		usb(deviceID, CAER_DEVICE_DYNAPSE) {
+	}
+
+	dynapse(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+		const std::string &serialNumberRestrict) :
+		usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+	}
+
 	struct caer_dynapse_info infoGet() {
 		return (caerDynapseInfoGet(handle));
 	}
 
-	void sendDataToUSB(int *data, int numConfig) {
+	void sendDataToUSB(uint32_t *data, int numConfig) {
 		bool success = caerDynapseSendDataToUSB(handle, data, numConfig);
 		if (!success) {
 			throw std::runtime_error("Failed to send config data to device.");
 		}
 	}
 
-	void writeSRAM(uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
-		bool success = caerDynapseWriteSRAM(handle, data, baseAddr, numWords);
+	void writeSramWords(uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
+		bool success = caerDynapseWriteSramWords(handle, data, baseAddr, numWords);
+		if (!success) {
+			throw std::runtime_error("Failed to write SRAM word.");
+		}
+	}
+
+	void writeSram(uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy,
+		uint16_t sramId, uint16_t destinationCore) {
+		bool success = caerDynapseWriteSram(handle, coreId, neuronId, virtualCoreId, sx, dx, sy, dy, sramId,
+			destinationCore);
 		if (!success) {
 			throw std::runtime_error("Failed to write SRAM.");
 		}

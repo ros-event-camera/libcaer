@@ -8,7 +8,7 @@ namespace libcaer {
 namespace devices {
 
 class usb {
-public:
+protected:
 	usb(uint16_t deviceID, uint16_t deviceType) :
 		usb(deviceID, deviceType, 0, 0, std::string()) {
 	}
@@ -24,6 +24,8 @@ public:
 		}
 	}
 
+public:
+	// This can be called from base class pointers!
 	~usb() {
 		// Run destructors, free all memory.
 		// Never fails in current implementation.
