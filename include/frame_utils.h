@@ -17,7 +17,6 @@ extern "C" {
 
 caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket);
 void caerFrameUtilsContrast(caerFrameEventPacket framePacket);
-void caerFrameUtilsWhiteBalance(caerFrameEventPacket framePacket);
 
 #ifdef __cplusplus
 }

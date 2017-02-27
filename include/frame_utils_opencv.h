@@ -22,15 +22,9 @@ enum caer_frame_utils_opencv_contrast {
 	CONTRAST_NORMALIZATION, CONTRAST_HISTOGRAM_EQUALIZATION, CONTRAST_CLAHE,
 };
 
-enum caer_frame_utils_opencv_white_balance {
-	WHITEBALANCE_SIMPLE, WHITEBALANCE_GRAYWORLD,
-};
-
 caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePacket,
 	enum caer_frame_utils_opencv_demosaic demosaicType);
 void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_opencv_contrast contrastType);
-void caerFrameUtilsOpenCVWhiteBalance(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_opencv_white_balance whiteBalanceType);
 
 #ifdef __cplusplus
 }
