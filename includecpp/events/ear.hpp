@@ -1,0 +1,6 @@
+#ifndef LIBCAER_EVENTS_EAR_HPP_
+#define LIBCAER_EVENTS_EAR_HPP_
+
+
+
+#endif /* LIBCAER_EVENTS_EAR_HPP_ */
