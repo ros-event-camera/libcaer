@@ -639,7 +639,7 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neu
 *
 * @return true on success, false otherwise
 */
-bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig);
+bool caerDynapseSendDataToUSB(caerDeviceHandle handle, uint32_t * data, int numConfig);
 
 /*
  * Remember to Select the chip before calling this function

@@ -179,7 +179,7 @@ bool dynapseClose(caerDeviceHandle cdh) {
 }
 
 
-bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig) {
+bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, uint32_t * pointer, int numConfig) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
