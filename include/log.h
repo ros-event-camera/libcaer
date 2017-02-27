@@ -10,10 +10,12 @@
 #ifdef __cplusplus
 
 #include <cstdint>
+#include <cstdarg>
 
 #else
 
 #include <stdint.h>
+#include <stdarg.h>
 
 #endif
 
