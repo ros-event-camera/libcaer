@@ -25,7 +25,7 @@ protected:
 	}
 
 public:
-	struct caer_davis_info infoGet() {
+	struct caer_davis_info infoGet() const {
 		return (caerDavisInfoGet(handle));
 	}
 
@@ -55,7 +55,7 @@ public:
 	}
 };
 
-class davisfx2: public davis {
+class davisfx2 final: public davis {
 public:
 	davisfx2(uint16_t deviceID) :
 		davis(deviceID, CAER_DEVICE_DAVIS_FX2) {
@@ -67,7 +67,7 @@ public:
 	}
 };
 
-class davisfx3: public davis {
+class davisfx3 final: public davis {
 public:
 	davisfx3(uint16_t deviceID) :
 		davis(deviceID, CAER_DEVICE_DAVIS_FX3) {
