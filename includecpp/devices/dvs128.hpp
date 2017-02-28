@@ -20,7 +20,7 @@ public:
 		usb(deviceID, CAER_DEVICE_DVS128, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
-	struct caer_dvs128_info infoGet() const {
+	struct caer_dvs128_info infoGet() const noexcept {
 		return (caerDVS128InfoGet(handle));
 	}
 };

@@ -20,7 +20,7 @@ public:
 		usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
-	struct caer_dynapse_info infoGet() const {
+	struct caer_dynapse_info infoGet() const noexcept {
 		return (caerDynapseInfoGet(handle));
 	}
 

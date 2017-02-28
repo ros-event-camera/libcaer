@@ -25,32 +25,32 @@ protected:
 	}
 
 public:
-	struct caer_davis_info infoGet() const {
+	struct caer_davis_info infoGet() const noexcept {
 		return (caerDavisInfoGet(handle));
 	}
 
 	// STATIC.
-	static uint16_t biasVDACGenerate(struct caer_bias_vdac vdacBias) {
+	static uint16_t biasVDACGenerate(struct caer_bias_vdac vdacBias) noexcept {
 		return (caerBiasVDACGenerate(vdacBias));
 	}
 
-	static struct caer_bias_vdac biasVDACParse(uint16_t vdacBias) {
+	static struct caer_bias_vdac biasVDACParse(uint16_t vdacBias) noexcept {
 		return (caerBiasVDACParse(vdacBias));
 	}
 
-	static uint16_t biasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias) {
+	static uint16_t biasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias) noexcept {
 		return (caerBiasCoarseFineGenerate(coarseFineBias));
 	}
 
-	static struct caer_bias_coarsefine biasCoarseFineParse(uint16_t coarseFineBias) {
+	static struct caer_bias_coarsefine biasCoarseFineParse(uint16_t coarseFineBias) noexcept {
 		return (caerBiasCoarseFineParse(coarseFineBias));
 	}
 
-	static uint16_t biasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSourceBias) {
+	static uint16_t biasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSourceBias) noexcept {
 		return (caerBiasShiftedSourceGenerate(shiftedSourceBias));
 	}
 
-	static struct caer_bias_shiftedsource biasShiftedSourceParse(uint16_t shiftedSourceBias) {
+	static struct caer_bias_shiftedsource biasShiftedSourceParse(uint16_t shiftedSourceBias) noexcept {
 		return (caerBiasShiftedSourceParse(shiftedSourceBias));
 	}
 };
