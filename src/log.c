@@ -27,6 +27,13 @@ void caerLogFileDescriptorsSet(int fd1, int fd2) {
 }
 
 void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVA(logLevel, subSystem, format, argumentList);
+	va_end(argumentList);
+}
+
+void caerLogVA(uint8_t logLevel, const char *subSystem, const char *format, va_list args) {
 	// Check that subSystem and format are defined correctly.
 	if (subSystem == NULL || format == NULL) {
 		caerLog(CAER_LOG_ERROR, "Logger", "Missing subSystem or format strings. Neither can be NULL.");
@@ -120,10 +127,7 @@ void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) {
 	// Cap full log message length at 2048 bytes.
 	char logMessageString[2048];
 
-	va_list argptr;
-	va_start(argptr, format);
-	vsnprintf(logMessageString, 2048, format, argptr);
-	va_end(argptr);
+	vsnprintf(logMessageString, 2048, format, args);
 
 	// Copy all strings into one and ensure NUL termination.
 	size_t logLength = (size_t) snprintf(NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,

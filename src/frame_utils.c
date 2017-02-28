@@ -645,7 +645,3 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
 		}
 	CAER_FRAME_ITERATOR_VALID_END
 }
-
-void caerFrameUtilsWhiteBalance(caerFrameEventPacket framePacket) {
-	// TODO: implement auto white-balance.
-}

@@ -188,118 +188,6 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePack
 	return (colorFramePacket);
 }
 
-void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_opencv_contrast contrastType) {
-	if (framePacket == NULL) {
-		return;
-	}
-
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
-		Size frameSize(caerFrameEventGetLengthX(caerFrameIteratorElement),
-			caerFrameEventGetLengthY(caerFrameIteratorElement));
-		Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
-			caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));
-
-		CV_Assert(orig.type() == CV_16UC1 || orig.type() == CV_16UC3 || orig.type() == CV_16UC4);
-
-		// This generally only works well on grayscale intensity images.
-		// So, if this is a grayscale image, good, else if its a color
-		// image we convert it to YCrCb and operate on the Y channel only.
-		Mat intensity;
-		std::vector<Mat> yCrCbPlanes(3);
-		Mat rgbaAlpha;
-
-		// Grayscale, no intensity extraction needed.
-		if (orig.channels() == GRAYSCALE) {
-			intensity = orig;
-		}
-		else {
-			// Color image, extract RGB and intensity/luminance.
-			Mat rgb;
-
-			if (orig.channels() == RGBA) {
-				// We separate Alpha from RGB first.
-				// We will restore alpha at the end.
-				rgb = Mat(orig.rows, orig.cols, CV_16UC3);
-				rgbaAlpha = Mat(orig.rows, orig.cols, CV_16UC1);
-
-				Mat out[] = { rgb, rgbaAlpha };
-				// rgba[0] -> rgb[0], rgba[1] -> rgb[1],
-				// rgba[2] -> rgb[2], rgba[3] -> rgbaAlpha[0]
-				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
-				mixChannels(&orig, 1, out, 2, channelTransform, 4);
-			}
-			else {
-				// Already an RGB image.
-				rgb = orig;
-				CV_Assert(rgb.type() == CV_16UC3);
-			}
-
-			// First we convert from RGB to a color space with
-			// separate luminance channel.
-			Mat rgbYCrCb;
-			cvtColor(rgb, rgbYCrCb, COLOR_RGB2YCrCb);
-
-			CV_Assert(rgbYCrCb.type() == CV_16UC3);
-
-			// Then we split it up so that we can access the luminance
-			// channel on its own separately.
-			split(rgbYCrCb, yCrCbPlanes);
-
-			// Now we have the luminance image in yCrCbPlanes[0].
-			intensity = yCrCbPlanes[0];
-		}
-
-		CV_Assert(intensity.type() == CV_16UC1);
-
-		// Apply contrast enhancement algorithm.
-		switch (contrastType) {
-			case CONTRAST_NORMALIZATION:
-				frameUtilsOpenCVContrastNormalize(intensity, 1.0);
-				break;
-
-			case CONTRAST_HISTOGRAM_EQUALIZATION:
-				frameUtilsOpenCVContrastEqualize(intensity);
-				break;
-
-			case CONTRAST_CLAHE:
-				frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
-				break;
-		}
-
-		// If original was a color frame, we have to mix the various
-		// components back together into an RGB(A) image.
-		if (orig.channels() != GRAYSCALE) {
-			Mat YCrCbrgb;
-			merge(yCrCbPlanes, YCrCbrgb);
-
-			CV_Assert(YCrCbrgb.type() == CV_16UC3);
-
-			if (orig.channels() == RGBA) {
-				Mat rgb;
-				cvtColor(YCrCbrgb, rgb, COLOR_YCrCb2RGB);
-
-				CV_Assert(rgb.type() == CV_16UC3);
-
-				// Restore original alpha.
-				Mat in[] = { rgb, rgbaAlpha };
-				// rgb[0] -> rgba[0], rgb[1] -> rgba[1],
-				// rgb[2] -> rgba[2], rgbaAlpha[0] -> rgba[3]
-				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
-				mixChannels(in, 2, &orig, 1, channelTransform, 4);
-			}
-			else {
-				cvtColor(YCrCbrgb, orig, COLOR_YCrCb2RGB);
-			}
-		}
-	CAER_FRAME_ITERATOR_VALID_END
-}
-
-void caerFrameUtilsOpenCVWhiteBalance(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_opencv_white_balance whiteBalanceType) {
-	// TODO: implement OpenCV auto white-balance.
-}
-
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent) {
 	CV_Assert(intensity.type() == CV_16UC1);
 	CV_Assert(clipHistPercent >= 0 && clipHistPercent < 100);
@@ -409,4 +297,111 @@ static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int t
 	clahe->setClipLimit(clipLimit);
 	clahe->setTilesGridSize(Size(tilesGridSize, tilesGridSize));
 	clahe->apply(intensity, intensity);
+}
+
+void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
+	enum caer_frame_utils_opencv_contrast contrastType) {
+	if (framePacket == NULL) {
+		return;
+	}
+
+	CAER_FRAME_ITERATOR_VALID_START(framePacket)
+		Size frameSize(caerFrameEventGetLengthX(caerFrameIteratorElement),
+			caerFrameEventGetLengthY(caerFrameIteratorElement));
+		Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
+			caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));
+
+		CV_Assert(orig.type() == CV_16UC1 || orig.type() == CV_16UC3 || orig.type() == CV_16UC4);
+
+		// This generally only works well on grayscale intensity images.
+		// So, if this is a grayscale image, good, else if its a color
+		// image we convert it to YCrCb and operate on the Y channel only.
+		Mat intensity;
+		std::vector<Mat> yCrCbPlanes(3);
+		Mat rgbaAlpha;
+
+		// Grayscale, no intensity extraction needed.
+		if (orig.channels() == GRAYSCALE) {
+			intensity = orig;
+		}
+		else {
+			// Color image, extract RGB and intensity/luminance.
+			Mat rgb;
+
+			if (orig.channels() == RGBA) {
+				// We separate Alpha from RGB first.
+				// We will restore alpha at the end.
+				rgb = Mat(orig.rows, orig.cols, CV_16UC3);
+				rgbaAlpha = Mat(orig.rows, orig.cols, CV_16UC1);
+
+				Mat out[] = { rgb, rgbaAlpha };
+				// rgba[0] -> rgb[0], rgba[1] -> rgb[1],
+				// rgba[2] -> rgb[2], rgba[3] -> rgbaAlpha[0]
+				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
+				mixChannels(&orig, 1, out, 2, channelTransform, 4);
+			}
+			else {
+				// Already an RGB image.
+				rgb = orig;
+				CV_Assert(rgb.type() == CV_16UC3);
+			}
+
+			// First we convert from RGB to a color space with
+			// separate luminance channel.
+			Mat rgbYCrCb;
+			cvtColor(rgb, rgbYCrCb, COLOR_RGB2YCrCb);
+
+			CV_Assert(rgbYCrCb.type() == CV_16UC3);
+
+			// Then we split it up so that we can access the luminance
+			// channel on its own separately.
+			split(rgbYCrCb, yCrCbPlanes);
+
+			// Now we have the luminance image in yCrCbPlanes[0].
+			intensity = yCrCbPlanes[0];
+		}
+
+		CV_Assert(intensity.type() == CV_16UC1);
+
+		// Apply contrast enhancement algorithm.
+		switch (contrastType) {
+			case CONTRAST_NORMALIZATION:
+				frameUtilsOpenCVContrastNormalize(intensity, 1.0);
+				break;
+
+			case CONTRAST_HISTOGRAM_EQUALIZATION:
+				frameUtilsOpenCVContrastEqualize(intensity);
+				break;
+
+			case CONTRAST_CLAHE:
+				frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
+				break;
+		}
+
+		// If original was a color frame, we have to mix the various
+		// components back together into an RGB(A) image.
+		if (orig.channels() != GRAYSCALE) {
+			Mat YCrCbrgb;
+			merge(yCrCbPlanes, YCrCbrgb);
+
+			CV_Assert(YCrCbrgb.type() == CV_16UC3);
+
+			if (orig.channels() == RGBA) {
+				Mat rgb;
+				cvtColor(YCrCbrgb, rgb, COLOR_YCrCb2RGB);
+
+				CV_Assert(rgb.type() == CV_16UC3);
+
+				// Restore original alpha.
+				Mat in[] = { rgb, rgbaAlpha };
+				// rgb[0] -> rgba[0], rgb[1] -> rgba[1],
+				// rgb[2] -> rgba[2], rgbaAlpha[0] -> rgba[3]
+				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
+				mixChannels(in, 2, &orig, 1, channelTransform, 4);
+			}
+			else {
+				cvtColor(YCrCbrgb, orig, COLOR_YCrCb2RGB);
+			}
+		}
+	CAER_FRAME_ITERATOR_VALID_END
 }

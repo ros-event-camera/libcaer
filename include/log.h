@@ -10,18 +10,22 @@
 #ifdef __cplusplus
 
 #include <cstdint>
+#include <cstdarg>
 
 #else
 
 #include <stdint.h>
+#include <stdarg.h>
 
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
 	#if defined(__USE_MINGW_ANSI_STDIO)
 		#define ATTRIBUTE_FORMAT __attribute__ ((format (gnu_printf, 3, 4)))
+		#define ATTRIBUTE_FORMAT_VA __attribute__ ((format (gnu_printf, 3, 0)))
 	#else
 		#define ATTRIBUTE_FORMAT __attribute__ ((format (printf, 3, 4)))
+		#define ATTRIBUTE_FORMAT_VA __attribute__ ((format (printf, 3, 0)))
 	#endif
 #else
 	#define ATTRIBUTE_FORMAT
@@ -96,6 +100,24 @@ void caerLogFileDescriptorsSet(int fd1, int fd2);
  * @param ... the parameters to be formatted according to the format string (see printf()).
  */
 void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT;
+
+/**
+ * Secondary logging function.
+ * This function takes messages, formats them and sends them out to a file descriptor,
+ * respecting the system-wide log level setting and prepending the current time, the
+ * log level and a user-specified common string to the actual formatted output.
+ * The format is specified exactly as with the printf() family of functions.
+ * The argument list is a va_list as returned by va_start(), following the vprintf()
+ * family of functions in its functionality.
+ * Please see their manual-page for more information.
+ *
+ * @param logLevel the message-specific log level.
+ * @param subSystem a common, user-specified string to prepend before the message.
+ * @param format the message format string (see printf()).
+ * @param args the parameters to be formatted according to the format string (see printf()).
+ *             This is an argument list as returned by va_start().
+ */
+void caerLogVA(uint8_t logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA;
 
 #ifdef __cplusplus
 }

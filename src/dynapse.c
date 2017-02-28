@@ -179,19 +179,19 @@ bool dynapseClose(caerDeviceHandle cdh) {
 }
 
 
-bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig) {
+bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, uint32_t * pointer, int numConfig) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		//struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
 		return (false);
 	}
 
 	// Check if device type is supported.
 	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		//struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
 		return (false);
 	}
 
@@ -214,8 +214,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, int * pointer, int numConfig
 			spiMultiConfig[(i * 6) + 5] = (pointer[i] >> 0) & 0x0FF;
 	}
 	while (numConfig > 0) {
-		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
-		size_t configSize = configNum * 6;
+		int configNum = (numConfig > 85) ? (85) : (numConfig);
+		int configSize = configNum * 6;
 
 		int result = libusb_control_transfer(state->usbState.deviceHandle,
 			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
@@ -1786,7 +1786,7 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 	}
 }
 
-bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
+bool caerDynapseWriteSRAMWords(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 	uint32_t idxConfig = 0;
@@ -1797,7 +1797,7 @@ bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAdd
 	if ( spiMultiConfig == NULL ) {
 		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 			"Failed to malloc spiMultiConfigArray" );
-		return false; // No memory allocated, don't need to free.
+		return(false); // No memory allocated, don't need to free.
 	}
 
 	for( uint32_t i = 0; i<numWords; i++ ) {
@@ -1841,15 +1841,14 @@ bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAdd
 
 	free(spiMultiConfig);
 
-	return true;
+	return(true);
 }
 
 bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
 
 	// Check if the pointer is valid.
-	if (handle == NULL) {
+	if (handle) {
 		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
 		return (false);
 	}
@@ -1873,7 +1872,7 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
 			| coreId << 15 | row << 5 | column;
 
-	caerDeviceConfigSet(handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
+	caerDeviceConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
 
 	return(true);
 }
@@ -1894,5 +1893,15 @@ uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronA
 			| coreId << 15 | row << 5 | column;
 
 	return(bits);
+}
+
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
+
+	uint32_t bits =  neuronId << 7 | sramId << 5 | coreId << 15 | 1 << 17 | 1 << 4
+								| destinationCore << 18 | sy << 27 | dy << 25 | dx << 22 | sx << 24 | virtualCoreId << 28;
+
+	caerDeviceConfigSet(handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
+
+	return(true);
 }
 

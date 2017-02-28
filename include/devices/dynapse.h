@@ -362,6 +362,11 @@ extern "C" {
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
 
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH 0
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH 1
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST 0
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST 1
+
 
 /**
  * Parameter address for module DYNAPSE_X4BOARD_NEUX:
@@ -403,6 +408,9 @@ extern "C" {
 #define DYNAPSE_CONFIG_NUMCAM				64
 
 #define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
+#define DYNAPSE_CONFIG_CAMTYPE_S_EXC		2
+#define DYNAPSE_CONFIG_CAMTYPE_F_INH		1
+#define DYNAPSE_CONFIG_CAMTYPE_S_INH		0
 
 /*
 *  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
@@ -601,24 +609,49 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 * address baseAddr in SRAM.
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteSRAM(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+bool caerDynapseWriteSramWords(caerDeviceHandle handle, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+
 /*
+ *
+ *  Remember to Select the chip before calling this function
 * @param handle a valid device handle.
-*  Copy DYNAPSE_SPIKE_DEFAULT_SIZE (4096) int data
-*  into usb buffer, and send them via usb.
 *
-*  Make sure that data has max size data[4096]
+*  coreId [0,3]
+*  neuronId [0,255], virtualCoreId [0,3],
+*  sx [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST], dx,
+*  sy[DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH], dy,
+*  sramId [0,3],
+*  destinationCore [0,0,0,0]...[1,1,1,1] hot coded 15 (all cores)
 *
 * @return true on success, false otherwise
 */
-bool caerDynapseSendDataToUSB(caerDeviceHandle handle, int * data, int numConfig);
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore);
 
 /*
+ * Remember to Select the chip before calling this function
+ *
+* @param handle a valid device handle.
+*  int *data , pointer to array of integers bits
+*  numConfig , number of configurations to sends
+*
+*  Copy send data[numConfig] via usb
+*  NB: Make sure that data has max size data[DYNAPSE_SPIKE_DEFAULT_SIZE]
+*
+* @return true on success, false otherwise
+*/
+bool caerDynapseSendDataToUSB(caerDeviceHandle handle, uint32_t * data, int numConfig);
+
+/*
+ * Remember to Select the chip before calling this function
+ *
 * @param handle a valid device handle.
 *  Write a single CAM
 *
 *  parameters:
-*	usb_handle, preNeuron, postNeuron, camId, synapseType
+*	usb_handle, preNeuron [0,1023], postNeuron [0,1023], camId [0,63], synapseType [DYNAPSE_CONFIG_CAMTYPE_F_EXC
+*																					DYNAPSE_CONFIG_CAMTYPE_S_EXC
+*																					DYNAPSE_CONFIG_CAMTYPE_F_INH
+*																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
 * @return true on success, false otherwise
 */
 bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
@@ -628,7 +661,10 @@ bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32
 *  Return addres for writing CAM
 *
 *  parameters:
-*   preNeuron, postNeuron, camId, synapseType
+*	usb_handle, preNeuron [0,1023], postNeuron [0,1023], camId [0,63], synapseType [DYNAPSE_CONFIG_CAMTYPE_F_EXC
+*																					DYNAPSE_CONFIG_CAMTYPE_S_EXC
+*																					DYNAPSE_CONFIG_CAMTYPE_F_INH
+*																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
 *
 * @return bits that would make the connection
 */
