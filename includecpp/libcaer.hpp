@@ -10,26 +10,26 @@ namespace log {
 		EMERGENCY = 0, ALERT = 1, CRITICAL = 2, ERROR = 3, WARNING = 4, NOTICE = 5, INFO = 6, DEBUG = 7
 	};
 
-	void logLevelSet(logLevel l) {
+	void logLevelSet(logLevel l) noexcept {
 		caerLogLevelSet(static_cast<typename std::underlying_type<logLevel>::type>(l));
 	}
 
-	logLevel logLevelGet() {
+	logLevel logLevelGet() noexcept {
 		return (static_cast<logLevel>(caerLogLevelGet()));
 	}
 
-	void fileDescriptorsSet(int fd1, int fd2) {
+	void fileDescriptorsSet(int fd1, int fd2) noexcept {
 		caerLogFileDescriptorsSet(fd1, fd2);
 	}
 
-	void log(logLevel l, const char *subSystem, const char *format, ...) {
+	void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
 		va_list argumentList;
 		va_start(argumentList, format);
 		caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, argumentList);
 		va_end(argumentList);
 	}
 
-	void logVA(logLevel l, const char *subSystem, const char *format, va_list args) {
+	void logVA(logLevel l, const char *subSystem, const char *format, va_list args) noexcept {
 		caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, args);
 	}
 }

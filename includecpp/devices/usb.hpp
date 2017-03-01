@@ -34,39 +34,39 @@ public:
 		caerDeviceClose(&handle);
 	}
 
-	void sendDefaultConfig() {
+	void sendDefaultConfig() const {
 		bool success = caerDeviceSendDefaultConfig(handle);
 		if (!success) {
 			throw std::runtime_error("Failed to send default configuration.");
 		}
 	}
 
-	void configSet(int8_t modAddr, uint8_t paramAddr, uint32_t param) {
+	void configSet(int8_t modAddr, uint8_t paramAddr, uint32_t param) const {
 		bool success = caerDeviceConfigSet(handle, modAddr, paramAddr, param);
 		if (!success) {
 			throw std::runtime_error("Failed to set configuration parameter.");
 		}
 	}
 
-	void configGet(int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
+	void configGet(int8_t modAddr, uint8_t paramAddr, uint32_t *param) const {
 		bool success = caerDeviceConfigGet(handle, modAddr, paramAddr, param);
 		if (!success) {
 			throw std::runtime_error("Failed to get configuration parameter.");
 		}
 	}
 
-	uint32_t configGet(int8_t modAddr, uint8_t paramAddr) {
+	uint32_t configGet(int8_t modAddr, uint8_t paramAddr) const {
 		uint32_t param = 0;
 		configGet(modAddr, paramAddr, &param);
 		return (param);
 	}
 
-	void dataStart() {
+	void dataStart() const {
 		dataStart(nullptr, nullptr, nullptr, nullptr, nullptr);
 	}
 
 	void dataStart(void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
-		void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
+		void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) const {
 		bool success = caerDeviceDataStart(handle, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
 			dataShutdownNotify, dataShutdownUserPtr);
 		if (!success) {
@@ -74,14 +74,14 @@ public:
 		}
 	}
 
-	void dataStop() {
+	void dataStop() const {
 		bool success = caerDeviceDataStop(handle);
 		if (!success) {
 			throw std::runtime_error("Failed to stop getting data.");
 		}
 	}
 
-	caerEventPacketContainer dataGet() {
+	caerEventPacketContainer dataGet() const {
 		return (caerDeviceDataGet(handle));
 	}
 };

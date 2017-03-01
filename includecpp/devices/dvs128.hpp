@@ -9,7 +9,7 @@
 namespace libcaer {
 namespace devices {
 
-class dvs128: public usb {
+class dvs128 final: public usb {
 public:
 	dvs128(uint16_t deviceID) :
 		usb(deviceID, CAER_DEVICE_DVS128) {
@@ -20,7 +20,7 @@ public:
 		usb(deviceID, CAER_DEVICE_DVS128, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
-	struct caer_dvs128_info infoGet() {
+	struct caer_dvs128_info infoGet() const noexcept {
 		return (caerDVS128InfoGet(handle));
 	}
 };
