@@ -11,17 +11,17 @@ class EventPacketHeader {
 protected:
 	caerEventPacketHeader header;
 
-	EventPacketHeader() {
-		header = nullptr;
+	EventPacketHeader() :
+		header(nullptr) {
 	}
 
+public:
 	~EventPacketHeader() {
 		// All EventPackets must have been allocated somewhere on the heap,
 		// and can thus always be passed to free(). free(nullptr) does nothing.
 		free(header);
 	}
 
-public:
 	int16_t getEventType() const noexcept {
 		return (caerEventPacketHeaderGetEventType(header));
 	}
