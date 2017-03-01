@@ -8,6 +8,9 @@ namespace libcaer {
 namespace events {
 
 class SpecialEventPacket: public EventPacketHeader {
+private:
+	caerSpecialEventPacket packet;
+
 public:
 	using SpecialEventBase = struct caer_special_event;
 
@@ -20,7 +23,11 @@ public:
 			return (caerSpecialEventGetTimestamp64(this, packet.packet));
 		}
 
-		void setTimestamp(int32_t timestamp) noexcept {
+		void setTimestamp(int32_t timestamp) {
+			if (timestamp < 0) {
+				throw std::invalid_argument("Negative timestamp not allowed.");
+			}
+
 			caerSpecialEventSetTimestamp(this, timestamp);
 		}
 
@@ -65,19 +72,33 @@ public:
 	// EventPacketHeader's destructor takes care of freeing above memory.
 
 	SpecialEvent &getEvent(int32_t index) {
-		return (internalGetEvent(index));
+		if (index < 0 || index >= capacity()) {
+			throw std::out_of_range("Index out of range.");
+		}
+
+		SpecialEventBase *evtBase = caerSpecialEventPacketGetEvent(packet, index);
+		SpecialEvent *evt = static_cast<SpecialEvent *>(evtBase);
+
+		return (*evt);
 	}
 
 	const SpecialEvent &getEvent(int32_t index) const {
-		return (internalGetEvent(index));
+		if (index < 0 || index >= capacity()) {
+			throw std::out_of_range("Index out of range.");
+		}
+
+		const SpecialEventBase *evtBase = caerSpecialEventPacketGetEventConst(packet, index);
+		const SpecialEvent *evt = static_cast<const SpecialEvent *>(evtBase);
+
+		return (*evt);
 	}
 
 	SpecialEvent &operator[](size_t index) {
-		return (internalGetEvent(index));
+		return (getEvent(index));
 	}
 
 	const SpecialEvent &operator[](size_t index) const {
-		return (internalGetEvent(index));
+		return (getEvent(index));
 	}
 
 	SpecialEvent &findEventByType(uint8_t type) {
@@ -91,37 +112,34 @@ public:
 		return (*evt);
 	}
 
-	SpecialEvent &findValidEventByType(uint8_t type) {
-		SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByType(packet, type);
+	const SpecialEvent &findEventByType(uint8_t type) const {
+		const SpecialEventBase *evtBase = caerSpecialEventPacketFindEventByTypeConst(packet, type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Special Event of particular type not found.");
 		}
 
+		const SpecialEvent *evt = static_cast<const SpecialEvent *>(evtBase);
+
+		return (*evt);
+	}
+
+	SpecialEvent &findValidEventByType(uint8_t type) {
+		SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByType(packet, type);
+		if (evtBase == nullptr) {
+			throw std::range_error("Valid Special Event of particular type not found.");
+		}
+
 		SpecialEvent *evt = static_cast<SpecialEvent *>(evtBase);
 
 		return (*evt);
 	}
 
-private:
-	caerSpecialEventPacket packet;
-
-	SpecialEvent &internalGetEvent(int32_t index) {
-		if (index < 0 || index >= size()) {
-			throw std::out_of_range("Index out of range.");
+	const SpecialEvent &findValidEventByType(uint8_t type) const {
+		const SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByTypeConst(packet, type);
+		if (evtBase == nullptr) {
+			throw std::range_error("Valid Special Event of particular type not found.");
 		}
 
-		SpecialEventBase *evtBase = caerSpecialEventPacketGetEvent(packet, index);
-		SpecialEvent *evt = static_cast<SpecialEvent *>(evtBase);
-
-		return (*evt);
-	}
-
-	const SpecialEvent &internalGetEvent(int32_t index) const {
-		if (index < 0 || index >= size()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const SpecialEventBase *evtBase = caerSpecialEventPacketGetEventConst(packet, index);
 		const SpecialEvent *evt = static_cast<const SpecialEvent *>(evtBase);
 
 		return (*evt);
