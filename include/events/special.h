@@ -395,6 +395,29 @@ static inline caerSpecialEvent caerSpecialEventPacketFindEventByType(caerSpecial
 }
 
 /**
+ * Get the first special event with the given event type in this
+ * event packet. This returns the first found event with that type ID,
+ * or NULL if we get to the end without finding any such event.
+ * The returned event is read-only!
+ *
+ * @param packet a valid SpecialEventPacket pointer. Cannot be NULL.
+ * @param type the special event type to search for.
+ *
+ * @return the requested read-only special event or NULL on error/not found.
+ */
+static inline caerSpecialEventConst caerSpecialEventPacketFindEventByTypeConst(caerSpecialEventPacketConst packet, uint8_t type) {
+	CAER_SPECIAL_CONST_ITERATOR_ALL_START(packet)
+		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+			// Found it, return it.
+			return (caerSpecialIteratorElement);
+		}
+	CAER_SPECIAL_ITERATOR_ALL_END
+
+	// Found nothing, return nothing.
+	return (NULL);
+}
+
+/**
  * Get the first valid special event with the given event type in this
  * event packet. This returns the first found valid event with that type ID,
  * or NULL if we get to the end without finding any such event.
@@ -406,6 +429,29 @@ static inline caerSpecialEvent caerSpecialEventPacketFindEventByType(caerSpecial
  */
 static inline caerSpecialEvent caerSpecialEventPacketFindValidEventByType(caerSpecialEventPacket packet, uint8_t type) {
 	CAER_SPECIAL_ITERATOR_VALID_START(packet)
+		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+			// Found it, return it.
+			return (caerSpecialIteratorElement);
+		}
+	CAER_SPECIAL_ITERATOR_VALID_END
+
+	// Found nothing, return nothing.
+	return (NULL);
+}
+
+/**
+ * Get the first valid special event with the given event type in this
+ * event packet. This returns the first found valid event with that type ID,
+ * or NULL if we get to the end without finding any such event.
+ * The returned event is read-only!
+ *
+ * @param packet a valid SpecialEventPacket pointer. Cannot be NULL.
+ * @param type the special event type to search for.
+ *
+ * @return the requested read-only valid special event or NULL on error/not found.
+ */
+static inline caerSpecialEventConst caerSpecialEventPacketFindValidEventByTypeConst(caerSpecialEventPacketConst packet, uint8_t type) {
+	CAER_SPECIAL_CONST_ITERATOR_VALID_START(packet)
 		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
 			// Found it, return it.
 			return (caerSpecialIteratorElement);
