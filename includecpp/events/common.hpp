@@ -134,6 +134,38 @@ public:
 		return (GenericEvent { evt, header });
 	}
 
+	// Generic copy/clean methods.
+	void *copy() {
+		void *packetCopy = caerCopyEventPacket(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (packetCopy);
+	}
+
+	void *copyOnlyEvents() {
+		void *packetCopy = caerCopyEventPacketOnlyEvents(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (packetCopy);
+	}
+
+	void *copyOnlyValidEvents() {
+		void *packetCopy = caerCopyEventPacketOnlyValidEvents(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (packetCopy);
+	}
+
+	void clean() {
+		caerCleanEventPacket(header);
+	}
+
 	// Convenience methods.
 	int32_t capacity() const noexcept {
 		return (getEventCapacity());
