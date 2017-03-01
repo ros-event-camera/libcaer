@@ -114,6 +114,7 @@ struct caer_event_packet_header {
  * Type for pointer to EventPacket header data structure.
  */
 typedef struct caer_event_packet_header *caerEventPacketHeader;
+typedef const struct caer_event_packet_header *caerEventPacketHeaderConst;
 
 /**
  * Return the numerical event type ID, representing the event type this
@@ -123,7 +124,7 @@ typedef struct caer_event_packet_header *caerEventPacketHeader;
  *
  * @return the numerical event type (see 'enum caer_default_event_types').
  */
-static inline int16_t caerEventPacketHeaderGetEventType(caerEventPacketHeader header) {
+static inline int16_t caerEventPacketHeaderGetEventType(caerEventPacketHeaderConst header) {
 	return (le16toh(header->eventType));
 }
 
@@ -155,7 +156,7 @@ static inline void caerEventPacketHeaderSetEventType(caerEventPacketHeader heade
  *
  * @return the numerical event source ID.
  */
-static inline int16_t caerEventPacketHeaderGetEventSource(caerEventPacketHeader header) {
+static inline int16_t caerEventPacketHeaderGetEventSource(caerEventPacketHeaderConst header) {
 	return (le16toh(header->eventSource));
 }
 
@@ -188,7 +189,7 @@ static inline void caerEventPacketHeaderSetEventSource(caerEventPacketHeader hea
  *
  * @return the event size in bytes.
  */
-static inline int32_t caerEventPacketHeaderGetEventSize(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventSize(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventSize));
 }
 
@@ -222,7 +223,7 @@ static inline void caerEventPacketHeaderSetEventSize(caerEventPacketHeader heade
  *
  * @return the event timestamp offset in bytes.
  */
-static inline int32_t caerEventPacketHeaderGetEventTSOffset(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventTSOffset(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventTSOffset));
 }
 
@@ -260,7 +261,7 @@ static inline void caerEventPacketHeaderSetEventTSOffset(caerEventPacketHeader h
  *
  * @return the packet-level timestamp overflow counter, in microseconds.
  */
-static inline int32_t caerEventPacketHeaderGetEventTSOverflow(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventTSOverflow(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventTSOverflow));
 }
 
@@ -293,7 +294,7 @@ static inline void caerEventPacketHeaderSetEventTSOverflow(caerEventPacketHeader
  *
  * @return the number of events this packet can hold.
  */
-static inline int32_t caerEventPacketHeaderGetEventCapacity(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventCapacity(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventCapacity));
 }
 
@@ -324,7 +325,7 @@ static inline void caerEventPacketHeaderSetEventCapacity(caerEventPacketHeader h
  *
  * @return the number of events in this packet.
  */
-static inline int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventNumber));
 }
 
@@ -354,7 +355,7 @@ static inline void caerEventPacketHeaderSetEventNumber(caerEventPacketHeader hea
  *
  * @return the number of valid events in this packet.
  */
-static inline int32_t caerEventPacketHeaderGetEventValid(caerEventPacketHeader header) {
+static inline int32_t caerEventPacketHeaderGetEventValid(caerEventPacketHeaderConst header) {
 	return (le32toh(header->eventValid));
 }
 
@@ -505,8 +506,12 @@ static inline caerEventPacketHeader caerGenericEventPacketAppend(caerEventPacket
  * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
  *
  * @return a generic pointer to the requested event. NULL on error.
+ *         This points to unmodifiable memory, as it should never be used for anything
+ *         other than read operations, such as caerGenericEventGetTimestamp(). Don't
+ *         modify the memory, you have no idea what it is! If you do know, just use the
+ *         proper typed packet functions.
  */
-static inline void *caerGenericEventGetEvent(caerEventPacketHeader headerPtr, int32_t n) {
+static inline const void *caerGenericEventGetEvent(caerEventPacketHeaderConst headerPtr, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(headerPtr)) {
 		caerLog(CAER_LOG_CRITICAL, "Generic Event",
@@ -516,7 +521,7 @@ static inline void *caerGenericEventGetEvent(caerEventPacketHeader headerPtr, in
 	}
 
 	// Return a pointer to the specified event.
-	return (((uint8_t *) headerPtr)
+	return (((const uint8_t *) headerPtr)
 		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(headerPtr))));
 }
 
@@ -529,8 +534,8 @@ static inline void *caerGenericEventGetEvent(caerEventPacketHeader headerPtr, in
  *
  * @return the main 32 bit timestamp of this event.
  */
-static inline int32_t caerGenericEventGetTimestamp(void *eventPtr, caerEventPacketHeader headerPtr) {
-	return (le32toh(*((int32_t *) (((uint8_t *) eventPtr) + U64T(caerEventPacketHeaderGetEventTSOffset(headerPtr))))));
+static inline int32_t caerGenericEventGetTimestamp(const void *eventPtr, caerEventPacketHeaderConst headerPtr) {
+	return (le32toh(*((const int32_t *) (((const uint8_t *) eventPtr) + U64T(caerEventPacketHeaderGetEventTSOffset(headerPtr))))));
 }
 
 /**
@@ -544,7 +549,7 @@ static inline int32_t caerGenericEventGetTimestamp(void *eventPtr, caerEventPack
  *
  * @return the main 64 bit timestamp of this event.
  */
-static inline int64_t caerGenericEventGetTimestamp64(void *eventPtr, caerEventPacketHeader headerPtr) {
+static inline int64_t caerGenericEventGetTimestamp64(const void *eventPtr, caerEventPacketHeaderConst headerPtr) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(headerPtr)) << TS_OVERFLOW_SHIFT) | U64T(caerGenericEventGetTimestamp(eventPtr, headerPtr))));
 }
@@ -556,11 +561,11 @@ static inline int64_t caerGenericEventGetTimestamp64(void *eventPtr, caerEventPa
  *
  * @return true if the event is valid, false otherwise.
  */
-static inline bool caerGenericEventIsValid(void *eventPtr) {
+static inline bool caerGenericEventIsValid(const void *eventPtr) {
 	// Look at first byte of event memory's lowest bit.
 	// This should always work since first event member must contain the valid mark
 	// and memory is little-endian, so lowest bit must be in first byte of memory.
-	return (*((uint8_t *) eventPtr) & VALID_MARK_MASK);
+	return (*((const uint8_t *) eventPtr) & VALID_MARK_MASK);
 }
 
 /**
@@ -613,14 +618,14 @@ static inline bool caerGenericEventIsValid(void *eventPtr) {
  *
  * @return a full copy of an event packet.
  */
-static inline void *caerCopyEventPacket(void *eventPacket) {
+static inline void *caerCopyEventPacket(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
+	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
 	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
 	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
 	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
@@ -652,14 +657,14 @@ static inline void *caerCopyEventPacket(void *eventPacket) {
  *
  * @return a sized down copy of an event packet.
  */
-static inline void *caerCopyEventPacketOnlyEvents(void *eventPacket) {
+static inline void *caerCopyEventPacketOnlyEvents(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
+	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
 	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
 	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
 
@@ -695,14 +700,14 @@ static inline void *caerCopyEventPacketOnlyEvents(void *eventPacket) {
  *
  * @return a copy of an event packet, containing only valid events.
  */
-static inline void *caerCopyEventPacketOnlyValidEvents(void *eventPacket) {
+static inline void *caerCopyEventPacketOnlyValidEvents(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
+	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
 	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
 	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
 
@@ -726,7 +731,7 @@ static inline void *caerCopyEventPacketOnlyValidEvents(void *eventPacket) {
 	// Copy the data over. Must check every event for validity!
 	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
 
-	CAER_ITERATOR_VALID_START(header, void *)
+	CAER_ITERATOR_VALID_START(header, const void *)
 		memcpy(((uint8_t *) eventPacketCopy) + offset, caerIteratorElement, (size_t) eventSize);
 		offset += (size_t) eventSize;
 	}
@@ -767,7 +772,7 @@ static inline void caerCleanEventPacket(void *eventPacket) {
 	// Move all valid events close together. Must check every event for validity!
 	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
 
-	CAER_ITERATOR_VALID_START(header, void *)
+	CAER_ITERATOR_VALID_START(header, const void *)
 		void *dest = ((uint8_t *) header) + offset;
 
 		if (dest != caerIteratorElement) {

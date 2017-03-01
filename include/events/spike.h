@@ -41,13 +41,13 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT( struct caer_spike_event {
+PACKED_STRUCT(
+struct caer_spike_event {
 	/// Event information. First because of valid mark.
 	uint32_t data;
 	/// Event timestamp.
 	int32_t timestamp;
-})
-;
+});
 
 /**
  * Type for pointer to Spike event data structure.
@@ -60,13 +60,13 @@ typedef struct caer_spike_event *caerSpikeEvent;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT( struct caer_spike_event_packet {
+PACKED_STRUCT(
+struct caer_spike_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
 	struct caer_spike_event events[];
-})
-;
+});
 
 /**
  * Type for pointer to Spike event packet data structure.
@@ -280,24 +280,24 @@ static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neur
 }
 
 /**
- * Get the Y (column) address for a spike event, in pixels.
+ * Get the Y (row) address for a spike event, in pixels.
  * The (0, 0) address is in the upper left corner.
  *
  * @param event a valid SpikeEvent pointer. Cannot be NULL.
  *
- * @return the event Y address.
+ * @return the event Y address in pixels.
  */
 static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
-	uint8_t chipid = U8T(GET_NUMBITS32(event->data, SPIKE_CHIP_ID_SHIFT, SPIKE_CHIP_ID_MASK)); // chipid	
-	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
-	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
-	uint16_t colid = (neuronid & 0x0F);
-	bool addcol = (coreid) & 1;
-	bool addcolchip =  (chipid) & (1<<(2));
-	colid = colid + (addcol)*16 + (addcolchip)*32;
+	uint16_t columnId = (neuronId & 0x0F);
+	bool addColumn = (coreId & 0x01);
+	bool addColumnChip = (chipId & (0x01 << 2));
+	columnId = U16T(columnId + (addColumn) * 16 + (addColumnChip) * 32);
 
-	return(colid);
+	return (columnId);
 }
 
 /**
@@ -306,19 +306,19 @@ static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
  *
  * @param event a valid SpikeEvent pointer. Cannot be NULL.
  *
- * @return the event X address.
+ * @return the event X address in pixels.
  */
 static inline uint16_t caerSpikeEventGetX(caerSpikeEvent event) {
-	uint8_t chipid = U8T(GET_NUMBITS32(event->data, SPIKE_CHIP_ID_SHIFT, SPIKE_CHIP_ID_MASK)); // chipid	
-	uint16_t coreid = U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK)); // core id
-	uint32_t neuronid = U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK)); // neuronid
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
-	uint16_t rowid = ((neuronid >> 4) & 0x0F);
-	bool addrow =  (coreid) & (1<<(1));
-	bool addrowchip =  (chipid) & (1<<(3));
-	rowid = rowid + (addrow)*16 + (addrowchip)*32;
+	uint16_t rowId = ((neuronId >> 4) & 0x0F);
+	bool addRow = (coreId & (0x01 << 1));
+	bool addRowChip = (chipId & (0x01 << 3));
+	rowId = U16T(rowId + (addRow) * 16 + (addRowChip) * 32);
 
-	return(rowid);
+	return (rowId);
 }
 
 

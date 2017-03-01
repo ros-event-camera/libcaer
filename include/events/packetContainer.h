@@ -204,10 +204,10 @@ static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContain
 	}
 
 	// Get timestamps to update lowest/highest tracking.
-	void *firstEvent = caerGenericEventGetEvent(packetHeader, 0);
+	const void *firstEvent = caerGenericEventGetEvent(packetHeader, 0);
 	int64_t currLowestEventTimestamp = caerGenericEventGetTimestamp64(firstEvent, packetHeader);
 
-	void *lastEvent = caerGenericEventGetEvent(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader) - 1);
+	const void *lastEvent = caerGenericEventGetEvent(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader) - 1);
 	int64_t currHighestEventTimestamp = caerGenericEventGetTimestamp64(lastEvent, packetHeader);
 
 	// Update tracked timestamps (or initialize if needed).
