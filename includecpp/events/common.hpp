@@ -106,6 +106,39 @@ public:
 		}
 	}
 
+	// Generic event methods.
+	struct GenericEvent {
+		const void *event;
+		caerEventPacketHeaderConst header;
+
+		int32_t getTimestamp() const noexcept {
+			return (caerGenericEventGetTimestamp(event, header));
+		}
+
+		int64_t getTimestamp64() const noexcept {
+			return (caerGenericEventGetTimestamp64(event, header));
+		}
+
+		bool isValid() const noexcept {
+			return (caerGenericEventIsValid(event));
+		}
+	};
+
+	const GenericEvent genericGetEvent(int32_t index) const {
+		if (index < 0 || index >= capacity()) {
+			throw std::out_of_range("Index out of range.");
+		}
+
+		const void *evt = caerGenericEventGetEvent(header, index);
+
+		return (GenericEvent { evt, header });
+	}
+
+	// Convenience methods.
+	int32_t capacity() const noexcept {
+		return (getEventCapacity());
+	}
+
 	int32_t size() const noexcept {
 		return (getEventNumber());
 	}
