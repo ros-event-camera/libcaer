@@ -654,7 +654,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, uint32_t * data, int numC
 *																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
 
 /*
 * @param handle a valid device handle.

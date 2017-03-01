@@ -1845,19 +1845,6 @@ bool caerDynapseWriteSRAMWords(caerDeviceHandle cdh, uint16_t *data, uint32_t ba
 }
 
 bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
-	dynapseHandle handle = (dynapseHandle) cdh;
-
-	// Check if the pointer is valid.
-	if (handle) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
-
-	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
 
 	uint32_t bits;
 	uint32_t ei = (synapseType & 0x2) >> 1;
@@ -1872,7 +1859,9 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
 			| coreId << 15 | row << 5 | column;
 
-	caerDeviceConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
+	if(caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false){
+		return(false);
+	}
 
 	return(true);
 }
@@ -1895,13 +1884,14 @@ uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronA
 	return(bits);
 }
 
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
+bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
 
 	uint32_t bits =  neuronId << 7 | sramId << 5 | coreId << 15 | 1 << 17 | 1 << 4
 								| destinationCore << 18 | sy << 27 | dy << 25 | dx << 22 | sx << 24 | virtualCoreId << 28;
 
-	caerDeviceConfigSet(handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits);
-
+	if(caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false){
+		return(false);
+	}
 	return(true);
 }
 
