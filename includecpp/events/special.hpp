@@ -59,6 +59,10 @@ public:
 
 	// Constructors.
 	SpecialEventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+		if (eventCapacity <= 0) {
+			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
+		}
+
 		caerSpecialEventPacket packet = caerSpecialEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		if (packet == nullptr) {
 			throw std::runtime_error("Failed to allocate special event packet.");
