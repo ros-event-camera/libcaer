@@ -378,127 +378,6 @@ static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader head
 }
 
 /**
- * Grows an event packet.
- * Use free() to reclaim this memory afterwards.
- *
- * @param packet the current events packet.
- * @param newEventCapacity the new maximum number of events this packet will hold.
- *
- * @return a valid event packet handle or NULL on error.
- * On success, the old packet handle is to be considered invalid and not to be
- * used anymore. On failure, the old packet handle is not touched in any way.
- */
-static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader packet, int32_t newEventCapacity) {
-	if (packet == NULL || newEventCapacity == 0) {
-		return (NULL);
-	}
-
-	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
-
-	if (newEventCapacity <= oldEventCapacity) {
-		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
-			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32 ") that is equal or smaller than the old one (%" PRIi32 "). "
-			"Only strictly growing an event packet is supported!", newEventCapacity, oldEventCapacity);
-		return (NULL);
-	}
-
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
-	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (newEventCapacity * eventSize);
-
-	// Grow memory used to hold events.
-	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
-	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
-			"Failed to reallocate %zu bytes of memory for growing Event Packet of capacity %"
-			PRIi32 " to new capacity of %" PRIi32 ". Error: %d.", newEventPacketSize, oldEventCapacity,
-			newEventCapacity, errno);
-		return (NULL);
-	}
-
-	// Zero out new event memory (all events invalid).
-	memset(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE + (oldEventCapacity * eventSize), 0,
-		(size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
-
-	// Update header fields.
-	caerEventPacketHeaderSetEventCapacity(packet, newEventCapacity);
-
-	return (packet);
-}
-
-/**
- * Appends an event packet to another.
- * This is a simple append operation, no timestamp reordering is done.
- * Please ensure time is monotonically increasing over the two packets!
- * Use free() to reclaim this memory afterwards.
- *
- * @param packet the main events packet.
- * @param appendPacket the events packet to append on the main one.
- *
- * @return a valid event packet handle or NULL on error.
- * On success, the old packet handle is to be considered invalid and not to be
- * used anymore. On failure, the old packet handle is not touched in any way.
- * The appendPacket handle is never touched in any way.
- */
-static inline caerEventPacketHeader caerEventPacketAppend(caerEventPacketHeader packet,
-	caerEventPacketHeader appendPacket) {
-	if (packet == NULL) {
-		return (NULL);
-	}
-
-	// Support appending nothing, the result is the unmodified input.
-	if (appendPacket == NULL) {
-		return (packet);
-	}
-
-	// Check that the two packets are of the same type and size, and have the same TSOverflow epoch.
-	if ((caerEventPacketHeaderGetEventType(packet) != caerEventPacketHeaderGetEventType(appendPacket))
-		|| (caerEventPacketHeaderGetEventSize(packet) != caerEventPacketHeaderGetEventSize(appendPacket))
-		|| (caerEventPacketHeaderGetEventTSOverflow(packet) != caerEventPacketHeaderGetEventTSOverflow(appendPacket))) {
-		return (NULL);
-	}
-
-	int32_t packetEventValid = caerEventPacketHeaderGetEventValid(packet);
-	int32_t packetEventNumber = caerEventPacketHeaderGetEventNumber(packet);
-	int32_t packetEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
-
-	int32_t appendPacketEventValid = caerEventPacketHeaderGetEventValid(appendPacket);
-	int32_t appendPacketEventNumber = caerEventPacketHeaderGetEventNumber(appendPacket);
-	int32_t appendPacketEventCapacity = caerEventPacketHeaderGetEventCapacity(appendPacket);
-
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet); // Is the same! Checked above.
-	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE
-		+ (size_t) ((packetEventCapacity + appendPacketEventCapacity) * eventSize);
-
-	// Grow memory used to hold events.
-	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
-	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
-			"Failed to reallocate %zu bytes of memory for appending Event Packet of capacity %"
-			PRIi32 " to Event Packet of capacity %" PRIi32 ". Error: %d.", newEventPacketSize,
-			appendPacketEventCapacity, packetEventCapacity, errno);
-		return (NULL);
-	}
-
-	// Copy appendPacket event memory at start of free space in packet.
-	memcpy(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE + (packetEventNumber * eventSize),
-		((uint8_t *) appendPacket) + CAER_EVENT_PACKET_HEADER_SIZE, (size_t) (appendPacketEventNumber * eventSize));
-
-	// Zero out remaining event memory (all events invalid).
-	memset(
-		((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE
-			+ ((packetEventNumber + appendPacketEventNumber) * eventSize), 0,
-		(size_t) (((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
-			* eventSize));
-
-	// Update header fields.
-	caerEventPacketHeaderSetEventValid(packet, (packetEventValid + appendPacketEventValid));
-	caerEventPacketHeaderSetEventNumber(packet, (packetEventNumber + appendPacketEventNumber));
-	caerEventPacketHeaderSetEventCapacity(packet, (packetEventCapacity + appendPacketEventCapacity));
-
-	return (packet);
-}
-
-/**
  * Get a generic pointer to an event, without having to know what event
  * type the packet is containing.
  *
@@ -609,7 +488,247 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
  */
 #define CAER_ITERATOR_VALID_END }
 
-// Functions for event packet copying.
+/**
+ * Clean a packet by removing all invalid events, so that
+ * the total number of events is the number of valid events.
+ * The packet's capacity doesn't change.
+ *
+ * @param eventPacket an event packet to clean.
+ */
+static inline void caerEventPacketClean(void *eventPacket) {
+	// Handle empty event packets.
+	if (eventPacket == NULL) {
+		return;
+	}
+
+	// Calculate needed memory for new event packet.
+	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
+	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
+	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
+	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
+
+	// If we have no invalid events, we're already done.
+	if (eventValid == eventNumber) {
+		return;
+	}
+
+	// Move all valid events close together. Must check every event for validity!
+	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
+
+	CAER_ITERATOR_VALID_START(header, const void *)
+		void *dest = ((uint8_t *) header) + offset;
+
+		if (dest != caerIteratorElement) {
+			memcpy(dest, caerIteratorElement, (size_t) eventSize);
+			offset += (size_t) eventSize;
+		}
+	}
+
+	// Reset remaining memory, up to capacity, to zero (all events invalid).
+	memset(((uint8_t *) header) + offset, 0, (size_t) ((eventCapacity - eventValid) * eventSize));
+
+	// Event capacity remains unchanged, event number shrunk to event valid number.
+	caerEventPacketHeaderSetEventNumber(header, eventValid);
+}
+
+/**
+ * Resize an event packet.
+ * First, the packet is cleaned (all invalid events removed), then:
+ * - If the old and new event capacity are equal, nothing else changes.
+ * - If the new capacity is bigger, the packet is enlarged and the new events
+ *   are initialized to all zeros (invalid).
+ * - If the new capacity is smaller, the packet is truncated at the given point.
+ * Use free() to reclaim this memory afterwards.
+ *
+ * @param packet the current event packet.
+ * @param newEventCapacity the new maximum number of events this packet can hold.
+ *                         Cannot be zero.
+ *
+ * @return a valid event packet handle or NULL on error.
+ * On success, the old packet handle is to be considered invalid and not to be
+ * used anymore. On failure, the old packet handle is still valid, but will
+ * have been cleaned of all invalid events!
+ */
+static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader packet, int32_t newEventCapacity) {
+	if (packet == NULL || newEventCapacity == 0) {
+		return (NULL);
+	}
+
+	// Always clean for consistency with shrink case (side-effects guarantee).
+	caerEventPacketClean(packet);
+
+	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
+
+	if (oldEventCapacity == newEventCapacity) {
+		// Nothing to do in this case.
+		return (packet);
+	}
+
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (newEventCapacity * eventSize);
+
+	// Reallocate memory used to hold events.
+	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
+	if (packet == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+			"Failed to reallocate %zu bytes of memory for resizing Event Packet of capacity %"
+			PRIi32 " to new capacity of %" PRIi32 ". Error: %d.", newEventPacketSize, oldEventCapacity,
+			newEventCapacity, errno);
+		return (NULL);
+	}
+
+	if (newEventCapacity > oldEventCapacity) {
+		// Capacity increased: we simply zero out the newly added events.
+		size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (oldEventCapacity * eventSize);
+
+		memset(((uint8_t *) packet) + oldEventPacketSize, 0,
+			(size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
+	}
+	else {
+		// Capacity decreased: the events were cleaned, so eventValid == eventNumber.
+		// They also are all together in memory. Thus we can simply keep the current
+		// eventValid/eventNumber counts if the capacity is still bigger or equal to
+		// them, or, if new capacity is smaller, we reset them to that value.
+		int32_t oldEventNumber = caerEventPacketHeaderGetEventNumber(packet);
+
+		if (newEventCapacity < oldEventNumber) {
+			caerEventPacketHeaderSetEventValid(packet, newEventCapacity);
+			caerEventPacketHeaderSetEventNumber(packet, newEventCapacity);
+		}
+	}
+
+	// Update capacity header field.
+	caerEventPacketHeaderSetEventCapacity(packet, newEventCapacity);
+
+	return (packet);
+}
+
+/**
+ * Grows an event packet.
+ * This only supports strictly increasing the size of a packet.
+ * For a more flexible resize operation, see caerEventPacketResize().
+ * Use free() to reclaim this memory afterwards.
+ *
+ * @param packet the current event packet.
+ * @param newEventCapacity the new maximum number of events this packet can hold.
+ *                         Cannot be zero.
+ *
+ * @return a valid event packet handle or NULL on error.
+ * On success, the old packet handle is to be considered invalid and not to be
+ * used anymore. On failure, the old packet handle is not touched in any way.
+ */
+static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader packet, int32_t newEventCapacity) {
+	if (packet == NULL || newEventCapacity == 0) {
+		return (NULL);
+	}
+
+	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
+
+	if (newEventCapacity <= oldEventCapacity) {
+		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32 ") that is equal or smaller than the old one (%" PRIi32 "). "
+			"Only strictly growing an event packet is supported!", newEventCapacity, oldEventCapacity);
+		return (NULL);
+	}
+
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (newEventCapacity * eventSize);
+
+	// Grow memory used to hold events.
+	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
+	if (packet == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+			"Failed to reallocate %zu bytes of memory for growing Event Packet of capacity %"
+			PRIi32 " to new capacity of %" PRIi32 ". Error: %d.", newEventPacketSize, oldEventCapacity,
+			newEventCapacity, errno);
+		return (NULL);
+	}
+
+	// Zero out new event memory (all events invalid).
+	size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (oldEventCapacity * eventSize);
+
+	memset(((uint8_t *) packet) + oldEventPacketSize, 0,
+		(size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
+
+	// Update capacity header field.
+	caerEventPacketHeaderSetEventCapacity(packet, newEventCapacity);
+
+	return (packet);
+}
+
+/**
+ * Appends an event packet to another.
+ * This is a simple append operation, no timestamp reordering is done.
+ * Please ensure time is monotonically increasing over the two packets!
+ * Use free() to reclaim this memory afterwards.
+ *
+ * @param packet the main events packet.
+ * @param appendPacket the events packet to append on the main one.
+ *
+ * @return a valid event packet handle or NULL on error.
+ * On success, the old packet handle is to be considered invalid and not to be
+ * used anymore. On failure, the old packet handle is not touched in any way.
+ * The appendPacket handle is never touched in any way.
+ */
+static inline caerEventPacketHeader caerEventPacketAppend(caerEventPacketHeader packet,
+	caerEventPacketHeader appendPacket) {
+	if (packet == NULL) {
+		return (NULL);
+	}
+
+	// Support appending nothing, the result is the unmodified input.
+	if (appendPacket == NULL) {
+		return (packet);
+	}
+
+	// Check that the two packets are of the same type and size, and have the same TSOverflow epoch.
+	if ((caerEventPacketHeaderGetEventType(packet) != caerEventPacketHeaderGetEventType(appendPacket))
+		|| (caerEventPacketHeaderGetEventSize(packet) != caerEventPacketHeaderGetEventSize(appendPacket))
+		|| (caerEventPacketHeaderGetEventTSOverflow(packet) != caerEventPacketHeaderGetEventTSOverflow(appendPacket))) {
+		return (NULL);
+	}
+
+	int32_t packetEventValid = caerEventPacketHeaderGetEventValid(packet);
+	int32_t packetEventNumber = caerEventPacketHeaderGetEventNumber(packet);
+	int32_t packetEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
+
+	int32_t appendPacketEventValid = caerEventPacketHeaderGetEventValid(appendPacket);
+	int32_t appendPacketEventNumber = caerEventPacketHeaderGetEventNumber(appendPacket);
+	int32_t appendPacketEventCapacity = caerEventPacketHeaderGetEventCapacity(appendPacket);
+
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet); // Is the same! Checked above.
+	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE
+		+ (size_t) ((packetEventCapacity + appendPacketEventCapacity) * eventSize);
+
+	// Grow memory used to hold events.
+	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
+	if (packet == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
+			"Failed to reallocate %zu bytes of memory for appending Event Packet of capacity %"
+			PRIi32 " to Event Packet of capacity %" PRIi32 ". Error: %d.", newEventPacketSize,
+			appendPacketEventCapacity, packetEventCapacity, errno);
+		return (NULL);
+	}
+
+	// Copy appendPacket event memory at start of free space in packet.
+	memcpy(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE + (packetEventNumber * eventSize),
+		((uint8_t *) appendPacket) + CAER_EVENT_PACKET_HEADER_SIZE, (size_t) (appendPacketEventNumber * eventSize));
+
+	// Zero out remaining event memory (all events invalid).
+	memset(
+		((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE
+			+ ((packetEventNumber + appendPacketEventNumber) * eventSize), 0,
+		(size_t) (((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
+			* eventSize));
+
+	// Update header fields.
+	caerEventPacketHeaderSetEventValid(packet, (packetEventValid + appendPacketEventValid));
+	caerEventPacketHeaderSetEventNumber(packet, (packetEventNumber + appendPacketEventNumber));
+	caerEventPacketHeaderSetEventCapacity(packet, (packetEventCapacity + appendPacketEventCapacity));
+
+	return (packet);
+}
 
 /**
  * Make a full copy of an event packet (up to eventCapacity).
@@ -742,50 +861,6 @@ static inline void *caerEventPacketCopyOnlyValidEvents(const void *eventPacket) 
 	caerEventPacketHeaderSetEventNumber(eventPacketCopy, eventValid);
 
 	return (eventPacketCopy);
-}
-
-/**
- * Cleanup a packet by removing all invalid events, so that
- * the total number of events is the number of valid events.
- * The packet's capacity doesn't change.
- *
- * @param eventPacket an event packet to clean.
- */
-static inline void caerEventPacketClean(void *eventPacket) {
-	// Handle empty event packets.
-	if (eventPacket == NULL) {
-		return;
-	}
-
-	// Calculate needed memory for new event packet.
-	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
-	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
-	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
-	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
-
-	// If we have no invalid events, we're already done.
-	if (eventValid == eventNumber) {
-		return;
-	}
-
-	// Move all valid events close together. Must check every event for validity!
-	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
-
-	CAER_ITERATOR_VALID_START(header, const void *)
-		void *dest = ((uint8_t *) header) + offset;
-
-		if (dest != caerIteratorElement) {
-			memcpy(dest, caerIteratorElement, (size_t) eventSize);
-			offset += (size_t) eventSize;
-		}
-	}
-
-	// Reset remaining memory, up to capacity, to zero (all events invalid).
-	memset(((uint8_t *) header) + offset, 0, (size_t) ((eventCapacity - eventValid) * eventSize));
-
-	// Event capacity remains unchanged, event number shrunk to event valid number.
-	caerEventPacketHeaderSetEventNumber(header, eventValid);
 }
 
 #ifdef __cplusplus
