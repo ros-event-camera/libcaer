@@ -75,7 +75,7 @@ public:
 		// a valid state, as it would lead to segfaults on any call. Instead we allocate
 		// a small header with no events (capacity=0), which will return sensible values
 		// on calls, and refuse to give out access to any events (doesn't have any!).
-		caerEventPacketHeader emptyPacket = malloc(CAER_EVENT_PACKET_HEADER_SIZE);
+		caerEventPacketHeader emptyPacket = static_cast<caerEventPacketHeader>(malloc(CAER_EVENT_PACKET_HEADER_SIZE));
 		if (emptyPacket == nullptr) {
 			throw std::runtime_error("Failed to move construct event packet.");
 		}
@@ -105,7 +105,7 @@ public:
 		// a valid state, as it would lead to segfaults on any call. Instead we allocate
 		// a small header with no events (capacity=0), which will return sensible values
 		// on calls, and refuse to give out access to any events (doesn't have any!).
-		caerEventPacketHeader emptyPacket = malloc(CAER_EVENT_PACKET_HEADER_SIZE);
+		caerEventPacketHeader emptyPacket = static_cast<caerEventPacketHeader>(malloc(CAER_EVENT_PACKET_HEADER_SIZE));
 		if (emptyPacket == nullptr) {
 			throw std::runtime_error("Failed to move assign event packet.");
 		}
