@@ -3796,7 +3796,7 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 uint16_t caerBiasVDACGenerate(struct caer_bias_vdac vdacBias) {
 	// Build up bias value from all its components.
 	uint16_t biasValue = U16T((vdacBias.voltageValue & 0x3F) << 0);
-	biasValue |= U16T((vdacBias.currentValue & 0x07) << 6);
+	biasValue = U16T(biasValue | ((vdacBias.currentValue & 0x07) << 6));
 
 	return (biasValue);
 }
@@ -3828,8 +3828,8 @@ uint16_t caerBiasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias) 
 		biasValue |= 0x08;
 	}
 
-	biasValue |= U16T((coarseFineBias.fineValue & 0xFF) << 4);
-	biasValue |= U16T((coarseFineBias.coarseValue & 0x07) << 12);
+	biasValue = U16T(biasValue | ((coarseFineBias.fineValue & 0xFF) << 4));
+	biasValue = U16T(biasValue | ((coarseFineBias.coarseValue & 0x07) << 12));
 
 	return (biasValue);
 }
@@ -3865,8 +3865,8 @@ uint16_t caerBiasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSou
 		biasValue |= (0x02 << 2);
 	}
 
-	biasValue |= U16T((shiftedSourceBias.refValue & 0x3F) << 4);
-	biasValue |= U16T((shiftedSourceBias.regValue & 0x3F) << 10);
+	biasValue = U16T(biasValue | ((shiftedSourceBias.refValue & 0x3F) << 4));
+	biasValue = U16T(biasValue | ((shiftedSourceBias.regValue & 0x3F) << 10));
 
 	return (biasValue);
 }
