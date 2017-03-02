@@ -2394,7 +2394,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPolarityPacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerGenericEventPacketGrow(
+			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow polarity event packet.");
@@ -2416,7 +2416,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerGenericEventPacketGrow(
+			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow special event packet.");
@@ -2439,7 +2439,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentFramePacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerFrameEventPacket grownPacket = (caerFrameEventPacket) caerGenericEventPacketGrow(
+			caerFrameEventPacket grownPacket = (caerFrameEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentFramePacket, state->currentFramePacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow frame event packet.");
@@ -2461,7 +2461,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentIMU6Packet)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerIMU6EventPacket grownPacket = (caerIMU6EventPacket) caerGenericEventPacketGrow(
+			caerIMU6EventPacket grownPacket = (caerIMU6EventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentIMU6Packet, state->currentIMU6PacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow IMU6 event packet.");
@@ -2483,7 +2483,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSamplePacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerGenericEventPacketGrow(
+			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSamplePacket, state->currentSamplePacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow Sample event packet.");

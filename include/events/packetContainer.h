@@ -359,7 +359,7 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyAllEvents(cae
 
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_START(container)
 		caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
-			(caerEventPacketHeader) caerCopyEventPacketOnlyEvents((void *) caerEventPacketContainerIteratorElement));
+			(caerEventPacketHeader) caerEventPacketCopyOnlyEvents((void *) caerEventPacketContainerIteratorElement));
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	return (newContainer);
@@ -387,7 +387,7 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyValidEvents(c
 
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_START(container)
 		caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
-			(caerEventPacketHeader) caerCopyEventPacketOnlyValidEvents((void *) caerEventPacketContainerIteratorElement));
+			(caerEventPacketHeader) caerEventPacketCopyOnlyValidEvents((void *) caerEventPacketContainerIteratorElement));
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	return (newContainer);

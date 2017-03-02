@@ -772,7 +772,7 @@ static void das1v4EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpikePacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSpikeEventPacket grownPacket = (caerSpikeEventPacket) caerGenericEventPacketGrow(
+			caerSpikeEventPacket grownPacket = (caerSpikeEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpikePacket, state->currentSpikePacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow spike event packet.");
@@ -794,7 +794,7 @@ static void das1v4EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerGenericEventPacketGrow(
+			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
 			if (grownPacket == NULL) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow special event packet.");

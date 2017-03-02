@@ -388,7 +388,7 @@ static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader head
  * On success, the old packet handle is to be considered invalid and not to be
  * used anymore. On failure, the old packet handle is not touched in any way.
  */
-static inline caerEventPacketHeader caerGenericEventPacketGrow(caerEventPacketHeader packet, int32_t newEventCapacity) {
+static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader packet, int32_t newEventCapacity) {
 	if (packet == NULL || newEventCapacity == 0) {
 		return (NULL);
 	}
@@ -397,7 +397,7 @@ static inline caerEventPacketHeader caerGenericEventPacketGrow(caerEventPacketHe
 
 	if (newEventCapacity <= oldEventCapacity) {
 		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
-			"Called caerGenericEventPacketGrow() with a new capacity value (%" PRIi32 ") that is equal or smaller than the old one (%" PRIi32 "). "
+			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32 ") that is equal or smaller than the old one (%" PRIi32 "). "
 			"Only strictly growing an event packet is supported!", newEventCapacity, oldEventCapacity);
 		return (NULL);
 	}
@@ -439,7 +439,7 @@ static inline caerEventPacketHeader caerGenericEventPacketGrow(caerEventPacketHe
  * used anymore. On failure, the old packet handle is not touched in any way.
  * The appendPacket handle is never touched in any way.
  */
-static inline caerEventPacketHeader caerGenericEventPacketAppend(caerEventPacketHeader packet,
+static inline caerEventPacketHeader caerEventPacketAppend(caerEventPacketHeader packet,
 	caerEventPacketHeader appendPacket) {
 	if (packet == NULL) {
 		return (NULL);
@@ -618,7 +618,7 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
  *
  * @return a full copy of an event packet.
  */
-static inline void *caerCopyEventPacket(const void *eventPacket) {
+static inline void *caerEventPacketCopy(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
@@ -657,7 +657,7 @@ static inline void *caerCopyEventPacket(const void *eventPacket) {
  *
  * @return a sized down copy of an event packet.
  */
-static inline void *caerCopyEventPacketOnlyEvents(const void *eventPacket) {
+static inline void *caerEventPacketCopyOnlyEvents(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
@@ -700,7 +700,7 @@ static inline void *caerCopyEventPacketOnlyEvents(const void *eventPacket) {
  *
  * @return a copy of an event packet, containing only valid events.
  */
-static inline void *caerCopyEventPacketOnlyValidEvents(const void *eventPacket) {
+static inline void *caerEventPacketCopyOnlyValidEvents(const void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return (NULL);
@@ -751,7 +751,7 @@ static inline void *caerCopyEventPacketOnlyValidEvents(const void *eventPacket) 
  *
  * @param eventPacket an event packet to clean.
  */
-static inline void caerCleanEventPacket(void *eventPacket) {
+static inline void caerEventPacketClean(void *eventPacket) {
 	// Handle empty event packets.
 	if (eventPacket == NULL) {
 		return;
