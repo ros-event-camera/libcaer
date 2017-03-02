@@ -179,7 +179,7 @@ bool dynapseClose(caerDeviceHandle cdh) {
 }
 
 
-bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, uint32_t * pointer, int numConfig) {
+bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, int numConfig) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
@@ -288,7 +288,7 @@ uint32_t dynapseCalculateCoordinatesNeuX(uint32_t index, uint32_t columns, uint3
 			return (index - columns * i);
 		}
 	}
-	return NULL;
+	return (0);
 }
 
 uint32_t dynapseCalculateCoordinatesNeuY(uint32_t index, uint32_t columns, uint32_t rows) {
@@ -300,12 +300,12 @@ uint32_t dynapseCalculateCoordinatesNeuY(uint32_t index, uint32_t columns, uint3
 			return (i);
 		}
 	}
-	return NULL;
+	return (0);
 }
 
 //columns = amount of columns, x = column, y = row
 uint32_t dynapseCalculateIndexNeu(uint32_t columns, uint32_t x, uint32_t y) {
-	return y * columns + x;
+	return ((y * columns) + x);
 }
 
 bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
@@ -1008,9 +1008,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					}
 
 				}
-					break;
+				break;
 			}
+			break;
 		}
+
 		default:
 			return (false);
 			break;
@@ -1786,13 +1788,13 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 	}
 }
 
-bool caerDynapseWriteSRAMWords(caerDeviceHandle cdh, uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
+bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 	uint32_t idxConfig = 0;
 	int numConfig = numWords * 2;
 	//we need malloc because allocating dynamically sized arrays on the stack is not allowed.
-	uint8_t *spiMultiConfig = malloc(numConfig*6*sizeof(*spiMultiConfig)); 
+	uint8_t *spiMultiConfig = malloc(numConfig*6*sizeof(*spiMultiConfig));
 
 	if ( spiMultiConfig == NULL ) {
 		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
@@ -1810,7 +1812,7 @@ bool caerDynapseWriteSRAMWords(caerDeviceHandle cdh, uint16_t *data, uint32_t ba
 		spiMultiConfig[i*12+5] = (data[i] >> 0) & 0x0FF;
 		// Address configuration
 		spiMultiConfig[i*12+6] = DYNAPSE_CONFIG_SRAM;
-		spiMultiConfig[i*12+7] = DYNAPSE_CONFIG_SRAM_ADDRESS; 
+		spiMultiConfig[i*12+7] = DYNAPSE_CONFIG_SRAM_ADDRESS;
 		spiMultiConfig[i*12+8] = 0;
 		spiMultiConfig[i*12+9] = ((baseAddr+i) >> 16) & 0x0FF;
 		spiMultiConfig[i*12+10] = ((baseAddr+i) >> 8) & 0x0FF;

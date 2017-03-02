@@ -101,7 +101,7 @@ extern "C" {
 * Module address: Device side Synapse Reconfiguration module configuration.
 * Provides run control, selection between using a single kernel for
 * all neurons and reading per-neuron kernels from SRAM, programming of the
-* global kernel, as well as target output chip ID selection and SRAM kernel 
+* global kernel, as well as target output chip ID selection and SRAM kernel
 * table base address.
 */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG 15
@@ -109,14 +109,14 @@ extern "C" {
 /**
 * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
 * Run control. Starts and stops handshaking with DVS.
-*/    
+*/
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_RUN 0
 
 /**
 * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
 * Bits 16 downto 12 select the address in the global kernel table
-* and bits 11 downto 0 specify the data. 
-* The 12 data bits are split into 4*3 synaptic weight bits which map 
+* and bits 11 downto 0 specify the data.
+* The 12 data bits are split into 4*3 synaptic weight bits which map
 * onto positive/negative polarity events from 2 DVS pixels.
 */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_GLOBALKERNEL 1
@@ -130,7 +130,7 @@ extern "C" {
 
 /**
 * Parameter address for moudle DYNAPSE_CONFIG_SYNAPSERECONFIG
-* Output chip select using chip identifiers from this document 
+* Output chip select using chip identifiers from this document
 */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT 3
 
@@ -605,11 +605,11 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
 /*
 * @param cdh a valid device handle
-* Transfer numWords 16 bit words from *data to SRAM start at 
+* Transfer numWords 16 bit words from *data to SRAM start at
 * address baseAddr in SRAM.
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteSramWords(caerDeviceHandle handle, uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords);
 
 /*
  *
@@ -639,7 +639,7 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neu
 *
 * @return true on success, false otherwise
 */
-bool caerDynapseSendDataToUSB(caerDeviceHandle handle, uint32_t * data, int numConfig);
+bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, int numConfig);
 
 /*
  * Remember to Select the chip before calling this function
@@ -654,7 +654,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, uint32_t * data, int numC
 *																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
 * @return true on success, false otherwise
 */
-bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
+bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType);
 
 /*
 * @param handle a valid device handle.

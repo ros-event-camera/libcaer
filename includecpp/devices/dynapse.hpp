@@ -24,14 +24,14 @@ public:
 		return (caerDynapseInfoGet(handle));
 	}
 
-	void sendDataToUSB(uint32_t *data, int numConfig) const {
+	void sendDataToUSB(const uint32_t *data, int numConfig) const {
 		bool success = caerDynapseSendDataToUSB(handle, data, numConfig);
 		if (!success) {
 			throw std::runtime_error("Failed to send config data to device.");
 		}
 	}
 
-	void writeSramWords(uint16_t *data, uint32_t baseAddr, uint32_t numWords) const {
+	void writeSramWords(const uint16_t *data, uint32_t baseAddr, uint32_t numWords) const {
 		bool success = caerDynapseWriteSramWords(handle, data, baseAddr, numWords);
 		if (!success) {
 			throw std::runtime_error("Failed to write SRAM word.");
