@@ -18,6 +18,7 @@ protected:
 	}
 
 private:
+	// Only used for copy*() methods.
 	EventPacketHeader(caerEventPacketHeader h) :
 		header(h) {
 	}
@@ -28,7 +29,6 @@ public:
 		// All EventPackets must have been allocated somewhere on the heap,
 		// and can thus always be passed to free(). free(nullptr) does nothing.
 		free(header);
-		header = nullptr;
 	}
 
 	// Copy constructor.
@@ -62,7 +62,6 @@ public:
 			}
 
 			free(header);
-			header = nullptr;
 
 			header = copy;
 		}
@@ -72,8 +71,22 @@ public:
 
 	// Move constructor.
 	EventPacketHeader(EventPacketHeader &&rhs) {
+		// Moved-from object must remain in a valid state. Setting it to NULL is not
+		// a valid state, as it would lead to segfaults on any call. Instead we allocate
+		// a small header with no events (capacity=0), which will return sensible values
+		// on calls, and refuse to give out access to any events (doesn't have any!).
+		caerEventPacketHeader emptyPacket = malloc(CAER_EVENT_PACKET_HEADER_SIZE);
+		if (emptyPacket == nullptr) {
+			throw std::runtime_error("Failed to move construct event packet.");
+		}
+
+		memcpy(emptyPacket, rhs.header, 16);
+		memset(((uint8_t *) emptyPacket) + 16, 0, 12);
+
+		// Move data here.
 		header = rhs.header;
-		rhs.header = nullptr; // TODO: this is not a valid state!
+
+		rhs.header = emptyPacket;
 	}
 
 	// Move assignment.
@@ -88,12 +101,24 @@ public:
 			throw std::invalid_argument("Event size must be the same.");
 		}
 
-		// They are, so we can move the data to this packet.
+		// Moved-from object must remain in a valid state. Setting it to NULL is not
+		// a valid state, as it would lead to segfaults on any call. Instead we allocate
+		// a small header with no events (capacity=0), which will return sensible values
+		// on calls, and refuse to give out access to any events (doesn't have any!).
+		caerEventPacketHeader emptyPacket = malloc(CAER_EVENT_PACKET_HEADER_SIZE);
+		if (emptyPacket == nullptr) {
+			throw std::runtime_error("Failed to move assign event packet.");
+		}
+
+		memcpy(emptyPacket, rhs.header, 16);
+		memset(((uint8_t *) emptyPacket) + 16, 0, 12);
+
+		// Packets are compatible, so we can move the data here.
 		free(header);
-		header = nullptr;
 
 		header = rhs.header;
-		rhs.header = nullptr; // TODO: this is not a valid state!
+
+		rhs.header = emptyPacket;
 
 		return (*this);
 	}
@@ -229,6 +254,10 @@ public:
 	}
 
 	void resize(int32_t newEventCapacity) {
+		if (newEventCapacity == 0) {
+			throw std::invalid_argument("New event capacity cannot be zero.");
+		}
+
 		caerEventPacketHeader resizedPacket = caerEventPacketResize(header, newEventCapacity);
 		if (resizedPacket == nullptr) {
 			throw std::bad_alloc();
@@ -239,6 +268,9 @@ public:
 	}
 
 	void grow(int32_t newEventCapacity) {
+		if (newEventCapacity == 0) {
+			throw std::invalid_argument("New event capacity cannot be zero.");
+		}
 		if (newEventCapacity <= getEventCapacity()) {
 			throw std::invalid_argument("New event capacity must be strictly bigger than old one.");
 		}
