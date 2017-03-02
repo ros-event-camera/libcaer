@@ -3793,7 +3793,7 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 	}
 }
 
-uint16_t caerBiasVDACGenerate(struct caer_bias_vdac vdacBias) {
+uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias) {
 	// Build up bias value from all its components.
 	uint16_t biasValue = U16T((vdacBias.voltageValue & 0x3F) << 0);
 	biasValue = U16T(biasValue | ((vdacBias.currentValue & 0x07) << 6));
@@ -3801,7 +3801,7 @@ uint16_t caerBiasVDACGenerate(struct caer_bias_vdac vdacBias) {
 	return (biasValue);
 }
 
-struct caer_bias_vdac caerBiasVDACParse(uint16_t vdacBias) {
+struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias) {
 	struct caer_bias_vdac biasValue;
 
 	// Decompose bias integer into its parts.
@@ -3811,7 +3811,7 @@ struct caer_bias_vdac caerBiasVDACParse(uint16_t vdacBias) {
 	return (biasValue);
 }
 
-uint16_t caerBiasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias) {
+uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFineBias) {
 	uint16_t biasValue = 0;
 
 	// Build up bias value from all its components.
@@ -3834,7 +3834,7 @@ uint16_t caerBiasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias) 
 	return (biasValue);
 }
 
-struct caer_bias_coarsefine caerBiasCoarseFineParse(uint16_t coarseFineBias) {
+struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBias) {
 	struct caer_bias_coarsefine biasValue;
 
 	// Decompose bias integer into its parts.
@@ -3848,7 +3848,7 @@ struct caer_bias_coarsefine caerBiasCoarseFineParse(uint16_t coarseFineBias) {
 	return (biasValue);
 }
 
-uint16_t caerBiasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSourceBias) {
+uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shiftedSourceBias) {
 	uint16_t biasValue = 0;
 
 	if (shiftedSourceBias.operatingMode == HI_Z) {
@@ -3871,7 +3871,7 @@ uint16_t caerBiasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSou
 	return (biasValue);
 }
 
-struct caer_bias_shiftedsource caerBiasShiftedSourceParse(uint16_t shiftedSourceBias) {
+struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias) {
 	struct caer_bias_shiftedsource biasValue;
 
 	// Decompose bias integer into its parts.

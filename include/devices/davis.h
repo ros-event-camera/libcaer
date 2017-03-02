@@ -1753,7 +1753,7 @@ struct caer_bias_vdac {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasVDACGenerate(struct caer_bias_vdac vdacBias);
+uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias);
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a VDAC bias structure, for easier
@@ -1763,7 +1763,7 @@ uint16_t caerBiasVDACGenerate(struct caer_bias_vdac vdacBias);
  *
  * @return VDAC bias structure.
  */
-struct caer_bias_vdac caerBiasVDACParse(uint16_t vdacBias);
+struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias);
 
 /**
  * On-chip coarse-fine bias current configuration.
@@ -1792,7 +1792,7 @@ struct caer_bias_coarsefine {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias);
+uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFineBias);
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a coarse-fine bias structure, for easier
@@ -1802,7 +1802,7 @@ uint16_t caerBiasCoarseFineGenerate(struct caer_bias_coarsefine coarseFineBias);
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_coarsefine caerBiasCoarseFineParse(uint16_t coarseFineBias);
+struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBias);
 
 /**
  * Shifted-source bias operating mode.
@@ -1851,7 +1851,7 @@ struct caer_bias_shiftedsource {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSourceBias);
+uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shiftedSourceBias);
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a shifted-source bias structure, for easier
@@ -1861,7 +1861,7 @@ uint16_t caerBiasShiftedSourceGenerate(struct caer_bias_shiftedsource shiftedSou
  *
  * @return shifted-source bias structure.
  */
-struct caer_bias_shiftedsource caerBiasShiftedSourceParse(uint16_t shiftedSourceBias);
+struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
 
 #ifdef __cplusplus
 }
