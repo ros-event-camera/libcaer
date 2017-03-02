@@ -503,15 +503,16 @@ static inline void caerEventPacketClean(void *eventPacket) {
 
 	// Calculate needed memory for new event packet.
 	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
 	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
 	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
-	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
 
 	// If we have no invalid events, we're already done.
 	if (eventValid == eventNumber) {
 		return;
 	}
+
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
+	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
 
 	// Move all valid events close together. Must check every event for validity!
 	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
