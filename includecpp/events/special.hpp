@@ -8,9 +8,6 @@ namespace libcaer {
 namespace events {
 
 class SpecialEventPacket: public EventPacketHeader {
-private:
-	caerSpecialEventPacket packet;
-
 public:
 	using SpecialEventBase = struct caer_special_event;
 
@@ -20,7 +17,7 @@ public:
 		}
 
 		int64_t getTimestamp64(const SpecialEventPacket &packet) const noexcept {
-			return (caerSpecialEventGetTimestamp64(this, packet.packet));
+			return (caerSpecialEventGetTimestamp64(this, reinterpret_cast<caerSpecialEventPacketConst>(packet.header)));
 		}
 
 		void setTimestamp(int32_t timestamp) {
@@ -36,11 +33,11 @@ public:
 		}
 
 		void validate(SpecialEventPacket &packet) noexcept {
-			caerSpecialEventValidate(this, packet.packet);
+			caerSpecialEventValidate(this, reinterpret_cast<caerSpecialEventPacket>(packet.header));
 		}
 
 		void invalidate(SpecialEventPacket &packet) noexcept {
-			caerSpecialEventInvalidate(this, packet.packet);
+			caerSpecialEventInvalidate(this, reinterpret_cast<caerSpecialEventPacket>(packet.header));
 		}
 
 		uint8_t getType() const noexcept {
@@ -60,8 +57,9 @@ public:
 		}
 	};
 
+	// Constructors.
 	SpecialEventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-		packet = caerSpecialEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
+		caerSpecialEventPacket packet = caerSpecialEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		if (packet == nullptr) {
 			throw std::runtime_error("Failed to allocate special event packet.");
 		}
@@ -70,13 +68,15 @@ public:
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
+	// Same for all copy/move constructor/assignment, use EventPacketHeader.
 
 	SpecialEvent &getEvent(int32_t index) {
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
 
-		SpecialEventBase *evtBase = caerSpecialEventPacketGetEvent(packet, index);
+		SpecialEventBase *evtBase = caerSpecialEventPacketGetEvent(reinterpret_cast<caerSpecialEventPacket>(header),
+			index);
 		SpecialEvent *evt = static_cast<SpecialEvent *>(evtBase);
 
 		return (*evt);
@@ -87,7 +87,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		const SpecialEventBase *evtBase = caerSpecialEventPacketGetEventConst(packet, index);
+		const SpecialEventBase *evtBase = caerSpecialEventPacketGetEventConst(
+			reinterpret_cast<caerSpecialEventPacketConst>(header), index);
 		const SpecialEvent *evt = static_cast<const SpecialEvent *>(evtBase);
 
 		return (*evt);
@@ -102,7 +103,8 @@ public:
 	}
 
 	SpecialEvent &findEventByType(uint8_t type) {
-		SpecialEventBase *evtBase = caerSpecialEventPacketFindEventByType(packet, type);
+		SpecialEventBase *evtBase = caerSpecialEventPacketFindEventByType(
+			reinterpret_cast<caerSpecialEventPacket>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Special Event of particular type not found.");
 		}
@@ -113,7 +115,8 @@ public:
 	}
 
 	const SpecialEvent &findEventByType(uint8_t type) const {
-		const SpecialEventBase *evtBase = caerSpecialEventPacketFindEventByTypeConst(packet, type);
+		const SpecialEventBase *evtBase = caerSpecialEventPacketFindEventByTypeConst(
+			reinterpret_cast<caerSpecialEventPacketConst>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Special Event of particular type not found.");
 		}
@@ -124,7 +127,8 @@ public:
 	}
 
 	SpecialEvent &findValidEventByType(uint8_t type) {
-		SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByType(packet, type);
+		SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByType(
+			reinterpret_cast<caerSpecialEventPacket>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Valid Special Event of particular type not found.");
 		}
@@ -135,7 +139,8 @@ public:
 	}
 
 	const SpecialEvent &findValidEventByType(uint8_t type) const {
-		const SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByTypeConst(packet, type);
+		const SpecialEventBase *evtBase = caerSpecialEventPacketFindValidEventByTypeConst(
+			reinterpret_cast<caerSpecialEventPacketConst>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Valid Special Event of particular type not found.");
 		}
