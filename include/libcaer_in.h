@@ -178,7 +178,7 @@ static inline bool caerStrEqualsUpTo(const char *s1, const char *s2, size_t len)
  * @param byteArray pointer to the byte array in which to store the converted values.
  * @param byteArrayLength length of the byte array to convert to.
  */
-static inline void caerIntegerToByteArray(uint32_t integer, uint8_t *byteArray, uint8_t byteArrayLength) {
+static inline void caerIntegerToByteArray(const uint32_t integer, uint8_t *byteArray, const uint8_t byteArrayLength) {
 	switch (byteArrayLength) {
 		case 4:
 			byteArray[0] = U8T(integer >> 24);
@@ -217,7 +217,7 @@ static inline void caerIntegerToByteArray(uint32_t integer, uint8_t *byteArray, 
  *
  * @return integer representing the value stored in the byte array.
  */
-static inline uint32_t caerByteArrayToInteger(uint8_t *byteArray, uint8_t byteArrayLength) {
+static inline uint32_t caerByteArrayToInteger(const uint8_t *byteArray, const uint8_t byteArrayLength) {
 	uint32_t integer = 0;
 
 	switch (byteArrayLength) {
