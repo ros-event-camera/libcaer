@@ -415,6 +415,20 @@ static inline void caerIMU6EventSetTemp(caerIMU6Event event, float temp) {
 		caerIMU6Event caerIMU6IteratorElement = caerIMU6EventPacketGetEvent(IMU6_PACKET, caerIMU6IteratorCounter);
 
 /**
+ * Const-Iterator over all IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6EventConst.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_CONST_ITERATOR_ALL_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = 0; \
+		caerIMU6IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader); \
+		caerIMU6IteratorCounter++) { \
+		caerIMU6EventConst caerIMU6IteratorElement = caerIMU6EventPacketGetEventConst(IMU6_PACKET, caerIMU6IteratorCounter);
+
+/**
  * Iterator close statement.
  */
 #define CAER_IMU6_ITERATOR_ALL_END }
@@ -432,6 +446,21 @@ static inline void caerIMU6EventSetTemp(caerIMU6Event event, float temp) {
 		caerIMU6IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader); \
 		caerIMU6IteratorCounter++) { \
 		caerIMU6Event caerIMU6IteratorElement = caerIMU6EventPacketGetEvent(IMU6_PACKET, caerIMU6IteratorCounter); \
+		if (!caerIMU6EventIsValid(caerIMU6IteratorElement)) { continue; } // Skip invalid IMU6 events.
+
+/**
+ * Const-Iterator over only the valid IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6EventConst.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_CONST_ITERATOR_VALID_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = 0; \
+		caerIMU6IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader); \
+		caerIMU6IteratorCounter++) { \
+		caerIMU6EventConst caerIMU6IteratorElement = caerIMU6EventPacketGetEventConst(IMU6_PACKET, caerIMU6IteratorCounter); \
 		if (!caerIMU6EventIsValid(caerIMU6IteratorElement)) { continue; } // Skip invalid IMU6 events.
 
 /**

@@ -400,6 +400,20 @@ static inline void caerPoint4DEventSetW(caerPoint4DEvent event, float w) {
 		caerPoint4DEvent caerPoint4DIteratorElement = caerPoint4DEventPacketGetEvent(POINT4D_PACKET, caerPoint4DIteratorCounter);
 
 /**
+ * Const-Iterator over all Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEventConst.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_CONST_ITERATOR_ALL_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = 0; \
+		caerPoint4DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader); \
+		caerPoint4DIteratorCounter++) { \
+		caerPoint4DEventConst caerPoint4DIteratorElement = caerPoint4DEventPacketGetEventConst(POINT4D_PACKET, caerPoint4DIteratorCounter);
+
+/**
  * Iterator close statement.
  */
 #define CAER_POINT4D_ITERATOR_ALL_END }
@@ -417,6 +431,21 @@ static inline void caerPoint4DEventSetW(caerPoint4DEvent event, float w) {
 		caerPoint4DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader); \
 		caerPoint4DIteratorCounter++) { \
 		caerPoint4DEvent caerPoint4DIteratorElement = caerPoint4DEventPacketGetEvent(POINT4D_PACKET, caerPoint4DIteratorCounter); \
+		if (!caerPoint4DEventIsValid(caerPoint4DIteratorElement)) { continue; } // Skip invalid Point4D events.
+
+/**
+ * Const-Iterator over only the valid Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEventConst.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_CONST_ITERATOR_VALID_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = 0; \
+		caerPoint4DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader); \
+		caerPoint4DIteratorCounter++) { \
+		caerPoint4DEventConst caerPoint4DIteratorElement = caerPoint4DEventPacketGetEventConst(POINT4D_PACKET, caerPoint4DIteratorCounter); \
 		if (!caerPoint4DEventIsValid(caerPoint4DIteratorElement)) { continue; } // Skip invalid Point4D events.
 
 /**

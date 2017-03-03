@@ -361,6 +361,20 @@ static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
 		caerSpikeEvent caerSpikeIteratorElement = caerSpikeEventPacketGetEvent(SPIKE_PACKET, caerSpikeIteratorCounter);
 
 /**
+ * Const-Iterator over all Spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEventConst.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_CONST_ITERATOR_ALL_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = 0; \
+		caerSpikeIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader); \
+		caerSpikeIteratorCounter++) { \
+		caerSpikeEventConst caerSpikeIteratorElement = caerSpikeEventPacketGetEventConst(SPIKE_PACKET, caerSpikeIteratorCounter);
+
+/**
  * Iterator close statement.
  */
 #define CAER_SPIKE_ITERATOR_ALL_END }
@@ -378,6 +392,21 @@ static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
 		caerSpikeIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader); \
 		caerSpikeIteratorCounter++) { \
 		caerSpikeEvent caerSpikeIteratorElement = caerSpikeEventPacketGetEvent(SPIKE_PACKET, caerSpikeIteratorCounter); \
+		if (!caerSpikeEventIsValid(caerSpikeIteratorElement)) { continue; } // Skip invalid Spike events.
+
+/**
+ * Const-Iterator over only the valid Spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEventConst.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_CONST_ITERATOR_VALID_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = 0; \
+		caerSpikeIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader); \
+		caerSpikeIteratorCounter++) { \
+		caerSpikeEventConst caerSpikeIteratorElement = caerSpikeEventPacketGetEventConst(SPIKE_PACKET, caerSpikeIteratorCounter); \
 		if (!caerSpikeEventIsValid(caerSpikeIteratorElement)) { continue; } // Skip invalid Spike events.
 
 /**

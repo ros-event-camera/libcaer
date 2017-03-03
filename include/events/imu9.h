@@ -492,6 +492,20 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter);
 
 /**
+ * Const-Iterator over all IMU9 events in a packet.
+ * Returns the current index in the 'caerIMU9IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU9IteratorElement' variable
+ * of type caerIMU9EventConst.
+ *
+ * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU9_CONST_ITERATOR_ALL_START(IMU9_PACKET) \
+	for (int32_t caerIMU9IteratorCounter = 0; \
+		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
+		caerIMU9IteratorCounter++) { \
+		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);
+
+/**
  * Iterator close statement.
  */
 #define CAER_IMU9_ITERATOR_ALL_END }
@@ -509,6 +523,21 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
 		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
 		caerIMU9IteratorCounter++) { \
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter); \
+		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
+
+/**
+ * Const-Iterator over only the valid IMU9 events in a packet.
+ * Returns the current index in the 'caerIMU9IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU9IteratorElement' variable
+ * of type caerIMU9EventConst.
+ *
+ * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU9_CONST_ITERATOR_VALID_START(IMU9_PACKET) \
+	for (int32_t caerIMU9IteratorCounter = 0; \
+		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
+		caerIMU9IteratorCounter++) { \
+		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter); \
 		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
 
 /**

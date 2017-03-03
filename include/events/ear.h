@@ -329,6 +329,20 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
 		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter);
 
 /**
+ * Const-Iterator over all ear events in a packet.
+ * Returns the current index in the 'caerEarIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerEarIteratorElement' variable
+ * of type caerEarEventConst.
+ *
+ * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_EAR_CONST_ITERATOR_ALL_START(EAR_PACKET) \
+	for (int32_t caerEarIteratorCounter = 0; \
+		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
+		caerEarIteratorCounter++) { \
+		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter);
+
+/**
  * Iterator close statement.
  */
 #define CAER_EAR_ITERATOR_ALL_END }
@@ -346,6 +360,21 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
 		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
 		caerEarIteratorCounter++) { \
 		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter); \
+		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
+
+/**
+ * Const-Iterator over only the valid ear events in a packet.
+ * Returns the current index in the 'caerEarIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerEarIteratorElement' variable
+ * of type caerEarEventConst.
+ *
+ * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_EAR_CONST_ITERATOR_VALID_START(EAR_PACKET) \
+	for (int32_t caerEarIteratorCounter = 0; \
+		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
+		caerEarIteratorCounter++) { \
+		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter); \
 		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
 
 /**
