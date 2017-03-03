@@ -12,12 +12,12 @@ namespace devices {
 class dvs128 final: public usb {
 public:
 	dvs128(uint16_t deviceID) :
-		usb(deviceID, CAER_DEVICE_DVS128) {
+			usb(deviceID, CAER_DEVICE_DVS128) {
 	}
 
 	dvs128(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) :
-		usb(deviceID, CAER_DEVICE_DVS128, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+			usb(deviceID, CAER_DEVICE_DVS128, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 	struct caer_dvs128_info infoGet() const noexcept {

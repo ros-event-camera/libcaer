@@ -16,12 +16,12 @@ class davis: public usb {
 protected:
 	// Forward construction to base class.
 	davis(uint16_t deviceID, uint16_t deviceType) :
-		usb(deviceID, deviceType, 0, 0, std::string()) {
+			usb(deviceID, deviceType, 0, 0, std::string()) {
 	}
 
 	davis(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) :
-		usb(deviceID, deviceType, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+			usb(deviceID, deviceType, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 public:
@@ -58,24 +58,24 @@ public:
 class davisfx2 final: public davis {
 public:
 	davisfx2(uint16_t deviceID) :
-		davis(deviceID, CAER_DEVICE_DAVIS_FX2) {
+			davis(deviceID, CAER_DEVICE_DAVIS_FX2) {
 	}
 
 	davisfx2(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) :
-		davis(deviceID, CAER_DEVICE_DAVIS_FX2, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+			davis(deviceID, CAER_DEVICE_DAVIS_FX2, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 };
 
 class davisfx3 final: public davis {
 public:
 	davisfx3(uint16_t deviceID) :
-		davis(deviceID, CAER_DEVICE_DAVIS_FX3) {
+			davis(deviceID, CAER_DEVICE_DAVIS_FX3) {
 	}
 
 	davisfx3(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) :
-		davis(deviceID, CAER_DEVICE_DAVIS_FX3, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+			davis(deviceID, CAER_DEVICE_DAVIS_FX3, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 };
 

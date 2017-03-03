@@ -1,6 +1,4 @@
 #ifndef LIBCAER_EVENTS_IMU9_HPP_
 #define LIBCAER_EVENTS_IMU9_HPP_
 
-
-
 #endif /* LIBCAER_EVENTS_IMU9_HPP_ */

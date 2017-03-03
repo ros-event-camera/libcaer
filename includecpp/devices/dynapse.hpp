@@ -12,12 +12,12 @@ namespace devices {
 class dynapse final: public usb {
 public:
 	dynapse(uint16_t deviceID) :
-		usb(deviceID, CAER_DEVICE_DYNAPSE) {
+			usb(deviceID, CAER_DEVICE_DYNAPSE) {
 	}
 
 	dynapse(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) :
-		usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+			usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 	struct caer_dynapse_info infoGet() const noexcept {

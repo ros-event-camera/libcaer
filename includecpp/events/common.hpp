@@ -14,13 +14,13 @@ protected:
 
 	// Constructors.
 	EventPacketHeader() :
-		header(nullptr) {
+			header(nullptr) {
 	}
 
 private:
 	// Only used for copy*() methods.
 	EventPacketHeader(caerEventPacketHeader h) :
-		header(h) {
+			header(h) {
 	}
 
 public:

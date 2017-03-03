@@ -6,32 +6,41 @@
 
 namespace libcaer {
 namespace log {
-	enum class logLevel {
-		EMERGENCY = 0, ALERT = 1, CRITICAL = 2, ERROR = 3, WARNING = 4, NOTICE = 5, INFO = 6, DEBUG = 7
-	};
 
-	void logLevelSet(logLevel l) noexcept {
-		caerLogLevelSet(static_cast<typename std::underlying_type<logLevel>::type>(l));
-	}
+enum class logLevel {
+	EMERGENCY = 0,
+	ALERT = 1,
+	CRITICAL = 2,
+	ERROR = 3,
+	WARNING = 4,
+	NOTICE = 5,
+	INFO = 6,
+	DEBUG = 7
+};
 
-	logLevel logLevelGet() noexcept {
-		return (static_cast<logLevel>(caerLogLevelGet()));
-	}
+void logLevelSet(logLevel l) noexcept {
+	caerLogLevelSet(static_cast<typename std::underlying_type<logLevel>::type>(l));
+}
 
-	void fileDescriptorsSet(int fd1, int fd2) noexcept {
-		caerLogFileDescriptorsSet(fd1, fd2);
-	}
+logLevel logLevelGet() noexcept {
+	return (static_cast<logLevel>(caerLogLevelGet()));
+}
 
-	void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
-		va_list argumentList;
-		va_start(argumentList, format);
-		caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, argumentList);
-		va_end(argumentList);
-	}
+void fileDescriptorsSet(int fd1, int fd2) noexcept {
+	caerLogFileDescriptorsSet(fd1, fd2);
+}
 
-	void logVA(logLevel l, const char *subSystem, const char *format, va_list args) noexcept {
-		caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, args);
-	}
+void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, argumentList);
+	va_end(argumentList);
+}
+
+void logVA(logLevel l, const char *subSystem, const char *format, va_list args) noexcept {
+	caerLogVA(static_cast<typename std::underlying_type<logLevel>::type>(l), subSystem, format, args);
+}
+
 }
 }
 
