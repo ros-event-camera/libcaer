@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
+   &#160;<span id="projectnumber">2.0.0-rf0250a03150eeb69a3f5d39e942ee401582d0f3c</span>
    </div>
   </td>
  </tr>
@@ -90,6 +90,18 @@ Macros</h2></td></tr>
 <tr class="separator:adcc00f38ff8769bd852d8ed2791547fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a166f9e48d4fb9e4a5ee3b5a6500f55ba"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a166f9e48d4fb9e4a5ee3b5a6500f55ba">CAER_SPECIAL_ITERATOR_VALID_END</a>&#160;&#160;&#160;}</td></tr>
 <tr class="separator:a166f9e48d4fb9e4a5ee3b5a6500f55ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18e7b7488f6887ed1556435847102f77"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a18e7b7488f6887ed1556435847102f77">CAER_SPECIAL_REVERSE_ITERATOR_ALL_START</a>(SPECIAL_PACKET)</td></tr>
+<tr class="separator:a18e7b7488f6887ed1556435847102f77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a27915bd2352f11722bdc25c0e39398bd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a27915bd2352f11722bdc25c0e39398bd">CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START</a>(SPECIAL_PACKET)</td></tr>
+<tr class="separator:a27915bd2352f11722bdc25c0e39398bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10fb072333430f50efec3e37aa4debd6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a10fb072333430f50efec3e37aa4debd6">CAER_SPECIAL_REVERSE_ITERATOR_ALL_END</a>&#160;&#160;&#160;}</td></tr>
+<tr class="separator:a10fb072333430f50efec3e37aa4debd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae90c9114c39dba05e8ea20ebe17a9cf6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#ae90c9114c39dba05e8ea20ebe17a9cf6">CAER_SPECIAL_REVERSE_ITERATOR_VALID_START</a>(SPECIAL_PACKET)</td></tr>
+<tr class="separator:ae90c9114c39dba05e8ea20ebe17a9cf6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a48cec481f285239cda2ed101772bb4da"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a48cec481f285239cda2ed101772bb4da">CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START</a>(SPECIAL_PACKET)</td></tr>
+<tr class="separator:a48cec481f285239cda2ed101772bb4da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae90c582c713eb6f01705b25028fee5e6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#ae90c582c713eb6f01705b25028fee5e6">CAER_SPECIAL_REVERSE_ITERATOR_VALID_END</a>&#160;&#160;&#160;}</td></tr>
+<tr class="separator:ae90c582c713eb6f01705b25028fee5e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader"></div></td></tr>
 <tr class="memitem:a2310ec2e069b4027aac8c964d2b9410b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="special_8h.html#a2310ec2e069b4027aac8c964d2b9410b">TYPE_SHIFT</a>&#160;&#160;&#160;1</td></tr>
 <tr class="separator:a2310ec2e069b4027aac8c964d2b9410b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -202,7 +214,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEventConst caerSpecialIteratorElement = <a class="code" href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a>(SPECIAL_PACKET, caerSpecialIteratorCounter);</div><div class="ttc" id="special_8h_html_affd5b30656aef59690e46b11e35c7925"><div class="ttname"><a href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a></div><div class="ttdeci">static caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:139</div></div>
-<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
 </div><!-- fragment --><p>Const-Iterator over all special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable of type caerSpecialEventConst.</p>
 <p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
 
@@ -224,9 +236,54 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEventConst caerSpecialIteratorElement = <a class="code" href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a>(SPECIAL_PACKET, caerSpecialIteratorCounter); \</div><div class="line">        if (!<a class="code" href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a>(caerSpecialIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="special_8h_html_affd5b30656aef59690e46b11e35c7925"><div class="ttname"><a href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a></div><div class="ttdeci">static caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:139</div></div>
-<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
 <div class="ttc" id="special_8h_html_a0e8fd6190b9fa9cd78ea8f2f4e471b99"><div class="ttname"><a href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a></div><div class="ttdeci">static bool caerSpecialEventIsValid(caerSpecialEventConst event)</div><div class="ttdef"><b>Definition:</b> special.h:206</div></div>
 </div><!-- fragment --><p>Const-Iterator over only the valid special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable of type caerSpecialEventConst.</p>
+<p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
+
+</div>
+</div>
+<a id="a27915bd2352f11722bdc25c0e39398bd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a27915bd2352f11722bdc25c0e39398bd">&#9670;&nbsp;</a></span>CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">SPECIAL_PACKET</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerSpecialIteratorCounter &gt;= 0; \</div><div class="line">        caerSpecialIteratorCounter--) { \</div><div class="line">        caerSpecialEventConst caerSpecialIteratorElement = <a class="code" href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a>(SPECIAL_PACKET, caerSpecialIteratorCounter);</div><div class="ttc" id="special_8h_html_affd5b30656aef59690e46b11e35c7925"><div class="ttname"><a href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a></div><div class="ttdeci">static caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:139</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
+</div><!-- fragment --><p>Const-Reverse iterator over all special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable of type caerSpecialEventConst.</p>
+<p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
+
+</div>
+</div>
+<a id="a48cec481f285239cda2ed101772bb4da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a48cec481f285239cda2ed101772bb4da">&#9670;&nbsp;</a></span>CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">SPECIAL_PACKET</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerSpecialIteratorCounter &gt;= 0; \</div><div class="line">        caerSpecialIteratorCounter--) { \</div><div class="line">        caerSpecialEventConst caerSpecialIteratorElement = <a class="code" href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a>(SPECIAL_PACKET, caerSpecialIteratorCounter); \</div><div class="line">        if (!<a class="code" href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a>(caerSpecialIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="special_8h_html_affd5b30656aef59690e46b11e35c7925"><div class="ttname"><a href="special_8h.html#affd5b30656aef59690e46b11e35c7925">caerSpecialEventPacketGetEventConst</a></div><div class="ttdeci">static caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:139</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
+<div class="ttc" id="special_8h_html_a0e8fd6190b9fa9cd78ea8f2f4e471b99"><div class="ttname"><a href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a></div><div class="ttdeci">static bool caerSpecialEventIsValid(caerSpecialEventConst event)</div><div class="ttdef"><b>Definition:</b> special.h:206</div></div>
+</div><!-- fragment --><p>Const-Reverse iterator over only the valid special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable of type caerSpecialEventConst.</p>
 <p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
 
 </div>
@@ -261,7 +318,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
 <div class="ttc" id="special_8h_html_a22457b67240c28a1ba24edce25dbc3f5"><div class="ttname"><a href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a></div><div class="ttdeci">static caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:117</div></div>
 </div><!-- fragment --><p>Iterator over all special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable of type caerSpecialEvent.</p>
 <p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
@@ -298,10 +355,85 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter); \</div><div class="line">        if (!<a class="code" href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a>(caerSpecialIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = 0; \</div><div class="line">        caerSpecialIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader); \</div><div class="line">        caerSpecialIteratorCounter++) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter); \</div><div class="line">        if (!<a class="code" href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a>(caerSpecialIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
 <div class="ttc" id="special_8h_html_a0e8fd6190b9fa9cd78ea8f2f4e471b99"><div class="ttname"><a href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a></div><div class="ttdeci">static bool caerSpecialEventIsValid(caerSpecialEventConst event)</div><div class="ttdef"><b>Definition:</b> special.h:206</div></div>
 <div class="ttc" id="special_8h_html_a22457b67240c28a1ba24edce25dbc3f5"><div class="ttname"><a href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a></div><div class="ttdeci">static caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:117</div></div>
 </div><!-- fragment --><p>Iterator over only the valid special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable of type caerSpecialEvent.</p>
+<p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
+
+</div>
+</div>
+<a id="a10fb072333430f50efec3e37aa4debd6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10fb072333430f50efec3e37aa4debd6">&#9670;&nbsp;</a></span>CAER_SPECIAL_REVERSE_ITERATOR_ALL_END</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_END&#160;&#160;&#160;}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Reverse iterator close statement. </p>
+
+</div>
+</div>
+<a id="a18e7b7488f6887ed1556435847102f77"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a18e7b7488f6887ed1556435847102f77">&#9670;&nbsp;</a></span>CAER_SPECIAL_REVERSE_ITERATOR_ALL_START</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_START</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">SPECIAL_PACKET</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerSpecialIteratorCounter &gt;= 0; \</div><div class="line">        caerSpecialIteratorCounter--) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
+<div class="ttc" id="special_8h_html_a22457b67240c28a1ba24edce25dbc3f5"><div class="ttname"><a href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a></div><div class="ttdeci">static caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:117</div></div>
+</div><!-- fragment --><p>Reverse iterator over all special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable of type caerSpecialEvent.</p>
+<p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
+
+</div>
+</div>
+<a id="ae90c582c713eb6f01705b25028fee5e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae90c582c713eb6f01705b25028fee5e6">&#9670;&nbsp;</a></span>CAER_SPECIAL_REVERSE_ITERATOR_VALID_END</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_END&#160;&#160;&#160;}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Reverse iterator close statement. </p>
+
+</div>
+</div>
+<a id="ae90c9114c39dba05e8ea20ebe17a9cf6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae90c9114c39dba05e8ea20ebe17a9cf6">&#9670;&nbsp;</a></span>CAER_SPECIAL_REVERSE_ITERATOR_VALID_START</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_START</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">SPECIAL_PACKET</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerSpecialIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(SPECIAL_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerSpecialIteratorCounter &gt;= 0; \</div><div class="line">        caerSpecialIteratorCounter--) { \</div><div class="line">        caerSpecialEvent caerSpecialIteratorElement = <a class="code" href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a>(SPECIAL_PACKET, caerSpecialIteratorCounter); \</div><div class="line">        if (!<a class="code" href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a>(caerSpecialIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:320</div></div>
+<div class="ttc" id="special_8h_html_a0e8fd6190b9fa9cd78ea8f2f4e471b99"><div class="ttname"><a href="special_8h.html#a0e8fd6190b9fa9cd78ea8f2f4e471b99">caerSpecialEventIsValid</a></div><div class="ttdeci">static bool caerSpecialEventIsValid(caerSpecialEventConst event)</div><div class="ttdef"><b>Definition:</b> special.h:206</div></div>
+<div class="ttc" id="special_8h_html_a22457b67240c28a1ba24edce25dbc3f5"><div class="ttname"><a href="special_8h.html#a22457b67240c28a1ba24edce25dbc3f5">caerSpecialEventPacketGetEvent</a></div><div class="ttdeci">static caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> special.h:117</div></div>
+</div><!-- fragment --><p>Reverse iterator over only the valid special events in a packet. Returns the current index in the 'caerSpecialIteratorCounter' variable of type 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable of type caerSpecialEvent.</p>
 <p>SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL. </p>
 
 </div>

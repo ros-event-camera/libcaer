@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
+   &#160;<span id="projectnumber">2.0.0-rf0250a03150eeb69a3f5d39e942ee401582d0f3c</span>
    </div>
   </td>
  </tr>
@@ -79,6 +79,8 @@ $(function() {
 Macros</h2></td></tr>
 <tr class="memitem:a42fdc36b757863ef1b7ca999bd3a37b9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a42fdc36b757863ef1b7ca999bd3a37b9">CAER_EVENT_PACKET_CONTAINER_ITERATOR_START</a>(PACKET_CONTAINER)</td></tr>
 <tr class="separator:a42fdc36b757863ef1b7ca999bd3a37b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36908950721136ea71c7c336a3d171cf"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a36908950721136ea71c7c336a3d171cf">CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START</a>(PACKET_CONTAINER)</td></tr>
+<tr class="separator:a36908950721136ea71c7c336a3d171cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab481389ce7076a02f6db565db948511d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#ab481389ce7076a02f6db565db948511d">CAER_EVENT_PACKET_CONTAINER_ITERATOR_END</a>&#160;&#160;&#160;} }</td></tr>
 <tr class="separator:ab481389ce7076a02f6db565db948511d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -86,6 +88,9 @@ Macros</h2></td></tr>
 Typedefs</h2></td></tr>
 <tr class="memitem:a609a59297d1e0590f493bbbfeb42a70a"><td class="memItemLeft" align="right" valign="top">typedef struct caer_event_packet_container *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a></td></tr>
 <tr class="separator:a609a59297d1e0590f493bbbfeb42a70a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae66bcc700c28e9612b301de87265aa9d"><td class="memItemLeft" align="right" valign="top"><a id="ae66bcc700c28e9612b301de87265aa9d"></a>
+typedef const struct caer_event_packet_container *&#160;</td><td class="memItemRight" valign="bottom"><b>caerEventPacketContainerConst</b></td></tr>
+<tr class="separator:ae66bcc700c28e9612b301de87265aa9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -95,33 +100,61 @@ Functions</h2></td></tr>
 <tr class="separator:a5aaf0f7157fba799d27a751e2d8325a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5044247d9599664c02e9abf1d84c7e8d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a5044247d9599664c02e9abf1d84c7e8d">caerEventPacketContainerFree</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
 <tr class="separator:a5044247d9599664c02e9abf1d84c7e8d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a12fdbe37e638ade887922e7e936150b3"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a12fdbe37e638ade887922e7e936150b3">caerEventPacketContainerGetEventPacketsNumber</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a12fdbe37e638ade887922e7e936150b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8468090b2219c30f8a7c3396d229ddeb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a8468090b2219c30f8a7c3396d229ddeb">caerEventPacketContainerUpdateStatistics</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
+<tr class="separator:a8468090b2219c30f8a7c3396d229ddeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa04076b5a2c8f60e2afe03c5f8cd952"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#aaa04076b5a2c8f60e2afe03c5f8cd952">caerEventPacketContainerGetEventPacketsNumber</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:aaa04076b5a2c8f60e2afe03c5f8cd952"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7613f98d9f9cc4e1cadc4125c2443c4b"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a7613f98d9f9cc4e1cadc4125c2443c4b">caerEventPacketContainerSetEventPacketsNumber</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container, int32_t eventPacketsNumber)</td></tr>
 <tr class="separator:a7613f98d9f9cc4e1cadc4125c2443c4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ea6139f276d2f84ff883c0ec373051d"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a2ea6139f276d2f84ff883c0ec373051d">caerEventPacketContainerGetEventPacket</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container, int32_t n)</td></tr>
-<tr class="separator:a2ea6139f276d2f84ff883c0ec373051d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19099820883a07ed63485193f925d8ba"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a19099820883a07ed63485193f925d8ba">caerEventPacketContainerGetEventPacket</a> (caerEventPacketContainerConst container, int32_t n)</td></tr>
+<tr class="separator:a19099820883a07ed63485193f925d8ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc502ef626e1efe07ce3af0d9dbf4852"><td class="memItemLeft" align="right" valign="top">static caerEventPacketHeaderConst&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#adc502ef626e1efe07ce3af0d9dbf4852">caerEventPacketContainerGetEventPacketConst</a> (caerEventPacketContainerConst container, int32_t n)</td></tr>
+<tr class="separator:adc502ef626e1efe07ce3af0d9dbf4852"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a99eaafdc8cbfb7781753c7aeaf30e26e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a99eaafdc8cbfb7781753c7aeaf30e26e">caerEventPacketContainerSetEventPacket</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container, int32_t n, <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a> packetHeader)</td></tr>
 <tr class="separator:a99eaafdc8cbfb7781753c7aeaf30e26e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e61e6bcf0fea9e8ded88ace68e2f6e8"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a3e61e6bcf0fea9e8ded88ace68e2f6e8">caerEventPacketContainerGetLowestEventTimestamp</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a3e61e6bcf0fea9e8ded88ace68e2f6e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5b742bfc77ab8240c4a4e26f80fc64b3"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a5b742bfc77ab8240c4a4e26f80fc64b3">caerEventPacketContainerGetHighestEventTimestamp</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a5b742bfc77ab8240c4a4e26f80fc64b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0f17758509ca2661125df870048717f7"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a0f17758509ca2661125df870048717f7">caerEventPacketContainerGetEventsNumber</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a0f17758509ca2661125df870048717f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a93efca9ca05b16e45b1a5728f1fe0026"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a93efca9ca05b16e45b1a5728f1fe0026">caerEventPacketContainerGetEventsValidNumber</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a93efca9ca05b16e45b1a5728f1fe0026"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a283d006c37388ce466195aae9e3a505e"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a283d006c37388ce466195aae9e3a505e">caerEventPacketContainerFindEventPacketByType</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container, int16_t typeID)</td></tr>
-<tr class="separator:a283d006c37388ce466195aae9e3a505e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aad46f2ab7b96ab9526f1e22947b699b0"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#aad46f2ab7b96ab9526f1e22947b699b0">caerEventPacketContainerCopyAllEvents</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:aad46f2ab7b96ab9526f1e22947b699b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14b22fa864d91f77c8e5837c8cc839ae"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a14b22fa864d91f77c8e5837c8cc839ae">caerEventPacketContainerCopyValidEvents</a> (<a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> container)</td></tr>
-<tr class="separator:a14b22fa864d91f77c8e5837c8cc839ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1692e621da224e8e39c10c1dbd6ed06"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#aa1692e621da224e8e39c10c1dbd6ed06">caerEventPacketContainerGetLowestEventTimestamp</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:aa1692e621da224e8e39c10c1dbd6ed06"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70209be23dbda855906a8597c3613678"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a70209be23dbda855906a8597c3613678">caerEventPacketContainerGetHighestEventTimestamp</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:a70209be23dbda855906a8597c3613678"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0a925f7d4bc213080b7639ba1542cd3"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#ab0a925f7d4bc213080b7639ba1542cd3">caerEventPacketContainerGetEventsNumber</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:ab0a925f7d4bc213080b7639ba1542cd3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade5e102ba364c8a3ed8ae1f6b646aef9"><td class="memItemLeft" align="right" valign="top">static int32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#ade5e102ba364c8a3ed8ae1f6b646aef9">caerEventPacketContainerGetEventsValidNumber</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:ade5e102ba364c8a3ed8ae1f6b646aef9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af39a2703ac753ed295cffd1900eff11a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#af39a2703ac753ed295cffd1900eff11a">caerEventPacketContainerFindEventPacketByType</a> (caerEventPacketContainerConst container, int16_t typeID)</td></tr>
+<tr class="separator:af39a2703ac753ed295cffd1900eff11a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2df49e330a8d5277149ed1f7964c1ea7"><td class="memItemLeft" align="right" valign="top">static caerEventPacketHeaderConst&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#a2df49e330a8d5277149ed1f7964c1ea7">caerEventPacketContainerFindEventPacketByTypeConst</a> (caerEventPacketContainerConst container, int16_t typeID)</td></tr>
+<tr class="separator:a2df49e330a8d5277149ed1f7964c1ea7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef6e138fd65628af7210712dcc18a1c2"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#aef6e138fd65628af7210712dcc18a1c2">caerEventPacketContainerCopyAllEvents</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:aef6e138fd65628af7210712dcc18a1c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae65bd214aaa635779c40cc3f144210c"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="packetContainer_8h.html#aae65bd214aaa635779c40cc3f144210c">caerEventPacketContainerCopyValidEvents</a> (caerEventPacketContainerConst container)</td></tr>
+<tr class="separator:aae65bd214aaa635779c40cc3f144210c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>EventPacketContainer format definition and handling functions. An EventPacketContainer is a logical construct that contains packets of events (EventPackets) of different event types, with the aim of keeping related events of differing types, such as DVS and IMU data, together. Such a relation is usually based on time intervals, trying to keep groups of event happening in a certain time-slice together. This time-order is based on the <em>main</em> time-stamp of an event, the one whose offset is referenced in the event packet header and that is used by the caerGenericEvent*() functions. It's guaranteed that all conforming input modules keep to this rule, generating containers that include all events from all types within the given time-slice. The smallest and largest timestamps are tracked at the packet container level as a convenience, to avoid having to examine all packets for this often useful piece of information. All integers are in their native host format, as this is a purely internal, in-memory data structure, never meant for exchange between different systems (and different endianness).</p>
 <p>== Packet Containers and Input Modules == The "packeting system" works in this way: events are accumulated by type in a packet, and that packet is part of a packet container, by an input module. The packet container is then sent out for processing when either the configured time limit or the size limit are hit. The time limit is always active, in microseconds, and basically tells you the time-span an event packet covers. This enables regular, constant delivery of packets, that cover a period of time. The size limit is an addon to prevent packets to grow to immense sizes (like if the time limit is high and there is lots of activity). As soon as a packet hits the number of events in the size limit, it is sent out. The regular time limit is not reset in this case. This size limit can be disabled by setting it to 0. The cAER DVS128/DAVIS/File/Network input modules call these two configuration variables "PacketContainerInterval" and "PacketContainerMaxPacketSize". Too small packet sizes or intervals simply mean more packets, which may negatively affect performance. It's usually a good idea to set the size to something around 4-8K, and the time to a good value based on the application you're building, so if you need ms-reaction-time, you probably want to set it to 1000µs, so that you do get new data every ms. If on the other hand you're looking at a static scene and just want to detect that something is passing by once every while, a higher number like 100ms might also be perfectly appropriate. </p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a36908950721136ea71c7c336a3d171cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a36908950721136ea71c7c336a3d171cf">&#9670;&nbsp;</a></span>CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">PACKET_CONTAINER</td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> ((PACKET_CONTAINER) != NULL) { \</div><div class="line">        for (int32_t caerEventPacketContainerIteratorCounter = 0; \</div><div class="line">            caerEventPacketContainerIteratorCounter &lt; <a class="code" href="packetContainer_8h.html#aaa04076b5a2c8f60e2afe03c5f8cd952">caerEventPacketContainerGetEventPacketsNumber</a>(PACKET_CONTAINER); \</div><div class="line">            caerEventPacketContainerIteratorCounter++) { \</div><div class="line">            caerEventPacketHeaderConst caerEventPacketContainerIteratorElement = <a class="code" href="packetContainer_8h.html#adc502ef626e1efe07ce3af0d9dbf4852">caerEventPacketContainerGetEventPacketConst</a>(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \</div><div class="line">            if (caerEventPacketContainerIteratorElement == NULL) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="packetContainer_8h_html_adc502ef626e1efe07ce3af0d9dbf4852"><div class="ttname"><a href="packetContainer_8h.html#adc502ef626e1efe07ce3af0d9dbf4852">caerEventPacketContainerGetEventPacketConst</a></div><div class="ttdeci">static caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketConst(caerEventPacketContainerConst container, int32_t n)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:192</div></div>
+<div class="ttc" id="packetContainer_8h_html_aaa04076b5a2c8f60e2afe03c5f8cd952"><div class="ttname"><a href="packetContainer_8h.html#aaa04076b5a2c8f60e2afe03c5f8cd952">caerEventPacketContainerGetEventPacketsNumber</a></div><div class="ttdeci">static int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPacketContainerConst container)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:117</div></div>
+</div><!-- fragment --><p>Const-Iterator over all event packets in an event packet container. Returns the current index in the 'caerEventPacketContainerIteratorCounter' variable of type 'int32_t' and the current read-only event packet in the 'caerEventPacketContainerIteratorElement' variable of type caerEventPacketHeaderConst. The current packet may be NULL, in which case it is skipped during iteration.</p>
+<p>PACKET_CONTAINER: a valid EventPacketContainer handle. If NULL, no iteration is performed. </p>
+
+</div>
+</div>
 <a id="ab481389ce7076a02f6db565db948511d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab481389ce7076a02f6db565db948511d">&#9670;&nbsp;</a></span>CAER_EVENT_PACKET_CONTAINER_ITERATOR_END</h2>
 
@@ -152,8 +185,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> ((PACKET_CONTAINER) != NULL) { \</div><div class="line">        for (int32_t caerEventPacketContainerIteratorCounter = 0; \</div><div class="line">            caerEventPacketContainerIteratorCounter &lt; <a class="code" href="packetContainer_8h.html#a12fdbe37e638ade887922e7e936150b3">caerEventPacketContainerGetEventPacketsNumber</a>(PACKET_CONTAINER); \</div><div class="line">            caerEventPacketContainerIteratorCounter++) { \</div><div class="line">            caerEventPacketHeader caerEventPacketContainerIteratorElement = <a class="code" href="packetContainer_8h.html#a2ea6139f276d2f84ff883c0ec373051d">caerEventPacketContainerGetEventPacket</a>(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \</div><div class="line">            if (caerEventPacketContainerIteratorElement == NULL) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="packetContainer_8h_html_a12fdbe37e638ade887922e7e936150b3"><div class="ttname"><a href="packetContainer_8h.html#a12fdbe37e638ade887922e7e936150b3">caerEventPacketContainerGetEventPacketsNumber</a></div><div class="ttdeci">static int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPacketContainer container)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:113</div></div>
-<div class="ttc" id="packetContainer_8h_html_a2ea6139f276d2f84ff883c0ec373051d"><div class="ttname"><a href="packetContainer_8h.html#a2ea6139f276d2f84ff883c0ec373051d">caerEventPacketContainerGetEventPacket</a></div><div class="ttdeci">static caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerEventPacketContainer container, int32_t n)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:156</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">if</span> ((PACKET_CONTAINER) != NULL) { \</div><div class="line">        for (int32_t caerEventPacketContainerIteratorCounter = 0; \</div><div class="line">            caerEventPacketContainerIteratorCounter &lt; <a class="code" href="packetContainer_8h.html#aaa04076b5a2c8f60e2afe03c5f8cd952">caerEventPacketContainerGetEventPacketsNumber</a>(PACKET_CONTAINER); \</div><div class="line">            caerEventPacketContainerIteratorCounter++) { \</div><div class="line">            caerEventPacketHeader caerEventPacketContainerIteratorElement = <a class="code" href="packetContainer_8h.html#a19099820883a07ed63485193f925d8ba">caerEventPacketContainerGetEventPacket</a>(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \</div><div class="line">            if (caerEventPacketContainerIteratorElement == NULL) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="packetContainer_8h_html_a19099820883a07ed63485193f925d8ba"><div class="ttname"><a href="packetContainer_8h.html#a19099820883a07ed63485193f925d8ba">caerEventPacketContainerGetEventPacket</a></div><div class="ttdeci">static caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerEventPacketContainerConst container, int32_t n)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:163</div></div>
+<div class="ttc" id="packetContainer_8h_html_aaa04076b5a2c8f60e2afe03c5f8cd952"><div class="ttname"><a href="packetContainer_8h.html#aaa04076b5a2c8f60e2afe03c5f8cd952">caerEventPacketContainerGetEventPacketsNumber</a></div><div class="ttdeci">static int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPacketContainerConst container)</div><div class="ttdef"><b>Definition:</b> packetContainer.h:117</div></div>
 </div><!-- fragment --><p>Iterator over all event packets in an event packet container. Returns the current index in the 'caerEventPacketContainerIteratorCounter' variable of type 'int32_t' and the current event packet in the 'caerEventPacketContainerIteratorElement' variable of type caerEventPacketHeader. The current packet may be NULL, in which case it is skipped during iteration.</p>
 <p>PACKET_CONTAINER: a valid EventPacketContainer handle. If NULL, no iteration is performed. </p>
 
@@ -202,8 +235,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aad46f2ab7b96ab9526f1e22947b699b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aad46f2ab7b96ab9526f1e22947b699b0">&#9670;&nbsp;</a></span>caerEventPacketContainerCopyAllEvents()</h2>
+<a id="aef6e138fd65628af7210712dcc18a1c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef6e138fd65628af7210712dcc18a1c2">&#9670;&nbsp;</a></span>caerEventPacketContainerCopyAllEvents()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -214,7 +247,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> caerEventPacketContainerCopyAllEvents </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -236,8 +269,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a14b22fa864d91f77c8e5837c8cc839ae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a14b22fa864d91f77c8e5837c8cc839ae">&#9670;&nbsp;</a></span>caerEventPacketContainerCopyValidEvents()</h2>
+<a id="aae65bd214aaa635779c40cc3f144210c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae65bd214aaa635779c40cc3f144210c">&#9670;&nbsp;</a></span>caerEventPacketContainerCopyValidEvents()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -248,7 +281,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static <a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a> caerEventPacketContainerCopyValidEvents </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -270,8 +303,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a283d006c37388ce466195aae9e3a505e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a283d006c37388ce466195aae9e3a505e">&#9670;&nbsp;</a></span>caerEventPacketContainerFindEventPacketByType()</h2>
+<a id="af39a2703ac753ed295cffd1900eff11a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af39a2703ac753ed295cffd1900eff11a">&#9670;&nbsp;</a></span>caerEventPacketContainerFindEventPacketByType()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -282,7 +315,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a> caerEventPacketContainerFindEventPacketByType </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em>, </td>
         </tr>
         <tr>
@@ -315,6 +348,51 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a2df49e330a8d5277149ed1f7964c1ea7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2df49e330a8d5277149ed1f7964c1ea7">&#9670;&nbsp;</a></span>caerEventPacketContainerFindEventPacketByTypeConst()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static caerEventPacketHeaderConst caerEventPacketContainerFindEventPacketByTypeConst </td>
+          <td>(</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
+          <td class="paramname"><em>container</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int16_t&#160;</td>
+          <td class="paramname"><em>typeID</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the reference for a read-only EventPacket stored in this container with the given event type. This returns the first found event packet with that type ID, or NULL if we get to the end without finding any such event packet.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
+    <tr><td class="paramname">typeID</td><td>the event type to search for.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a reference to a read-only EventPacket with a certain type or NULL if none found. </dd></dl>
+
+</div>
+</div>
 <a id="a5044247d9599664c02e9abf1d84c7e8d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5044247d9599664c02e9abf1d84c7e8d">&#9670;&nbsp;</a></span>caerEventPacketContainerFree()</h2>
 
@@ -340,8 +418,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a2ea6139f276d2f84ff883c0ec373051d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2ea6139f276d2f84ff883c0ec373051d">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventPacket()</h2>
+<a id="a19099820883a07ed63485193f925d8ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19099820883a07ed63485193f925d8ba">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventPacket()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -352,7 +430,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static <a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a> caerEventPacketContainerGetEventPacket </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em>, </td>
         </tr>
         <tr>
@@ -385,8 +463,53 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a12fdbe37e638ade887922e7e936150b3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a12fdbe37e638ade887922e7e936150b3">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventPacketsNumber()</h2>
+<a id="adc502ef626e1efe07ce3af0d9dbf4852"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc502ef626e1efe07ce3af0d9dbf4852">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventPacketConst()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketConst </td>
+          <td>(</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
+          <td class="paramname"><em>container</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int32_t&#160;</td>
+          <td class="paramname"><em>n</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the reference for the EventPacket stored in this container at the given index. This is a read-only EventPacket, do not change its contents in any way!</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
+    <tr><td class="paramname">n</td><td>the index of the EventPacket to get.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a reference to a read-only EventPacket or NULL on error. </dd></dl>
+
+</div>
+</div>
+<a id="aaa04076b5a2c8f60e2afe03c5f8cd952"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa04076b5a2c8f60e2afe03c5f8cd952">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventPacketsNumber()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -397,7 +520,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static int32_t caerEventPacketContainerGetEventPacketsNumber </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -419,8 +542,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a0f17758509ca2661125df870048717f7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0f17758509ca2661125df870048717f7">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventsNumber()</h2>
+<a id="ab0a925f7d4bc213080b7639ba1542cd3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0a925f7d4bc213080b7639ba1542cd3">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventsNumber()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -431,7 +554,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static int32_t caerEventPacketContainerGetEventsNumber </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -453,8 +576,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a93efca9ca05b16e45b1a5728f1fe0026"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a93efca9ca05b16e45b1a5728f1fe0026">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventsValidNumber()</h2>
+<a id="ade5e102ba364c8a3ed8ae1f6b646aef9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade5e102ba364c8a3ed8ae1f6b646aef9">&#9670;&nbsp;</a></span>caerEventPacketContainerGetEventsValidNumber()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -465,7 +588,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static int32_t caerEventPacketContainerGetEventsValidNumber </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -487,8 +610,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a5b742bfc77ab8240c4a4e26f80fc64b3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5b742bfc77ab8240c4a4e26f80fc64b3">&#9670;&nbsp;</a></span>caerEventPacketContainerGetHighestEventTimestamp()</h2>
+<a id="a70209be23dbda855906a8597c3613678"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70209be23dbda855906a8597c3613678">&#9670;&nbsp;</a></span>caerEventPacketContainerGetHighestEventTimestamp()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -499,7 +622,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static int64_t caerEventPacketContainerGetHighestEventTimestamp </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -521,8 +644,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a3e61e6bcf0fea9e8ded88ace68e2f6e8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e61e6bcf0fea9e8ded88ace68e2f6e8">&#9670;&nbsp;</a></span>caerEventPacketContainerGetLowestEventTimestamp()</h2>
+<a id="aa1692e621da224e8e39c10c1dbd6ed06"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa1692e621da224e8e39c10c1dbd6ed06">&#9670;&nbsp;</a></span>caerEventPacketContainerGetLowestEventTimestamp()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -533,7 +656,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static int64_t caerEventPacketContainerGetLowestEventTimestamp </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramtype">caerEventPacketContainerConst&#160;</td>
           <td class="paramname"><em>container</em></td><td>)</td>
           <td></td>
         </tr>
@@ -644,6 +767,39 @@ Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, nothing happens. </td></tr>
     <tr><td class="paramname">eventPacketsNumber</td><td>the number of EventPacket references that can be contained. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8468090b2219c30f8a7c3396d229ddeb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8468090b2219c30f8a7c3396d229ddeb">&#9670;&nbsp;</a></span>caerEventPacketContainerUpdateStatistics()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void caerEventPacketContainerUpdateStatistics </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a">caerEventPacketContainer</a>&#160;</td>
+          <td class="paramname"><em>container</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Recalculates and updates all the packet-container level statistics (event counts and timestamps).</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, nothing happens. </td></tr>
   </table>
   </dd>
 </dl>
