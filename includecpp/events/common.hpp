@@ -81,7 +81,7 @@ public:
 		}
 
 		memcpy(emptyPacket, rhs.header, 16);
-		memset(((uint8_t *) emptyPacket) + 16, 0, 12);
+		memset(reinterpret_cast<uint8_t *>(emptyPacket) + 16, 0, 12);
 
 		// Move data here.
 		header = rhs.header;
@@ -111,7 +111,7 @@ public:
 		}
 
 		memcpy(emptyPacket, rhs.header, 16);
-		memset(((uint8_t *) emptyPacket) + 16, 0, 12);
+		memset(reinterpret_cast<uint8_t *>(emptyPacket) + 16, 0, 12);
 
 		// Packets are compatible, so we can move the data here.
 		free(header);
