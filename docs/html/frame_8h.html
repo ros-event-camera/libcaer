@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-rb01111f270e7bfdb6cf23f9b9f6a4a1fee6a8fe1</span>
+   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
    </div>
   </td>
  </tr>
@@ -268,7 +268,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = 0; \</div><div class="line">        caerFrameIteratorCounter &lt; <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader); \</div><div class="line">        caerFrameIteratorCounter++) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter);</div><div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = 0; \</div><div class="line">        caerFrameIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader); \</div><div class="line">        caerFrameIteratorCounter++) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
 <div class="ttc" id="frame_8h_html_a770505dbcc7b3c21e124105848845188"><div class="ttname"><a href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a></div><div class="ttdeci">static caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> frame.h:164</div></div>
 </div><!-- fragment --><p>Iterator over all frame events in a packet. Returns the current index in the 'caerFrameIteratorCounter' variable of type 'int32_t' and the current event in the 'caerFrameIteratorElement' variable of type caerFrameEvent.</p>
 <p>FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL. </p>
@@ -305,8 +305,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = 0; \</div><div class="line">        caerFrameIteratorCounter &lt; <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader); \</div><div class="line">        caerFrameIteratorCounter++) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter); \</div><div class="line">        if (!<a class="code" href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a>(caerFrameIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="frame_8h_html_a5f596c1e0cfb81dd8df62eb7ae47c04d"><div class="ttname"><a href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a></div><div class="ttdeci">static bool caerFrameEventIsValid(caerFrameEvent event)</div><div class="ttdef"><b>Definition:</b> frame.h:426</div></div>
-<div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = 0; \</div><div class="line">        caerFrameIteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader); \</div><div class="line">        caerFrameIteratorCounter++) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter); \</div><div class="line">        if (!<a class="code" href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a>(caerFrameIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="frame_8h_html_a5f596c1e0cfb81dd8df62eb7ae47c04d"><div class="ttname"><a href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a></div><div class="ttdeci">static bool caerFrameEventIsValid(caerFrameEvent event)</div><div class="ttdef"><b>Definition:</b> frame.h:426</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
 <div class="ttc" id="frame_8h_html_a770505dbcc7b3c21e124105848845188"><div class="ttname"><a href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a></div><div class="ttdeci">static caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> frame.h:164</div></div>
 </div><!-- fragment --><p>Iterator over only the valid frame events in a packet. Returns the current index in the 'caerFrameIteratorCounter' variable of type 'int32_t' and the current event in the 'caerFrameIteratorElement' variable of type caerFrameEvent.</p>
 <p>FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL. </p>
@@ -343,7 +343,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerFrameIteratorCounter &gt;= 0; \</div><div class="line">        caerFrameIteratorCounter--) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter);</div><div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerFrameIteratorCounter &gt;= 0; \</div><div class="line">        caerFrameIteratorCounter--) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
 <div class="ttc" id="frame_8h_html_a770505dbcc7b3c21e124105848845188"><div class="ttname"><a href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a></div><div class="ttdeci">static caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> frame.h:164</div></div>
 </div><!-- fragment --><p>Reverse iterator over all frame events in a packet. Returns the current index in the 'caerFrameIteratorCounter' variable of type 'int32_t' and the current event in the 'caerFrameIteratorElement' variable of type caerFrameEvent.</p>
 <p>FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL. </p>
@@ -380,8 +380,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerFrameIteratorCounter &gt;= 0; \</div><div class="line">        caerFrameIteratorCounter--) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter); \</div><div class="line">        if (!<a class="code" href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a>(caerFrameIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="frame_8h_html_a5f596c1e0cfb81dd8df62eb7ae47c04d"><div class="ttname"><a href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a></div><div class="ttdeci">static bool caerFrameEventIsValid(caerFrameEvent event)</div><div class="ttdef"><b>Definition:</b> frame.h:426</div></div>
-<div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerFrameIteratorCounter = <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(FRAME_PACKET)-&gt;packetHeader) - 1; \</div><div class="line">        caerFrameIteratorCounter &gt;= 0; \</div><div class="line">        caerFrameIteratorCounter--) { \</div><div class="line">        caerFrameEvent caerFrameIteratorElement = <a class="code" href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a>(FRAME_PACKET, caerFrameIteratorCounter); \</div><div class="line">        if (!<a class="code" href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a>(caerFrameIteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="frame_8h_html_a5f596c1e0cfb81dd8df62eb7ae47c04d"><div class="ttname"><a href="frame_8h.html#a5f596c1e0cfb81dd8df62eb7ae47c04d">caerFrameEventIsValid</a></div><div class="ttdeci">static bool caerFrameEventIsValid(caerFrameEvent event)</div><div class="ttdef"><b>Definition:</b> frame.h:426</div></div>
+<div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
 <div class="ttc" id="frame_8h_html_a770505dbcc7b3c21e124105848845188"><div class="ttname"><a href="frame_8h.html#a770505dbcc7b3c21e124105848845188">caerFrameEventPacketGetEvent</a></div><div class="ttdeci">static caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> frame.h:164</div></div>
 </div><!-- fragment --><p>Reverse iterator over only the valid frame events in a packet. Returns the current index in the 'caerFrameIteratorCounter' variable of type 'int32_t' and the current event in the 'caerFrameIteratorElement' variable of type caerFrameEvent.</p>
 <p>FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL. </p>
@@ -1188,7 +1188,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit event timestamp, in microseconds. This is a median of the exposure timestamps. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit event timestamp, in microseconds. This is a median of the exposure timestamps. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL.</td></tr>
@@ -1232,7 +1232,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit event timestamp, in microseconds. This is a median of the exposure timestamps. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit event timestamp, in microseconds. This is a median of the exposure timestamps. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL. </td></tr>
@@ -1267,7 +1267,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit end of exposure timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit end of exposure timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL.</td></tr>
@@ -1311,7 +1311,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit end of exposure timestamp, in microseconds. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit end of exposure timestamp, in microseconds. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL. </td></tr>
@@ -1346,7 +1346,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit end of frame capture timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit end of frame capture timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL.</td></tr>
@@ -1390,7 +1390,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit end of frame capture timestamp, in microseconds. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit end of frame capture timestamp, in microseconds. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL. </td></tr>
@@ -1425,7 +1425,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit start of exposure timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit start of exposure timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL.</td></tr>
@@ -1469,7 +1469,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit start of exposure timestamp, in microseconds. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit start of exposure timestamp, in microseconds. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL. </td></tr>
@@ -1504,7 +1504,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit start of frame capture timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit start of frame capture timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL.</td></tr>
@@ -1548,7 +1548,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit start of frame capture timestamp, in microseconds. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit start of frame capture timestamp, in microseconds. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid FrameEvent pointer. Cannot be NULL. </td></tr>

@@ -82,6 +82,8 @@ var searchData=
   ['caer_5fsample_5fiterator_5fall_5fstart',['CAER_SAMPLE_ITERATOR_ALL_START',['../sample_8h.html#af934ff01382e944807ee3c57eabfc57c',1,'sample.h']]],
   ['caer_5fsample_5fiterator_5fvalid_5fend',['CAER_SAMPLE_ITERATOR_VALID_END',['../sample_8h.html#a9a5f6a9ca00dbc2071ab6de17071dca5',1,'sample.h']]],
   ['caer_5fsample_5fiterator_5fvalid_5fstart',['CAER_SAMPLE_ITERATOR_VALID_START',['../sample_8h.html#a953a93dcbecf1ee8149bf78c5bf5e1dc',1,'sample.h']]],
+  ['caer_5fspecial_5fconst_5fiterator_5fall_5fstart',['CAER_SPECIAL_CONST_ITERATOR_ALL_START',['../special_8h.html#a9130826332402d6fc387cc92e1b5df8b',1,'special.h']]],
+  ['caer_5fspecial_5fconst_5fiterator_5fvalid_5fstart',['CAER_SPECIAL_CONST_ITERATOR_VALID_START',['../special_8h.html#adcc00f38ff8769bd852d8ed2791547fa',1,'special.h']]],
   ['caer_5fspecial_5fiterator_5fall_5fend',['CAER_SPECIAL_ITERATOR_ALL_END',['../special_8h.html#a142914f90e3179f4979c00c87fe96d10',1,'special.h']]],
   ['caer_5fspecial_5fiterator_5fall_5fstart',['CAER_SPECIAL_ITERATOR_ALL_START',['../special_8h.html#a38789162643e3aa8929a018b2948167a',1,'special.h']]],
   ['caer_5fspecial_5fiterator_5fvalid_5fend',['CAER_SPECIAL_ITERATOR_VALID_END',['../special_8h.html#a166f9e48d4fb9e4a5ee3b5a6500f55ba',1,'special.h']]],

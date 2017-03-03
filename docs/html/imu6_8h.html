@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-rb01111f270e7bfdb6cf23f9b9f6a4a1fee6a8fe1</span>
+   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
    </div>
   </td>
  </tr>
@@ -177,7 +177,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerIMU6IteratorCounter = 0; \</div><div class="line">        caerIMU6IteratorCounter &lt; <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(IMU6_PACKET)-&gt;packetHeader); \</div><div class="line">        caerIMU6IteratorCounter++) { \</div><div class="line">        caerIMU6Event caerIMU6IteratorElement = <a class="code" href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a>(IMU6_PACKET, caerIMU6IteratorCounter);</div><div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerIMU6IteratorCounter = 0; \</div><div class="line">        caerIMU6IteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(IMU6_PACKET)-&gt;packetHeader); \</div><div class="line">        caerIMU6IteratorCounter++) { \</div><div class="line">        caerIMU6Event caerIMU6IteratorElement = <a class="code" href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a>(IMU6_PACKET, caerIMU6IteratorCounter);</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
 <div class="ttc" id="imu6_8h_html_afd5b84241c6ba4e490f09071387580b3"><div class="ttname"><a href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a></div><div class="ttdeci">static caerIMU6Event caerIMU6EventPacketGetEvent(caerIMU6EventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> imu6.h:98</div></div>
 </div><!-- fragment --><p>Iterator over all IMU6 events in a packet. Returns the current index in the 'caerIMU6IteratorCounter' variable of type 'int32_t' and the current event in the 'caerIMU6IteratorElement' variable of type caerIMU6Event.</p>
 <p>IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL. </p>
@@ -214,8 +214,8 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerIMU6IteratorCounter = 0; \</div><div class="line">        caerIMU6IteratorCounter &lt; <a class="code" href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a>(&amp;(IMU6_PACKET)-&gt;packetHeader); \</div><div class="line">        caerIMU6IteratorCounter++) { \</div><div class="line">        caerIMU6Event caerIMU6IteratorElement = <a class="code" href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a>(IMU6_PACKET, caerIMU6IteratorCounter); \</div><div class="line">        if (!<a class="code" href="imu6_8h.html#ad11dedaac6c35d734f9a94225bb7e95d">caerIMU6EventIsValid</a>(caerIMU6IteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="imu6_8h_html_ad11dedaac6c35d734f9a94225bb7e95d"><div class="ttname"><a href="imu6_8h.html#ad11dedaac6c35d734f9a94225bb7e95d">caerIMU6EventIsValid</a></div><div class="ttdeci">static bool caerIMU6EventIsValid(caerIMU6Event event)</div><div class="ttdef"><b>Definition:</b> imu6.h:165</div></div>
-<div class="ttc" id="common_8h_html_a4b0646e69eb3059ee721cac8d2c279d0"><div class="ttname"><a href="common_8h.html#a4b0646e69eb3059ee721cac8d2c279d0">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeader header)</div><div class="ttdef"><b>Definition:</b> common.h:327</div></div>
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">for</span> (int32_t caerIMU6IteratorCounter = 0; \</div><div class="line">        caerIMU6IteratorCounter &lt; <a class="code" href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a>(&amp;(IMU6_PACKET)-&gt;packetHeader); \</div><div class="line">        caerIMU6IteratorCounter++) { \</div><div class="line">        caerIMU6Event caerIMU6IteratorElement = <a class="code" href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a>(IMU6_PACKET, caerIMU6IteratorCounter); \</div><div class="line">        if (!<a class="code" href="imu6_8h.html#ad11dedaac6c35d734f9a94225bb7e95d">caerIMU6EventIsValid</a>(caerIMU6IteratorElement)) { <span class="keywordflow">continue</span>; }</div><div class="ttc" id="common_8h_html_add6c4f5f40ae7210e337f415d156e98c"><div class="ttname"><a href="common_8h.html#add6c4f5f40ae7210e337f415d156e98c">caerEventPacketHeaderGetEventNumber</a></div><div class="ttdeci">static int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderConst header)</div><div class="ttdef"><b>Definition:</b> common.h:328</div></div>
+<div class="ttc" id="imu6_8h_html_ad11dedaac6c35d734f9a94225bb7e95d"><div class="ttname"><a href="imu6_8h.html#ad11dedaac6c35d734f9a94225bb7e95d">caerIMU6EventIsValid</a></div><div class="ttdeci">static bool caerIMU6EventIsValid(caerIMU6Event event)</div><div class="ttdef"><b>Definition:</b> imu6.h:165</div></div>
 <div class="ttc" id="imu6_8h_html_afd5b84241c6ba4e490f09071387580b3"><div class="ttname"><a href="imu6_8h.html#afd5b84241c6ba4e490f09071387580b3">caerIMU6EventPacketGetEvent</a></div><div class="ttdeci">static caerIMU6Event caerIMU6EventPacketGetEvent(caerIMU6EventPacket packet, int32_t n)</div><div class="ttdef"><b>Definition:</b> imu6.h:98</div></div>
 </div><!-- fragment --><p>Iterator over only the valid IMU6 events in a packet. Returns the current index in the 'caerIMU6IteratorCounter' variable of type 'int32_t' and the current event in the 'caerIMU6IteratorElement' variable of type caerIMU6Event.</p>
 <p>IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL. </p>
@@ -515,7 +515,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 32bit event timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 32bit event timestamp, in microseconds. Be aware that this wraps around! You can either ignore this fact, or handle the special 'TIMESTAMP_WRAP' event that is generated when this happens, or use the 64bit timestamp which never wraps around. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid IMU6Event pointer. Cannot be NULL.</td></tr>
@@ -559,7 +559,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the 64bit event timestamp, in microseconds. See '<a class="el" href="common_8h.html#ac6d939f1f86c48c241805eed6679df77">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
+<p>Get the 64bit event timestamp, in microseconds. See '<a class="el" href="common_8h.html#a50f32462734ae95a61388e37305b9125">caerEventPacketHeaderGetEventTSOverflow()</a>' documentation for more details on the 64bit timestamp.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">event</td><td>a valid IMU6Event pointer. Cannot be NULL. </td></tr>

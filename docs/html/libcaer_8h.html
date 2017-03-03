@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-rb01111f270e7bfdb6cf23f9b9f6a4a1fee6a8fe1</span>
+   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
    </div>
   </td>
  </tr>
@@ -137,10 +137,10 @@ Functions</h2></td></tr>
 <tr class="separator:a87fe88d09756a6713fb2bd76aaedfd92"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31a66c1152f337dfc815400e6e7466d0"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="libcaer_8h.html#a31a66c1152f337dfc815400e6e7466d0">caerStrEqualsUpTo</a> (const char *s1, const char *s2, size_t len)</td></tr>
 <tr class="separator:a31a66c1152f337dfc815400e6e7466d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba92c2dec2abba8ce84f9be08b891e49"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="libcaer_8h.html#aba92c2dec2abba8ce84f9be08b891e49">caerIntegerToByteArray</a> (uint32_t integer, uint8_t *byteArray, uint8_t byteArrayLength)</td></tr>
-<tr class="separator:aba92c2dec2abba8ce84f9be08b891e49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d49c0f308728e8529e4bcc5afd0a230"><td class="memItemLeft" align="right" valign="top">static uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="libcaer_8h.html#a0d49c0f308728e8529e4bcc5afd0a230">caerByteArrayToInteger</a> (uint8_t *byteArray, uint8_t byteArrayLength)</td></tr>
-<tr class="separator:a0d49c0f308728e8529e4bcc5afd0a230"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7fffd68c40879d27f64fc5d7f84de9b5"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="libcaer_8h.html#a7fffd68c40879d27f64fc5d7f84de9b5">caerIntegerToByteArray</a> (const uint32_t integer, uint8_t *byteArray, const uint8_t byteArrayLength)</td></tr>
+<tr class="separator:a7fffd68c40879d27f64fc5d7f84de9b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4612d0ef667111901aebb81567e27a4"><td class="memItemLeft" align="right" valign="top">static uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="libcaer_8h.html#ab4612d0ef667111901aebb81567e27a4">caerByteArrayToInteger</a> (const uint8_t *byteArray, const uint8_t byteArrayLength)</td></tr>
+<tr class="separator:ab4612d0ef667111901aebb81567e27a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Main libcaer header; provides inclusions for common system functions and definitions for useful macros used often in the code. Also includes the logging functions and definitions and several useful static inline functions for string comparison and byte array manipulation. When including libcaer, please make sure to always use the full path, ie. #include &lt;libcaer/libcaer.h&gt; and not just #include &lt;<a class="el" href="libcaer_8h.html">libcaer.h</a>&gt;. </p>
@@ -749,8 +749,8 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a0d49c0f308728e8529e4bcc5afd0a230"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0d49c0f308728e8529e4bcc5afd0a230">&#9670;&nbsp;</a></span>caerByteArrayToInteger()</h2>
+<a id="ab4612d0ef667111901aebb81567e27a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4612d0ef667111901aebb81567e27a4">&#9670;&nbsp;</a></span>caerByteArrayToInteger()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -761,13 +761,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static uint32_t caerByteArrayToInteger </td>
           <td>(</td>
-          <td class="paramtype">uint8_t *&#160;</td>
+          <td class="paramtype">const uint8_t *&#160;</td>
           <td class="paramname"><em>byteArray</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">const uint8_t&#160;</td>
           <td class="paramname"><em>byteArrayLength</em>&#160;</td>
         </tr>
         <tr>
@@ -794,8 +794,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="aba92c2dec2abba8ce84f9be08b891e49"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aba92c2dec2abba8ce84f9be08b891e49">&#9670;&nbsp;</a></span>caerIntegerToByteArray()</h2>
+<a id="a7fffd68c40879d27f64fc5d7f84de9b5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7fffd68c40879d27f64fc5d7f84de9b5">&#9670;&nbsp;</a></span>caerIntegerToByteArray()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -806,7 +806,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">static void caerIntegerToByteArray </td>
           <td>(</td>
-          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramtype">const uint32_t&#160;</td>
           <td class="paramname"><em>integer</em>, </td>
         </tr>
         <tr>
@@ -818,7 +818,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">const uint8_t&#160;</td>
           <td class="paramname"><em>byteArrayLength</em>&#160;</td>
         </tr>
         <tr>

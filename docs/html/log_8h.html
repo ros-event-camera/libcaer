@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-rb01111f270e7bfdb6cf23f9b9f6a4a1fee6a8fe1</span>
+   &#160;<span id="projectnumber">2.0.0-r6c20a7bfdf0555c72a946f044ad1d0a9d6c04374</span>
    </div>
   </td>
  </tr>
@@ -67,6 +67,7 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;stdint.h&gt;</code><br />
+<code>#include &lt;stdarg.h&gt;</code><br />
 </div>
 <p><a href="log_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -103,6 +104,8 @@ Functions</h2></td></tr>
 <tr class="separator:ad5d975dbf2a216cedfed263afa0f8e0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a474123e1492eeb0afc99f8ee39e2429f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog</a> (uint8_t logLevel, const char *subSystem, const char *format,...) ATTRIBUTE_FORMAT</td></tr>
 <tr class="separator:a474123e1492eeb0afc99f8ee39e2429f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad7f3b02e95285e50d8908fc3c628f0fc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad7f3b02e95285e50d8908fc3c628f0fc">caerLogVA</a> (uint8_t logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA</td></tr>
+<tr class="separator:ad7f3b02e95285e50d8908fc3c628f0fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Logging functions to print useful messages for the user. </p>
@@ -353,6 +356,56 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">logLevel</td><td>the system-wide log level. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ad7f3b02e95285e50d8908fc3c628f0fc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7f3b02e95285e50d8908fc3c628f0fc">&#9670;&nbsp;</a></span>caerLogVA()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void caerLogVA </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramname"><em>logLevel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>subSystem</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>format</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">va_list&#160;</td>
+          <td class="paramname"><em>args</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Secondary logging function. This function takes messages, formats them and sends them out to a file descriptor, respecting the system-wide log level setting and prepending the current time, the log level and a user-specified common string to the actual formatted output. The format is specified exactly as with the printf() family of functions. The argument list is a va_list as returned by va_start(), following the vprintf() family of functions in its functionality. Please see their manual-page for more information.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">logLevel</td><td>the message-specific log level. </td></tr>
+    <tr><td class="paramname">subSystem</td><td>a common, user-specified string to prepend before the message. </td></tr>
+    <tr><td class="paramname">format</td><td>the message format string (see printf()). </td></tr>
+    <tr><td class="paramname">args</td><td>the parameters to be formatted according to the format string (see printf()). This is an argument list as returned by va_start(). </td></tr>
   </table>
   </dd>
 </dl>
