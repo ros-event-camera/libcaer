@@ -20,12 +20,12 @@ public:
 			return (caerSpecialEventGetTimestamp64(this, reinterpret_cast<caerSpecialEventPacketConst>(packet.header)));
 		}
 
-		void setTimestamp(int32_t timestamp) {
-			if (timestamp < 0) {
+		void setTimestamp(int32_t ts) {
+			if (ts < 0) {
 				throw std::invalid_argument("Negative timestamp not allowed.");
 			}
 
-			caerSpecialEventSetTimestamp(this, timestamp);
+			caerSpecialEventSetTimestamp(this, ts);
 		}
 
 		bool isValid() const noexcept {
@@ -44,16 +44,16 @@ public:
 			return (caerSpecialEventGetType(this));
 		}
 
-		void setType(uint8_t type) noexcept {
-			caerSpecialEventSetType(this, type);
+		void setType(uint8_t t) noexcept {
+			caerSpecialEventSetType(this, t);
 		}
 
 		uint32_t getData() const noexcept {
 			return (caerSpecialEventGetData(this));
 		}
 
-		void setData(uint32_t data) noexcept {
-			caerSpecialEventSetData(this, data);
+		void setData(uint32_t d) noexcept {
+			caerSpecialEventSetData(this, d);
 		}
 	};
 
@@ -99,11 +99,11 @@ public:
 	}
 
 	SpecialEvent &operator[](size_t index) {
-		return (getEvent(index));
+		return (getEvent(static_cast<int32_t>(index)));
 	}
 
 	const SpecialEvent &operator[](size_t index) const {
-		return (getEvent(index));
+		return (getEvent(static_cast<int32_t>(index)));
 	}
 
 	SpecialEvent &findEventByType(uint8_t type) {
