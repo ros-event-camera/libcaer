@@ -1,4 +1,4 @@
-CONFIGURE_FILE(libcaer_in.h ${CMAKE_CURRENT_SOURCE_DIR}/libcaer.h @ONLY)
+CONFIGURE_FILE(libcaer.h.in ${CMAKE_CURRENT_SOURCE_DIR}/libcaer.h @ONLY)
 
 SET(INC_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${CMAKE_PROJECT_NAME})
 INSTALL(FILES libcaer.h log.h network.h portable_endian.h frame_utils.h DESTINATION ${INC_INSTALL_DIR})
