@@ -149,7 +149,7 @@ static inline caerPoint3DEventConst caerPoint3DEventPacketGetEventConst(caerPoin
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerPoint3DEventGetTimestamp(caerPoint3DEvent event) {
+static inline int32_t caerPoint3DEventGetTimestamp(caerPoint3DEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -163,7 +163,7 @@ static inline int32_t caerPoint3DEventGetTimestamp(caerPoint3DEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerPoint3DEventGetTimestamp64(caerPoint3DEvent event, caerPoint3DEventPacket packet) {
+static inline int64_t caerPoint3DEventGetTimestamp64(caerPoint3DEventConst event, caerPoint3DEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPoint3DEventGetTimestamp(event))));
 }
@@ -191,7 +191,7 @@ static inline void caerPoint3DEventSetTimestamp(caerPoint3DEvent event, int32_t 
  *
  * @return true if valid, false if not.
  */
-static inline bool caerPoint3DEventIsValid(caerPoint3DEvent event) {
+static inline bool caerPoint3DEventIsValid(caerPoint3DEventConst event) {
 	return (GET_NUMBITS32(event->info, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -252,7 +252,7 @@ static inline void caerPoint3DEventInvalidate(caerPoint3DEvent event, caerPoint3
  *
  * @return the Point3D measurement type.
  */
-static inline uint8_t caerPoint3DEventGetType(caerPoint3DEvent event) {
+static inline uint8_t caerPoint3DEventGetType(caerPoint3DEventConst event) {
 	return U8T(GET_NUMBITS32(event->info, POINT3D_TYPE_SHIFT, POINT3D_TYPE_MASK));
 }
 
@@ -279,7 +279,7 @@ static inline void caerPoint3DEventSetType(caerPoint3DEvent event, uint8_t type)
  *
  * @return the Point3D measurement scale.
  */
-static inline int8_t caerPoint3DEventGetScale(caerPoint3DEvent event) {
+static inline int8_t caerPoint3DEventGetScale(caerPoint3DEventConst event) {
 	return I8T(GET_NUMBITS32(event->info, POINT3D_SCALE_SHIFT, POINT3D_SCALE_MASK));
 }
 
@@ -305,7 +305,7 @@ static inline void caerPoint3DEventSetScale(caerPoint3DEvent event, int8_t scale
  *
  * @return X axis measurement.
  */
-static inline float caerPoint3DEventGetX(caerPoint3DEvent event) {
+static inline float caerPoint3DEventGetX(caerPoint3DEventConst event) {
 	return (le32toh(event->x));
 }
 
@@ -326,7 +326,7 @@ static inline void caerPoint3DEventSetX(caerPoint3DEvent event, float x) {
  *
  * @return Y axis measurement.
  */
-static inline float caerPoint3DEventGetY(caerPoint3DEvent event) {
+static inline float caerPoint3DEventGetY(caerPoint3DEventConst event) {
 	return (le32toh(event->y));
 }
 
@@ -347,7 +347,7 @@ static inline void caerPoint3DEventSetY(caerPoint3DEvent event, float y) {
  *
  * @return Z axis measurement.
  */
-static inline float caerPoint3DEventGetZ(caerPoint3DEvent event) {
+static inline float caerPoint3DEventGetZ(caerPoint3DEventConst event) {
 	return (le32toh(event->z));
 }
 

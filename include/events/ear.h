@@ -143,7 +143,7 @@ static inline caerEarEventConst caerEarEventPacketGetEventConst(caerEarEventPack
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerEarEventGetTimestamp(caerEarEvent event) {
+static inline int32_t caerEarEventGetTimestamp(caerEarEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -157,7 +157,7 @@ static inline int32_t caerEarEventGetTimestamp(caerEarEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerEarEventGetTimestamp64(caerEarEvent event, caerEarEventPacket packet) {
+static inline int64_t caerEarEventGetTimestamp64(caerEarEventConst event, caerEarEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerEarEventGetTimestamp(event))));
 }
@@ -185,7 +185,7 @@ static inline void caerEarEventSetTimestamp(caerEarEvent event, int32_t timestam
  *
  * @return true if valid, false if not.
  */
-static inline bool caerEarEventIsValid(caerEarEvent event) {
+static inline bool caerEarEventIsValid(caerEarEventConst event) {
 	return (GET_NUMBITS32(event->data, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -248,7 +248,7 @@ static inline void caerEarEventInvalidate(caerEarEvent event, caerEarEventPacket
  *
  * @return the ear (microphone) ID.
  */
-static inline uint8_t caerEarEventGetEar(caerEarEvent event) {
+static inline uint8_t caerEarEventGetEar(caerEarEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, EAR_SHIFT, EAR_MASK));
 }
 
@@ -277,7 +277,7 @@ static inline void caerEarEventSetEar(caerEarEvent event, uint8_t ear) {
  *
  * @return the channel (frequency band) ID.
  */
-static inline uint16_t caerEarEventGetChannel(caerEarEvent event) {
+static inline uint16_t caerEarEventGetChannel(caerEarEventConst event) {
 	return U16T(GET_NUMBITS32(event->data, CHANNEL_SHIFT, CHANNEL_MASK));
 }
 
@@ -296,7 +296,7 @@ static inline void caerEarEventSetChannel(caerEarEvent event, uint16_t channel) 
 	SET_NUMBITS32(event->data, CHANNEL_SHIFT, CHANNEL_MASK, channel);
 }
 
-static inline uint8_t caerEarEventGetNeuron(caerEarEvent event) {
+static inline uint8_t caerEarEventGetNeuron(caerEarEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, NEURON_SHIFT, NEURON_MASK));
 }
 
@@ -305,7 +305,7 @@ static inline void caerEarEventSetNeuron(caerEarEvent event, uint8_t neuron) {
 	SET_NUMBITS32(event->data, NEURON_SHIFT, NEURON_MASK, neuron);
 }
 
-static inline uint8_t caerEarEventGetFilter(caerEarEvent event) {
+static inline uint8_t caerEarEventGetFilter(caerEarEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, FILTER_SHIFT, FILTER_MASK));
 }
 

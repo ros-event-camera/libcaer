@@ -142,7 +142,7 @@ static inline caerSpikeEventConst caerSpikeEventPacketGetEventConst(caerSpikeEve
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerSpikeEventGetTimestamp(caerSpikeEvent event) {
+static inline int32_t caerSpikeEventGetTimestamp(caerSpikeEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -156,7 +156,7 @@ static inline int32_t caerSpikeEventGetTimestamp(caerSpikeEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerSpikeEventGetTimestamp64(caerSpikeEvent event, caerSpikeEventPacket packet) {
+static inline int64_t caerSpikeEventGetTimestamp64(caerSpikeEventConst event, caerSpikeEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerSpikeEventGetTimestamp(event))));
 }
@@ -184,7 +184,7 @@ static inline void caerSpikeEventSetTimestamp(caerSpikeEvent event, int32_t time
  *
  * @return true if valid, false if not.
  */
-static inline bool caerSpikeEventIsValid(caerSpikeEvent event) {
+static inline bool caerSpikeEventIsValid(caerSpikeEventConst event) {
 	return (GET_NUMBITS32(event->data, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -244,7 +244,7 @@ static inline void caerSpikeEventInvalidate(caerSpikeEvent event, caerSpikeEvent
  *
  * @return the Spike's source core ID.
  */
-static inline uint8_t caerSpikeEventGetSourceCoreID(caerSpikeEvent event) {
+static inline uint8_t caerSpikeEventGetSourceCoreID(caerSpikeEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, SPIKE_SOURCE_CORE_ID_SHIFT, SPIKE_SOURCE_CORE_ID_MASK));
 }
 
@@ -266,7 +266,7 @@ static inline void caerSpikeEventSetSourceCoreID(caerSpikeEvent event, uint8_t s
  *
  * @return the Spike's chip ID.
  */
-static inline uint8_t caerSpikeEventGetChipID(caerSpikeEvent event) {
+static inline uint8_t caerSpikeEventGetChipID(caerSpikeEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, SPIKE_CHIP_ID_SHIFT, SPIKE_CHIP_ID_MASK));
 }
 
@@ -288,7 +288,7 @@ static inline void caerSpikeEventSetChipID(caerSpikeEvent event, uint8_t chipID)
  *
  * @return the Spike's neuron ID.
  */
-static inline uint32_t caerSpikeEventGetNeuronID(caerSpikeEvent event) {
+static inline uint32_t caerSpikeEventGetNeuronID(caerSpikeEventConst event) {
 	return U32T(GET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK));
 }
 
@@ -311,7 +311,7 @@ static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neur
  *
  * @return the event Y address in pixels.
  */
-static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
+static inline uint16_t caerSpikeEventGetY(caerSpikeEventConst event) {
 	uint8_t chipId = caerSpikeEventGetChipID(event);
 	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
@@ -332,7 +332,7 @@ static inline uint16_t caerSpikeEventGetY(caerSpikeEvent event) {
  *
  * @return the event X address in pixels.
  */
-static inline uint16_t caerSpikeEventGetX(caerSpikeEvent event) {
+static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
 	uint8_t chipId = caerSpikeEventGetChipID(event);
 	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);

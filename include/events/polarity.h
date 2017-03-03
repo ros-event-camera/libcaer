@@ -143,7 +143,7 @@ static inline caerPolarityEventConst caerPolarityEventPacketGetEventConst(caerPo
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerPolarityEventGetTimestamp(caerPolarityEvent event) {
+static inline int32_t caerPolarityEventGetTimestamp(caerPolarityEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -157,7 +157,7 @@ static inline int32_t caerPolarityEventGetTimestamp(caerPolarityEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerPolarityEventGetTimestamp64(caerPolarityEvent event, caerPolarityEventPacket packet) {
+static inline int64_t caerPolarityEventGetTimestamp64(caerPolarityEventConst event, caerPolarityEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPolarityEventGetTimestamp(event))));
 }
@@ -185,7 +185,7 @@ static inline void caerPolarityEventSetTimestamp(caerPolarityEvent event, int32_
  *
  * @return true if valid, false if not.
  */
-static inline bool caerPolarityEventIsValid(caerPolarityEvent event) {
+static inline bool caerPolarityEventIsValid(caerPolarityEventConst event) {
 	return (GET_NUMBITS32(event->data, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -245,7 +245,7 @@ static inline void caerPolarityEventInvalidate(caerPolarityEvent event, caerPola
  *
  * @return event polarity value.
  */
-static inline bool caerPolarityEventGetPolarity(caerPolarityEvent event) {
+static inline bool caerPolarityEventGetPolarity(caerPolarityEventConst event) {
 	return (GET_NUMBITS32(event->data, POLARITY_SHIFT, POLARITY_MASK));
 }
 
@@ -268,7 +268,7 @@ static inline void caerPolarityEventSetPolarity(caerPolarityEvent event, bool po
  *
  * @return the event Y address.
  */
-static inline uint16_t caerPolarityEventGetY(caerPolarityEvent event) {
+static inline uint16_t caerPolarityEventGetY(caerPolarityEventConst event) {
 	return U16T(GET_NUMBITS32(event->data, Y_ADDR_SHIFT, Y_ADDR_MASK));
 }
 
@@ -292,7 +292,7 @@ static inline void caerPolarityEventSetY(caerPolarityEvent event, uint16_t yAddr
  *
  * @return the event X address.
  */
-static inline uint16_t caerPolarityEventGetX(caerPolarityEvent event) {
+static inline uint16_t caerPolarityEventGetX(caerPolarityEventConst event) {
 	return U16T(GET_NUMBITS32(event->data, X_ADDR_SHIFT, X_ADDR_MASK));
 }
 

@@ -145,7 +145,7 @@ static inline caerPoint1DEventConst caerPoint1DEventPacketGetEventConst(caerPoin
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerPoint1DEventGetTimestamp(caerPoint1DEvent event) {
+static inline int32_t caerPoint1DEventGetTimestamp(caerPoint1DEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -159,7 +159,7 @@ static inline int32_t caerPoint1DEventGetTimestamp(caerPoint1DEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerPoint1DEventGetTimestamp64(caerPoint1DEvent event, caerPoint1DEventPacket packet) {
+static inline int64_t caerPoint1DEventGetTimestamp64(caerPoint1DEventConst event, caerPoint1DEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPoint1DEventGetTimestamp(event))));
 }
@@ -187,7 +187,7 @@ static inline void caerPoint1DEventSetTimestamp(caerPoint1DEvent event, int32_t 
  *
  * @return true if valid, false if not.
  */
-static inline bool caerPoint1DEventIsValid(caerPoint1DEvent event) {
+static inline bool caerPoint1DEventIsValid(caerPoint1DEventConst event) {
 	return (GET_NUMBITS32(event->info, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -248,7 +248,7 @@ static inline void caerPoint1DEventInvalidate(caerPoint1DEvent event, caerPoint1
  *
  * @return the Point1D measurement type.
  */
-static inline uint8_t caerPoint1DEventGetType(caerPoint1DEvent event) {
+static inline uint8_t caerPoint1DEventGetType(caerPoint1DEventConst event) {
 	return U8T(GET_NUMBITS32(event->info, POINT1D_TYPE_SHIFT, POINT1D_TYPE_MASK));
 }
 
@@ -275,7 +275,7 @@ static inline void caerPoint1DEventSetType(caerPoint1DEvent event, uint8_t type)
  *
  * @return the Point1D measurement scale.
  */
-static inline int8_t caerPoint1DEventGetScale(caerPoint1DEvent event) {
+static inline int8_t caerPoint1DEventGetScale(caerPoint1DEventConst event) {
 	return I8T(GET_NUMBITS32(event->info, POINT1D_SCALE_SHIFT, POINT1D_SCALE_MASK));
 }
 
@@ -301,7 +301,7 @@ static inline void caerPoint1DEventSetScale(caerPoint1DEvent event, int8_t scale
  *
  * @return X axis measurement.
  */
-static inline float caerPoint1DEventGetX(caerPoint1DEvent event) {
+static inline float caerPoint1DEventGetX(caerPoint1DEventConst event) {
 	return (le32toh(event->x));
 }
 

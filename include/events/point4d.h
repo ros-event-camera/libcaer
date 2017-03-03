@@ -152,7 +152,7 @@ static inline caerPoint4DEventConst caerPoint4DEventPacketGetEventConst(caerPoin
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerPoint4DEventGetTimestamp(caerPoint4DEvent event) {
+static inline int32_t caerPoint4DEventGetTimestamp(caerPoint4DEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -166,7 +166,7 @@ static inline int32_t caerPoint4DEventGetTimestamp(caerPoint4DEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerPoint4DEventGetTimestamp64(caerPoint4DEvent event, caerPoint4DEventPacket packet) {
+static inline int64_t caerPoint4DEventGetTimestamp64(caerPoint4DEventConst event, caerPoint4DEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPoint4DEventGetTimestamp(event))));
 }
@@ -194,7 +194,7 @@ static inline void caerPoint4DEventSetTimestamp(caerPoint4DEvent event, int32_t 
  *
  * @return true if valid, false if not.
  */
-static inline bool caerPoint4DEventIsValid(caerPoint4DEvent event) {
+static inline bool caerPoint4DEventIsValid(caerPoint4DEventConst event) {
 	return (GET_NUMBITS32(event->info, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -255,7 +255,7 @@ static inline void caerPoint4DEventInvalidate(caerPoint4DEvent event, caerPoint4
  *
  * @return the Point4D measurement type.
  */
-static inline uint8_t caerPoint4DEventGetType(caerPoint4DEvent event) {
+static inline uint8_t caerPoint4DEventGetType(caerPoint4DEventConst event) {
 	return U8T(GET_NUMBITS32(event->info, POINT4D_TYPE_SHIFT, POINT4D_TYPE_MASK));
 }
 
@@ -282,7 +282,7 @@ static inline void caerPoint4DEventSetType(caerPoint4DEvent event, uint8_t type)
  *
  * @return the Point4D measurement scale.
  */
-static inline int8_t caerPoint4DEventGetScale(caerPoint4DEvent event) {
+static inline int8_t caerPoint4DEventGetScale(caerPoint4DEventConst event) {
 	return I8T(GET_NUMBITS32(event->info, POINT4D_SCALE_SHIFT, POINT4D_SCALE_MASK));
 }
 
@@ -308,7 +308,7 @@ static inline void caerPoint4DEventSetScale(caerPoint4DEvent event, int8_t scale
  *
  * @return X axis measurement.
  */
-static inline float caerPoint4DEventGetX(caerPoint4DEvent event) {
+static inline float caerPoint4DEventGetX(caerPoint4DEventConst event) {
 	return (le32toh(event->x));
 }
 
@@ -329,7 +329,7 @@ static inline void caerPoint4DEventSetX(caerPoint4DEvent event, float x) {
  *
  * @return Y axis measurement.
  */
-static inline float caerPoint4DEventGetY(caerPoint4DEvent event) {
+static inline float caerPoint4DEventGetY(caerPoint4DEventConst event) {
 	return (le32toh(event->y));
 }
 
@@ -350,7 +350,7 @@ static inline void caerPoint4DEventSetY(caerPoint4DEvent event, float y) {
  *
  * @return Z axis measurement.
  */
-static inline float caerPoint4DEventGetZ(caerPoint4DEvent event) {
+static inline float caerPoint4DEventGetZ(caerPoint4DEventConst event) {
 	return (le32toh(event->z));
 }
 
@@ -371,7 +371,7 @@ static inline void caerPoint4DEventSetZ(caerPoint4DEvent event, float z) {
  *
  * @return W axis measurement.
  */
-static inline float caerPoint4DEventGetW(caerPoint4DEvent event) {
+static inline float caerPoint4DEventGetW(caerPoint4DEventConst event) {
 	return (le32toh(event->w));
 }
 

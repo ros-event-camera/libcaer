@@ -152,7 +152,7 @@ static inline caerIMU9EventConst caerIMU9EventPacketGetEventConst(caerIMU9EventP
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerIMU9EventGetTimestamp(caerIMU9Event event) {
+static inline int32_t caerIMU9EventGetTimestamp(caerIMU9EventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -166,7 +166,7 @@ static inline int32_t caerIMU9EventGetTimestamp(caerIMU9Event event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerIMU9EventGetTimestamp64(caerIMU9Event event, caerIMU9EventPacket packet) {
+static inline int64_t caerIMU9EventGetTimestamp64(caerIMU9EventConst event, caerIMU9EventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerIMU9EventGetTimestamp(event))));
 }
@@ -194,7 +194,7 @@ static inline void caerIMU9EventSetTimestamp(caerIMU9Event event, int32_t timest
  *
  * @return true if valid, false if not.
  */
-static inline bool caerIMU9EventIsValid(caerIMU9Event event) {
+static inline bool caerIMU9EventIsValid(caerIMU9EventConst event) {
 	return (GET_NUMBITS32(event->info, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -255,7 +255,7 @@ static inline void caerIMU9EventInvalidate(caerIMU9Event event, caerIMU9EventPac
  *
  * @return acceleration on the X axis.
  */
-static inline float caerIMU9EventGetAccelX(caerIMU9Event event) {
+static inline float caerIMU9EventGetAccelX(caerIMU9EventConst event) {
 	return (le32toh(event->accel_x));
 }
 
@@ -278,7 +278,7 @@ static inline void caerIMU9EventSetAccelX(caerIMU9Event event, float accelX) {
  *
  * @return acceleration on the Y axis.
  */
-static inline float caerIMU9EventGetAccelY(caerIMU9Event event) {
+static inline float caerIMU9EventGetAccelY(caerIMU9EventConst event) {
 	return (le32toh(event->accel_y));
 }
 
@@ -301,7 +301,7 @@ static inline void caerIMU9EventSetAccelY(caerIMU9Event event, float accelY) {
  *
  * @return acceleration on the Z axis.
  */
-static inline float caerIMU9EventGetAccelZ(caerIMU9Event event) {
+static inline float caerIMU9EventGetAccelZ(caerIMU9EventConst event) {
 	return (le32toh(event->accel_z));
 }
 
@@ -324,7 +324,7 @@ static inline void caerIMU9EventSetAccelZ(caerIMU9Event event, float accelZ) {
  *
  * @return angular velocity on the X axis (roll).
  */
-static inline float caerIMU9EventGetGyroX(caerIMU9Event event) {
+static inline float caerIMU9EventGetGyroX(caerIMU9EventConst event) {
 	return (le32toh(event->gyro_x));
 }
 
@@ -347,7 +347,7 @@ static inline void caerIMU9EventSetGyroX(caerIMU9Event event, float gyroX) {
  *
  * @return angular velocity on the Y axis (pitch).
  */
-static inline float caerIMU9EventGetGyroY(caerIMU9Event event) {
+static inline float caerIMU9EventGetGyroY(caerIMU9EventConst event) {
 	return (le32toh(event->gyro_y));
 }
 
@@ -370,7 +370,7 @@ static inline void caerIMU9EventSetGyroY(caerIMU9Event event, float gyroY) {
  *
  * @return angular velocity on the Z axis (yaw).
  */
-static inline float caerIMU9EventGetGyroZ(caerIMU9Event event) {
+static inline float caerIMU9EventGetGyroZ(caerIMU9EventConst event) {
 	return (le32toh(event->gyro_z));
 }
 
@@ -393,7 +393,7 @@ static inline void caerIMU9EventSetGyroZ(caerIMU9Event event, float gyroZ) {
  *
  * @return temperature in °C.
  */
-static inline float caerIMU9EventGetTemp(caerIMU9Event event) {
+static inline float caerIMU9EventGetTemp(caerIMU9EventConst event) {
 	return (le32toh(event->temp));
 }
 
@@ -416,7 +416,7 @@ static inline void caerIMU9EventSetTemp(caerIMU9Event event, float temp) {
  *
  * @return X axis compass heading.
  */
-static inline float caerIMU9EventGetCompX(caerIMU9Event event) {
+static inline float caerIMU9EventGetCompX(caerIMU9EventConst event) {
 	return (le32toh(event->comp_x));
 }
 
@@ -439,7 +439,7 @@ static inline void caerIMU9EventSetCompX(caerIMU9Event event, float compX) {
  *
  * @return Y axis compass heading.
  */
-static inline float caerIMU9EventGetCompY(caerIMU9Event event) {
+static inline float caerIMU9EventGetCompY(caerIMU9EventConst event) {
 	return (le32toh(event->comp_y));
 }
 
@@ -462,7 +462,7 @@ static inline void caerIMU9EventSetCompY(caerIMU9Event event, float compY) {
  *
  * @return Z axis compass heading.
  */
-static inline float caerIMU9EventGetCompZ(caerIMU9Event event) {
+static inline float caerIMU9EventGetCompZ(caerIMU9EventConst event) {
 	return (le32toh(event->comp_z));
 }
 

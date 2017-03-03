@@ -150,7 +150,7 @@ static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventCo
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerConfigurationEventGetTimestamp(caerConfigurationEvent event) {
+static inline int32_t caerConfigurationEventGetTimestamp(caerConfigurationEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -164,8 +164,8 @@ static inline int32_t caerConfigurationEventGetTimestamp(caerConfigurationEvent 
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerConfigurationEventGetTimestamp64(caerConfigurationEvent event,
-	caerConfigurationEventPacket packet) {
+static inline int64_t caerConfigurationEventGetTimestamp64(caerConfigurationEventConst event,
+	caerConfigurationEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerConfigurationEventGetTimestamp(event))));
 }
@@ -194,7 +194,7 @@ static inline void caerConfigurationEventSetTimestamp(caerConfigurationEvent eve
  *
  * @return true if valid, false if not.
  */
-static inline bool caerConfigurationEventIsValid(caerConfigurationEvent event) {
+static inline bool caerConfigurationEventIsValid(caerConfigurationEventConst event) {
 	return (GET_NUMBITS8(event->moduleAddress, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -256,7 +256,7 @@ static inline void caerConfigurationEventInvalidate(caerConfigurationEvent event
  *
  * @return configuration module address.
  */
-static inline uint8_t caerConfigurationEventGetModuleAddress(caerConfigurationEvent event) {
+static inline uint8_t caerConfigurationEventGetModuleAddress(caerConfigurationEventConst event) {
 	return U8T(GET_NUMBITS8(event->moduleAddress, MODULE_ADDR_SHIFT, MODULE_ADDR_MASK));
 }
 
@@ -278,7 +278,7 @@ static inline void caerConfigurationEventSetModuleAddress(caerConfigurationEvent
  *
  * @return configuration parameter address.
  */
-static inline uint8_t caerConfigurationEventGetParameterAddress(caerConfigurationEvent event) {
+static inline uint8_t caerConfigurationEventGetParameterAddress(caerConfigurationEventConst event) {
 	return (event->parameterAddress);
 }
 
@@ -299,7 +299,7 @@ static inline void caerConfigurationEventSetParameterAddress(caerConfigurationEv
  *
  * @return configuration parameter.
  */
-static inline uint32_t caerConfigurationEventGetParameter(caerConfigurationEvent event) {
+static inline uint32_t caerConfigurationEventGetParameter(caerConfigurationEventConst event) {
 	return (le32toh(event->parameter));
 }
 

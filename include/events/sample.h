@@ -139,7 +139,7 @@ static inline caerSampleEventConst caerSampleEventPacketGetEventConst(caerSample
  *
  * @return this event's 32bit microsecond timestamp.
  */
-static inline int32_t caerSampleEventGetTimestamp(caerSampleEvent event) {
+static inline int32_t caerSampleEventGetTimestamp(caerSampleEventConst event) {
 	return (le32toh(event->timestamp));
 }
 
@@ -153,7 +153,7 @@ static inline int32_t caerSampleEventGetTimestamp(caerSampleEvent event) {
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerSampleEventGetTimestamp64(caerSampleEvent event, caerSampleEventPacket packet) {
+static inline int64_t caerSampleEventGetTimestamp64(caerSampleEventConst event, caerSampleEventPacketConst packet) {
 	return (I64T(
 		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerSampleEventGetTimestamp(event))));
 }
@@ -181,7 +181,7 @@ static inline void caerSampleEventSetTimestamp(caerSampleEvent event, int32_t ti
  *
  * @return true if valid, false if not.
  */
-static inline bool caerSampleEventIsValid(caerSampleEvent event) {
+static inline bool caerSampleEventIsValid(caerSampleEventConst event) {
 	return (GET_NUMBITS32(event->data, VALID_MARK_SHIFT, VALID_MARK_MASK));
 }
 
@@ -243,7 +243,7 @@ static inline void caerSampleEventInvalidate(caerSampleEvent event, caerSampleEv
  *
  * @return the ADC sample type.
  */
-static inline uint8_t caerSampleEventGetType(caerSampleEvent event) {
+static inline uint8_t caerSampleEventGetType(caerSampleEventConst event) {
 	return U8T(GET_NUMBITS32(event->data, SAMPLE_TYPE_SHIFT, SAMPLE_TYPE_MASK));
 }
 
@@ -268,7 +268,7 @@ static inline void caerSampleEventSetType(caerSampleEvent event, uint8_t type) {
  *
  * @return the ADC sample value.
  */
-static inline uint32_t caerSampleEventGetSample(caerSampleEvent event) {
+static inline uint32_t caerSampleEventGetSample(caerSampleEventConst event) {
 	return U32T(GET_NUMBITS32(event->data, SAMPLE_SHIFT, SAMPLE_MASK));
 }
 
