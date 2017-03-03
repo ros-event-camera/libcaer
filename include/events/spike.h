@@ -53,6 +53,7 @@ struct caer_spike_event {
  * Type for pointer to Spike event data structure.
  */
 typedef struct caer_spike_event *caerSpikeEvent;
+typedef const struct caer_spike_event *caerSpikeEventConst;
 
 /**
  * Spike event packet data structure definition.
@@ -72,6 +73,7 @@ struct caer_spike_event_packet {
  * Type for pointer to Spike event packet data structure.
  */
 typedef struct caer_spike_event_packet *caerSpikeEventPacket;
+typedef const struct caer_spike_event_packet *caerSpikeEventPacketConst;
 
 /**
  * Allocate a new Spike events packet.
@@ -98,6 +100,28 @@ static inline caerSpikeEvent caerSpikeEventPacketGetEvent(caerSpikeEventPacket p
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Spike Event",
 			"Called caerSpikeEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the Spike event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid SpikeEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only Spike event. NULL on error.
+ */
+static inline caerSpikeEventConst caerSpikeEventPacketGetEventConst(caerSpikeEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Spike Event",
+			"Called caerSpikeEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

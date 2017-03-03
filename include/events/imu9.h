@@ -63,6 +63,7 @@ struct caer_imu9_event {
  * Type for pointer to IMU 9-axes event data structure.
  */
 typedef struct caer_imu9_event *caerIMU9Event;
+typedef const struct caer_imu9_event *caerIMU9EventConst;
 
 /**
  * IMU 9-axes event packet data structure definition.
@@ -82,6 +83,7 @@ struct caer_imu9_event_packet {
  * Type for pointer to IMU 9-axes event packet data structure.
  */
 typedef struct caer_imu9_event_packet *caerIMU9EventPacket;
+typedef const struct caer_imu9_event_packet *caerIMU9EventPacketConst;
 
 /**
  * Allocate a new IMU 9-axes events packet.
@@ -108,6 +110,28 @@ static inline caerIMU9Event caerIMU9EventPacketGetEvent(caerIMU9EventPacket pack
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
 			"Called caerIMU9EventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the IMU 9-axes event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid IMU9EventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only IMU 9-axes event. NULL on error.
+ */
+static inline caerIMU9EventConst caerIMU9EventPacketGetEventConst(caerIMU9EventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
+			"Called caerIMU9EventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

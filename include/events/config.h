@@ -58,6 +58,7 @@ struct caer_configuration_event {
  * Type for pointer to configuration event data structure.
  */
 typedef struct caer_configuration_event *caerConfigurationEvent;
+typedef const struct caer_configuration_event *caerConfigurationEventConst;
 
 /**
  * Configuration event packet data structure definition.
@@ -77,6 +78,7 @@ struct caer_configuration_event_packet {
  * Type for pointer to configuration event packet data structure.
  */
 typedef struct caer_configuration_event_packet *caerConfigurationEventPacket;
+typedef const struct caer_configuration_event_packet *caerConfigurationEventPacketConst;
 
 /**
  * Allocate a new configuration events packet.
@@ -105,6 +107,29 @@ static inline caerConfigurationEvent caerConfigurationEventPacketGetEvent(caerCo
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the configuration event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid ConfigurationEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only configuration event. NULL on error.
+ */
+static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventConst(caerConfigurationEventPacketConst packet,
+	int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+			"Called caerConfigurationEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

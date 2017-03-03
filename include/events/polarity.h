@@ -54,6 +54,7 @@ struct caer_polarity_event {
  * Type for pointer to polarity event data structure.
  */
 typedef struct caer_polarity_event *caerPolarityEvent;
+typedef const struct caer_polarity_event *caerPolarityEventConst;
 
 /**
  * Polarity event packet data structure definition.
@@ -73,6 +74,7 @@ struct caer_polarity_event_packet {
  * Type for pointer to polarity event packet data structure.
  */
 typedef struct caer_polarity_event_packet *caerPolarityEventPacket;
+typedef const struct caer_polarity_event_packet *caerPolarityEventPacketConst;
 
 /**
  * Allocate a new polarity events packet.
@@ -99,6 +101,28 @@ static inline caerPolarityEvent caerPolarityEventPacketGetEvent(caerPolarityEven
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Polarity Event",
 			"Called caerPolarityEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the polarity event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid PolarityEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only polarity event. NULL on error.
+ */
+static inline caerPolarityEventConst caerPolarityEventPacketGetEventConst(caerPolarityEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Polarity Event",
+			"Called caerPolarityEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

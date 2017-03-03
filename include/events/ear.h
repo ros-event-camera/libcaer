@@ -54,6 +54,7 @@ struct caer_ear_event {
  * Type for pointer to ear (cochlea) event data structure.
  */
 typedef struct caer_ear_event *caerEarEvent;
+typedef const struct caer_ear_event *caerEarEventConst;
 
 /**
  * Ear (cochlea) event packet data structure definition.
@@ -73,6 +74,7 @@ struct caer_ear_event_packet {
  * Type for pointer to ear (cochlea) event packet data structure.
  */
 typedef struct caer_ear_event_packet *caerEarEventPacket;
+typedef const struct caer_ear_event_packet *caerEarEventPacketConst;
 
 /**
  * Allocate a new ear (cochlea) events packet.
@@ -99,6 +101,28 @@ static inline caerEarEvent caerEarEventPacketGetEvent(caerEarEventPacket packet,
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Ear Event",
 			"Called caerEarEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the ear (cochlea) event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid EarEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only ear (cochlea) event. NULL on error.
+ */
+static inline caerEarEventConst caerEarEventPacketGetEventConst(caerEarEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Ear Event",
+			"Called caerEarEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

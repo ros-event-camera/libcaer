@@ -50,6 +50,7 @@ struct caer_sample_event {
  * Type for pointer to ADC sample event data structure.
  */
 typedef struct caer_sample_event *caerSampleEvent;
+typedef const struct caer_sample_event *caerSampleEventConst;
 
 /**
  * ADC sample event packet data structure definition.
@@ -69,6 +70,7 @@ struct caer_sample_event_packet {
  * Type for pointer to ADC sample event packet data structure.
  */
 typedef struct caer_sample_event_packet *caerSampleEventPacket;
+typedef const struct caer_sample_event_packet *caerSampleEventPacketConst;
 
 /**
  * Allocate a new ADC sample events packet.
@@ -95,6 +97,28 @@ static inline caerSampleEvent caerSampleEventPacketGetEvent(caerSampleEventPacke
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Sample Event",
 			"Called caerSampleEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the ADC sample event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid SampleEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only ADC sample event. NULL on error.
+ */
+static inline caerSampleEventConst caerSampleEventPacketGetEventConst(caerSampleEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Sample Event",
+			"Called caerSampleEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

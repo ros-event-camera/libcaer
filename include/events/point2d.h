@@ -58,6 +58,7 @@ struct caer_point2d_event {
  * Type for pointer to Point2D event data structure.
  */
 typedef struct caer_point2d_event *caerPoint2DEvent;
+typedef const struct caer_point2d_event *caerPoint2DEventConst;
 
 /**
  * Point2D event packet data structure definition.
@@ -77,6 +78,7 @@ struct caer_point2d_event_packet {
  * Type for pointer to Point2D event packet data structure.
  */
 typedef struct caer_point2d_event_packet *caerPoint2DEventPacket;
+typedef const struct caer_point2d_event_packet *caerPoint2DEventPacketConst;
 
 /**
  * Allocate a new Point2D events packet.
@@ -103,6 +105,28 @@ static inline caerPoint2DEvent caerPoint2DEventPacketGetEvent(caerPoint2DEventPa
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Point2D Event",
 			"Called caerPoint2DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the Point2D event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid Point2DEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only Point2D event. NULL on error.
+ */
+static inline caerPoint2DEventConst caerPoint2DEventPacketGetEventConst(caerPoint2DEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Point2D Event",
+			"Called caerPoint2DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}

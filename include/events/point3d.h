@@ -60,6 +60,7 @@ struct caer_point3d_event {
  * Type for pointer to Point3D event data structure.
  */
 typedef struct caer_point3d_event *caerPoint3DEvent;
+typedef const struct caer_point3d_event *caerPoint3DEventConst;
 
 /**
  * Point3D event packet data structure definition.
@@ -79,6 +80,7 @@ struct caer_point3d_event_packet {
  * Type for pointer to Point3D event packet data structure.
  */
 typedef struct caer_point3d_event_packet *caerPoint3DEventPacket;
+typedef const struct caer_point3d_event_packet *caerPoint3DEventPacketConst;
 
 /**
  * Allocate a new Point3D events packet.
@@ -105,6 +107,28 @@ static inline caerPoint3DEvent caerPoint3DEventPacketGetEvent(caerPoint3DEventPa
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLog(CAER_LOG_CRITICAL, "Point3D Event",
 			"Called caerPoint3DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
+		return (NULL);
+	}
+
+	// Return a pointer to the specified event.
+	return (packet->events + n);
+}
+
+/**
+ * Get the Point3D event at the given index from the event packet.
+ * This is a read-only event, do not change its contents in any way!
+ *
+ * @param packet a valid Point3DEventPacket pointer. Cannot be NULL.
+ * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ *
+ * @return the requested read-only Point3D event. NULL on error.
+ */
+static inline caerPoint3DEventConst caerPoint3DEventPacketGetEventConst(caerPoint3DEventPacketConst packet, int32_t n) {
+	// Check that we're not out of bounds.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
+		caerLog(CAER_LOG_CRITICAL, "Point3D Event",
+			"Called caerPoint3DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
