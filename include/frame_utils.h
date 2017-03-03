@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket);
+caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket);
 void caerFrameUtilsContrast(caerFrameEventPacket framePacket);
 
 #ifdef __cplusplus

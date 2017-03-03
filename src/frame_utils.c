@@ -4,7 +4,7 @@ enum pixelColorEnum {
 	PXR, PXB, PXG1, PXG2, PXW
 };
 
-static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEvent monoFrame);
+static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
 
 static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, int32_t x,
 	int32_t y) {
@@ -171,9 +171,9 @@ static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_colo
 	return (PXR);
 }
 
-static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEvent monoFrame) {
+static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame) {
 	uint16_t *colorPixels = caerFrameEventGetPixelArrayUnsafe(colorFrame);
-	uint16_t *monoPixels = caerFrameEventGetPixelArrayUnsafe(monoFrame);
+	const uint16_t *monoPixels = caerFrameEventGetPixelArrayUnsafeConst(monoFrame);
 
 	enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(monoFrame);
 	int32_t lengthY = caerFrameEventGetLengthY(monoFrame);
@@ -528,7 +528,7 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEvent mo
 	}
 }
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket) {
+caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket) {
 	if (framePacket == NULL) {
 		return (NULL);
 	}
@@ -539,7 +539,7 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket) {
 
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
+	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
 		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
 			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
 			countValid++;
@@ -565,7 +565,7 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacket framePacket) {
 	int32_t colorIndex = 0;
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
+	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
 		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
 			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
 			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.

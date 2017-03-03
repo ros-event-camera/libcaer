@@ -6,18 +6,18 @@
 
 using namespace cv;
 
-static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEvent monoFrame,
+static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
 	enum caer_frame_utils_opencv_demosaic demosaicType);
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent);
 static void frameUtilsOpenCVContrastEqualize(Mat &intensity);
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize);
 
-static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEvent monoFrame,
+static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
 	enum caer_frame_utils_opencv_demosaic demosaicType) {
 	// Initialize OpenCV Mat based on caerFrameEvent data directly (no image copy).
-	Size frameSize(caerFrameEventGetLengthX(monoFrame), caerFrameEventGetLengthY(monoFrame));
-	Mat monoMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(monoFrame)),
-		caerFrameEventGetPixelArrayUnsafe(monoFrame));
+	const Size frameSize(caerFrameEventGetLengthX(monoFrame), caerFrameEventGetLengthY(monoFrame));
+	const Mat monoMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(monoFrame)),
+		const_cast<uint16_t *>(caerFrameEventGetPixelArrayUnsafeConst(monoFrame)));
 	Mat colorMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(colorFrame)),
 		caerFrameEventGetPixelArrayUnsafe(colorFrame));
 
@@ -104,7 +104,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 	cvtColor(monoMat, colorMat, code);
 }
 
-caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePacket,
+caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
 	enum caer_frame_utils_opencv_demosaic demosaicType) {
 	if (framePacket == NULL) {
 		return (NULL);
@@ -116,7 +116,7 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePack
 
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
+	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
 		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
 			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
 			if (caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG
@@ -151,7 +151,7 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePack
 	int32_t colorIndex = 0;
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
+	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
 		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
 			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
 			if (caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG
@@ -306,7 +306,7 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
 	}
 
 	CAER_FRAME_ITERATOR_VALID_START(framePacket)
-		Size frameSize(caerFrameEventGetLengthX(caerFrameIteratorElement),
+		const Size frameSize(caerFrameEventGetLengthX(caerFrameIteratorElement),
 			caerFrameEventGetLengthY(caerFrameIteratorElement));
 		Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
 			caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));

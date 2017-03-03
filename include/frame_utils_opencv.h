@@ -22,7 +22,7 @@ enum caer_frame_utils_opencv_contrast {
 	CONTRAST_NORMALIZATION, CONTRAST_HISTOGRAM_EQUALIZATION, CONTRAST_CLAHE,
 };
 
-caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacket framePacket,
+caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
 	enum caer_frame_utils_opencv_demosaic demosaicType);
 void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_opencv_contrast contrastType);
 
