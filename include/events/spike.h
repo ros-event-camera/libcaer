@@ -414,6 +414,73 @@ static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
  */
 #define CAER_SPIKE_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEvent.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_REVERSE_ITERATOR_ALL_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader) - 1; \
+		caerSpikeIteratorCounter >= 0; \
+		caerSpikeIteratorCounter--) { \
+		caerSpikeEvent caerSpikeIteratorElement = caerSpikeEventPacketGetEvent(SPIKE_PACKET, caerSpikeIteratorCounter);
+/**
+ * Const-Reverse iterator over all spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEventConst.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_CONST_REVERSE_ITERATOR_ALL_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader) - 1; \
+		caerSpikeIteratorCounter >= 0; \
+		caerSpikeIteratorCounter--) { \
+		caerSpikeEventConst caerSpikeIteratorElement = caerSpikeEventPacketGetEventConst(SPIKE_PACKET, caerSpikeIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SPIKE_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEvent.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_REVERSE_ITERATOR_VALID_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader) - 1; \
+		caerSpikeIteratorCounter >= 0; \
+		caerSpikeIteratorCounter--) { \
+		caerSpikeEvent caerSpikeIteratorElement = caerSpikeEventPacketGetEvent(SPIKE_PACKET, caerSpikeIteratorCounter); \
+		if (!caerSpikeEventIsValid(caerSpikeIteratorElement)) { continue; } // Skip invalid spike events.
+
+/**
+ * Const-Reverse iterator over only the valid spike events in a packet.
+ * Returns the current index in the 'caerSpikeIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpikeIteratorElement' variable
+ * of type caerSpikeEventConst.
+ *
+ * SPIKE_PACKET: a valid SpikeEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPIKE_CONST_REVERSE_ITERATOR_VALID_START(SPIKE_PACKET) \
+	for (int32_t caerSpikeIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPIKE_PACKET)->packetHeader) - 1; \
+		caerSpikeIteratorCounter >= 0; \
+		caerSpikeIteratorCounter--) { \
+		caerSpikeEventConst caerSpikeIteratorElement = caerSpikeEventPacketGetEventConst(SPIKE_PACKET, caerSpikeIteratorCounter); \
+		if (!caerSpikeEventIsValid(caerSpikeIteratorElement)) { continue; } // Skip invalid spike events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SPIKE_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

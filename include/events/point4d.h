@@ -453,6 +453,73 @@ static inline void caerPoint4DEventSetW(caerPoint4DEvent event, float w) {
  */
 #define CAER_POINT4D_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEvent.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_REVERSE_ITERATOR_ALL_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader) - 1; \
+		caerPoint4DIteratorCounter >= 0; \
+		caerPoint4DIteratorCounter--) { \
+		caerPoint4DEvent caerPoint4DIteratorElement = caerPoint4DEventPacketGetEvent(POINT4D_PACKET, caerPoint4DIteratorCounter);
+/**
+ * Const-Reverse iterator over all Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEventConst.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_CONST_REVERSE_ITERATOR_ALL_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader) - 1; \
+		caerPoint4DIteratorCounter >= 0; \
+		caerPoint4DIteratorCounter--) { \
+		caerPoint4DEventConst caerPoint4DIteratorElement = caerPoint4DEventPacketGetEventConst(POINT4D_PACKET, caerPoint4DIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT4D_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEvent.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_REVERSE_ITERATOR_VALID_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader) - 1; \
+		caerPoint4DIteratorCounter >= 0; \
+		caerPoint4DIteratorCounter--) { \
+		caerPoint4DEvent caerPoint4DIteratorElement = caerPoint4DEventPacketGetEvent(POINT4D_PACKET, caerPoint4DIteratorCounter); \
+		if (!caerPoint4DEventIsValid(caerPoint4DIteratorElement)) { continue; } // Skip invalid Point4D events.
+
+/**
+ * Const-Reverse iterator over only the valid Point4D events in a packet.
+ * Returns the current index in the 'caerPoint4DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint4DIteratorElement' variable
+ * of type caerPoint4DEventConst.
+ *
+ * POINT4D_PACKET: a valid Point4DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT4D_CONST_REVERSE_ITERATOR_VALID_START(POINT4D_PACKET) \
+	for (int32_t caerPoint4DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT4D_PACKET)->packetHeader) - 1; \
+		caerPoint4DIteratorCounter >= 0; \
+		caerPoint4DIteratorCounter--) { \
+		caerPoint4DEventConst caerPoint4DIteratorElement = caerPoint4DEventPacketGetEventConst(POINT4D_PACKET, caerPoint4DIteratorCounter); \
+		if (!caerPoint4DEventIsValid(caerPoint4DIteratorElement)) { continue; } // Skip invalid Point4D events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT4D_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

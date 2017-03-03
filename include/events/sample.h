@@ -352,6 +352,73 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  */
 #define CAER_SAMPLE_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all sample events in a packet.
+ * Returns the current index in the 'caerSampleIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSampleIteratorElement' variable
+ * of type caerSampleEvent.
+ *
+ * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SAMPLE_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET) \
+	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
+		caerSampleIteratorCounter >= 0; \
+		caerSampleIteratorCounter--) { \
+		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);
+/**
+ * Const-Reverse iterator over all sample events in a packet.
+ * Returns the current index in the 'caerSampleIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSampleIteratorElement' variable
+ * of type caerSampleEventConst.
+ *
+ * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET) \
+	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
+		caerSampleIteratorCounter >= 0; \
+		caerSampleIteratorCounter--) { \
+		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SAMPLE_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid sample events in a packet.
+ * Returns the current index in the 'caerSampleIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSampleIteratorElement' variable
+ * of type caerSampleEvent.
+ *
+ * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SAMPLE_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET) \
+	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
+		caerSampleIteratorCounter >= 0; \
+		caerSampleIteratorCounter--) { \
+		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter); \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+
+/**
+ * Const-Reverse iterator over only the valid sample events in a packet.
+ * Returns the current index in the 'caerSampleIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSampleIteratorElement' variable
+ * of type caerSampleEventConst.
+ *
+ * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET) \
+	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
+		caerSampleIteratorCounter >= 0; \
+		caerSampleIteratorCounter--) { \
+		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter); \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SAMPLE_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

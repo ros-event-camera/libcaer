@@ -429,6 +429,73 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  */
 #define CAER_POINT3D_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all Point3D events in a packet.
+ * Returns the current index in the 'caerPoint3DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint3DIteratorElement' variable
+ * of type caerPoint3DEvent.
+ *
+ * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT3D_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET) \
+	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		caerPoint3DIteratorCounter >= 0; \
+		caerPoint3DIteratorCounter--) { \
+		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);
+/**
+ * Const-Reverse iterator over all Point3D events in a packet.
+ * Returns the current index in the 'caerPoint3DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint3DIteratorElement' variable
+ * of type caerPoint3DEventConst.
+ *
+ * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT3D_CONST_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET) \
+	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		caerPoint3DIteratorCounter >= 0; \
+		caerPoint3DIteratorCounter--) { \
+		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT3D_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid Point3D events in a packet.
+ * Returns the current index in the 'caerPoint3DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint3DIteratorElement' variable
+ * of type caerPoint3DEvent.
+ *
+ * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT3D_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET) \
+	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		caerPoint3DIteratorCounter >= 0; \
+		caerPoint3DIteratorCounter--) { \
+		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter); \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+
+/**
+ * Const-Reverse iterator over only the valid Point3D events in a packet.
+ * Returns the current index in the 'caerPoint3DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint3DIteratorElement' variable
+ * of type caerPoint3DEventConst.
+ *
+ * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT3D_CONST_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET) \
+	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		caerPoint3DIteratorCounter >= 0; \
+		caerPoint3DIteratorCounter--) { \
+		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter); \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT3D_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

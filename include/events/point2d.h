@@ -406,6 +406,73 @@ static inline void caerPoint2DEventSetY(caerPoint2DEvent event, float y) {
  */
 #define CAER_POINT2D_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all Point2D events in a packet.
+ * Returns the current index in the 'caerPoint2DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint2DIteratorElement' variable
+ * of type caerPoint2DEvent.
+ *
+ * POINT2D_PACKET: a valid Point2DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT2D_REVERSE_ITERATOR_ALL_START(POINT2D_PACKET) \
+	for (int32_t caerPoint2DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT2D_PACKET)->packetHeader) - 1; \
+		caerPoint2DIteratorCounter >= 0; \
+		caerPoint2DIteratorCounter--) { \
+		caerPoint2DEvent caerPoint2DIteratorElement = caerPoint2DEventPacketGetEvent(POINT2D_PACKET, caerPoint2DIteratorCounter);
+/**
+ * Const-Reverse iterator over all Point2D events in a packet.
+ * Returns the current index in the 'caerPoint2DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint2DIteratorElement' variable
+ * of type caerPoint2DEventConst.
+ *
+ * POINT2D_PACKET: a valid Point2DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT2D_CONST_REVERSE_ITERATOR_ALL_START(POINT2D_PACKET) \
+	for (int32_t caerPoint2DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT2D_PACKET)->packetHeader) - 1; \
+		caerPoint2DIteratorCounter >= 0; \
+		caerPoint2DIteratorCounter--) { \
+		caerPoint2DEventConst caerPoint2DIteratorElement = caerPoint2DEventPacketGetEventConst(POINT2D_PACKET, caerPoint2DIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT2D_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid Point2D events in a packet.
+ * Returns the current index in the 'caerPoint2DIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerPoint2DIteratorElement' variable
+ * of type caerPoint2DEvent.
+ *
+ * POINT2D_PACKET: a valid Point2DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT2D_REVERSE_ITERATOR_VALID_START(POINT2D_PACKET) \
+	for (int32_t caerPoint2DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT2D_PACKET)->packetHeader) - 1; \
+		caerPoint2DIteratorCounter >= 0; \
+		caerPoint2DIteratorCounter--) { \
+		caerPoint2DEvent caerPoint2DIteratorElement = caerPoint2DEventPacketGetEvent(POINT2D_PACKET, caerPoint2DIteratorCounter); \
+		if (!caerPoint2DEventIsValid(caerPoint2DIteratorElement)) { continue; } // Skip invalid Point2D events.
+
+/**
+ * Const-Reverse iterator over only the valid Point2D events in a packet.
+ * Returns the current index in the 'caerPoint2DIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerPoint2DIteratorElement' variable
+ * of type caerPoint2DEventConst.
+ *
+ * POINT2D_PACKET: a valid Point2DEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_POINT2D_CONST_REVERSE_ITERATOR_VALID_START(POINT2D_PACKET) \
+	for (int32_t caerPoint2DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT2D_PACKET)->packetHeader) - 1; \
+		caerPoint2DIteratorCounter >= 0; \
+		caerPoint2DIteratorCounter--) { \
+		caerPoint2DEventConst caerPoint2DIteratorElement = caerPoint2DEventPacketGetEventConst(POINT2D_PACKET, caerPoint2DIteratorCounter); \
+		if (!caerPoint2DEventIsValid(caerPoint2DIteratorElement)) { continue; } // Skip invalid Point2D events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_POINT2D_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

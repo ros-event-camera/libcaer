@@ -468,6 +468,73 @@ static inline void caerIMU6EventSetTemp(caerIMU6Event event, float temp) {
  */
 #define CAER_IMU6_ITERATOR_VALID_END }
 
+/**
+ * Reverse iterator over all IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6Event.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_REVERSE_ITERATOR_ALL_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader) - 1; \
+		caerIMU6IteratorCounter >= 0; \
+		caerIMU6IteratorCounter--) { \
+		caerIMU6Event caerIMU6IteratorElement = caerIMU6EventPacketGetEvent(IMU6_PACKET, caerIMU6IteratorCounter);
+/**
+ * Const-Reverse iterator over all IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6EventConst.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_CONST_REVERSE_ITERATOR_ALL_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader) - 1; \
+		caerIMU6IteratorCounter >= 0; \
+		caerIMU6IteratorCounter--) { \
+		caerIMU6EventConst caerIMU6IteratorElement = caerIMU6EventPacketGetEventConst(IMU6_PACKET, caerIMU6IteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_IMU6_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6Event.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_REVERSE_ITERATOR_VALID_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader) - 1; \
+		caerIMU6IteratorCounter >= 0; \
+		caerIMU6IteratorCounter--) { \
+		caerIMU6Event caerIMU6IteratorElement = caerIMU6EventPacketGetEvent(IMU6_PACKET, caerIMU6IteratorCounter); \
+		if (!caerIMU6EventIsValid(caerIMU6IteratorElement)) { continue; } // Skip invalid IMU6 events.
+
+/**
+ * Const-Reverse iterator over only the valid IMU6 events in a packet.
+ * Returns the current index in the 'caerIMU6IteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerIMU6IteratorElement' variable
+ * of type caerIMU6EventConst.
+ *
+ * IMU6_PACKET: a valid IMU6EventPacket pointer. Cannot be NULL.
+ */
+#define CAER_IMU6_CONST_REVERSE_ITERATOR_VALID_START(IMU6_PACKET) \
+	for (int32_t caerIMU6IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU6_PACKET)->packetHeader) - 1; \
+		caerIMU6IteratorCounter >= 0; \
+		caerIMU6IteratorCounter--) { \
+		caerIMU6EventConst caerIMU6IteratorElement = caerIMU6EventPacketGetEventConst(IMU6_PACKET, caerIMU6IteratorCounter); \
+		if (!caerIMU6EventIsValid(caerIMU6IteratorElement)) { continue; } // Skip invalid IMU6 events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_IMU6_REVERSE_ITERATOR_VALID_END }
+
 #ifdef __cplusplus
 }
 #endif

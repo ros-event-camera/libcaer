@@ -373,6 +373,73 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
 #define CAER_SPECIAL_ITERATOR_VALID_END }
 
 /**
+ * Reverse iterator over all special events in a packet.
+ * Returns the current index in the 'caerSpecialIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable
+ * of type caerSpecialEvent.
+ *
+ * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET) \
+	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		caerSpecialIteratorCounter >= 0; \
+		caerSpecialIteratorCounter--) { \
+		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);
+/**
+ * Const-Reverse iterator over all special events in a packet.
+ * Returns the current index in the 'caerSpecialIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable
+ * of type caerSpecialEventConst.
+ *
+ * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET) \
+	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		caerSpecialIteratorCounter >= 0; \
+		caerSpecialIteratorCounter--) { \
+		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_END }
+
+/**
+ * Reverse iterator over only the valid special events in a packet.
+ * Returns the current index in the 'caerSpecialIteratorCounter' variable of type
+ * 'int32_t' and the current event in the 'caerSpecialIteratorElement' variable
+ * of type caerSpecialEvent.
+ *
+ * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET) \
+	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		caerSpecialIteratorCounter >= 0; \
+		caerSpecialIteratorCounter--) { \
+		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter); \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+
+/**
+ * Const-Reverse iterator over only the valid special events in a packet.
+ * Returns the current index in the 'caerSpecialIteratorCounter' variable of type
+ * 'int32_t' and the current read-only event in the 'caerSpecialIteratorElement' variable
+ * of type caerSpecialEventConst.
+ *
+ * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
+ */
+#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET) \
+	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		caerSpecialIteratorCounter >= 0; \
+		caerSpecialIteratorCounter--) { \
+		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter); \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+
+/**
+ * Reverse iterator close statement.
+ */
+#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_END }
+
+/**
  * Get the first special event with the given event type in this
  * event packet. This returns the first found event with that type ID,
  * or NULL if we get to the end without finding any such event.
