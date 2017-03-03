@@ -13,14 +13,6 @@
 
 #include "../libcaer.h"
 
-#if defined(__GNUC__) || defined(__clang__)
-	#define PACKED_STRUCT(STRUCT_DECLARATION) STRUCT_DECLARATION __attribute__((__packed__))
-#elif defined(_MSC_VER)
-	#define PACKED_STRUCT(STRUCT_DECLARATION) __pragma(pack(push, 1)) STRUCT_DECLARATION __pragma(pack(pop))
-#else
-	#error "Unable to ensure structures are properly packed."
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

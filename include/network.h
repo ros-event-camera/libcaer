@@ -7,6 +7,8 @@
 #ifndef LIBCAER_NETWORK_H_
 #define LIBCAER_NETWORK_H_
 
+#include "libcaer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
