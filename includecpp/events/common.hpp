@@ -2,7 +2,7 @@
 #define LIBCAER_EVENTS_COMMON_HPP_
 
 #include <libcaer/events/common.h>
-#include <stdexcept>
+#include "../libcaer.hpp"
 #include <cassert>
 
 namespace libcaer {

@@ -2,6 +2,7 @@
 #define LIBCAER_NETWORK_HPP_
 
 #include <libcaer/network.h>
+#include "libcaer.hpp"
 
 namespace libcaer {
 namespace network {

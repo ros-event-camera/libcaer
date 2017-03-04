@@ -2,6 +2,7 @@
 #define LIBCAER_HPP_
 
 #include <libcaer/libcaer.h>
+#include <stdexcept>
 #include <type_traits>
 
 namespace libcaer {

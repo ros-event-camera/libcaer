@@ -2,7 +2,8 @@
 #define LIBCAER_DEVICES_USB_HPP_
 
 #include <libcaer/devices/usb.h>
-#include <stdexcept>
+#include "../libcaer.hpp"
+#include "../events/packetContainer.hpp"
 
 namespace libcaer {
 namespace devices {
