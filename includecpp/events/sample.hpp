@@ -71,6 +71,14 @@ public:
 		header = &packet->packetHeader;
 	}
 
+	SampleEventPacket(caerSampleEventPacket packet) {
+		if (packet == nullptr) {
+			throw std::runtime_error("Failed to initialize sample event packet from existing C struct.");
+		}
+
+		header = &packet->packetHeader;
+	}
+
 	// EventPacketHeader's destructor takes care of freeing above memory.
 	// Same for all copy/move constructor/assignment, use EventPacketHeader.
 

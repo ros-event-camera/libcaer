@@ -315,6 +315,14 @@ public:
 		header = &packet->packetHeader;
 	}
 
+	FrameEventPacket(caerFrameEventPacket packet) {
+		if (packet == nullptr) {
+			throw std::runtime_error("Failed to initialize frame event packet from existing C struct.");
+		}
+
+		header = &packet->packetHeader;
+	}
+
 	// EventPacketHeader's destructor takes care of freeing above memory.
 	// Same for all copy/move constructor/assignment, use EventPacketHeader.
 

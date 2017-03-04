@@ -79,6 +79,14 @@ public:
 		header = &packet->packetHeader;
 	}
 
+	Point1DEventPacket(caerPoint1DEventPacket packet) {
+		if (packet == nullptr) {
+			throw std::runtime_error("Failed to initialize Point1D event packet from existing C struct.");
+		}
+
+		header = &packet->packetHeader;
+	}
+
 	// EventPacketHeader's destructor takes care of freeing above memory.
 	// Same for all copy/move constructor/assignment, use EventPacketHeader.
 

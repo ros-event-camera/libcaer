@@ -87,6 +87,14 @@ public:
 		header = &packet->packetHeader;
 	}
 
+	EarEventPacket(caerEarEventPacket packet) {
+		if (packet == nullptr) {
+			throw std::runtime_error("Failed to initialize ear event packet from existing C struct.");
+		}
+
+		header = &packet->packetHeader;
+	}
+
 	// EventPacketHeader's destructor takes care of freeing above memory.
 	// Same for all copy/move constructor/assignment, use EventPacketHeader.
 
