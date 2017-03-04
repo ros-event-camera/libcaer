@@ -26,12 +26,12 @@ extern "C" {
 //@{
 #define EAR_SHIFT 1
 #define EAR_MASK 0x0000000F
-#define CHANNEL_SHIFT 5
-#define CHANNEL_MASK 0x000007FF
-#define NEURON_SHIFT 16
-#define NEURON_MASK 0x000000FF
-#define FILTER_SHIFT 24
-#define FILTER_MASK 0x000000FF
+#define EAR_CHANNEL_SHIFT 5
+#define EAR_CHANNEL_MASK 0x000007FF
+#define EAR_NEURON_SHIFT 16
+#define EAR_NEURON_MASK 0x000000FF
+#define EAR_FILTER_SHIFT 24
+#define EAR_FILTER_MASK 0x000000FF
 //@}
 
 /**
@@ -278,7 +278,7 @@ static inline void caerEarEventSetEar(caerEarEvent event, uint8_t ear) {
  * @return the channel (frequency band) ID.
  */
 static inline uint16_t caerEarEventGetChannel(caerEarEventConst event) {
-	return U16T(GET_NUMBITS32(event->data, CHANNEL_SHIFT, CHANNEL_MASK));
+	return U16T(GET_NUMBITS32(event->data, EAR_CHANNEL_SHIFT, EAR_CHANNEL_MASK));
 }
 
 /**
@@ -292,26 +292,26 @@ static inline uint16_t caerEarEventGetChannel(caerEarEventConst event) {
  * @param channel the channel (frequency band) ID.
  */
 static inline void caerEarEventSetChannel(caerEarEvent event, uint16_t channel) {
-	CLEAR_NUMBITS32(event->data, CHANNEL_SHIFT, CHANNEL_MASK);
-	SET_NUMBITS32(event->data, CHANNEL_SHIFT, CHANNEL_MASK, channel);
+	CLEAR_NUMBITS32(event->data, EAR_CHANNEL_SHIFT, EAR_CHANNEL_MASK);
+	SET_NUMBITS32(event->data, EAR_CHANNEL_SHIFT, EAR_CHANNEL_MASK, channel);
 }
 
 static inline uint8_t caerEarEventGetNeuron(caerEarEventConst event) {
-	return U8T(GET_NUMBITS32(event->data, NEURON_SHIFT, NEURON_MASK));
+	return U8T(GET_NUMBITS32(event->data, EAR_NEURON_SHIFT, EAR_NEURON_MASK));
 }
 
 static inline void caerEarEventSetNeuron(caerEarEvent event, uint8_t neuron) {
-	CLEAR_NUMBITS32(event->data, NEURON_SHIFT, NEURON_MASK);
-	SET_NUMBITS32(event->data, NEURON_SHIFT, NEURON_MASK, neuron);
+	CLEAR_NUMBITS32(event->data, EAR_NEURON_SHIFT, EAR_NEURON_MASK);
+	SET_NUMBITS32(event->data, EAR_NEURON_SHIFT, EAR_NEURON_MASK, neuron);
 }
 
 static inline uint8_t caerEarEventGetFilter(caerEarEventConst event) {
-	return U8T(GET_NUMBITS32(event->data, FILTER_SHIFT, FILTER_MASK));
+	return U8T(GET_NUMBITS32(event->data, EAR_FILTER_SHIFT, EAR_FILTER_MASK));
 }
 
 static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
-	CLEAR_NUMBITS32(event->data, FILTER_SHIFT, FILTER_MASK);
-	SET_NUMBITS32(event->data, FILTER_SHIFT, FILTER_MASK, filter);
+	CLEAR_NUMBITS32(event->data, EAR_FILTER_SHIFT, EAR_FILTER_MASK);
+	SET_NUMBITS32(event->data, EAR_FILTER_SHIFT, EAR_FILTER_MASK, filter);
 }
 
 /**

@@ -22,10 +22,10 @@ extern "C" {
  * Bit 0 is the valid mark, see 'common.h' for more details.
  */
 //@{
-#define TYPE_SHIFT 1
-#define TYPE_MASK 0x0000007F
-#define DATA_SHIFT 8
-#define DATA_MASK 0x00FFFFFF
+#define SPECIAL_TYPE_SHIFT 1
+#define SPECIAL_TYPE_MASK 0x0000007F
+#define SPECIAL_DATA_SHIFT 8
+#define SPECIAL_DATA_MASK 0x00FFFFFF
 //@}
 
 /**
@@ -264,7 +264,7 @@ static inline void caerSpecialEventInvalidate(caerSpecialEvent event, caerSpecia
  * @return the special event type (see 'enum caer_special_event_types').
  */
 static inline uint8_t caerSpecialEventGetType(caerSpecialEventConst event) {
-	return U8T(GET_NUMBITS32(event->data, TYPE_SHIFT, TYPE_MASK));
+	return U8T(GET_NUMBITS32(event->data, SPECIAL_TYPE_SHIFT, SPECIAL_TYPE_MASK));
 }
 
 /**
@@ -274,8 +274,8 @@ static inline uint8_t caerSpecialEventGetType(caerSpecialEventConst event) {
  * @param type the special event type (see 'enum caer_special_event_types').
  */
 static inline void caerSpecialEventSetType(caerSpecialEvent event, uint8_t type) {
-	CLEAR_NUMBITS32(event->data, TYPE_SHIFT, TYPE_MASK);
-	SET_NUMBITS32(event->data, TYPE_SHIFT, TYPE_MASK, type);
+	CLEAR_NUMBITS32(event->data, SPECIAL_TYPE_SHIFT, SPECIAL_TYPE_MASK);
+	SET_NUMBITS32(event->data, SPECIAL_TYPE_SHIFT, SPECIAL_TYPE_MASK, type);
 }
 
 /**
@@ -288,7 +288,7 @@ static inline void caerSpecialEventSetType(caerSpecialEvent event, uint8_t type)
  * @return the special event data.
  */
 static inline uint32_t caerSpecialEventGetData(caerSpecialEventConst event) {
-	return U32T(GET_NUMBITS32(event->data, DATA_SHIFT, DATA_MASK));
+	return U32T(GET_NUMBITS32(event->data, SPECIAL_DATA_SHIFT, SPECIAL_DATA_MASK));
 }
 
 /**
@@ -300,8 +300,8 @@ static inline uint32_t caerSpecialEventGetData(caerSpecialEventConst event) {
  * @param data the special event data.
  */
 static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data) {
-	CLEAR_NUMBITS32(event->data, DATA_SHIFT, DATA_MASK);
-	SET_NUMBITS32(event->data, DATA_SHIFT, DATA_MASK, data);
+	CLEAR_NUMBITS32(event->data, SPECIAL_DATA_SHIFT, SPECIAL_DATA_MASK);
+	SET_NUMBITS32(event->data, SPECIAL_DATA_SHIFT, SPECIAL_DATA_MASK, data);
 }
 
 /**

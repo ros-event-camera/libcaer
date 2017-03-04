@@ -32,12 +32,12 @@ extern "C" {
  * Bit 0 is the valid mark, see 'common.h' for more details.
  */
 //@{
-#define COLOR_CHANNELS_SHIFT 1
-#define COLOR_CHANNELS_MASK 0x00000007
-#define COLOR_FILTER_SHIFT 4
-#define COLOR_FILTER_MASK 0x0000000F
-#define ROI_IDENTIFIER_SHIFT 8
-#define ROI_IDENTIFIER_MASK 0x0000007F
+#define FRAME_COLOR_CHANNELS_SHIFT 1
+#define FRAME_COLOR_CHANNELS_MASK 0x00000007
+#define FRAME_COLOR_FILTER_SHIFT 4
+#define FRAME_COLOR_FILTER_MASK 0x0000000F
+#define FRAME_ROI_IDENTIFIER_SHIFT 8
+#define FRAME_ROI_IDENTIFIER_MASK 0x0000007F
 //@}
 
 /**
@@ -535,7 +535,7 @@ static inline size_t caerFrameEventPacketGetPixelsMaxIndex(caerFrameEventPacketC
  * @return numerical ROI identifier.
  */
 static inline uint8_t caerFrameEventGetROIIdentifier(caerFrameEventConst event) {
-	return U8T(GET_NUMBITS32(event->info, ROI_IDENTIFIER_SHIFT, ROI_IDENTIFIER_MASK));
+	return U8T(GET_NUMBITS32(event->info, FRAME_ROI_IDENTIFIER_SHIFT, FRAME_ROI_IDENTIFIER_MASK));
 }
 
 /**
@@ -546,8 +546,8 @@ static inline uint8_t caerFrameEventGetROIIdentifier(caerFrameEventConst event) 
  * @param roiIdentifier numerical ROI identifier.
  */
 static inline void caerFrameEventSetROIIdentifier(caerFrameEvent event, uint8_t roiIdentifier) {
-	CLEAR_NUMBITS32(event->info, ROI_IDENTIFIER_SHIFT, ROI_IDENTIFIER_MASK);
-	SET_NUMBITS32(event->info, ROI_IDENTIFIER_SHIFT, ROI_IDENTIFIER_MASK, roiIdentifier);
+	CLEAR_NUMBITS32(event->info, FRAME_ROI_IDENTIFIER_SHIFT, FRAME_ROI_IDENTIFIER_MASK);
+	SET_NUMBITS32(event->info, FRAME_ROI_IDENTIFIER_SHIFT, FRAME_ROI_IDENTIFIER_MASK, roiIdentifier);
 }
 
 /**
@@ -559,7 +559,7 @@ static inline void caerFrameEventSetROIIdentifier(caerFrameEvent event, uint8_t 
  * @return color filter identifier.
  */
 static inline enum caer_frame_event_color_filter caerFrameEventGetColorFilter(caerFrameEventConst event) {
-	return ((enum caer_frame_event_color_filter) U8T(GET_NUMBITS32(event->info, COLOR_FILTER_SHIFT, COLOR_FILTER_MASK)));
+	return ((enum caer_frame_event_color_filter) U8T(GET_NUMBITS32(event->info, FRAME_COLOR_FILTER_SHIFT, FRAME_COLOR_FILTER_MASK)));
 }
 
 /**
@@ -570,8 +570,8 @@ static inline enum caer_frame_event_color_filter caerFrameEventGetColorFilter(ca
  * @param colorFilter color filter identifier.
  */
 static inline void caerFrameEventSetColorFilter(caerFrameEvent event, enum caer_frame_event_color_filter colorFilter) {
-	CLEAR_NUMBITS32(event->info, COLOR_FILTER_SHIFT, COLOR_FILTER_MASK);
-	SET_NUMBITS32(event->info, COLOR_FILTER_SHIFT, COLOR_FILTER_MASK, colorFilter);
+	CLEAR_NUMBITS32(event->info, FRAME_COLOR_FILTER_SHIFT, FRAME_COLOR_FILTER_MASK);
+	SET_NUMBITS32(event->info, FRAME_COLOR_FILTER_SHIFT, FRAME_COLOR_FILTER_MASK, colorFilter);
 }
 
 /**
@@ -606,7 +606,7 @@ static inline int32_t caerFrameEventGetLengthY(caerFrameEventConst event) {
  */
 static inline enum caer_frame_event_color_channels caerFrameEventGetChannelNumber(caerFrameEventConst event) {
 	return ((enum caer_frame_event_color_channels) U8T(
-		GET_NUMBITS32(event->info, COLOR_CHANNELS_SHIFT, COLOR_CHANNELS_MASK)));
+		GET_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK)));
 }
 
 /**
@@ -634,8 +634,8 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
 
 	event->lengthX = htole32(lengthX);
 	event->lengthY = htole32(lengthY);
-	CLEAR_NUMBITS32(event->info, COLOR_CHANNELS_SHIFT, COLOR_CHANNELS_MASK);
-	SET_NUMBITS32(event->info, COLOR_CHANNELS_SHIFT, COLOR_CHANNELS_MASK, channelNumber);
+	CLEAR_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK);
+	SET_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK, channelNumber);
 }
 
 /**

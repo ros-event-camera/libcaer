@@ -29,8 +29,8 @@ extern "C" {
  * Here we can just re-use it for the validity mark.
  */
 //@{
-#define MODULE_ADDR_SHIFT 1
-#define MODULE_ADDR_MASK 0x0000007F
+#define CONFIG_MODULE_ADDR_SHIFT 1
+#define CONFIG_MODULE_ADDR_MASK 0x0000007F
 //@}
 
 /**
@@ -257,7 +257,7 @@ static inline void caerConfigurationEventInvalidate(caerConfigurationEvent event
  * @return configuration module address.
  */
 static inline uint8_t caerConfigurationEventGetModuleAddress(caerConfigurationEventConst event) {
-	return U8T(GET_NUMBITS8(event->moduleAddress, MODULE_ADDR_SHIFT, MODULE_ADDR_MASK));
+	return U8T(GET_NUMBITS8(event->moduleAddress, CONFIG_MODULE_ADDR_SHIFT, CONFIG_MODULE_ADDR_MASK));
 }
 
 /**
@@ -267,8 +267,8 @@ static inline uint8_t caerConfigurationEventGetModuleAddress(caerConfigurationEv
  * @param moduleAddress configuration module address.
  */
 static inline void caerConfigurationEventSetModuleAddress(caerConfigurationEvent event, uint8_t moduleAddress) {
-	CLEAR_NUMBITS8(event->moduleAddress, MODULE_ADDR_SHIFT, MODULE_ADDR_MASK);
-	SET_NUMBITS8(event->moduleAddress, MODULE_ADDR_SHIFT, MODULE_ADDR_MASK, moduleAddress);
+	CLEAR_NUMBITS8(event->moduleAddress, CONFIG_MODULE_ADDR_SHIFT, CONFIG_MODULE_ADDR_MASK);
+	SET_NUMBITS8(event->moduleAddress, CONFIG_MODULE_ADDR_SHIFT, CONFIG_MODULE_ADDR_MASK, moduleAddress);
 }
 
 /**

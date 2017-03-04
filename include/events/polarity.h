@@ -26,10 +26,10 @@ extern "C" {
 //@{
 #define POLARITY_SHIFT 1
 #define POLARITY_MASK 0x00000001
-#define Y_ADDR_SHIFT 2
-#define Y_ADDR_MASK 0x00007FFF
-#define X_ADDR_SHIFT 17
-#define X_ADDR_MASK 0x00007FFF
+#define POLARITY_Y_ADDR_SHIFT 2
+#define POLARITY_Y_ADDR_MASK 0x00007FFF
+#define POLARITY_X_ADDR_SHIFT 17
+#define POLARITY_X_ADDR_MASK 0x00007FFF
 //@}
 
 /**
@@ -269,7 +269,7 @@ static inline void caerPolarityEventSetPolarity(caerPolarityEvent event, bool po
  * @return the event Y address.
  */
 static inline uint16_t caerPolarityEventGetY(caerPolarityEventConst event) {
-	return U16T(GET_NUMBITS32(event->data, Y_ADDR_SHIFT, Y_ADDR_MASK));
+	return U16T(GET_NUMBITS32(event->data, POLARITY_Y_ADDR_SHIFT, POLARITY_Y_ADDR_MASK));
 }
 
 /**
@@ -280,8 +280,8 @@ static inline uint16_t caerPolarityEventGetY(caerPolarityEventConst event) {
  * @param yAddress the event Y address.
  */
 static inline void caerPolarityEventSetY(caerPolarityEvent event, uint16_t yAddress) {
-	CLEAR_NUMBITS32(event->data, Y_ADDR_SHIFT, Y_ADDR_MASK);
-	SET_NUMBITS32(event->data, Y_ADDR_SHIFT, Y_ADDR_MASK, yAddress);
+	CLEAR_NUMBITS32(event->data, POLARITY_Y_ADDR_SHIFT, POLARITY_Y_ADDR_MASK);
+	SET_NUMBITS32(event->data, POLARITY_Y_ADDR_SHIFT, POLARITY_Y_ADDR_MASK, yAddress);
 }
 
 /**
@@ -293,7 +293,7 @@ static inline void caerPolarityEventSetY(caerPolarityEvent event, uint16_t yAddr
  * @return the event X address.
  */
 static inline uint16_t caerPolarityEventGetX(caerPolarityEventConst event) {
-	return U16T(GET_NUMBITS32(event->data, X_ADDR_SHIFT, X_ADDR_MASK));
+	return U16T(GET_NUMBITS32(event->data, POLARITY_X_ADDR_SHIFT, POLARITY_X_ADDR_MASK));
 }
 
 /**
@@ -304,8 +304,8 @@ static inline uint16_t caerPolarityEventGetX(caerPolarityEventConst event) {
  * @param xAddress the event X address.
  */
 static inline void caerPolarityEventSetX(caerPolarityEvent event, uint16_t xAddress) {
-	CLEAR_NUMBITS32(event->data, X_ADDR_SHIFT, X_ADDR_MASK);
-	SET_NUMBITS32(event->data, X_ADDR_SHIFT, X_ADDR_MASK, xAddress);
+	CLEAR_NUMBITS32(event->data, POLARITY_X_ADDR_SHIFT, POLARITY_X_ADDR_MASK);
+	SET_NUMBITS32(event->data, POLARITY_X_ADDR_SHIFT, POLARITY_X_ADDR_MASK, xAddress);
 }
 
 /**
