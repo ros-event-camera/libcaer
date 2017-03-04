@@ -101,7 +101,7 @@ struct caer_frame_event {
 	/// Pixel array, 16 bit unsigned integers, normalized to 16 bit depth.
 	/// The pixel array is laid out row by row (increasing X axis), going
 	/// from top to bottom (increasing Y axis).
-	uint16_t pixels[];
+	uint16_t pixels[1]; // size 1 here for C++ compatibility.
 });
 
 /**
@@ -510,7 +510,8 @@ static inline void caerFrameEventInvalidate(caerFrameEvent event, caerFrameEvent
  * @return maximum pixels array size in bytes.
  */
 static inline size_t caerFrameEventPacketGetPixelsSize(caerFrameEventPacketConst packet) {
-	return ((size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader) - sizeof(struct caer_frame_event));
+	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
+	return ((size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader) - (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 }
 
 /**

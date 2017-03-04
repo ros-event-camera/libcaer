@@ -45,7 +45,7 @@ static inline void initFrame(davisHandle handle) {
 	}
 
 	// for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
-	memset(state->currentFrameEvent[0], 0, sizeof(struct caer_frame_event));
+	memset(state->currentFrameEvent[0], 0, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 	// }
 
 	if (state->apsROIUpdate != 0) {
@@ -2154,7 +2154,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	}
 
 	// Allocate memory for the current FrameEvents. Use contiguous memory for all ROI FrameEvents.
-	size_t eventSize = sizeof(struct caer_frame_event)
+	size_t eventSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t))
 		+ ((size_t) state->apsSizeX * (size_t) state->apsSizeY * APS_ADC_CHANNELS * sizeof(uint16_t));
 
 	state->currentFrameEvent[0] = calloc(APS_ROI_REGIONS_MAX, eventSize);
@@ -2712,7 +2712,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								caerFrameEvent currentFrameEvent = caerFrameEventPacketGetEvent(
 									state->currentFramePacket, state->currentFramePacketPosition);
 								memcpy(currentFrameEvent, state->currentFrameEvent[0],
-									sizeof(struct caer_frame_event)
+									(sizeof(struct caer_frame_event) - sizeof(uint16_t))
 										+ caerFrameEventGetPixelsSize(state->currentFrameEvent[0]));
 								state->currentFramePacketPosition++;
 							}
