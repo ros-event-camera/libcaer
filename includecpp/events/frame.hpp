@@ -2,6 +2,7 @@
 #define LIBCAER_EVENTS_FRAME_HPP_
 
 #include <libcaer/events/frame.h>
+#include <libcaer/frame_utils.h>
 #include "common.hpp"
 
 namespace libcaer {
@@ -364,6 +365,52 @@ public:
 	size_t getPixelsMaxIndex() const noexcept {
 		return (caerFrameEventPacketGetPixelsMaxIndex(reinterpret_cast<caerFrameEventPacketConst>(header)));
 	}
+
+	FrameEventPacket demosaic() const {
+		caerFrameEventPacket colorPacket = caerFrameUtilsDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header));
+		if (colorPacket == nullptr) {
+			throw std::runtime_error("Failed to generate a demosaiced frame event packet.");
+		}
+
+		return (FrameEventPacket(colorPacket));
+	}
+
+	void contrast() noexcept {
+		caerFrameUtilsContrast(reinterpret_cast<caerFrameEventPacket>(header));
+	}
+
+#if defined(LIBCAER_HAVE_OPENCV)
+
+	// DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
+	enum class opencvDemosaic {
+		NORMAL = 0,
+		EDGE_AWARE = 1,
+	};
+
+	enum class opencvContrast {
+		NORMALIZATION = 0,
+		HISTOGRAM_EQUALIZATION = 1,
+		CLAHE = 2,
+	};
+
+	FrameEventPacket demosaic(opencvDemosaic demosaicType) const {
+		caerFrameEventPacket colorPacket =
+			caerFrameUtilsOpenCVDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
+				static_cast<enum caer_frame_utils_opencv_demosaic>(static_cast<typename std::underlying_type<
+					opencvDemosaic>::type>(demosaicType)));
+		if (colorPacket == nullptr) {
+			throw std::runtime_error("Failed to generate a demosaiced frame event packet using OpenCV.");
+		}
+
+		return (FrameEventPacket(colorPacket));
+	}
+
+	void contrast(opencvContrast contrastType) noexcept {
+		caerFrameUtilsOpenCVContrast(reinterpret_cast<caerFrameEventPacket>(header),
+			static_cast<enum caer_frame_utils_opencv_contrast>(static_cast<typename std::underlying_type<opencvContrast>::type>(contrastType)));
+	}
+
+#endif
 };
 
 }
