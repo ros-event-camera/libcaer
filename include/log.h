@@ -35,7 +35,6 @@
 extern "C" {
 #endif
 
-//@{
 /**
  * Log levels for caerLog() logging function.
  * Log messages only get printed if their log level is equal or
@@ -46,15 +45,16 @@ extern "C" {
  * be printed, while CAER_LOG_DEBUG is the least urgent log
  * level and will only be delivered if configured by the user.
  */
-#define CAER_LOG_EMERGENCY (0)
-#define CAER_LOG_ALERT     (1)
-#define CAER_LOG_CRITICAL  (2)
-#define CAER_LOG_ERROR     (3)
-#define CAER_LOG_WARNING   (4)
-#define CAER_LOG_NOTICE    (5)
-#define CAER_LOG_INFO      (6)
-#define CAER_LOG_DEBUG     (7)
-//@}
+enum caer_log_level {
+	CAER_LOG_EMERGENCY = 0,
+	CAER_LOG_ALERT     = 1,
+	CAER_LOG_CRITICAL  = 2,
+	CAER_LOG_ERROR     = 3,
+	CAER_LOG_WARNING   = 4,
+	CAER_LOG_NOTICE    = 5,
+	CAER_LOG_INFO      = 6,
+	CAER_LOG_DEBUG     = 7,
+};
 
 /**
  * Set the system-wide log level.
@@ -63,7 +63,7 @@ extern "C" {
  *
  * @param logLevel the system-wide log level.
  */
-void caerLogLevelSet(uint8_t logLevel);
+void caerLogLevelSet(enum caer_log_level logLevel);
 
 /**
  * Get the current system-wide log level.
@@ -72,7 +72,7 @@ void caerLogLevelSet(uint8_t logLevel);
  *
  * @return the current system-wide log level.
  */
-uint8_t caerLogLevelGet(void);
+enum caer_log_level caerLogLevelGet(void);
 
 /**
  * Set to which file descriptors log messages are sent.
@@ -99,7 +99,7 @@ void caerLogFileDescriptorsSet(int fd1, int fd2);
  * @param format the message format string (see printf()).
  * @param ... the parameters to be formatted according to the format string (see printf()).
  */
-void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT;
+void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT;
 
 /**
  * Secondary logging function.
@@ -117,7 +117,7 @@ void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) A
  * @param args the parameters to be formatted according to the format string (see printf()).
  *             This is an argument list as returned by va_start().
  */
-void caerLogVA(uint8_t logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA;
+void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA;
 
 #ifdef __cplusplus
 }

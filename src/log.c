@@ -8,11 +8,11 @@ static atomic_uint_fast8_t caerLogLevel = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
 static atomic_int caerLogFileDescriptor1 = ATOMIC_VAR_INIT(STDERR_FILENO);
 static atomic_int caerLogFileDescriptor2 = ATOMIC_VAR_INIT(-1);
 
-void caerLogLevelSet(uint8_t logLevel) {
+void caerLogLevelSet(enum caer_log_level logLevel) {
 	atomic_store_explicit(&caerLogLevel, logLevel, memory_order_relaxed);
 }
 
-uint8_t caerLogLevelGet(void) {
+enum caer_log_level caerLogLevelGet(void) {
 	return (atomic_load_explicit(&caerLogLevel, memory_order_relaxed));
 }
 
@@ -26,14 +26,14 @@ void caerLogFileDescriptorsSet(int fd1, int fd2) {
 	atomic_store_explicit(&caerLogFileDescriptor2, fd2, memory_order_relaxed);
 }
 
-void caerLog(uint8_t logLevel, const char *subSystem, const char *format, ...) {
+void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
 	caerLogVA(logLevel, subSystem, format, argumentList);
 	va_end(argumentList);
 }
 
-void caerLogVA(uint8_t logLevel, const char *subSystem, const char *format, va_list args) {
+void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) {
 	// Check that subSystem and format are defined correctly.
 	if (subSystem == NULL || format == NULL) {
 		caerLog(CAER_LOG_ERROR, "Logger", "Missing subSystem or format strings. Neither can be NULL.");
