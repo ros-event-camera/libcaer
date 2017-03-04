@@ -1,5 +1,25 @@
 var searchData=
 [
-  ['neuron_5fmask',['NEURON_MASK',['../ear_8h.html#af5a899ec734306362896e4b12d0bfa35',1,'ear.h']]],
-  ['neuron_5fshift',['NEURON_SHIFT',['../ear_8h.html#acdea9773fd47e9057ee85e2c8d6db23c',1,'ear.h']]]
+  ['point1d_5fscale_5fmask',['POINT1D_SCALE_MASK',['../point1d_8h.html#a98f8b44df46aa3cd32707b77868b3afe',1,'point1d.h']]],
+  ['point1d_5fscale_5fshift',['POINT1D_SCALE_SHIFT',['../point1d_8h.html#ac2634c694cb590c80c9f6a2f32973037',1,'point1d.h']]],
+  ['point1d_5ftype_5fmask',['POINT1D_TYPE_MASK',['../point1d_8h.html#af352f2446fe4088d67ba108d0216c71c',1,'point1d.h']]],
+  ['point1d_5ftype_5fshift',['POINT1D_TYPE_SHIFT',['../point1d_8h.html#a38d832d86838898cc1781cbd1fa0a7e4',1,'point1d.h']]],
+  ['point2d_5fscale_5fmask',['POINT2D_SCALE_MASK',['../point2d_8h.html#a9de2075fc27ce7cc56e0c892956cbc88',1,'point2d.h']]],
+  ['point2d_5fscale_5fshift',['POINT2D_SCALE_SHIFT',['../point2d_8h.html#a0d9d9fefc1dc33d3f70856400ec3b9d9',1,'point2d.h']]],
+  ['point2d_5ftype_5fmask',['POINT2D_TYPE_MASK',['../point2d_8h.html#aa720c2c5bcb01d79ae6f2957a29b6954',1,'point2d.h']]],
+  ['point2d_5ftype_5fshift',['POINT2D_TYPE_SHIFT',['../point2d_8h.html#a7ecc1e201616fd87185bbfe4d516c4da',1,'point2d.h']]],
+  ['point3d_5fscale_5fmask',['POINT3D_SCALE_MASK',['../point3d_8h.html#af7aef6fd9f1d9d96ad7511e7bdd9427a',1,'point3d.h']]],
+  ['point3d_5fscale_5fshift',['POINT3D_SCALE_SHIFT',['../point3d_8h.html#afdd3f5f8b8b960b92448a504c478879d',1,'point3d.h']]],
+  ['point3d_5ftype_5fmask',['POINT3D_TYPE_MASK',['../point3d_8h.html#a5d7ccda559c06fea2349f294a7366efa',1,'point3d.h']]],
+  ['point3d_5ftype_5fshift',['POINT3D_TYPE_SHIFT',['../point3d_8h.html#a817bb339dc7bf54c2300675c6f9ad8d5',1,'point3d.h']]],
+  ['point4d_5fscale_5fmask',['POINT4D_SCALE_MASK',['../point4d_8h.html#a734de6125187735d70064e809a095e3a',1,'point4d.h']]],
+  ['point4d_5fscale_5fshift',['POINT4D_SCALE_SHIFT',['../point4d_8h.html#a249dacdb6efed02b81bf2d01c8daa47a',1,'point4d.h']]],
+  ['point4d_5ftype_5fmask',['POINT4D_TYPE_MASK',['../point4d_8h.html#a309f7d2b4433482609ebb1a05325bdbe',1,'point4d.h']]],
+  ['point4d_5ftype_5fshift',['POINT4D_TYPE_SHIFT',['../point4d_8h.html#aff5e3da1688d2d9b3c8c8219cb21a852',1,'point4d.h']]],
+  ['polarity_5fmask',['POLARITY_MASK',['../polarity_8h.html#a9d29db4da608ac0bb82260adbddfff1f',1,'polarity.h']]],
+  ['polarity_5fshift',['POLARITY_SHIFT',['../polarity_8h.html#ae7951ad78852a0054240bcfa2ad283f8',1,'polarity.h']]],
+  ['polarity_5fx_5faddr_5fmask',['POLARITY_X_ADDR_MASK',['../polarity_8h.html#aca9d98c91e6227108647e98c0fe31850',1,'polarity.h']]],
+  ['polarity_5fx_5faddr_5fshift',['POLARITY_X_ADDR_SHIFT',['../polarity_8h.html#a37ac7fd4242cae39a083f6aeafb63a25',1,'polarity.h']]],
+  ['polarity_5fy_5faddr_5fmask',['POLARITY_Y_ADDR_MASK',['../polarity_8h.html#a4d3128067c053ddc7f240a54aaf1348c',1,'polarity.h']]],
+  ['polarity_5fy_5faddr_5fshift',['POLARITY_Y_ADDR_SHIFT',['../polarity_8h.html#a21b17b1bf3dc3ff28a579a25e8fdf826',1,'polarity.h']]]
 ];

@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['ts_5foverflow_5fshift',['TS_OVERFLOW_SHIFT',['../common_8h.html#ae0e61733adb1536e51cc292788041c90',1,'common.h']]],
-  ['type_5fmask',['TYPE_MASK',['../special_8h.html#aff17a6771d3319ab64930cd2b937d6cf',1,'special.h']]],
-  ['type_5fshift',['TYPE_SHIFT',['../special_8h.html#a2310ec2e069b4027aac8c964d2b9410b',1,'special.h']]]
+  ['valid_5fmark_5fmask',['VALID_MARK_MASK',['../common_8h.html#ae6072542f46a4122fc50382c6f186703',1,'common.h']]],
+  ['valid_5fmark_5fshift',['VALID_MARK_SHIFT',['../common_8h.html#aee83b74cd7efb3cde7f05f1cf12899dc',1,'common.h']]]
 ];

@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-r46483b90bcbf92bd9431100463a76c8da9ff1b1e</span>
+   &#160;<span id="projectnumber">2.0.0-rf7ebc7ea120fbfb5881744a3e35f62e7d3500234</span>
    </div>
   </td>
  </tr>
@@ -61,6 +61,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">log.h File Reference</div>  </div>
@@ -71,168 +72,56 @@ $(function() {
 </div>
 <p><a href="log_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
-Macros</h2></td></tr>
-<tr class="memitem:aefab4585ab0c54beae1644b9e53ee4a1"><td class="memItemLeft" align="right" valign="top"><a id="aefab4585ab0c54beae1644b9e53ee4a1"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>ATTRIBUTE_FORMAT</b></td></tr>
-<tr class="separator:aefab4585ab0c54beae1644b9e53ee4a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr><td colspan="2"><div class="groupHeader"></div></td></tr>
-<tr class="memitem:a78dd08a46c61ce487e2632766d641d93"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a78dd08a46c61ce487e2632766d641d93">CAER_LOG_EMERGENCY</a>&#160;&#160;&#160;(0)</td></tr>
-<tr class="separator:a78dd08a46c61ce487e2632766d641d93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:affe9d42ee23c9ec19f3b17bedce21c1f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#affe9d42ee23c9ec19f3b17bedce21c1f">CAER_LOG_ALERT</a>&#160;&#160;&#160;(1)</td></tr>
-<tr class="separator:affe9d42ee23c9ec19f3b17bedce21c1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d5a63e80a7e7a256e7a7e8f73908f06"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a2d5a63e80a7e7a256e7a7e8f73908f06">CAER_LOG_CRITICAL</a>&#160;&#160;&#160;(2)</td></tr>
-<tr class="separator:a2d5a63e80a7e7a256e7a7e8f73908f06"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6162a0362ed0042937bdbb5ce0724252"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a6162a0362ed0042937bdbb5ce0724252">CAER_LOG_ERROR</a>&#160;&#160;&#160;(3)</td></tr>
-<tr class="separator:a6162a0362ed0042937bdbb5ce0724252"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6f5005493ae02032cce8c720b69742d6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a6f5005493ae02032cce8c720b69742d6">CAER_LOG_WARNING</a>&#160;&#160;&#160;(4)</td></tr>
-<tr class="separator:a6f5005493ae02032cce8c720b69742d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad5e2d12e0d115e7d2075f3ef51bcce05"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad5e2d12e0d115e7d2075f3ef51bcce05">CAER_LOG_NOTICE</a>&#160;&#160;&#160;(5)</td></tr>
-<tr class="separator:ad5e2d12e0d115e7d2075f3ef51bcce05"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a155f1b86062b86998037110b2a15c097"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a155f1b86062b86998037110b2a15c097">CAER_LOG_INFO</a>&#160;&#160;&#160;(6)</td></tr>
-<tr class="separator:a155f1b86062b86998037110b2a15c097"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a94ea54e9de3940d4aaf86c9fec3c9eec"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a94ea54e9de3940d4aaf86c9fec3c9eec">CAER_LOG_DEBUG</a>&#160;&#160;&#160;(7)</td></tr>
-<tr class="separator:a94ea54e9de3940d4aaf86c9fec3c9eec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a5988fb14bd47761d15fb79b651338b50"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> { <br />
+&#160;&#160;<b>CAER_LOG_EMERGENCY</b> = 0, 
+<b>CAER_LOG_ALERT</b> = 1, 
+<b>CAER_LOG_CRITICAL</b> = 2, 
+<b>CAER_LOG_ERROR</b> = 3, 
+<br />
+&#160;&#160;<b>CAER_LOG_WARNING</b> = 4, 
+<b>CAER_LOG_NOTICE</b> = 5, 
+<b>CAER_LOG_INFO</b> = 6, 
+<b>CAER_LOG_DEBUG</b> = 7
+<br />
+ }</td></tr>
+<tr class="separator:a5988fb14bd47761d15fb79b651338b50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a99491654ca0d8ef34503ee3fc802944a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet</a> (uint8_t logLevel)</td></tr>
-<tr class="separator:a99491654ca0d8ef34503ee3fc802944a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a80dff9428c70f8674179be3c8a62ecf0"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a80dff9428c70f8674179be3c8a62ecf0">caerLogLevelGet</a> (void)</td></tr>
-<tr class="separator:a80dff9428c70f8674179be3c8a62ecf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af3ca8e708844b4efcaea5f45dc8353ee"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#af3ca8e708844b4efcaea5f45dc8353ee">caerLogLevelSet</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel)</td></tr>
+<tr class="separator:af3ca8e708844b4efcaea5f45dc8353ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f3a980270b0df01546c3213a2d516ca"><td class="memItemLeft" align="right" valign="top">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a7f3a980270b0df01546c3213a2d516ca">caerLogLevelGet</a> (void)</td></tr>
+<tr class="separator:a7f3a980270b0df01546c3213a2d516ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad5d975dbf2a216cedfed263afa0f8e0b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad5d975dbf2a216cedfed263afa0f8e0b">caerLogFileDescriptorsSet</a> (int fd1, int fd2)</td></tr>
 <tr class="separator:ad5d975dbf2a216cedfed263afa0f8e0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a474123e1492eeb0afc99f8ee39e2429f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog</a> (uint8_t logLevel, const char *subSystem, const char *format,...) ATTRIBUTE_FORMAT</td></tr>
-<tr class="separator:a474123e1492eeb0afc99f8ee39e2429f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad7f3b02e95285e50d8908fc3c628f0fc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad7f3b02e95285e50d8908fc3c628f0fc">caerLogVA</a> (uint8_t logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA</td></tr>
-<tr class="separator:ad7f3b02e95285e50d8908fc3c628f0fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30123d179e22994b733f80d173327625"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a30123d179e22994b733f80d173327625">caerLog</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format,...) ATTRIBUTE_FORMAT</td></tr>
+<tr class="separator:a30123d179e22994b733f80d173327625"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a726499cc47780d49e5fad0d74bec406c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a726499cc47780d49e5fad0d74bec406c">caerLogVA</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA</td></tr>
+<tr class="separator:a726499cc47780d49e5fad0d74bec406c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Logging functions to print useful messages for the user. </p>
-</div><h2 class="groupheader">Macro Definition Documentation</h2>
-<a id="affe9d42ee23c9ec19f3b17bedce21c1f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#affe9d42ee23c9ec19f3b17bedce21c1f">&#9670;&nbsp;</a></span>CAER_LOG_ALERT</h2>
+</div><h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a5988fb14bd47761d15fb79b651338b50"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5988fb14bd47761d15fb79b651338b50">&#9670;&nbsp;</a></span>caer_log_level</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#define CAER_LOG_ALERT&#160;&#160;&#160;(1)</td>
+          <td class="memname">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a2d5a63e80a7e7a256e7a7e8f73908f06"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2d5a63e80a7e7a256e7a7e8f73908f06">&#9670;&nbsp;</a></span>CAER_LOG_CRITICAL</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_CRITICAL&#160;&#160;&#160;(2)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a94ea54e9de3940d4aaf86c9fec3c9eec"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a94ea54e9de3940d4aaf86c9fec3c9eec">&#9670;&nbsp;</a></span>CAER_LOG_DEBUG</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_DEBUG&#160;&#160;&#160;(7)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a78dd08a46c61ce487e2632766d641d93"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a78dd08a46c61ce487e2632766d641d93">&#9670;&nbsp;</a></span>CAER_LOG_EMERGENCY</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_EMERGENCY&#160;&#160;&#160;(0)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a6162a0362ed0042937bdbb5ce0724252"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6162a0362ed0042937bdbb5ce0724252">&#9670;&nbsp;</a></span>CAER_LOG_ERROR</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_ERROR&#160;&#160;&#160;(3)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a155f1b86062b86998037110b2a15c097"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a155f1b86062b86998037110b2a15c097">&#9670;&nbsp;</a></span>CAER_LOG_INFO</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_INFO&#160;&#160;&#160;(6)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="ad5e2d12e0d115e7d2075f3ef51bcce05"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad5e2d12e0d115e7d2075f3ef51bcce05">&#9670;&nbsp;</a></span>CAER_LOG_NOTICE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_NOTICE&#160;&#160;&#160;(5)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
-
-</div>
-</div>
-<a id="a6f5005493ae02032cce8c720b69742d6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6f5005493ae02032cce8c720b69742d6">&#9670;&nbsp;</a></span>CAER_LOG_WARNING</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define CAER_LOG_WARNING&#160;&#160;&#160;(4)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
+<p>Log levels for <a class="el" href="log_8h.html#a30123d179e22994b733f80d173327625">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#af3ca8e708844b4efcaea5f45dc8353ee">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
 
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a474123e1492eeb0afc99f8ee39e2429f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a474123e1492eeb0afc99f8ee39e2429f">&#9670;&nbsp;</a></span>caerLog()</h2>
+<a id="a30123d179e22994b733f80d173327625"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30123d179e22994b733f80d173327625">&#9670;&nbsp;</a></span>caerLog()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -240,7 +129,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void caerLog </td>
           <td>(</td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a>&#160;</td>
           <td class="paramname"><em>logLevel</em>, </td>
         </tr>
         <tr>
@@ -317,14 +206,14 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a80dff9428c70f8674179be3c8a62ecf0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a80dff9428c70f8674179be3c8a62ecf0">&#9670;&nbsp;</a></span>caerLogLevelGet()</h2>
+<a id="a7f3a980270b0df01546c3213a2d516ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7f3a980270b0df01546c3213a2d516ca">&#9670;&nbsp;</a></span>caerLogLevelGet()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">uint8_t caerLogLevelGet </td>
+          <td class="memname">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> caerLogLevelGet </td>
           <td>(</td>
           <td class="paramtype">void&#160;</td>
           <td class="paramname"></td><td>)</td>
@@ -337,8 +226,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a99491654ca0d8ef34503ee3fc802944a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a99491654ca0d8ef34503ee3fc802944a">&#9670;&nbsp;</a></span>caerLogLevelSet()</h2>
+<a id="af3ca8e708844b4efcaea5f45dc8353ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3ca8e708844b4efcaea5f45dc8353ee">&#9670;&nbsp;</a></span>caerLogLevelSet()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -346,7 +235,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void caerLogLevelSet </td>
           <td>(</td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a>&#160;</td>
           <td class="paramname"><em>logLevel</em></td><td>)</td>
           <td></td>
         </tr>
@@ -362,8 +251,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ad7f3b02e95285e50d8908fc3c628f0fc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad7f3b02e95285e50d8908fc3c628f0fc">&#9670;&nbsp;</a></span>caerLogVA()</h2>
+<a id="a726499cc47780d49e5fad0d74bec406c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a726499cc47780d49e5fad0d74bec406c">&#9670;&nbsp;</a></span>caerLogVA()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -371,7 +260,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">void caerLogVA </td>
           <td>(</td>
-          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramtype">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a>&#160;</td>
           <td class="paramname"><em>logLevel</em>, </td>
         </tr>
         <tr>

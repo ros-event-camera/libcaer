@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-r46483b90bcbf92bd9431100463a76c8da9ff1b1e</span>
+   &#160;<span id="projectnumber">2.0.0-rf7ebc7ea120fbfb5881744a3e35f62e7d3500234</span>
    </div>
   </td>
  </tr>
@@ -326,29 +326,8 @@ $(function() {
 <li>CAER_ITERATOR_VALID_START
 : <a class="el" href="common_8h.html#a9c83c97f29fbfe5d800b3f1848df3a96">common.h</a>
 </li>
-<li>CAER_LOG_ALERT
-: <a class="el" href="log_8h.html#affe9d42ee23c9ec19f3b17bedce21c1f">log.h</a>
-</li>
-<li>CAER_LOG_CRITICAL
-: <a class="el" href="log_8h.html#a2d5a63e80a7e7a256e7a7e8f73908f06">log.h</a>
-</li>
-<li>CAER_LOG_DEBUG
-: <a class="el" href="log_8h.html#a94ea54e9de3940d4aaf86c9fec3c9eec">log.h</a>
-</li>
-<li>CAER_LOG_EMERGENCY
-: <a class="el" href="log_8h.html#a78dd08a46c61ce487e2632766d641d93">log.h</a>
-</li>
-<li>CAER_LOG_ERROR
-: <a class="el" href="log_8h.html#a6162a0362ed0042937bdbb5ce0724252">log.h</a>
-</li>
-<li>CAER_LOG_INFO
-: <a class="el" href="log_8h.html#a155f1b86062b86998037110b2a15c097">log.h</a>
-</li>
-<li>CAER_LOG_NOTICE
-: <a class="el" href="log_8h.html#ad5e2d12e0d115e7d2075f3ef51bcce05">log.h</a>
-</li>
-<li>CAER_LOG_WARNING
-: <a class="el" href="log_8h.html#a6f5005493ae02032cce8c720b69742d6">log.h</a>
+<li>caer_log_level
+: <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">log.h</a>
 </li>
 <li>CAER_POINT1D_CONST_ITERATOR_ALL_START
 : <a class="el" href="point1d_8h.html#a75a76fa33505126de46f6618fc882f45">point1d.h</a>
@@ -1248,19 +1227,19 @@ $(function() {
 : <a class="el" href="libcaer_8h.html#a7fffd68c40879d27f64fc5d7f84de9b5">libcaer.h</a>
 </li>
 <li>caerLog()
-: <a class="el" href="log_8h.html#a474123e1492eeb0afc99f8ee39e2429f">log.h</a>
+: <a class="el" href="log_8h.html#a30123d179e22994b733f80d173327625">log.h</a>
 </li>
 <li>caerLogFileDescriptorsSet()
 : <a class="el" href="log_8h.html#ad5d975dbf2a216cedfed263afa0f8e0b">log.h</a>
 </li>
 <li>caerLogLevelGet()
-: <a class="el" href="log_8h.html#a80dff9428c70f8674179be3c8a62ecf0">log.h</a>
+: <a class="el" href="log_8h.html#a7f3a980270b0df01546c3213a2d516ca">log.h</a>
 </li>
 <li>caerLogLevelSet()
-: <a class="el" href="log_8h.html#a99491654ca0d8ef34503ee3fc802944a">log.h</a>
+: <a class="el" href="log_8h.html#af3ca8e708844b4efcaea5f45dc8353ee">log.h</a>
 </li>
 <li>caerLogVA()
-: <a class="el" href="log_8h.html#ad7f3b02e95285e50d8908fc3c628f0fc">log.h</a>
+: <a class="el" href="log_8h.html#a726499cc47780d49e5fad0d74bec406c">log.h</a>
 </li>
 <li>caerPoint1DEvent
 : <a class="el" href="point1d_8h.html#a0fa9f0404e9336f5b39e1be253fb6b6a">point1d.h</a>
@@ -1718,12 +1697,6 @@ $(function() {
 <li>caerStrEqualsUpTo()
 : <a class="el" href="libcaer_8h.html#a31a66c1152f337dfc815400e6e7466d0">libcaer.h</a>
 </li>
-<li>CHANNEL_MASK
-: <a class="el" href="ear_8h.html#abdc82187828bad70b8b370705f080c24">ear.h</a>
-</li>
-<li>CHANNEL_SHIFT
-: <a class="el" href="ear_8h.html#a8db2d430f13a12623069e2c7fc4f32f3">ear.h</a>
-</li>
 <li>CLEAR_NUMBITS16
 : <a class="el" href="libcaer_8h.html#afe4c8840cab33720dee8df9d5f1deb9b">libcaer.h</a>
 </li>
@@ -1733,20 +1706,14 @@ $(function() {
 <li>CLEAR_NUMBITS8
 : <a class="el" href="libcaer_8h.html#aee4c6f4a2d140e02d0fa97c0f80c500b">libcaer.h</a>
 </li>
-<li>COLOR_CHANNELS_MASK
-: <a class="el" href="frame_8h.html#ab248036ca273533f042ec57bf289b7fc">frame.h</a>
-</li>
-<li>COLOR_CHANNELS_SHIFT
-: <a class="el" href="frame_8h.html#a8df80e94dc593509e3c4de65d27c451f">frame.h</a>
-</li>
-<li>COLOR_FILTER_MASK
-: <a class="el" href="frame_8h.html#a22b5a5e56c769140555e302023a8ffd6">frame.h</a>
-</li>
-<li>COLOR_FILTER_SHIFT
-: <a class="el" href="frame_8h.html#af400628e8324fbcd5c53ff56e22c9e96">frame.h</a>
-</li>
 <li>CONFIG_EVENT
 : <a class="el" href="common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019a5b5c1a4e48942794a64ab4b98e210b40">common.h</a>
+</li>
+<li>CONFIG_MODULE_ADDR_MASK
+: <a class="el" href="config_8h.html#abf0a58ffac82095dc250df0fa7e06252">config.h</a>
+</li>
+<li>CONFIG_MODULE_ADDR_SHIFT
+: <a class="el" href="config_8h.html#a58d3a5297c57cbf1a1ac8e7bfcc5a10a">config.h</a>
 </li>
 </ul>
 </div><!-- contents -->

@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['data_5fmask',['DATA_MASK',['../special_8h.html#a9e6a597bbfd901b2259ad39de928d0c0',1,'special.h']]],
-  ['data_5fshift',['DATA_SHIFT',['../special_8h.html#a42c64de05036a71c6476eb197fce5d2d',1,'special.h']]],
   ['davis128_5fconfig_5fbias_5fadccompbp',['DAVIS128_CONFIG_BIAS_ADCCOMPBP',['../davis_8h.html#acdccff60ebe44fb42961372f101597d7',1,'davis.h']]],
   ['davis128_5fconfig_5fbias_5fadcrefhigh',['DAVIS128_CONFIG_BIAS_ADCREFHIGH',['../davis_8h.html#a7a95db104987a485821f9db8cde117fb',1,'davis.h']]],
   ['davis128_5fconfig_5fbias_5fadcreflow',['DAVIS128_CONFIG_BIAS_ADCREFLOW',['../davis_8h.html#a758a46afb053d88dd88db68d526eb7c5',1,'davis.h']]],
