@@ -14,12 +14,16 @@
 extern "C" {
 #endif
 
+// DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
 enum caer_frame_utils_opencv_demosaic {
-	DEMOSAIC_NORMAL, DEMOSAIC_EDGE_AWARE, // DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
+	DEMOSAIC_NORMAL = 0,
+	DEMOSAIC_EDGE_AWARE = 1,
 };
 
 enum caer_frame_utils_opencv_contrast {
-	CONTRAST_NORMALIZATION, CONTRAST_HISTOGRAM_EQUALIZATION, CONTRAST_CLAHE,
+	CONTRAST_NORMALIZATION = 0,
+	CONTRAST_HISTOGRAM_EQUALIZATION = 1,
+	CONTRAST_CLAHE = 2,
 };
 
 caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
