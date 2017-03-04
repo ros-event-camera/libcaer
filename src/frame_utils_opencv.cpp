@@ -140,6 +140,11 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 		}
 	CAER_FRAME_ITERATOR_VALID_END
 
+	// Check if any frames did respect the requirements.
+	if (countValid == 0) {
+		return (NULL);
+	}
+
 	// Allocate new frame with RGB channels to hold resulting color image.
 	caerFrameEventPacket colorFramePacket = caerFrameEventPacketAllocate(countValid,
 		caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
