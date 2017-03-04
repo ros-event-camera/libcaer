@@ -918,10 +918,10 @@ static inline void caerFrameEventSetPixelUnsafe(caerFrameEvent event, int32_t xA
  */
 static inline uint16_t caerFrameEventGetPixelForChannelUnsafe(caerFrameEventConst event, int32_t xAddress, int32_t yAddress,
 	uint8_t channel) {
-	enum caer_frame_event_color_channels channels = caerFrameEventGetChannelNumber(event);
+	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
 	// Get pixel value at specified position.
 	return (le16toh(
-		event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * I32T(channels))+ channel]));
+		event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * channelNumber)+ channel]));
 }
 
 /**
@@ -938,9 +938,9 @@ static inline uint16_t caerFrameEventGetPixelForChannelUnsafe(caerFrameEventCons
  */
 static inline void caerFrameEventSetPixelForChannelUnsafe(caerFrameEvent event, int32_t xAddress, int32_t yAddress,
 	uint8_t channel, uint16_t pixelValue) {
-	enum caer_frame_event_color_channels channels = caerFrameEventGetChannelNumber(event);
+	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
 	// Set pixel value at specified position.
-	event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * I32T(channels)) + channel] = htole16(
+	event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * channelNumber) + channel] = htole16(
 		pixelValue);
 }
 
