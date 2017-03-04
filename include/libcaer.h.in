@@ -68,6 +68,11 @@ extern "C" {
 #define LIBCAER_VERSION_STRING "@PROJECT_VERSION_NOREV@"
 
 /**
+ * libcaer OpenCV support.
+ */
+#define LIBCAER_HAVE_OPENCV @ENABLE_OPENCV@
+
+/**
  * Cast argument to uint8_t (8bit unsigned integer).
  */
 #define U8T(X)  ((uint8_t)  (X))
