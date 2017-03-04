@@ -17,7 +17,8 @@ public:
 		}
 
 		int64_t getTimestamp64(const ConfigurationEventPacket &packet) const noexcept {
-			return (caerConfigurationEventGetTimestamp64(this, reinterpret_cast<caerConfigurationEventPacketConst>(packet.header)));
+			return (caerConfigurationEventGetTimestamp64(this,
+				reinterpret_cast<caerConfigurationEventPacketConst>(packet.header)));
 		}
 
 		void setTimestamp(int32_t ts) {
@@ -39,6 +40,30 @@ public:
 		void invalidate(ConfigurationEventPacket &packet) noexcept {
 			caerConfigurationEventInvalidate(this, reinterpret_cast<caerConfigurationEventPacket>(packet.header));
 		}
+
+		uint8_t getModuleAddress() const noexcept {
+			return (caerConfigurationEventGetModuleAddress(this));
+		}
+
+		void setModuleAddress(uint8_t modAddr) noexcept {
+			caerConfigurationEventSetModuleAddress(this, modAddr);
+		}
+
+		uint8_t getParameterAddress() const noexcept {
+			return (caerConfigurationEventGetParameterAddress(this));
+		}
+
+		void setParameterAddress(uint8_t paramAddr) noexcept {
+			caerConfigurationEventSetParameterAddress(this, paramAddr);
+		}
+
+		uint32_t getParameter() const noexcept {
+			return (caerConfigurationEventGetParameter(this));
+		}
+
+		void setParameter(uint32_t param) noexcept {
+			caerConfigurationEventSetParameter(this, param);
+		}
 	};
 
 	// Constructors.
@@ -47,7 +72,8 @@ public:
 			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
 		}
 
-		caerConfigurationEventPacket packet = caerConfigurationEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
+		caerConfigurationEventPacket packet = caerConfigurationEventPacketAllocate(eventCapacity, eventSource,
+			tsOverflow);
 		if (packet == nullptr) {
 			throw std::runtime_error("Failed to allocate configuration event packet.");
 		}
@@ -63,7 +89,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		ConfigurationEventBase *evtBase = caerConfigurationEventPacketGetEvent(reinterpret_cast<caerConfigurationEventPacket>(header), index);
+		ConfigurationEventBase *evtBase = caerConfigurationEventPacketGetEvent(
+			reinterpret_cast<caerConfigurationEventPacket>(header), index);
 		ConfigurationEvent *evt = static_cast<ConfigurationEvent *>(evtBase);
 
 		return (*evt);

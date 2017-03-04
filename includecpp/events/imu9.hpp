@@ -39,6 +39,86 @@ public:
 		void invalidate(IMU9EventPacket &packet) noexcept {
 			caerIMU9EventInvalidate(this, reinterpret_cast<caerIMU9EventPacket>(packet.header));
 		}
+
+		float getAccelX() const noexcept {
+			return (caerIMU9EventGetAccelX(this));
+		}
+
+		void setAccelX(float accelX) noexcept {
+			caerIMU9EventSetAccelX(this, accelX);
+		}
+
+		float getAccelY() const noexcept {
+			return (caerIMU9EventGetAccelY(this));
+		}
+
+		void setAccelY(float accelY) noexcept {
+			caerIMU9EventSetAccelY(this, accelY);
+		}
+
+		float getAccelZ() const noexcept {
+			return (caerIMU9EventGetAccelZ(this));
+		}
+
+		void setAccelZ(float accelZ) noexcept {
+			caerIMU9EventSetAccelZ(this, accelZ);
+		}
+
+		float getGyroX() const noexcept {
+			return (caerIMU9EventGetGyroX(this));
+		}
+
+		void setGyroX(float gyroX) noexcept {
+			caerIMU9EventSetGyroX(this, gyroX);
+		}
+
+		float getGyroY() const noexcept {
+			return (caerIMU9EventGetGyroY(this));
+		}
+
+		void setGyroY(float gyroY) noexcept {
+			caerIMU9EventSetGyroY(this, gyroY);
+		}
+
+		float getGyroZ() const noexcept {
+			return (caerIMU9EventGetGyroZ(this));
+		}
+
+		void setGyroZ(float gyroZ) noexcept {
+			caerIMU9EventSetGyroZ(this, gyroZ);
+		}
+
+		float getTemp() const noexcept {
+			return (caerIMU9EventGetTemp(this));
+		}
+
+		void setTemp(float t) noexcept {
+			caerIMU9EventSetTemp(this, t);
+		}
+
+		float getCompX() const noexcept {
+			return (caerIMU9EventGetCompX(this));
+		}
+
+		void setCompX(float compX) noexcept {
+			caerIMU9EventSetCompX(this, compX);
+		}
+
+		float getCompY() const noexcept {
+			return (caerIMU9EventGetCompY(this));
+		}
+
+		void setCompY(float compY) noexcept {
+			caerIMU9EventSetCompY(this, compY);
+		}
+
+		float getCompZ() const noexcept {
+			return (caerIMU9EventGetCompZ(this));
+		}
+
+		void setCompZ(float compZ) noexcept {
+			caerIMU9EventSetCompZ(this, compZ);
+		}
 	};
 
 	// Constructors.

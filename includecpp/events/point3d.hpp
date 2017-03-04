@@ -39,6 +39,46 @@ public:
 		void invalidate(Point3DEventPacket &packet) noexcept {
 			caerPoint3DEventInvalidate(this, reinterpret_cast<caerPoint3DEventPacket>(packet.header));
 		}
+
+		uint8_t getType() const noexcept {
+			return (caerPoint3DEventGetType(this));
+		}
+
+		void setType(uint8_t t) noexcept {
+			return (caerPoint3DEventSetType(this, t));
+		}
+
+		int8_t getScale() const noexcept {
+			return (caerPoint3DEventGetScale(this));
+		}
+
+		void setScale(int8_t s) noexcept {
+			return (caerPoint3DEventSetScale(this, s));
+		}
+
+		float getX() const noexcept {
+			return (caerPoint3DEventGetX(this));
+		}
+
+		void setX(float xVal) noexcept {
+			return (caerPoint3DEventSetX(this, xVal));
+		}
+
+		float getY() const noexcept {
+			return (caerPoint3DEventGetY(this));
+		}
+
+		void setY(float yVal) noexcept {
+			return (caerPoint3DEventSetY(this, yVal));
+		}
+
+		float getZ() const noexcept {
+			return (caerPoint3DEventGetZ(this));
+		}
+
+		void setZ(float zVal) noexcept {
+			return (caerPoint3DEventSetZ(this, zVal));
+		}
 	};
 
 	// Constructors.
@@ -63,7 +103,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		Point3DEventBase *evtBase = caerPoint3DEventPacketGetEvent(reinterpret_cast<caerPoint3DEventPacket>(header), index);
+		Point3DEventBase *evtBase = caerPoint3DEventPacketGetEvent(reinterpret_cast<caerPoint3DEventPacket>(header),
+			index);
 		Point3DEvent *evt = static_cast<Point3DEvent *>(evtBase);
 
 		return (*evt);

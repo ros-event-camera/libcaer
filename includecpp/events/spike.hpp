@@ -39,6 +39,38 @@ public:
 		void invalidate(SpikeEventPacket &packet) noexcept {
 			caerSpikeEventInvalidate(this, reinterpret_cast<caerSpikeEventPacket>(packet.header));
 		}
+
+		uint8_t getSourceCoreID() const noexcept {
+			return (caerSpikeEventGetSourceCoreID(this));
+		}
+
+		void setSourceCoreID(uint8_t coreID) noexcept {
+			caerSpikeEventSetSourceCoreID(this, coreID);
+		}
+
+		uint8_t getChipID() const noexcept {
+			return (caerSpikeEventGetChipID(this));
+		}
+
+		void setChipID(uint8_t chipID) noexcept {
+			caerSpikeEventSetChipID(this, chipID);
+		}
+
+		uint32_t getNeuronID() const noexcept {
+			return (caerSpikeEventGetNeuronID(this));
+		}
+
+		void setNeuronID(uint32_t neuronID) noexcept {
+			caerSpikeEventSetNeuronID(this, neuronID);
+		}
+
+		uint16_t getX() const noexcept {
+			return (caerSpikeEventGetX(this));
+		}
+
+		uint16_t getY() const noexcept {
+			return (caerSpikeEventGetY(this));
+		}
 	};
 
 	// Constructors.

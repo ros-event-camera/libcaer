@@ -39,6 +39,62 @@ public:
 		void invalidate(IMU6EventPacket &packet) noexcept {
 			caerIMU6EventInvalidate(this, reinterpret_cast<caerIMU6EventPacket>(packet.header));
 		}
+
+		float getAccelX() const noexcept {
+			return (caerIMU6EventGetAccelX(this));
+		}
+
+		void setAccelX(float accelX) noexcept {
+			caerIMU6EventSetAccelX(this, accelX);
+		}
+
+		float getAccelY() const noexcept {
+			return (caerIMU6EventGetAccelY(this));
+		}
+
+		void setAccelY(float accelY) noexcept {
+			caerIMU6EventSetAccelY(this, accelY);
+		}
+
+		float getAccelZ() const noexcept {
+			return (caerIMU6EventGetAccelZ(this));
+		}
+
+		void setAccelZ(float accelZ) noexcept {
+			caerIMU6EventSetAccelZ(this, accelZ);
+		}
+
+		float getGyroX() const noexcept {
+			return (caerIMU6EventGetGyroX(this));
+		}
+
+		void setGyroX(float gyroX) noexcept {
+			caerIMU6EventSetGyroX(this, gyroX);
+		}
+
+		float getGyroY() const noexcept {
+			return (caerIMU6EventGetGyroY(this));
+		}
+
+		void setGyroY(float gyroY) noexcept {
+			caerIMU6EventSetGyroY(this, gyroY);
+		}
+
+		float getGyroZ() const noexcept {
+			return (caerIMU6EventGetGyroZ(this));
+		}
+
+		void setGyroZ(float gyroZ) noexcept {
+			caerIMU6EventSetGyroZ(this, gyroZ);
+		}
+
+		float getTemp() const noexcept {
+			return (caerIMU6EventGetTemp(this));
+		}
+
+		void setTemp(float t) noexcept {
+			caerIMU6EventSetTemp(this, t);
+		}
 	};
 
 	// Constructors.

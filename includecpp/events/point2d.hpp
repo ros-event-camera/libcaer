@@ -39,6 +39,38 @@ public:
 		void invalidate(Point2DEventPacket &packet) noexcept {
 			caerPoint2DEventInvalidate(this, reinterpret_cast<caerPoint2DEventPacket>(packet.header));
 		}
+
+		uint8_t getType() const noexcept {
+			return (caerPoint2DEventGetType(this));
+		}
+
+		void setType(uint8_t t) noexcept {
+			return (caerPoint2DEventSetType(this, t));
+		}
+
+		int8_t getScale() const noexcept {
+			return (caerPoint2DEventGetScale(this));
+		}
+
+		void setScale(int8_t s) noexcept {
+			return (caerPoint2DEventSetScale(this, s));
+		}
+
+		float getX() const noexcept {
+			return (caerPoint2DEventGetX(this));
+		}
+
+		void setX(float xVal) noexcept {
+			return (caerPoint2DEventSetX(this, xVal));
+		}
+
+		float getY() const noexcept {
+			return (caerPoint2DEventGetY(this));
+		}
+
+		void setY(float yVal) noexcept {
+			return (caerPoint2DEventSetY(this, yVal));
+		}
 	};
 
 	// Constructors.
@@ -63,7 +95,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		Point2DEventBase *evtBase = caerPoint2DEventPacketGetEvent(reinterpret_cast<caerPoint2DEventPacket>(header), index);
+		Point2DEventBase *evtBase = caerPoint2DEventPacketGetEvent(reinterpret_cast<caerPoint2DEventPacket>(header),
+			index);
 		Point2DEvent *evt = static_cast<Point2DEvent *>(evtBase);
 
 		return (*evt);

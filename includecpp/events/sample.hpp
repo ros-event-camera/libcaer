@@ -39,6 +39,22 @@ public:
 		void invalidate(SampleEventPacket &packet) noexcept {
 			caerSampleEventInvalidate(this, reinterpret_cast<caerSampleEventPacket>(packet.header));
 		}
+
+		uint8_t getType() const noexcept {
+			return (caerSampleEventGetType(this));
+		}
+
+		void setType(uint8_t t) noexcept {
+			return (caerSampleEventSetType(this, t));
+		}
+
+		uint32_t getSample() const noexcept {
+			return (caerSampleEventGetSample(this));
+		}
+
+		void setSample(uint32_t s) noexcept {
+			return (caerSampleEventSetSample(this, s));
+		}
 	};
 
 	// Constructors.
@@ -63,7 +79,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		SampleEventBase *evtBase = caerSampleEventPacketGetEvent(reinterpret_cast<caerSampleEventPacket>(header), index);
+		SampleEventBase *evtBase = caerSampleEventPacketGetEvent(reinterpret_cast<caerSampleEventPacket>(header),
+			index);
 		SampleEvent *evt = static_cast<SampleEvent *>(evtBase);
 
 		return (*evt);

@@ -39,6 +39,30 @@ public:
 		void invalidate(PolarityEventPacket &packet) noexcept {
 			caerPolarityEventInvalidate(this, reinterpret_cast<caerPolarityEventPacket>(packet.header));
 		}
+
+		bool getPolarity() const noexcept {
+			return (caerPolarityEventGetPolarity(this));
+		}
+
+		void setPolarity(bool pol) noexcept {
+			caerPolarityEventSetPolarity(this, pol);
+		}
+
+		uint16_t getY() const noexcept {
+			return (caerPolarityEventGetY(this));
+		}
+
+		void setY(uint16_t y) noexcept {
+			caerPolarityEventSetY(this, y);
+		}
+
+		uint16_t getX() const noexcept {
+			return (caerPolarityEventGetX(this));
+		}
+
+		void setX(uint16_t x) noexcept {
+			caerPolarityEventSetX(this, x);
+		}
 	};
 
 	// Constructors.
@@ -63,7 +87,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		PolarityEventBase *evtBase = caerPolarityEventPacketGetEvent(reinterpret_cast<caerPolarityEventPacket>(header), index);
+		PolarityEventBase *evtBase = caerPolarityEventPacketGetEvent(reinterpret_cast<caerPolarityEventPacket>(header),
+			index);
 		PolarityEvent *evt = static_cast<PolarityEvent *>(evtBase);
 
 		return (*evt);

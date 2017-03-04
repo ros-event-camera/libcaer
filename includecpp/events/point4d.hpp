@@ -39,6 +39,54 @@ public:
 		void invalidate(Point4DEventPacket &packet) noexcept {
 			caerPoint4DEventInvalidate(this, reinterpret_cast<caerPoint4DEventPacket>(packet.header));
 		}
+
+		uint8_t getType() const noexcept {
+			return (caerPoint4DEventGetType(this));
+		}
+
+		void setType(uint8_t t) noexcept {
+			return (caerPoint4DEventSetType(this, t));
+		}
+
+		int8_t getScale() const noexcept {
+			return (caerPoint4DEventGetScale(this));
+		}
+
+		void setScale(int8_t s) noexcept {
+			return (caerPoint4DEventSetScale(this, s));
+		}
+
+		float getX() const noexcept {
+			return (caerPoint4DEventGetX(this));
+		}
+
+		void setX(float xVal) noexcept {
+			return (caerPoint4DEventSetX(this, xVal));
+		}
+
+		float getY() const noexcept {
+			return (caerPoint4DEventGetY(this));
+		}
+
+		void setY(float yVal) noexcept {
+			return (caerPoint4DEventSetY(this, yVal));
+		}
+
+		float getZ() const noexcept {
+			return (caerPoint4DEventGetZ(this));
+		}
+
+		void setZ(float zVal) noexcept {
+			return (caerPoint4DEventSetZ(this, zVal));
+		}
+
+		float getW() const noexcept {
+			return (caerPoint4DEventGetW(this));
+		}
+
+		void setW(float wVal) noexcept {
+			return (caerPoint4DEventSetW(this, wVal));
+		}
 	};
 
 	// Constructors.
@@ -63,7 +111,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		Point4DEventBase *evtBase = caerPoint4DEventPacketGetEvent(reinterpret_cast<caerPoint4DEventPacket>(header), index);
+		Point4DEventBase *evtBase = caerPoint4DEventPacketGetEvent(reinterpret_cast<caerPoint4DEventPacket>(header),
+			index);
 		Point4DEvent *evt = static_cast<Point4DEvent *>(evtBase);
 
 		return (*evt);

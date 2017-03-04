@@ -39,6 +39,30 @@ public:
 		void invalidate(Point1DEventPacket &packet) noexcept {
 			caerPoint1DEventInvalidate(this, reinterpret_cast<caerPoint1DEventPacket>(packet.header));
 		}
+
+		uint8_t getType() const noexcept {
+			return (caerPoint1DEventGetType(this));
+		}
+
+		void setType(uint8_t t) noexcept {
+			return (caerPoint1DEventSetType(this, t));
+		}
+
+		int8_t getScale() const noexcept {
+			return (caerPoint1DEventGetScale(this));
+		}
+
+		void setScale(int8_t s) noexcept {
+			return (caerPoint1DEventSetScale(this, s));
+		}
+
+		float getX() const noexcept {
+			return (caerPoint1DEventGetX(this));
+		}
+
+		void setX(float xVal) noexcept {
+			return (caerPoint1DEventSetX(this, xVal));
+		}
 	};
 
 	// Constructors.
@@ -63,7 +87,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		Point1DEventBase *evtBase = caerPoint1DEventPacketGetEvent(reinterpret_cast<caerPoint1DEventPacket>(header), index);
+		Point1DEventBase *evtBase = caerPoint1DEventPacketGetEvent(reinterpret_cast<caerPoint1DEventPacket>(header),
+			index);
 		Point1DEvent *evt = static_cast<Point1DEvent *>(evtBase);
 
 		return (*evt);

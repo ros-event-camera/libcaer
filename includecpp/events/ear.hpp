@@ -39,6 +39,38 @@ public:
 		void invalidate(EarEventPacket &packet) noexcept {
 			caerEarEventInvalidate(this, reinterpret_cast<caerEarEventPacket>(packet.header));
 		}
+
+		uint8_t getEar() const noexcept {
+			return (caerEarEventGetEar(this));
+		}
+
+		void setEar(uint8_t e) noexcept {
+			caerEarEventSetEar(this, e);
+		}
+
+		uint16_t getChannel() const noexcept {
+			return (caerEarEventGetChannel(this));
+		}
+
+		void setChannel(uint16_t c) noexcept {
+			caerEarEventSetChannel(this, c);
+		}
+
+		uint8_t getNeuron() const noexcept {
+			return (caerEarEventGetNeuron(this));
+		}
+
+		void setNeuron(uint8_t n) noexcept {
+			caerEarEventSetNeuron(this, n);
+		}
+
+		uint8_t getFilter() const noexcept {
+			return (caerEarEventGetFilter(this));
+		}
+
+		void setFilter(uint8_t f) noexcept {
+			caerEarEventSetFilter(this, f);
+		}
 	};
 
 	// Constructors.
@@ -74,8 +106,8 @@ public:
 			throw std::out_of_range("Index out of range.");
 		}
 
-		const EarEventBase *evtBase = caerEarEventPacketGetEventConst(
-			reinterpret_cast<caerEarEventPacketConst>(header), index);
+		const EarEventBase *evtBase = caerEarEventPacketGetEventConst(reinterpret_cast<caerEarEventPacketConst>(header),
+			index);
 		const EarEvent *evt = static_cast<const EarEvent *>(evtBase);
 
 		return (*evt);
