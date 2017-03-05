@@ -18,13 +18,13 @@ protected:
 	}
 
 public:
-	EventPacketHeader(caerEventPacketHeader h) {
-		if (h == nullptr) {
+	EventPacketHeader(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
 			throw std::runtime_error(
 				"Failed to initialize event packet header from existing C packet header: null pointer.");
 		}
 
-		header = h;
+		header = packetHeader;
 	}
 
 	// Destructor.
@@ -340,6 +340,15 @@ public:
 		}
 
 		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
+	}
+
+	// Direct underlying pointer access.
+	caerEventPacketHeader getHeaderPointer() noexcept {
+		return (header);
+	}
+
+	caerEventPacketHeaderConst getHeaderPointer() const noexcept {
+		return (header);
 	}
 
 	// Convenience methods.
