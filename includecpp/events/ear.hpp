@@ -89,10 +89,28 @@ public:
 
 	EarEventPacket(caerEarEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize ear event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != EAR_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	EarEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != EAR_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -127,6 +145,18 @@ public:
 
 	const EarEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	EarEventPacket copy() const {
+		return (EarEventPacket(internalCopy(header)));
+	}
+
+	EarEventPacket copyOnlyEvents() const {
+		return (EarEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	EarEventPacket copyOnlyValidEvents() const {
+		return (EarEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

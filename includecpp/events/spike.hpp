@@ -89,10 +89,28 @@ public:
 
 	SpikeEventPacket(caerSpikeEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize spike event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != SPIKE_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	SpikeEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != SPIKE_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -127,6 +145,18 @@ public:
 
 	const SpikeEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	SpikeEventPacket copy() const {
+		return (SpikeEventPacket(internalCopy(header)));
+	}
+
+	SpikeEventPacket copyOnlyEvents() const {
+		return (SpikeEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	SpikeEventPacket copyOnlyValidEvents() const {
+		return (SpikeEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

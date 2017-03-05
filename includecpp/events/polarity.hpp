@@ -81,10 +81,28 @@ public:
 
 	PolarityEventPacket(caerPolarityEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize polarity event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != POLARITY_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	PolarityEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != POLARITY_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -120,6 +138,18 @@ public:
 
 	const PolarityEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	PolarityEventPacket copy() const {
+		return (PolarityEventPacket(internalCopy(header)));
+	}
+
+	PolarityEventPacket copyOnlyEvents() const {
+		return (PolarityEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	PolarityEventPacket copyOnlyValidEvents() const {
+		return (PolarityEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

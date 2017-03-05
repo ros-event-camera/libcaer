@@ -81,10 +81,28 @@ public:
 
 	Point1DEventPacket(caerPoint1DEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize Point1D event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != POINT1D_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	Point1DEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != POINT1D_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -120,6 +138,18 @@ public:
 
 	const Point1DEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	Point1DEventPacket copy() const {
+		return (Point1DEventPacket(internalCopy(header)));
+	}
+
+	Point1DEventPacket copyOnlyEvents() const {
+		return (Point1DEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	Point1DEventPacket copyOnlyValidEvents() const {
+		return (Point1DEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

@@ -73,10 +73,28 @@ public:
 
 	SpecialEventPacket(caerSpecialEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize special event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != SPECIAL_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	SpecialEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != SPECIAL_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -112,6 +130,18 @@ public:
 
 	const SpecialEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	SpecialEventPacket copy() const {
+		return (SpecialEventPacket(internalCopy(header)));
+	}
+
+	SpecialEventPacket copyOnlyEvents() const {
+		return (SpecialEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	SpecialEventPacket copyOnlyValidEvents() const {
+		return (SpecialEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 
 	SpecialEvent &findEventByType(uint8_t type) {

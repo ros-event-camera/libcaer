@@ -113,10 +113,28 @@ public:
 
 	IMU6EventPacket(caerIMU6EventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize IMU6 event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != IMU6_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	IMU6EventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != IMU6_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -151,6 +169,18 @@ public:
 
 	const IMU6Event &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	IMU6EventPacket copy() const {
+		return (IMU6EventPacket(internalCopy(header)));
+	}
+
+	IMU6EventPacket copyOnlyEvents() const {
+		return (IMU6EventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	IMU6EventPacket copyOnlyValidEvents() const {
+		return (IMU6EventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

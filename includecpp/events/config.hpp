@@ -83,10 +83,28 @@ public:
 
 	ConfigurationEventPacket(caerConfigurationEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize configuration event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != CONFIG_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	ConfigurationEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != CONFIG_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -122,6 +140,18 @@ public:
 
 	const ConfigurationEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	ConfigurationEventPacket copy() const {
+		return (ConfigurationEventPacket(internalCopy(header)));
+	}
+
+	ConfigurationEventPacket copyOnlyEvents() const {
+		return (ConfigurationEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	ConfigurationEventPacket copyOnlyValidEvents() const {
+		return (ConfigurationEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

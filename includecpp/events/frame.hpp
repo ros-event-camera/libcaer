@@ -318,10 +318,28 @@ public:
 
 	FrameEventPacket(caerFrameEventPacket packet) {
 		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize frame event packet from existing C struct.");
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != FRAME_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
 		}
 
 		header = &packet->packetHeader;
+	}
+
+	FrameEventPacket(caerEventPacketHeader packetHeader) {
+		if (packetHeader == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
+		}
+
+		// Check for proper event type too!
+		if (caerEventPacketHeaderGetEventType(packetHeader) != FRAME_EVENT) {
+			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
+		}
+
+		header = packetHeader;
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
@@ -356,6 +374,18 @@ public:
 
 	const FrameEvent &operator[](size_t index) const {
 		return (getEvent(static_cast<int32_t>(index)));
+	}
+
+	FrameEventPacket copy() const {
+		return (FrameEventPacket(internalCopy(header)));
+	}
+
+	FrameEventPacket copyOnlyEvents() const {
+		return (FrameEventPacket(internalCopyOnlyEvents(header)));
+	}
+
+	FrameEventPacket copyOnlyValidEvents() const {
+		return (FrameEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 
 	size_t getPixelsSize() const noexcept {
