@@ -131,7 +131,7 @@ public:
 		return (caerEventPacketHeaderGetEventType(header));
 	}
 
-	void setEventType(int16_t eventType) const {
+	void setEventType(int16_t eventType) {
 		if (eventType < 0) {
 			throw std::invalid_argument("Negative event type not allowed.");
 		}
@@ -143,7 +143,7 @@ public:
 		return (caerEventPacketHeaderGetEventSource(header));
 	}
 
-	void setEventSource(int16_t eventSource) const {
+	void setEventSource(int16_t eventSource) {
 		if (eventSource < 0) {
 			throw std::invalid_argument("Negative event source not allowed.");
 		}
@@ -155,7 +155,7 @@ public:
 		return (caerEventPacketHeaderGetEventSize(header));
 	}
 
-	void setEventSize(int32_t eventSize) const {
+	void setEventSize(int32_t eventSize) {
 		if (eventSize < 0) {
 			throw std::invalid_argument("Negative event size not allowed.");
 		}
@@ -167,7 +167,7 @@ public:
 		return (caerEventPacketHeaderGetEventTSOffset(header));
 	}
 
-	void setEventTSOffset(int32_t eventTSOffset) const {
+	void setEventTSOffset(int32_t eventTSOffset) {
 		if (eventTSOffset < 0) {
 			throw std::invalid_argument("Negative event TS offset not allowed.");
 		}
@@ -179,7 +179,7 @@ public:
 		return (caerEventPacketHeaderGetEventTSOverflow(header));
 	}
 
-	void setEventTSOverflow(int32_t eventTSOverflow) const {
+	void setEventTSOverflow(int32_t eventTSOverflow) {
 		if (eventTSOverflow < 0) {
 			throw std::invalid_argument("Negative event TS overflow not allowed.");
 		}
@@ -191,7 +191,7 @@ public:
 		return (caerEventPacketHeaderGetEventCapacity(header));
 	}
 
-	void setEventCapacity(int32_t eventCapacity) const {
+	void setEventCapacity(int32_t eventCapacity) {
 		if (eventCapacity < 0) {
 			throw std::invalid_argument("Negative event capacity not allowed.");
 		}
@@ -203,7 +203,7 @@ public:
 		return (caerEventPacketHeaderGetEventNumber(header));
 	}
 
-	void setEventNumber(int32_t eventNumber) const {
+	void setEventNumber(int32_t eventNumber) {
 		if (eventNumber < 0) {
 			throw std::invalid_argument("Negative event number not allowed.");
 		}
@@ -215,7 +215,7 @@ public:
 		return (caerEventPacketHeaderGetEventValid(header));
 	}
 
-	void setEventValid(int32_t eventValid) const {
+	void setEventValid(int32_t eventValid) {
 		if (eventValid < 0) {
 			throw std::invalid_argument("Negative event valid not allowed.");
 		}
@@ -307,7 +307,7 @@ public:
 		}
 	}
 
-	EventPacketHeader copy() {
+	EventPacketHeader copy() const {
 		void *packetCopy = caerEventPacketCopy(header);
 		if (packetCopy == nullptr) {
 			throw std::bad_alloc();
@@ -316,7 +316,7 @@ public:
 		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
 	}
 
-	EventPacketHeader copyOnlyEvents() {
+	EventPacketHeader copyOnlyEvents() const {
 		if (getEventNumber() == 0) {
 			throw std::runtime_error("Copy would result in empty result.");
 		}
@@ -329,7 +329,7 @@ public:
 		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
 	}
 
-	EventPacketHeader copyOnlyValidEvents() {
+	EventPacketHeader copyOnlyValidEvents() const {
 		if (getEventValid() == 0) {
 			throw std::runtime_error("Copy would result in empty result.");
 		}
