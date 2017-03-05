@@ -156,7 +156,8 @@ public:
 				static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<
 					colorChannels>::type>(cNumber));
 
-			size_t neededMemory = (sizeof(uint16_t) * (size_t) lenX * (size_t) lenY * cNumberEnum);
+			size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY)
+				* cNumberEnum);
 
 			if (neededMemory > packet.getPixelsSize()) {
 				throw std::invalid_argument(
@@ -175,19 +176,19 @@ public:
 			return (caerFrameEventGetPixelsSize(this));
 		}
 
-		uint32_t getPositionX() const noexcept {
+		int32_t getPositionX() const noexcept {
 			return (caerFrameEventGetPositionX(this));
 		}
 
-		void setPositionX(uint32_t posX) noexcept {
+		void setPositionX(int32_t posX) noexcept {
 			caerFrameEventSetPositionX(this, posX);
 		}
 
-		uint32_t getPositionY() const noexcept {
+		int32_t getPositionY() const noexcept {
 			return (caerFrameEventGetPositionY(this));
 		}
 
-		void setPositionY(uint32_t posY) noexcept {
+		void setPositionY(int32_t posY) noexcept {
 			caerFrameEventSetPositionY(this, posY);
 		}
 
