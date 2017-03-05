@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 /**
- * Reference to an open device on which to operate.
+ * Pointer to an open device on which to operate.
  */
 typedef struct caer_device_handle *caerDeviceHandle;
 

@@ -945,7 +945,7 @@ static inline void caerFrameEventSetPixelForChannelUnsafe(caerFrameEvent event, 
 }
 
 /**
- * Get a direct reference to the underlying pixels array.
+ * Get a direct pointer to the underlying pixels array.
  * This can be used to both get and set values.
  * No checks at all are performed at any point, nor any
  * conversions, use this at your own risk!
@@ -963,7 +963,7 @@ static inline uint16_t *caerFrameEventGetPixelArrayUnsafe(caerFrameEvent event) 
 }
 
 /**
- * Get a direct read-only reference to the underlying pixels array.
+ * Get a direct read-only pointer to the underlying pixels array.
  * This can be used to only get values.
  * No checks at all are performed at any point, nor any
  * conversions, use this at your own risk!

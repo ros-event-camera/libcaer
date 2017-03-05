@@ -83,10 +83,10 @@ typedef const struct caer_event_packet_container *caerEventPacketContainerConst;
 
 /**
  * Allocate a new EventPacketContainer with enough space to
- * store up to the given number of EventPacket references.
- * All packet references will be NULL initially.
+ * store up to the given number of EventPacket pointers.
+ * All packet pointers will be NULL initially.
  *
- * @param eventPacketsNumber the maximum number of EventPacket references
+ * @param eventPacketsNumber the maximum number of EventPacket pointers
  *                           that can be stored in this container.
  *
  * @return a valid EventPacketContainer handle or NULL on error.
@@ -97,7 +97,7 @@ caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNu
  * Free the memory occupied by an EventPacketContainer, as well as
  * freeing all of its contained EventPackets and their memory.
  * If you don't want the contained EventPackets to be freed, make
- * sure that you set their reference to NULL before calling this.
+ * sure that you set their pointers to NULL before calling this.
 
  * @param container the container to be freed.
  */
@@ -107,12 +107,12 @@ void caerEventPacketContainerFree(caerEventPacketContainer container);
 static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketContainer container);
 
 /**
- * Get the maximum number of EventPacket references that can be stored
+ * Get the maximum number of EventPacket pointers that can be stored
  * in this particular EventPacketContainer.
  *
  * @param container a valid EventPacketContainer handle. If NULL, zero is returned.
  *
- * @return the number of EventPacket references that can be contained.
+ * @return the number of EventPacket pointers that can be contained.
  */
 static inline int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPacketContainerConst container) {
 	// Non-existing (empty) containers have no valid packets in them!
@@ -124,12 +124,12 @@ static inline int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPac
 }
 
 /**
- * Set the maximum number of EventPacket references that can be stored
+ * Set the maximum number of EventPacket pointers that can be stored
  * in this particular EventPacketContainer. This should never be used
  * directly, caerEventPacketContainerAllocate() sets this for you.
  *
  * @param container a valid EventPacketContainer handle. If NULL, nothing happens.
- * @param eventPacketsNumber the number of EventPacket references that can be contained.
+ * @param eventPacketsNumber the number of EventPacket pointers that can be contained.
  */
 static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacketContainer container,
 	int32_t eventPacketsNumber) {
@@ -152,13 +152,13 @@ static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacket
 }
 
 /**
- * Get the reference for the EventPacket stored in this container
+ * Get the pointer to the EventPacket stored in this container
  * at the given index.
  *
  * @param container a valid EventPacketContainer handle. If NULL, returns NULL too.
  * @param n the index of the EventPacket to get.
  *
- * @return a reference to an EventPacket or NULL on error.
+ * @return a pointer to an EventPacket or NULL on error.
  */
 static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerEventPacketContainerConst container,
 	int32_t n) {
@@ -180,14 +180,14 @@ static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerE
 }
 
 /**
- * Get the reference for the EventPacket stored in this container
+ * Get the pointer to the EventPacket stored in this container
  * at the given index.
  * This is a read-only EventPacket, do not change its contents in any way!
  *
  * @param container a valid EventPacketContainer handle. If NULL, returns NULL too.
  * @param n the index of the EventPacket to get.
  *
- * @return a reference to a read-only EventPacket or NULL on error.
+ * @return a pointer to a read-only EventPacket or NULL on error.
  */
 static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketConst(caerEventPacketContainerConst container, int32_t n) {
 	// Non-existing (empty) containers have no valid packets in them!
@@ -208,12 +208,12 @@ static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketC
 }
 
 /**
- * Set the reference for the EventPacket stored in this container
+ * Set the pointer to the EventPacket stored in this container
  * at the given index.
  *
  * @param container a valid EventPacketContainer handle. If NULL, nothing happens.
  * @param n the index of the EventPacket to set.
- * @param packetHeader a reference to an EventPacket's header. Can be NULL.
+ * @param packetHeader a pointer to an EventPacket's header. Can be NULL.
  */
 static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContainer container, int32_t n,
 	caerEventPacketHeader packetHeader) {
@@ -391,7 +391,7 @@ static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketConta
 }
 
 /**
- * Get the reference for an EventPacket stored in this container
+ * Get the pointer to an EventPacket stored in this container
  * with the given event type. This returns the first found event packet
  * with that type ID, or NULL if we get to the end without finding any
  * such event packet.
@@ -399,7 +399,7 @@ static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketConta
  * @param container a valid EventPacketContainer handle. If NULL, returns NULL too.
  * @param typeID the event type to search for.
  *
- * @return a reference to an EventPacket with a certain type or NULL if none found.
+ * @return a pointer to an EventPacket with a certain type or NULL if none found.
  */
 static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByType(caerEventPacketContainerConst container,
 	int16_t typeID) {
@@ -420,7 +420,7 @@ static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByTyp
 }
 
 /**
- * Get the reference for a read-only EventPacket stored in this container
+ * Get the pointer to a read-only EventPacket stored in this container
  * with the given event type. This returns the first found event packet
  * with that type ID, or NULL if we get to the end without finding any
  * such event packet.
@@ -428,7 +428,7 @@ static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByTyp
  * @param container a valid EventPacketContainer handle. If NULL, returns NULL too.
  * @param typeID the event type to search for.
  *
- * @return a reference to a read-only EventPacket with a certain type or NULL if none found.
+ * @return a pointer to a read-only EventPacket with a certain type or NULL if none found.
  */
 static inline caerEventPacketHeaderConst caerEventPacketContainerFindEventPacketByTypeConst(caerEventPacketContainerConst container,
 	int16_t typeID) {
