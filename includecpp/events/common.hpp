@@ -17,13 +17,16 @@ protected:
 			header(nullptr) {
 	}
 
-private:
-	// Only used for copy*() methods.
-	EventPacketHeader(caerEventPacketHeader h) :
-			header(h) {
+public:
+	EventPacketHeader(caerEventPacketHeader h) {
+		if (h == nullptr) {
+			throw std::runtime_error(
+				"Failed to initialize event packet header from existing C packet header: null pointer.");
+		}
+
+		header = h;
 	}
 
-public:
 	// Destructor.
 	~EventPacketHeader() {
 		// All EventPackets must have been allocated somewhere on the heap,
