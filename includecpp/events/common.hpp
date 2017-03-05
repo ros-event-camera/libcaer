@@ -37,12 +37,7 @@ public:
 	// Copy constructor.
 	EventPacketHeader(const EventPacketHeader &rhs) {
 		// Full copy.
-		caerEventPacketHeader copy = static_cast<caerEventPacketHeader>(caerEventPacketCopy(rhs.header));
-		if (copy == nullptr) {
-			throw std::runtime_error("Failed to copy construct event packet.");
-		}
-
-		header = copy;
+		header = internalCopy(rhs.header);
 	}
 
 	// Copy assignment.
@@ -58,11 +53,8 @@ public:
 			}
 
 			// They are, so we can make a copy, and if successful, put it in place
-			// of the old data.
-			caerEventPacketHeader copy = static_cast<caerEventPacketHeader>(caerEventPacketCopy(rhs.header));
-			if (copy == nullptr) {
-				throw std::runtime_error("Failed to copy assign event packet.");
-			}
+			// of the old data. internalCopy() checks for nullptr.
+			caerEventPacketHeader copy = internalCopy(rhs.header);
 
 			free(header);
 
@@ -308,38 +300,15 @@ public:
 	}
 
 	EventPacketHeader copy() const {
-		void *packetCopy = caerEventPacketCopy(header);
-		if (packetCopy == nullptr) {
-			throw std::bad_alloc();
-		}
-
-		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
+		return (EventPacketHeader(internalCopy(header)));
 	}
 
 	EventPacketHeader copyOnlyEvents() const {
-		if (getEventNumber() == 0) {
-			throw std::runtime_error("Copy would result in empty result.");
-		}
-
-		void *packetCopy = caerEventPacketCopyOnlyEvents(header);
-		if (packetCopy == nullptr) {
-			throw std::bad_alloc();
-		}
-
-		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
+		return (EventPacketHeader(internalCopyOnlyEvents(header)));
 	}
 
 	EventPacketHeader copyOnlyValidEvents() const {
-		if (getEventValid() == 0) {
-			throw std::runtime_error("Copy would result in empty result.");
-		}
-
-		void *packetCopy = caerEventPacketCopyOnlyValidEvents(header);
-		if (packetCopy == nullptr) {
-			throw std::bad_alloc();
-		}
-
-		return (EventPacketHeader(static_cast<caerEventPacketHeader>(packetCopy)));
+		return (EventPacketHeader(internalCopyOnlyValidEvents(header)));
 	}
 
 	// Direct underlying pointer access.
@@ -362,6 +331,43 @@ public:
 
 	bool empty() const noexcept {
 		return (getEventNumber() == 0);
+	}
+
+protected:
+	// Internal copy functions.
+	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header) {
+		void *packetCopy = caerEventPacketCopy(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (static_cast<caerEventPacketHeader>(packetCopy));
+	}
+
+	static caerEventPacketHeader internalCopyOnlyEvents(caerEventPacketHeaderConst header) {
+		if (caerEventPacketHeaderGetEventNumber(header) == 0) {
+			throw std::runtime_error("Copy would result in empty result.");
+		}
+
+		void *packetCopy = caerEventPacketCopyOnlyEvents(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (static_cast<caerEventPacketHeader>(packetCopy));
+	}
+
+	static caerEventPacketHeader internalCopyOnlyValidEvents(caerEventPacketHeaderConst header) {
+		if (caerEventPacketHeaderGetEventValid(header) == 0) {
+			throw std::runtime_error("Copy would result in empty result.");
+		}
+
+		void *packetCopy = caerEventPacketCopyOnlyValidEvents(header);
+		if (packetCopy == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return (static_cast<caerEventPacketHeader>(packetCopy));
 	}
 };
 
