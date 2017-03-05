@@ -254,8 +254,8 @@ public:
 	}
 
 	void resize(int32_t newEventCapacity) {
-		if (newEventCapacity == 0) {
-			throw std::invalid_argument("New event capacity cannot be zero.");
+		if (newEventCapacity <= 0) {
+			throw std::invalid_argument("Negative or zero event capacity not allowed.");
 		}
 
 		caerEventPacketHeader resizedPacket = caerEventPacketResize(header, newEventCapacity);
@@ -268,8 +268,8 @@ public:
 	}
 
 	void grow(int32_t newEventCapacity) {
-		if (newEventCapacity == 0) {
-			throw std::invalid_argument("New event capacity cannot be zero.");
+		if (newEventCapacity <= 0) {
+			throw std::invalid_argument("Negative or zero event capacity not allowed.");
 		}
 		if (newEventCapacity <= getEventCapacity()) {
 			throw std::invalid_argument("New event capacity must be strictly bigger than old one.");

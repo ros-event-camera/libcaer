@@ -544,7 +544,7 @@ static inline void caerEventPacketClean(void *eventPacket) {
  * have been cleaned of all invalid events!
  */
 static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader packet, int32_t newEventCapacity) {
-	if (packet == NULL || newEventCapacity == 0) {
+	if (packet == NULL || newEventCapacity <= 0) {
 		return (NULL);
 	}
 
@@ -612,7 +612,7 @@ static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader 
  * used anymore. On failure, the old packet handle is not touched in any way.
  */
 static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader packet, int32_t newEventCapacity) {
-	if (packet == NULL || newEventCapacity == 0) {
+	if (packet == NULL || newEventCapacity <= 0) {
 		return (NULL);
 	}
 
