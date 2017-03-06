@@ -68,6 +68,13 @@ enum caer_default_event_types {
 };
 
 /**
+ * Number of default event types that are part of libcaer.
+ * Corresponds to the count of definitions inside the
+ * 'enum caer_default_event_types' enumeration.
+ */
+#define CAER_DEFAULT_EVENT_TYPES_COUNT 13
+
+/**
  * Size of the EventPacket header.
  * This is constant across all supported systems.
  */
