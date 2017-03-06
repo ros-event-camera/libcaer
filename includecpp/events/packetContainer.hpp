@@ -291,15 +291,15 @@ public:
 	 *
 	 * @return a deep copy of this event packet container, containing all events.
 	 */
-	EventPacketContainer copyAllEvents() const {
-		EventPacketContainer newContainer = EventPacketContainer();
+	EventPacketContainer *copyAllEvents() const {
+		EventPacketContainer *newContainer = new EventPacketContainer();
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
-				newContainer.add(nullptr);
+				newContainer->add(nullptr);
 			}
 			else {
-				newContainer.add(std::make_shared<EventPacketHeader>(packet->copyOnlyEvents()));
+				newContainer->add(std::shared_ptr<EventPacketHeader>(packet->copyOnlyEvents()));
 			}
 		}
 
@@ -318,15 +318,15 @@ public:
 	 *
 	 * @return a deep copy of this event packet container, containing only valid events.
 	 */
-	EventPacketContainer copyValidEvents() const {
-		EventPacketContainer newContainer = EventPacketContainer();
+	EventPacketContainer *copyValidEvents() const {
+		EventPacketContainer *newContainer = new EventPacketContainer();
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
-				newContainer.add(nullptr);
+				newContainer->add(nullptr);
 			}
 			else {
-				newContainer.add(std::make_shared<EventPacketHeader>(packet->copyOnlyValidEvents()));
+				newContainer->add(std::shared_ptr<EventPacketHeader>(packet->copyOnlyValidEvents()));
 			}
 		}
 
