@@ -50,12 +50,9 @@ public:
 	EventPacketHeader &operator=(const EventPacketHeader &rhs) {
 		// If both the same, do nothing.
 		if (this != &rhs) {
-			// Different packets, so we need to check if they are the same type and size.
+			// Different packets, so we need to check if they are the same type.
 			if (getEventType() != rhs.getEventType()) {
 				throw std::invalid_argument("Event type must be the same.");
-			}
-			if (getEventSize() != rhs.getEventSize()) {
-				throw std::invalid_argument("Event size must be the same.");
 			}
 
 			// They are, so we can make a copy, and if successful, put it in place
@@ -71,55 +68,39 @@ public:
 	}
 
 	// Move constructor.
-	EventPacketHeader(EventPacketHeader &&rhs) {
-		// Moved-from object must remain in a valid state. Setting it to NULL is not
-		// a valid state, as it would lead to segfaults on any call. Instead we allocate
-		// a small header with no events (capacity=0), which will return sensible values
-		// on calls, and refuse to give out access to any events (doesn't have any!).
-		caerEventPacketHeader emptyPacket = static_cast<caerEventPacketHeader>(malloc(CAER_EVENT_PACKET_HEADER_SIZE));
-		if (emptyPacket == nullptr) {
-			throw std::runtime_error("Failed to move construct event packet.");
-		}
-
-		memcpy(emptyPacket, rhs.header, 16);
-		memset(reinterpret_cast<uint8_t *>(emptyPacket) + 16, 0, 12);
+	EventPacketHeader(EventPacketHeader &&rhs) noexcept {
+		// Moved-from object must remain in a valid state. We can define
+		// valid-state-after-move to be nothing allowed but a destructor
+		// call, which is what normally happens, and helps us a lot here.
 
 		// Move data here.
 		header = rhs.header;
 
-		rhs.header = emptyPacket;
+		// Reset old data (ready for destruction).
+		rhs.header = nullptr;
 	}
 
 	// Move assignment.
 	EventPacketHeader &operator=(EventPacketHeader &&rhs) {
 		assert(this != &rhs);
 
-		// Different packets, so we need to check if they are the same type and size.
+		// Different packets, so we need to check if they are the same type.
 		if (getEventType() != rhs.getEventType()) {
 			throw std::invalid_argument("Event type must be the same.");
 		}
-		if (getEventSize() != rhs.getEventSize()) {
-			throw std::invalid_argument("Event size must be the same.");
-		}
 
-		// Moved-from object must remain in a valid state. Setting it to NULL is not
-		// a valid state, as it would lead to segfaults on any call. Instead we allocate
-		// a small header with no events (capacity=0), which will return sensible values
-		// on calls, and refuse to give out access to any events (doesn't have any!).
-		caerEventPacketHeader emptyPacket = static_cast<caerEventPacketHeader>(malloc(CAER_EVENT_PACKET_HEADER_SIZE));
-		if (emptyPacket == nullptr) {
-			throw std::runtime_error("Failed to move assign event packet.");
-		}
+		// Moved-from object must remain in a valid state. We can define
+		// valid-state-after-move to be nothing allowed but a destructor
+		// call, which is what normally happens, and helps us a lot here.
 
-		memcpy(emptyPacket, rhs.header, 16);
-		memset(reinterpret_cast<uint8_t *>(emptyPacket) + 16, 0, 12);
-
-		// Packets are compatible, so we can move the data here.
+		// Destroy current data.
 		free(header);
 
+		// Move data here.
 		header = rhs.header;
 
-		rhs.header = emptyPacket;
+		// Reset old data (ready for destruction).
+		rhs.header = nullptr;
 
 		return (*this);
 	}
