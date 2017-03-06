@@ -10,8 +10,16 @@ namespace libcaer {
 namespace devices {
 
 class usb {
+private:
+	// Private deleter class for shared_ptr.
+	static void deleteDeviceHandle(caerDeviceHandle h) {
+		// Run destructor, free all memory.
+		// Never fails in current implementation.
+		caerDeviceClose(&h);
+	}
+
 protected:
-	caerDeviceHandle handle;
+	std::shared_ptr<struct caer_device_handle> handle;
 
 	usb(uint16_t deviceID, uint16_t deviceType) :
 			usb(deviceID, deviceType, 0, 0, "") {
@@ -19,39 +27,34 @@ protected:
 
 	usb(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 		const std::string &serialNumberRestrict) {
-		handle = caerDeviceOpen(deviceID, deviceType, busNumberRestrict, devAddressRestrict,
+		caerDeviceHandle h = caerDeviceOpen(deviceID, deviceType, busNumberRestrict, devAddressRestrict,
 			(serialNumberRestrict.empty()) ? (nullptr) : (serialNumberRestrict.c_str()));
 
 		// Handle constructor failure.
-		if (handle == nullptr) {
+		if (h == nullptr) {
 			throw std::runtime_error("Failed to open device.");
 		}
+
+		handle = std::shared_ptr<struct caer_device_handle>(h, &deleteDeviceHandle);
 	}
 
 public:
-	// This can be called from base class pointers!
-	~usb() {
-		// Run destructors, free all memory.
-		// Never fails in current implementation.
-		caerDeviceClose(&handle);
-	}
-
 	void sendDefaultConfig() const {
-		bool success = caerDeviceSendDefaultConfig(handle);
+		bool success = caerDeviceSendDefaultConfig(handle.get());
 		if (!success) {
 			throw std::runtime_error("Failed to send default configuration.");
 		}
 	}
 
 	void configSet(int8_t modAddr, uint8_t paramAddr, uint32_t param) const {
-		bool success = caerDeviceConfigSet(handle, modAddr, paramAddr, param);
+		bool success = caerDeviceConfigSet(handle.get(), modAddr, paramAddr, param);
 		if (!success) {
 			throw std::runtime_error("Failed to set configuration parameter.");
 		}
 	}
 
 	void configGet(int8_t modAddr, uint8_t paramAddr, uint32_t *param) const {
-		bool success = caerDeviceConfigGet(handle, modAddr, paramAddr, param);
+		bool success = caerDeviceConfigGet(handle.get(), modAddr, paramAddr, param);
 		if (!success) {
 			throw std::runtime_error("Failed to get configuration parameter.");
 		}
@@ -69,7 +72,7 @@ public:
 
 	void dataStart(void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 		void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) const {
-		bool success = caerDeviceDataStart(handle, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
+		bool success = caerDeviceDataStart(handle.get(), dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
 			dataShutdownNotify, dataShutdownUserPtr);
 		if (!success) {
 			throw std::runtime_error("Failed to start getting data.");
@@ -77,14 +80,14 @@ public:
 	}
 
 	void dataStop() const {
-		bool success = caerDeviceDataStop(handle);
+		bool success = caerDeviceDataStop(handle.get());
 		if (!success) {
 			throw std::runtime_error("Failed to stop getting data.");
 		}
 	}
 
 	std::shared_ptr<libcaer::events::EventPacketContainer> dataGet() const {
-		caerEventPacketContainer cContainer = caerDeviceDataGet(handle);
+		caerEventPacketContainer cContainer = caerDeviceDataGet(handle.get());
 		if (cContainer == nullptr) {
 			// NULL return means no data, forward that.
 			return (nullptr);

@@ -21,7 +21,7 @@ public:
 	}
 
 	struct caer_dvs128_info infoGet() const noexcept {
-		return (caerDVS128InfoGet(handle));
+		return (caerDVS128InfoGet(handle.get()));
 	}
 };
 

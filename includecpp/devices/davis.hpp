@@ -26,7 +26,7 @@ protected:
 
 public:
 	struct caer_davis_info infoGet() const noexcept {
-		return (caerDavisInfoGet(handle));
+		return (caerDavisInfoGet(handle.get()));
 	}
 
 	// STATIC.

@@ -47,7 +47,7 @@ public:
 			eventsValidNumber(0),
 			eventPackets(eventPacketsNumber) {
 		for (size_t i = 0; i < eventPacketsNumber; i++) {
-			eventPackets.emplace_back();
+			eventPackets.emplace_back(); // Call empty constructor.
 		}
 	}
 
