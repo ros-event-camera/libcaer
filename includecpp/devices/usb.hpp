@@ -14,7 +14,7 @@ protected:
 	caerDeviceHandle handle;
 
 	usb(uint16_t deviceID, uint16_t deviceType) :
-			usb(deviceID, deviceType, 0, 0, std::string()) {
+			usb(deviceID, deviceType, 0, 0, "") {
 	}
 
 	usb(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
