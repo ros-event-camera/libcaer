@@ -21,7 +21,13 @@ public:
 	EventPacketHeader(caerEventPacketHeader packetHeader) {
 		if (packetHeader == nullptr) {
 			throw std::runtime_error(
-				"Failed to initialize event packet header from existing C packet header: null pointer.");
+				"Failed to initialize EventPacketHeader from existing C packet header: null pointer.");
+		}
+
+		if (caerEventPacketHeaderGetEventType(packetHeader) < CAER_DEFAULT_EVENT_TYPES_COUNT) {
+			throw std::runtime_error(
+				"Failed to initialize EventPacketHeader from existing C packet header: default event types are not allowed. "
+					"Always call the proper specialized <Type>EventPacket constructor, to guarantee proper RTTI initialization.");
 		}
 
 		header = packetHeader;
