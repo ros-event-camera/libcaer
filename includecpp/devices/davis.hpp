@@ -16,7 +16,7 @@ class davis: public usb {
 protected:
 	// Forward construction to base class.
 	davis(uint16_t deviceID, uint16_t deviceType) :
-			usb(deviceID, deviceType, 0, 0, std::string()) {
+			usb(deviceID, deviceType) {
 	}
 
 	davis(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
