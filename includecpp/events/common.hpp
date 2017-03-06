@@ -28,7 +28,7 @@ public:
 	}
 
 	// Destructor.
-	~EventPacketHeader() {
+	virtual ~EventPacketHeader() {
 		// All EventPackets must have been allocated somewhere on the heap,
 		// and can thus always be passed to free(). free(nullptr) does nothing.
 		free(header);
@@ -299,16 +299,16 @@ public:
 		}
 	}
 
-	EventPacketHeader copy() const {
-		return (EventPacketHeader(internalCopy(header)));
+	virtual EventPacketHeader *copy() const {
+		return (new EventPacketHeader(internalCopy(header)));
 	}
 
-	EventPacketHeader copyOnlyEvents() const {
-		return (EventPacketHeader(internalCopyOnlyEvents(header)));
+	virtual EventPacketHeader *copyOnlyEvents() const {
+		return (new EventPacketHeader(internalCopyOnlyEvents(header)));
 	}
 
-	EventPacketHeader copyOnlyValidEvents() const {
-		return (EventPacketHeader(internalCopyOnlyValidEvents(header)));
+	virtual EventPacketHeader *copyOnlyValidEvents() const {
+		return (new EventPacketHeader(internalCopyOnlyValidEvents(header)));
 	}
 
 	// Direct underlying pointer access.

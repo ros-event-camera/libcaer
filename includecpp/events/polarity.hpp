@@ -140,16 +140,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	PolarityEventPacket copy() const {
-		return (PolarityEventPacket(internalCopy(header)));
+	virtual PolarityEventPacket *copy() const override {
+		return (new PolarityEventPacket(internalCopy(header)));
 	}
 
-	PolarityEventPacket copyOnlyEvents() const {
-		return (PolarityEventPacket(internalCopyOnlyEvents(header)));
+	virtual PolarityEventPacket *copyOnlyEvents() const override {
+		return (new PolarityEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	PolarityEventPacket copyOnlyValidEvents() const {
-		return (PolarityEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual PolarityEventPacket *copyOnlyValidEvents() const override {
+		return (new PolarityEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

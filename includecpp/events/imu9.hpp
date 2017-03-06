@@ -195,16 +195,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	IMU9EventPacket copy() const {
-		return (IMU9EventPacket(internalCopy(header)));
+	virtual IMU9EventPacket *copy() const override {
+		return (new IMU9EventPacket(internalCopy(header)));
 	}
 
-	IMU9EventPacket copyOnlyEvents() const {
-		return (IMU9EventPacket(internalCopyOnlyEvents(header)));
+	virtual IMU9EventPacket *copyOnlyEvents() const override {
+		return (new IMU9EventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	IMU9EventPacket copyOnlyValidEvents() const {
-		return (IMU9EventPacket(internalCopyOnlyValidEvents(header)));
+	virtual IMU9EventPacket *copyOnlyValidEvents() const override {
+		return (new IMU9EventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

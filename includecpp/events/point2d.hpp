@@ -148,16 +148,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	Point2DEventPacket copy() const {
-		return (Point2DEventPacket(internalCopy(header)));
+	virtual Point2DEventPacket *copy() const override {
+		return (new Point2DEventPacket(internalCopy(header)));
 	}
 
-	Point2DEventPacket copyOnlyEvents() const {
-		return (Point2DEventPacket(internalCopyOnlyEvents(header)));
+	virtual Point2DEventPacket *copyOnlyEvents() const override {
+		return (new Point2DEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	Point2DEventPacket copyOnlyValidEvents() const {
-		return (Point2DEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual Point2DEventPacket *copyOnlyValidEvents() const override {
+		return (new Point2DEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

@@ -147,16 +147,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	EarEventPacket copy() const {
-		return (EarEventPacket(internalCopy(header)));
+	virtual EarEventPacket *copy() const override {
+		return (new EarEventPacket(internalCopy(header)));
 	}
 
-	EarEventPacket copyOnlyEvents() const {
-		return (EarEventPacket(internalCopyOnlyEvents(header)));
+	virtual EarEventPacket *copyOnlyEvents() const override {
+		return (new EarEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	EarEventPacket copyOnlyValidEvents() const {
-		return (EarEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual EarEventPacket *copyOnlyValidEvents() const override {
+		return (new EarEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

@@ -142,16 +142,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	ConfigurationEventPacket copy() const {
-		return (ConfigurationEventPacket(internalCopy(header)));
+	virtual ConfigurationEventPacket *copy() const override {
+		return (new ConfigurationEventPacket(internalCopy(header)));
 	}
 
-	ConfigurationEventPacket copyOnlyEvents() const {
-		return (ConfigurationEventPacket(internalCopyOnlyEvents(header)));
+	virtual ConfigurationEventPacket *copyOnlyEvents() const override {
+		return (new ConfigurationEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	ConfigurationEventPacket copyOnlyValidEvents() const {
-		return (ConfigurationEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual ConfigurationEventPacket *copyOnlyValidEvents() const override {
+		return (new ConfigurationEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

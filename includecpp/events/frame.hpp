@@ -377,16 +377,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	FrameEventPacket copy() const {
-		return (FrameEventPacket(internalCopy(header)));
+	virtual FrameEventPacket *copy() const override {
+		return (new FrameEventPacket(internalCopy(header)));
 	}
 
-	FrameEventPacket copyOnlyEvents() const {
-		return (FrameEventPacket(internalCopyOnlyEvents(header)));
+	virtual FrameEventPacket *copyOnlyEvents() const override {
+		return (new FrameEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	FrameEventPacket copyOnlyValidEvents() const {
-		return (FrameEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual FrameEventPacket *copyOnlyValidEvents() const override {
+		return (new FrameEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 
 	size_t getPixelsSize() const noexcept {

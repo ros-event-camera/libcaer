@@ -132,16 +132,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	SpecialEventPacket copy() const {
-		return (SpecialEventPacket(internalCopy(header)));
+	virtual SpecialEventPacket *copy() const override {
+		return (new SpecialEventPacket(internalCopy(header)));
 	}
 
-	SpecialEventPacket copyOnlyEvents() const {
-		return (SpecialEventPacket(internalCopyOnlyEvents(header)));
+	virtual SpecialEventPacket *copyOnlyEvents() const override {
+		return (new SpecialEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	SpecialEventPacket copyOnlyValidEvents() const {
-		return (SpecialEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual SpecialEventPacket *copyOnlyValidEvents() const override {
+		return (new SpecialEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 
 	SpecialEvent &findEventByType(uint8_t type) {

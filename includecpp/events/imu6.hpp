@@ -171,16 +171,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	IMU6EventPacket copy() const {
-		return (IMU6EventPacket(internalCopy(header)));
+	virtual IMU6EventPacket *copy() const override {
+		return (new IMU6EventPacket(internalCopy(header)));
 	}
 
-	IMU6EventPacket copyOnlyEvents() const {
-		return (IMU6EventPacket(internalCopyOnlyEvents(header)));
+	virtual IMU6EventPacket *copyOnlyEvents() const override {
+		return (new IMU6EventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	IMU6EventPacket copyOnlyValidEvents() const {
-		return (IMU6EventPacket(internalCopyOnlyValidEvents(header)));
+	virtual IMU6EventPacket *copyOnlyValidEvents() const override {
+		return (new IMU6EventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

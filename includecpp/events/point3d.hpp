@@ -156,16 +156,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	Point3DEventPacket copy() const {
-		return (Point3DEventPacket(internalCopy(header)));
+	virtual Point3DEventPacket *copy() const override {
+		return (new Point3DEventPacket(internalCopy(header)));
 	}
 
-	Point3DEventPacket copyOnlyEvents() const {
-		return (Point3DEventPacket(internalCopyOnlyEvents(header)));
+	virtual Point3DEventPacket *copyOnlyEvents() const override {
+		return (new Point3DEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	Point3DEventPacket copyOnlyValidEvents() const {
-		return (Point3DEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual Point3DEventPacket *copyOnlyValidEvents() const override {
+		return (new Point3DEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

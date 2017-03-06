@@ -147,16 +147,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	SpikeEventPacket copy() const {
-		return (SpikeEventPacket(internalCopy(header)));
+	virtual SpikeEventPacket *copy() const override {
+		return (new SpikeEventPacket(internalCopy(header)));
 	}
 
-	SpikeEventPacket copyOnlyEvents() const {
-		return (SpikeEventPacket(internalCopyOnlyEvents(header)));
+	virtual SpikeEventPacket *copyOnlyEvents() const override {
+		return (new SpikeEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	SpikeEventPacket copyOnlyValidEvents() const {
-		return (SpikeEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual SpikeEventPacket *copyOnlyValidEvents() const override {
+		return (new SpikeEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

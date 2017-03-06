@@ -164,16 +164,16 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
-	Point4DEventPacket copy() const {
-		return (Point4DEventPacket(internalCopy(header)));
+	virtual Point4DEventPacket *copy() const override {
+		return (new Point4DEventPacket(internalCopy(header)));
 	}
 
-	Point4DEventPacket copyOnlyEvents() const {
-		return (Point4DEventPacket(internalCopyOnlyEvents(header)));
+	virtual Point4DEventPacket *copyOnlyEvents() const override {
+		return (new Point4DEventPacket(internalCopyOnlyEvents(header)));
 	}
 
-	Point4DEventPacket copyOnlyValidEvents() const {
-		return (Point4DEventPacket(internalCopyOnlyValidEvents(header)));
+	virtual Point4DEventPacket *copyOnlyValidEvents() const override {
+		return (new Point4DEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 
