@@ -1,6 +1,4 @@
-#include <libcaer/libcaer.h>
-#include <libcaer/devices/davis.h>
-#include <cstdio>
+#include <libcaercpp/devices/davis.hpp>
 #include <csignal>
 #include <atomic>
 #include <SFML/Audio.hpp>
@@ -49,13 +47,10 @@ int main(void) {
 #endif
 
 	// Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	caerDeviceHandle davis_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX3, 0, 0, NULL);
-	if (davis_handle == NULL) {
-		return (EXIT_FAILURE);
-	}
+	libcaer::devices::davisfx3 davisHandle = libcaer::devices::davisfx3(1, 0, 0, "");
 
 	// Let's take a look at the information we have on the device.
-	struct caer_davis_info davis_info = caerDavisInfoGet(davis_handle);
+	struct caer_davis_info davis_info = davisHandle.infoGet();
 
 	printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Logic: %d.\n", davis_info.deviceString,
 		davis_info.deviceID, davis_info.deviceIsMaster, davis_info.dvsSizeX, davis_info.dvsSizeY,
@@ -63,60 +58,61 @@ int main(void) {
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!
-	caerDeviceSendDefaultConfig(davis_handle);
+	davisHandle.sendDefaultConfig();
 
 	// Don't start all producers automatically, we only want to start microphones.
-	caerDeviceConfigSet(davis_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS,
-		false);
+	davisHandle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS, false);
 
 	// Start microphones and USB data transfer.
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32);
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, true);
+	davisHandle.configSet(DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32);
+	davisHandle.configSet(DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, true);
 
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
+	davisHandle.configSet(DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+	davisHandle.configSet(DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
+	davisHandle.configSet(DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
 
 	// Now let's get start getting some data from the device. We just loop, no notification needed.
-	caerDeviceDataStart(davis_handle, NULL, NULL, NULL, NULL, NULL);
+	davisHandle.dataStart();
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
-	caerDeviceConfigSet(davis_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+	davisHandle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
 
 	std::vector<sf::Int16> samples;
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
-		caerEventPacketContainer packetContainer = caerDeviceDataGet(davis_handle);
-		if (packetContainer == NULL) {
+		std::shared_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
+		if (packetContainer == nullptr) {
 			continue; // Skip if nothing there.
 		}
 
-		caerSampleEventPacket samplePacket = (caerSampleEventPacket) caerEventPacketContainerFindEventPacketByType(
-			packetContainer, SAMPLE_EVENT);
-		if (samplePacket == NULL) {
+		std::shared_ptr<libcaer::events::SampleEventPacket> samplePacket = static_pointer_cast<
+			libcaer::events::SampleEventPacket>(packetContainer->findEventPacketByType(SAMPLE_EVENT));
+		if (samplePacket == nullptr) {
 			continue; // Skip if nothing there.
 		}
 
 		// Convert to 16 bit samples.
 		int64_t meanValue = 0;
-		int32_t samplesNumber = caerEventPacketHeaderGetEventValid(&samplePacket->packetHeader);
+		int32_t samplesNumber = samplePacket->getEventValid();
 
-		CAER_SAMPLE_ITERATOR_VALID_START(samplePacket)
-			int16_t value = caerSampleEventGetSample(caerSampleIteratorElement) >> 8;
-			samples.push_back(value);
-			meanValue += value;
-		CAER_SAMPLE_ITERATOR_VALID_END
+		for (int32_t i = 0; i < samplePacket->size(); i++) {
+			libcaer::events::SampleEventPacket::SampleEvent sample = (*samplePacket)[i];
+
+			if (sample.isValid()) {
+				int16_t value = sample.getSample() >> 8;
+				samples.push_back(value);
+				meanValue += value;
+			}
+		}
 
 		meanValue /= samplesNumber;
 
 		printf("\nGot %d sound samples (mean value is %ld).\n", samplesNumber, meanValue);
-
-		caerEventPacketContainerFree(packetContainer);
 	}
 
-	caerDeviceDataStop(davis_handle);
+	davisHandle.dataStop();
 
-	caerDeviceClose(&davis_handle);
+	// Close automatically done by destructor.
 
 	sf::SoundBuffer buffer;
 	buffer.loadFromSamples(&samples[0], samples.size(), 2, 48000);
