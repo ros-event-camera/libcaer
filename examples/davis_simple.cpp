@@ -1,6 +1,4 @@
-#include <libcaer/libcaer.h>
-#include <libcaer/devices/davis.h>
-#include <cstdio>
+#include <libcaercpp/devices/davis.hpp>
 #include <csignal>
 #include <atomic>
 
@@ -48,13 +46,10 @@ int main(void) {
 #endif
 
 	// Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	caerDeviceHandle davis_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
-	if (davis_handle == NULL) {
-		return (EXIT_FAILURE);
-	}
+	libcaer::devices::davisfx2 davisHandle = libcaer::devices::davisfx2(1, 0, 0, NULL);
 
 	// Let's take a look at the information we have on the device.
-	struct caer_davis_info davis_info = caerDavisInfoGet(davis_handle);
+	struct caer_davis_info davis_info = davisHandle.infoGet();
 
 	printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Logic: %d.\n", davis_info.deviceString,
 		davis_info.deviceID, davis_info.deviceIsMaster, davis_info.dvsSizeX, davis_info.dvsSizeY,
@@ -62,7 +57,7 @@ int main(void) {
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!
-	caerDeviceSendDefaultConfig(davis_handle);
+	davisHandle.sendDefaultConfig();
 
 	// Tweak some biases, to increase bandwidth in this case.
 	struct caer_bias_coarsefine coarseFineBias;
@@ -73,8 +68,8 @@ int main(void) {
 	coarseFineBias.sexN = false;
 	coarseFineBias.typeNormal = true;
 	coarseFineBias.currentLevelNormal = true;
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP,
-		caerBiasCoarseFineGenerate(coarseFineBias));
+
+	davisHandle.configSet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(coarseFineBias));
 
 	coarseFineBias.coarseValue = 1;
 	coarseFineBias.fineValue = 33;
@@ -82,66 +77,64 @@ int main(void) {
 	coarseFineBias.sexN = false;
 	coarseFineBias.typeNormal = true;
 	coarseFineBias.currentLevelNormal = true;
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP,
-		caerBiasCoarseFineGenerate(coarseFineBias));
+
+	davisHandle.configSet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP, caerBiasCoarseFineGenerate(coarseFineBias));
 
 	// Let's verify they really changed!
-	uint32_t prBias, prsfBias;
-	caerDeviceConfigGet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, &prBias);
-	caerDeviceConfigGet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP, &prsfBias);
+	uint32_t prBias = davisHandle.configGet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP);
+	uint32_t prsfBias = davisHandle.configGet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP);
 
 	printf("New bias values --- PR-coarse: %d, PR-fine: %d, PRSF-coarse: %d, PRSF-fine: %d.\n",
 		caerBiasCoarseFineParse(prBias).coarseValue, caerBiasCoarseFineParse(prBias).fineValue,
 		caerBiasCoarseFineParse(prsfBias).coarseValue, caerBiasCoarseFineParse(prsfBias).fineValue);
 
 	// Now let's get start getting some data from the device. We just loop, no notification needed.
-	caerDeviceDataStart(davis_handle, NULL, NULL, NULL, NULL, NULL);
+	davisHandle.dataStart();
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
-	caerDeviceConfigSet(davis_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+	davisHandle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
-		caerEventPacketContainer packetContainer = caerDeviceDataGet(davis_handle);
-		if (packetContainer == NULL) {
+		std::shared_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
+		if (packetContainer == nullptr) {
 			continue; // Skip if nothing there.
 		}
 
-		int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+		int32_t packetNum = packetContainer->size();
 
 		printf("\nGot event container with %d packets (allocated).\n", packetNum);
 
 		for (int32_t i = 0; i < packetNum; i++) {
-			caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
-			if (packetHeader == NULL) {
+			std::shared_ptr<libcaer::events::EventPacketHeader> packetHeader = (*packetContainer)[i];
+			if (packetHeader == nullptr) {
 				printf("Packet %d is empty (not present).\n", i);
 				continue; // Skip if nothing there.
 			}
 
-			printf("Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
-				caerEventPacketHeaderGetEventNumber(packetHeader));
+			printf("Packet %d of type %d -> size is %d.\n", i, packetHeader->getEventType(),
+				packetHeader->getEventNumber());
 
-			// Packet 0 is always the special events packet for DVS128, while packet is the polarity events packet.
+			// Packet 0 is always the special events packet for DAVIS, while packet is the polarity events packet.
 			if (i == POLARITY_EVENT) {
-				caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
+				std::shared_ptr<libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
+					libcaer::events::PolarityEventPacket>(packetHeader);
 
 				// Get full timestamp and addresses of first event.
-				caerPolarityEvent firstEvent = caerPolarityEventPacketGetEvent(polarity, 0);
+				libcaer::events::PolarityEventPacket::PolarityEvent firstEvent = (*polarity)[0];
 
-				int32_t ts = caerPolarityEventGetTimestamp(firstEvent);
-				uint16_t x = caerPolarityEventGetX(firstEvent);
-				uint16_t y = caerPolarityEventGetY(firstEvent);
-				bool pol = caerPolarityEventGetPolarity(firstEvent);
+				int32_t ts = firstEvent.getTimestamp();
+				uint16_t x = firstEvent.getX();
+				uint16_t y = firstEvent.getY();
+				bool pol = firstEvent.getPolarity();
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
 			}
 		}
-
-		caerEventPacketContainerFree(packetContainer);
 	}
 
-	caerDeviceDataStop(davis_handle);
+	davisHandle.dataStop();
 
-	caerDeviceClose(&davis_handle);
+	// Close automatically done by destructor.
 
 	printf("Shutdown successful.\n");
 
