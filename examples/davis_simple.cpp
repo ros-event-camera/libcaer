@@ -46,7 +46,7 @@ int main(void) {
 #endif
 
 	// Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	libcaer::devices::davisfx2 davisHandle = libcaer::devices::davisfx2(1, 0, 0, NULL);
+	libcaer::devices::davisfx2 davisHandle = libcaer::devices::davisfx2(1, 0, 0, "");
 
 	// Let's take a look at the information we have on the device.
 	struct caer_davis_info davis_info = davisHandle.infoGet();
