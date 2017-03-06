@@ -2229,6 +2229,12 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 		state->apsROISizeY[0] = state->apsROIPositionY[0] = 0;
 	}
 
+	// Ignore multi-part events (APS and IMU) at startup, so that any initial
+	// incomplete event is ignored. The START events reset this as soon as
+	// the first one is observed.
+	state->apsIgnoreEvents = true;
+	state->imuIgnoreEvents = true;
+
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, &param32);
 	state->apsGlobalShutter = param32;
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
