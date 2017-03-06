@@ -4,6 +4,7 @@
 #include <libcaer/devices/usb.h>
 #include "../libcaer.hpp"
 #include "../events/packetContainer.hpp"
+#include "../events/utils.hpp"
 
 namespace libcaer {
 namespace devices {
@@ -82,8 +83,33 @@ public:
 		}
 	}
 
-	caerEventPacketContainer dataGet() const {
-		return (caerDeviceDataGet(handle));
+	libcaer::events::EventPacketContainer *dataGet() const {
+		caerEventPacketContainer cContainer = caerDeviceDataGet(handle);
+		if (cContainer == nullptr) {
+			// NULL return means no data, forward that.
+			return (nullptr);
+		}
+
+		libcaer::events::EventPacketContainer *cppContainer = new libcaer::events::EventPacketContainer();
+
+		for (int32_t i = 0; i < caerEventPacketContainerGetEventPacketsNumber(cContainer); i++) {
+			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(cContainer, i);
+
+			// NULL packets just get added directly.
+			if (packet == nullptr) {
+				cppContainer->add(nullptr);
+			}
+			else {
+				// Make sure the proper constructors are called when building the shared_ptr.
+				cppContainer->add(libcaer::events::utils::constructFromCStruct(packet));
+			}
+		}
+
+		// Free original C container. The event packet memory is now managed by
+		// the EventPacket classes inside the new C++ EventPacketContainer.
+		free(cContainer);
+
+		return (cppContainer);
 	}
 };
 
