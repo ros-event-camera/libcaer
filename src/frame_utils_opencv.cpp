@@ -217,24 +217,24 @@ static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPerc
 		calcHist(&intensity, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
 
 		// Calculate cumulative distribution from the histogram.
-		for (size_t i = 1; i < (size_t) histSize; i++) {
+		for (int i = 1; i < histSize; i++) {
 			hist.at<float>(i) += hist.at<float>(i - 1);
 		}
 
 		// Locate points that cut at required value.
 		float max = hist.at<float>(histSize - 1);
-		clipHistPercent *= (max / 100.0); // Calculate absolute value from percent.
-		clipHistPercent /= 2.0; // Left and right wings, so divide by two.
+		clipHistPercent *= (max / 100.0f); // Calculate absolute value from percent.
+		clipHistPercent /= 2.0f; // Left and right wings, so divide by two.
 
 		// Locate left cut.
 		minValue = 0;
-		while (hist.at<float>(minValue) < clipHistPercent) {
+		while (hist.at<float>((int) minValue) < clipHistPercent) {
 			minValue++;
 		}
 
 		// Locate right cut.
 		maxValue = UINT16_MAX;
-		while (hist.at<float>(maxValue) >= (max - clipHistPercent)) {
+		while (hist.at<float>((int) maxValue) >= (max - clipHistPercent)) {
 			maxValue--;
 		}
 	}
@@ -266,7 +266,7 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 	calcHist(&intensity, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
 
 	// Calculate CDF from the histogram.
-	for (size_t i = 1; i < (size_t) histSize; i++) {
+	for (int i = 1; i < histSize; i++) {
 		hist.at<float>(i) += hist.at<float>(i - 1);
 	}
 
@@ -275,7 +275,7 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 
 	// Smallest non-zero CDF value. Must be  the first non-zero value!
 	float min = 0;
-	for (size_t i = 0; i < (size_t) histSize; i++) {
+	for (int i = 0; i < histSize; i++) {
 		if (hist.at<float>(i) > 0) {
 			min = hist.at<float>(i);
 			break;
@@ -283,13 +283,13 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 	}
 
 	// Calculate lookup table for histogram equalization.
-	hist -= min;
-	hist /= (total - min);
-	hist *= (float) UINT16_MAX;
+	hist -= (double) min;
+	hist /= (double) (total - min);
+	hist *= (double) UINT16_MAX;
 
 	// Apply lookup table to input image.
 	std::for_each(intensity.begin<uint16_t>(), intensity.end<uint16_t>(),
-		[&hist](uint16_t &elem) {elem = hist.at<float>(elem);});
+		[&hist](uint16_t &elem) {elem = (uint16_t) hist.at<float>(elem);});
 }
 
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize) {
@@ -299,7 +299,7 @@ static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int t
 
 	// Apply the CLAHE algorithm to the intensity channel (luminance).
 	Ptr<CLAHE> clahe = createCLAHE();
-	clahe->setClipLimit(clipLimit);
+	clahe->setClipLimit((double) clipLimit);
 	clahe->setTilesGridSize(Size(tilesGridSize, tilesGridSize));
 	clahe->apply(intensity, intensity);
 }
