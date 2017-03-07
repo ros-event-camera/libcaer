@@ -8,6 +8,130 @@
 namespace libcaer {
 namespace events {
 
+template<class T>
+class EventPacketIterator {
+private:
+	uint8_t *eventPtr;
+	size_t eventSize;
+
+public:
+	// Iterator traits.
+	using iterator_category = std::random_access_iterator_tag;
+	using value_type = T;
+	using pointer = T *;
+	using reference = T &;
+	using difference_type = ptrdiff_t;
+	using size_type = int32_t;
+
+	EventPacketIterator() :
+			eventPtr(nullptr),
+			eventSize(0) {
+	}
+
+	EventPacketIterator(uint8_t *_eventPtr, size_t _eventSize) :
+			eventPtr(_eventPtr),
+			eventSize(_eventSize) {
+	}
+
+	EventPacketIterator(const uint8_t *_eventPtr, size_t _eventSize) :
+			eventPtr(_eventPtr),
+			eventSize(_eventSize) {
+	}
+
+	reference operator*() const {
+		return (*static_cast<pointer>(eventPtr));
+	}
+
+	pointer operator->() const {
+		return (static_cast<pointer>(eventPtr));
+	}
+
+	reference operator[](size_type index) const {
+		return (*static_cast<pointer>(eventPtr + (index * eventSize)));
+	}
+
+	bool operator==(const EventPacketIterator &rhs) const {
+		return (eventPtr == rhs.eventPtr);
+	}
+
+	bool operator!=(const EventPacketIterator &rhs) const {
+		return (eventPtr != rhs.eventPtr);
+	}
+
+	bool operator<(const EventPacketIterator &rhs) const {
+		return (eventPtr < rhs.eventPtr);
+	}
+
+	bool operator>(const EventPacketIterator &rhs) const {
+		return (eventPtr > rhs.eventPtr);
+	}
+
+	bool operator<=(const EventPacketIterator &rhs) const {
+		return (eventPtr <= rhs.eventPtr);
+	}
+
+	bool operator>=(const EventPacketIterator &rhs) const {
+		return (eventPtr >= rhs.eventPtr);
+	}
+
+	EventPacketIterator& operator++() {
+		// Prefix increment.
+		eventPtr += eventSize;
+		return (*this);
+	}
+
+	EventPacketIterator operator++(int) {
+		// Postfix increment.
+		uint8_t *currPtr = eventPtr;
+		eventPtr += eventSize;
+		return (EventPacketIterator(currPtr, eventSize));
+	}
+
+	EventPacketIterator& operator--() {
+		// Prefix decrement.
+		eventPtr -= eventSize;
+		return (*this);
+	}
+
+	EventPacketIterator operator--(int) {
+		// Postfix decrement.
+		uint8_t *currPtr = eventPtr;
+		eventPtr -= eventSize;
+		return (EventPacketIterator(currPtr, eventSize));
+	}
+
+	EventPacketIterator& operator+=(size_type add) {
+		eventPtr += (eventSize * add);
+		return (*this);
+	}
+
+	EventPacketIterator operator+(size_type add) const {
+		return (EventPacketIterator(eventPtr + (eventSize * add), eventSize));
+	}
+
+	EventPacketIterator& operator-=(size_type sub) {
+		eventPtr -= (eventSize * sub);
+		return (*this);
+	}
+
+	EventPacketIterator operator-(size_type sub) const {
+		return (EventPacketIterator(eventPtr - (eventSize * sub), eventSize));
+	}
+
+	friend EventPacketIterator operator+(difference_type lhs, const EventPacketIterator &rhs) {
+		return (EventPacketIterator(rhs.eventPtr + (rhs.eventSize * lhs), rhs.eventSize));
+	}
+
+	difference_type operator-(const EventPacketIterator &rhs) const {
+		return ((eventPtr - rhs.eventPtr) / eventSize);
+	}
+
+	friend void swap(EventPacketIterator &lhs, EventPacketIterator &rhs) {
+		std::swap(lhs.eventPtr, rhs.eventPtr);
+		std::swap(lhs.eventSize, rhs.eventSize);
+	}
+};
+
 class EventPacketHeader {
 protected:
 	caerEventPacketHeader header;

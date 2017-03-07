@@ -142,6 +142,22 @@ public:
 		return (getEvent(static_cast<int32_t>(index)));
 	}
 
+	ConfigurationEvent &front() {
+		return (getEvent(0));
+	}
+
+	const ConfigurationEvent &front() const {
+		return (getEvent(0));
+	}
+
+	ConfigurationEvent &back() {
+		return (getEvent(size() - 1));
+	}
+
+	const ConfigurationEvent &back() const {
+		return (getEvent(size() - 1));
+	}
+
 	virtual ConfigurationEventPacket *copy() const override {
 		return (new ConfigurationEventPacket(internalCopy(header)));
 	}
@@ -152,6 +168,62 @@ public:
 
 	virtual ConfigurationEventPacket *copyOnlyValidEvents() const override {
 		return (new ConfigurationEventPacket(internalCopyOnlyValidEvents(header)));
+	}
+
+	// Iterator support.
+	using iterator = EventPacketIterator<ConfigurationEvent>;
+	using const_iterator = EventPacketIterator<const ConfigurationEvent>;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	iterator begin() noexcept {
+		return (iterator(reinterpret_cast<uint8_t *>(&front()), static_cast<size_t>(getEventSize())));
+	}
+
+	iterator end() noexcept {
+		return (iterator(reinterpret_cast<uint8_t *>(&front()) + (size() * getEventSize()),
+			static_cast<size_t>(getEventSize())));
+	}
+
+	const_iterator begin() const noexcept {
+		return (cbegin());
+	}
+
+	const_iterator end() const noexcept {
+		return (cend());
+	}
+
+	const_iterator cbegin() const noexcept {
+		return (const_iterator(reinterpret_cast<const uint8_t *>(&front()), static_cast<size_t>(getEventSize())));
+	}
+
+	const_iterator cend() const noexcept {
+		return (const_iterator(reinterpret_cast<const uint8_t *>(&front()) + (size() * getEventSize()),
+			static_cast<size_t>(getEventSize())));
+	}
+
+	reverse_iterator rbegin() noexcept {
+		return (reverse_iterator(end()));
+	}
+
+	reverse_iterator rend() noexcept {
+		return (reverse_iterator(begin()));
+	}
+
+	const_reverse_iterator rbegin() const noexcept {
+		return (crbegin());
+	}
+
+	const_reverse_iterator rend() const noexcept {
+		return (crend());
+	}
+
+	const_reverse_iterator crbegin() const noexcept {
+		return (const_reverse_iterator(cend()));
+	}
+
+	const_reverse_iterator crend() const noexcept {
+		return (const_reverse_iterator(cbegin()));
 	}
 };
 
