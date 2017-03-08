@@ -229,6 +229,24 @@ public:
 		return (*this);
 	}
 
+	using value_type = const GenericEvent;
+	using pointer = const GenericEvent *;
+	using const_pointer = const GenericEvent *;
+	using reference = const GenericEvent &;
+	using const_reference = const GenericEvent &;
+	using size_type = int32_t;
+	using difference_type = ptrdiff_t;
+
+	// TODO: could provide push_back with automatic grow and timestamp check.
+
+	bool operator==(const EventPacketHeader &rhs) const {
+		return (caerEventPacketEquals(header, rhs.header));
+	}
+
+	bool operator!=(const EventPacketHeader &rhs) const {
+		return (!caerEventPacketEquals(header, rhs.header));
+	}
+
 	// Header data methods.
 	int16_t getEventType() const noexcept {
 		return (caerEventPacketHeaderGetEventType(header));
@@ -355,6 +373,10 @@ public:
 	}
 
 	// Generic Event Packet methods.
+	void clear() noexcept {
+		caerEventPacketClear(header);
+	}
+
 	void clean() noexcept {
 		caerEventPacketClean(header);
 	}
@@ -371,6 +393,10 @@ public:
 		else {
 			header = resizedPacket;
 		}
+	}
+
+	void shrink_to_fit() {
+		resize(getEventValid());
 	}
 
 	void grow(int32_t newEventCapacity) {

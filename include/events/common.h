@@ -487,37 +487,45 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
  */
 #define CAER_ITERATOR_VALID_END }
 
+
+static inline bool caerEventPacketEquals(caerEventPacketHeaderConst firstEventPacket, caerEventPacketHeaderConst secondEventPacket) {
+
+}
+
+static inline void caerEventPacketClear(caerEventPacketHeader packet) {
+
+}
+
 /**
  * Clean a packet by removing all invalid events, so that
  * the total number of events is the number of valid events.
  * The packet's capacity doesn't change.
  *
- * @param eventPacket an event packet to clean.
+ * @param packet an event packet to clean.
  */
-static inline void caerEventPacketClean(void *eventPacket) {
+static inline void caerEventPacketClean(caerEventPacketHeader packet) {
 	// Handle empty event packets.
-	if (eventPacket == NULL) {
+	if (packet == NULL) {
 		return;
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeader header = (caerEventPacketHeader) eventPacket;
-	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
-	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
+	int32_t eventValid = caerEventPacketHeaderGetEventValid(packet);
+	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(packet);
 
 	// If we have no invalid events, we're already done.
 	if (eventValid == eventNumber) {
 		return;
 	}
 
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
-	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
 
 	// Move all valid events close together. Must check every event for validity!
 	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
 
-	CAER_ITERATOR_VALID_START(header, const void *)
-		void *dest = ((uint8_t *) header) + offset;
+	CAER_ITERATOR_VALID_START(packet, const void *)
+		void *dest = ((uint8_t *) packet) + offset;
 
 		if (dest != caerIteratorElement) {
 			memcpy(dest, caerIteratorElement, (size_t) eventSize);
@@ -526,10 +534,10 @@ static inline void caerEventPacketClean(void *eventPacket) {
 	}
 
 	// Reset remaining memory, up to capacity, to zero (all events invalid).
-	memset(((uint8_t *) header) + offset, 0, (size_t) ((eventCapacity - eventValid) * eventSize));
+	memset(((uint8_t *) packet) + offset, 0, (size_t) ((eventCapacity - eventValid) * eventSize));
 
 	// Event capacity remains unchanged, event number shrunk to event valid number.
-	caerEventPacketHeaderSetEventNumber(header, eventValid);
+	caerEventPacketHeaderSetEventNumber(packet, eventValid);
 }
 
 /**
@@ -733,38 +741,37 @@ static inline caerEventPacketHeader caerEventPacketAppend(caerEventPacketHeader 
 /**
  * Make a full copy of an event packet (up to eventCapacity).
  *
- * @param eventPacket an event packet to copy.
+ * @param packet an event packet to copy.
  *
  * @return a full copy of an event packet.
  */
-static inline void *caerEventPacketCopy(const void *eventPacket) {
+static inline caerEventPacketHeader caerEventPacketCopy(caerEventPacketHeaderConst packet) {
 	// Handle empty event packets.
-	if (eventPacket == NULL) {
+	if (packet == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
-	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
-	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(header);
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(packet);
+	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
 	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventCapacity);
 	size_t dataMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventNumber);
 
 	// Allocate memory for new event packet.
-	caerEventPacketHeader eventPacketCopy = (caerEventPacketHeader) malloc(packetMem);
-	if (eventPacketCopy == NULL) {
+	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);
+	if (packetCopy == NULL) {
 		// Failed to allocate memory.
 		return (NULL);
 	}
 
 	// Copy the data over.
-	memcpy(eventPacketCopy, eventPacket, dataMem);
+	memcpy(packetCopy, packet, dataMem);
 
 	// Zero out the rest of the packet.
-	memset(((uint8_t *) eventPacketCopy) + dataMem, 0, packetMem - dataMem);
+	memset(((uint8_t *) packetCopy) + dataMem, 0, packetMem - dataMem);
 
-	return (eventPacketCopy);
+	return (packetCopy);
 }
 
 /**
@@ -772,20 +779,19 @@ static inline void *caerEventPacketCopy(const void *eventPacket) {
  * currently present events (eventNumber, valid+invalid), and not
  * including the possible extra unused events (up to eventCapacity).
  *
- * @param eventPacket an event packet to copy.
+ * @param packet an event packet to copy.
  *
  * @return a sized down copy of an event packet.
  */
-static inline void *caerEventPacketCopyOnlyEvents(const void *eventPacket) {
+static inline caerEventPacketHeader caerEventPacketCopyOnlyEvents(caerEventPacketHeaderConst packet) {
 	// Handle empty event packets.
-	if (eventPacket == NULL) {
+	if (packet == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
-	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(header);
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	int32_t eventNumber = caerEventPacketHeaderGetEventNumber(packet);
 
 	if (eventNumber == 0) {
 		// No copy possible if result is empty (capacity=0).
@@ -795,40 +801,39 @@ static inline void *caerEventPacketCopyOnlyEvents(const void *eventPacket) {
 	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventNumber);
 
 	// Allocate memory for new event packet.
-	caerEventPacketHeader eventPacketCopy = (caerEventPacketHeader) malloc(packetMem);
-	if (eventPacketCopy == NULL) {
+	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);
+	if (packetCopy == NULL) {
 		// Failed to allocate memory.
 		return (NULL);
 	}
 
 	// Copy the data over.
-	memcpy(eventPacketCopy, eventPacket, packetMem);
+	memcpy(packetCopy, packet, packetMem);
 
 	// Set the event capacity to the event number, since we only allocated
 	// memory for that many events.
-	caerEventPacketHeaderSetEventCapacity(eventPacketCopy, eventNumber);
+	caerEventPacketHeaderSetEventCapacity(packetCopy, eventNumber);
 
-	return (eventPacketCopy);
+	return (packetCopy);
 }
 
 /**
  * Make a copy of an event packet, sized down to only include the
  * currently valid events (eventValid), and discarding everything else.
  *
- * @param eventPacket an event packet to copy.
+ * @param packet an event packet to copy.
  *
  * @return a copy of an event packet, containing only valid events.
  */
-static inline void *caerEventPacketCopyOnlyValidEvents(const void *eventPacket) {
+static inline caerEventPacketHeader caerEventPacketCopyOnlyValidEvents(caerEventPacketHeaderConst packet) {
 	// Handle empty event packets.
-	if (eventPacket == NULL) {
+	if (packet == NULL) {
 		return (NULL);
 	}
 
 	// Calculate needed memory for new event packet.
-	caerEventPacketHeaderConst header = (caerEventPacketHeaderConst) eventPacket;
-	int32_t eventSize = caerEventPacketHeaderGetEventSize(header);
-	int32_t eventValid = caerEventPacketHeaderGetEventValid(header);
+	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet);
+	int32_t eventValid = caerEventPacketHeaderGetEventValid(packet);
 
 	if (eventValid == 0) {
 		// No copy possible if result is empty (capacity=0).
@@ -838,29 +843,29 @@ static inline void *caerEventPacketCopyOnlyValidEvents(const void *eventPacket) 
 	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventValid);
 
 	// Allocate memory for new event packet.
-	caerEventPacketHeader eventPacketCopy = (caerEventPacketHeader) malloc(packetMem);
-	if (eventPacketCopy == NULL) {
+	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);
+	if (packetCopy == NULL) {
 		// Failed to allocate memory.
 		return (NULL);
 	}
 
 	// First copy over the header.
-	memcpy(eventPacketCopy, eventPacket, CAER_EVENT_PACKET_HEADER_SIZE);
+	memcpy(packetCopy, packet, CAER_EVENT_PACKET_HEADER_SIZE);
 
 	// Copy the data over. Must check every event for validity!
 	size_t offset = CAER_EVENT_PACKET_HEADER_SIZE;
 
-	CAER_ITERATOR_VALID_START(header, const void *)
-		memcpy(((uint8_t *) eventPacketCopy) + offset, caerIteratorElement, (size_t) eventSize);
+	CAER_ITERATOR_VALID_START(packet, const void *)
+		memcpy(((uint8_t *) packetCopy) + offset, caerIteratorElement, (size_t) eventSize);
 		offset += (size_t) eventSize;
 	}
 
 	// Set the event capacity and the event number to the number of
 	// valid events, since we only copied those.
-	caerEventPacketHeaderSetEventCapacity(eventPacketCopy, eventValid);
-	caerEventPacketHeaderSetEventNumber(eventPacketCopy, eventValid);
+	caerEventPacketHeaderSetEventCapacity(packetCopy, eventValid);
+	caerEventPacketHeaderSetEventNumber(packetCopy, eventValid);
 
-	return (eventPacketCopy);
+	return (packetCopy);
 }
 
 #ifdef __cplusplus
