@@ -11,7 +11,10 @@ namespace events {
 template<class T>
 class EventPacketIterator {
 private:
-	uint8_t *eventPtr;
+	// Select proper pointer type (const or not) depending on template type.
+	using eventPtrType = typename std::conditional<std::is_const<T>::value, const uint8_t *, uint8_t *>::type;
+
+	eventPtrType eventPtr;
 	size_t eventSize;
 
 public:
@@ -23,112 +26,119 @@ public:
 	using difference_type = ptrdiff_t;
 	using size_type = int32_t;
 
+	// Constructors.
 	EventPacketIterator() :
 			eventPtr(nullptr),
 			eventSize(0) {
 	}
 
-	EventPacketIterator(uint8_t *_eventPtr, size_t _eventSize) :
+	EventPacketIterator(eventPtrType _eventPtr, size_t _eventSize) :
 			eventPtr(_eventPtr),
 			eventSize(_eventSize) {
 	}
 
-	EventPacketIterator(const uint8_t *_eventPtr, size_t _eventSize) :
-			eventPtr(_eventPtr),
-			eventSize(_eventSize) {
-	}
-
-	reference operator*() const {
+	// Data access operators.
+	reference operator*() const noexcept {
 		return (*static_cast<pointer>(eventPtr));
 	}
 
-	pointer operator->() const {
+	pointer operator->() const noexcept {
 		return (static_cast<pointer>(eventPtr));
 	}
 
-	reference operator[](size_type index) const {
+	reference operator[](size_type index) const noexcept {
 		return (*static_cast<pointer>(eventPtr + (index * eventSize)));
 	}
 
-	bool operator==(const EventPacketIterator &rhs) const {
+	// Comparison operators.
+	bool operator==(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr == rhs.eventPtr);
 	}
 
-	bool operator!=(const EventPacketIterator &rhs) const {
+	bool operator!=(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr != rhs.eventPtr);
 	}
 
-	bool operator<(const EventPacketIterator &rhs) const {
+	bool operator<(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr < rhs.eventPtr);
 	}
 
-	bool operator>(const EventPacketIterator &rhs) const {
+	bool operator>(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr > rhs.eventPtr);
 	}
 
-	bool operator<=(const EventPacketIterator &rhs) const {
+	bool operator<=(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr <= rhs.eventPtr);
 	}
 
-	bool operator>=(const EventPacketIterator &rhs) const {
+	bool operator>=(const EventPacketIterator &rhs) const noexcept {
 		return (eventPtr >= rhs.eventPtr);
 	}
 
-	EventPacketIterator& operator++() {
-		// Prefix increment.
+	// Prefix increment.
+	EventPacketIterator& operator++() noexcept {
 		eventPtr += eventSize;
 		return (*this);
 	}
 
-	EventPacketIterator operator++(int) {
-		// Postfix increment.
-		uint8_t *currPtr = eventPtr;
+	// Postfix increment.
+	EventPacketIterator operator++(int) noexcept {
+		eventPtrType currPtr = eventPtr;
 		eventPtr += eventSize;
 		return (EventPacketIterator(currPtr, eventSize));
 	}
 
-	EventPacketIterator& operator--() {
-		// Prefix decrement.
+	// Prefix decrement.
+	EventPacketIterator& operator--() noexcept {
 		eventPtr -= eventSize;
 		return (*this);
 	}
 
-	EventPacketIterator operator--(int) {
-		// Postfix decrement.
-		uint8_t *currPtr = eventPtr;
+	// Postfix decrement.
+	EventPacketIterator operator--(int) noexcept {
+		eventPtrType currPtr = eventPtr;
 		eventPtr -= eventSize;
 		return (EventPacketIterator(currPtr, eventSize));
 	}
 
-	EventPacketIterator& operator+=(size_type add) {
+	// Iter += N.
+	EventPacketIterator& operator+=(size_type add) noexcept {
 		eventPtr += (eventSize * add);
 		return (*this);
 	}
 
-	EventPacketIterator operator+(size_type add) const {
+	// Iter + N.
+	EventPacketIterator operator+(size_type add) const noexcept {
 		return (EventPacketIterator(eventPtr + (eventSize * add), eventSize));
 	}
 
-	EventPacketIterator& operator-=(size_type sub) {
+	// N + Iter. Must be friend as Iter is right-hand-side.
+	friend EventPacketIterator operator+(size_type lhs, const EventPacketIterator &rhs) noexcept {
+		return (EventPacketIterator(rhs.eventPtr + (rhs.eventSize * lhs), rhs.eventSize));
+	}
+
+	// Iter -= N.
+	EventPacketIterator& operator-=(size_type sub) noexcept {
 		eventPtr -= (eventSize * sub);
 		return (*this);
 	}
 
-	EventPacketIterator operator-(size_type sub) const {
+	// Iter - N. (N - Iter doesn't make sense!)
+	EventPacketIterator operator-(size_type sub) const noexcept {
 		return (EventPacketIterator(eventPtr - (eventSize * sub), eventSize));
 	}
 
-	friend EventPacketIterator operator+(difference_type lhs, const EventPacketIterator &rhs) {
-		return (EventPacketIterator(rhs.eventPtr + (rhs.eventSize * lhs), rhs.eventSize));
-	}
-
-	difference_type operator-(const EventPacketIterator &rhs) const {
+	// Iter - Iter. (Iter + Iter doesn't make sense!)
+	difference_type operator-(const EventPacketIterator &rhs) const noexcept {
+		// Distance in pointed-to-elements, so of eventSize size, hence
+		// why the division by eventSize is necessary.
 		return ((eventPtr - rhs.eventPtr) / eventSize);
 	}
 
-	friend void swap(EventPacketIterator &lhs, EventPacketIterator &rhs) {
-		std::swap(lhs.eventPtr, rhs.eventPtr);
-		std::swap(lhs.eventSize, rhs.eventSize);
+	// Swap two iterators.
+	void swap(EventPacketIterator &rhs) noexcept {
+		std::swap(eventPtr, rhs.eventPtr);
+		std::swap(eventSize, rhs.eventSize);
 	}
 };
 
@@ -229,21 +239,12 @@ public:
 		return (*this);
 	}
 
-	using value_type = const GenericEvent;
-	using pointer = const GenericEvent *;
-	using const_pointer = const GenericEvent *;
-	using reference = const GenericEvent &;
-	using const_reference = const GenericEvent &;
-	using size_type = int32_t;
-	using difference_type = ptrdiff_t;
-
-	// TODO: could provide push_back with automatic grow and timestamp check.
-
-	bool operator==(const EventPacketHeader &rhs) const {
+	// Comparison operators.
+	bool operator==(const EventPacketHeader &rhs) const noexcept {
 		return (caerEventPacketEquals(header, rhs.header));
 	}
 
-	bool operator!=(const EventPacketHeader &rhs) const {
+	bool operator!=(const EventPacketHeader &rhs) const noexcept {
 		return (!caerEventPacketEquals(header, rhs.header));
 	}
 
@@ -344,7 +345,7 @@ public:
 		return (caerEventPacketHeaderSetEventValid(header, eventValid));
 	}
 
-	// Generic Event methods.
+	// Generic Event definiton.
 	struct GenericEvent {
 		const void *event;
 		caerEventPacketHeaderConst header;
@@ -362,7 +363,17 @@ public:
 		}
 	};
 
-	const GenericEvent genericGetEvent(int32_t index) const {
+	// Container traits.
+	using value_type = const GenericEvent;
+	using pointer = const GenericEvent *;
+	using const_pointer = const GenericEvent *;
+	using reference = const GenericEvent &;
+	using const_reference = const GenericEvent &;
+	using size_type = int32_t;
+	using difference_type = ptrdiff_t;
+
+	// Generic Event access methods.
+	value_type genericGetEvent(size_type index) const {
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -381,7 +392,7 @@ public:
 		caerEventPacketClean(header);
 	}
 
-	void resize(int32_t newEventCapacity) {
+	void resize(size_type newEventCapacity) {
 		if (newEventCapacity <= 0) {
 			throw std::invalid_argument("Negative or zero event capacity not allowed.");
 		}
@@ -399,7 +410,7 @@ public:
 		resize(getEventValid());
 	}
 
-	void grow(int32_t newEventCapacity) {
+	void grow(size_type newEventCapacity) {
 		if (newEventCapacity <= 0) {
 			throw std::invalid_argument("Negative or zero event capacity not allowed.");
 		}
@@ -448,6 +459,15 @@ public:
 		return (new EventPacketHeader(internalCopyOnlyValidEvents(header)));
 	}
 
+	// Swap two event packets.
+	void swap(EventPacketHeader &rhs) {
+		if (getEventType() != rhs.getEventType()) {
+			throw std::invalid_argument("Event type must be the same.");
+		}
+
+		std::swap(header, rhs.header);
+	}
+
 	// Direct underlying pointer access.
 	caerEventPacketHeader getHeaderPointer() noexcept {
 		return (header);
@@ -458,11 +478,11 @@ public:
 	}
 
 	// Convenience methods.
-	int32_t capacity() const noexcept {
+	size_type capacity() const noexcept {
 		return (getEventCapacity());
 	}
 
-	int32_t size() const noexcept {
+	size_type size() const noexcept {
 		return (getEventNumber());
 	}
 
