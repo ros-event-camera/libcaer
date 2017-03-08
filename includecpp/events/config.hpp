@@ -66,8 +66,17 @@ public:
 		}
 	};
 
+	// Container traits.
+	using value_type = ConfigurationEvent;
+	using pointer = ConfigurationEvent *;
+	using const_pointer = const ConfigurationEvent *;
+	using reference = ConfigurationEvent &;
+	using const_reference = const ConfigurationEvent &;
+	using size_type = int32_t;
+	using difference_type = ptrdiff_t;
+
 	// Constructors.
-	ConfigurationEventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	ConfigurationEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
 		if (eventCapacity <= 0) {
 			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
 		}
@@ -108,9 +117,10 @@ public:
 	}
 
 	// EventPacketHeader's destructor takes care of freeing above memory.
-	// Same for all copy/move constructor/assignment, use EventPacketHeader.
+	// Same for all copy/move constructor/assignment, use EventPacketHeader's.
 
-	ConfigurationEvent &getEvent(int32_t index) {
+	// Event access methods.
+	reference getEvent(size_type index) {
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -122,7 +132,7 @@ public:
 		return (*evt);
 	}
 
-	const ConfigurationEvent &getEvent(int32_t index) const {
+	const_reference getEvent(size_type index) const {
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -134,27 +144,27 @@ public:
 		return (*evt);
 	}
 
-	ConfigurationEvent &operator[](size_t index) {
-		return (getEvent(static_cast<int32_t>(index)));
+	reference operator[](size_type index) {
+		return (getEvent(index));
 	}
 
-	const ConfigurationEvent &operator[](size_t index) const {
-		return (getEvent(static_cast<int32_t>(index)));
+	const_reference operator[](size_type index) const {
+		return (getEvent(index));
 	}
 
-	ConfigurationEvent &front() {
+	reference front() {
 		return (getEvent(0));
 	}
 
-	const ConfigurationEvent &front() const {
+	const_reference front() const {
 		return (getEvent(0));
 	}
 
-	ConfigurationEvent &back() {
+	reference back() {
 		return (getEvent(size() - 1));
 	}
 
-	const ConfigurationEvent &back() const {
+	const_reference back() const {
 		return (getEvent(size() - 1));
 	}
 
@@ -171,8 +181,8 @@ public:
 	}
 
 	// Iterator support.
-	using iterator = EventPacketIterator<ConfigurationEvent>;
-	using const_iterator = EventPacketIterator<const ConfigurationEvent>;
+	using iterator = EventPacketIterator<value_type>;
+	using const_iterator = EventPacketIterator<const value_type>;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
