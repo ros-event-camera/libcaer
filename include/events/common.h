@@ -488,8 +488,8 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
 #define CAER_ITERATOR_VALID_END }
 
 
-static inline bool caerEventPacketEquals(caerEventPacketHeaderConst firstEventPacket, caerEventPacketHeaderConst secondEventPacket) {
-
+static inline bool caerEventPacketEquals(caerEventPacketHeaderConst firstPacket, caerEventPacketHeaderConst secondPacket) {
+	return (false);
 }
 
 static inline void caerEventPacketClear(caerEventPacketHeader packet) {
