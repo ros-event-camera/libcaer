@@ -399,8 +399,7 @@ static inline const void *caerGenericEventGetEvent(caerEventPacketHeaderConst he
 	}
 
 	// Return a pointer to the specified event.
-	return (((const uint8_t *) headerPtr)
-		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(headerPtr))));
+	return (((const uint8_t *) headerPtr) + (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(headerPtr))));
 }
 
 /**
@@ -428,8 +427,7 @@ static inline int32_t caerGenericEventGetTimestamp(const void *eventPtr, caerEve
  * @return the main 64 bit timestamp of this event.
  */
 static inline int64_t caerGenericEventGetTimestamp64(const void *eventPtr, caerEventPacketHeaderConst headerPtr) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(headerPtr)) << TS_OVERFLOW_SHIFT) | U64T(caerGenericEventGetTimestamp(eventPtr, headerPtr))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(headerPtr)) << TS_OVERFLOW_SHIFT) | U64T(caerGenericEventGetTimestamp(eventPtr, headerPtr))));
 }
 
 /**
@@ -487,13 +485,68 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
  */
 #define CAER_ITERATOR_VALID_END }
 
+/**
+ * Verify if two event packets are equal. This means that the
+ * header and all events are equal.
+ *
+ * @param firstPacket an event packet to be compared.
+ * @param secondPacket the other event packet to compare against.
+ *
+ * @return true if both are the same, false otherwise.
+ */
+static inline bool caerEventPacketEquals(caerEventPacketHeaderConst firstPacket,
+	caerEventPacketHeaderConst secondPacket) {
+	// If any of the packets is NULL, they can't be equal.
+	if (firstPacket == NULL || secondPacket == NULL) {
+		return (false);
+	}
 
-static inline bool caerEventPacketEquals(caerEventPacketHeaderConst firstPacket, caerEventPacketHeaderConst secondPacket) {
-	return (false);
+	// If both packets are the same packet (pointer equal),
+	// they are of course indeed equal packets.
+	if (firstPacket == secondPacket) {
+		return (true);
+	}
+
+	// Actually compare memory now. We compare header equality, and
+	// all events up to eventNumber. The remaining events up to
+	// eventCapacity are by definition all zeroed out, so must be
+	// equal, if the capacity is the same, which it is, as we check
+	// for that when ensuring header equality.
+	if (memcmp(firstPacket, secondPacket, CAER_EVENT_PACKET_HEADER_SIZE) != 0) {
+		return (false);
+	}
+
+	size_t memCmpSize = (size_t) (caerEventPacketHeaderGetEventNumber(firstPacket)
+		* caerEventPacketHeaderGetEventSize(firstPacket));
+	if (memcmp(((const uint8_t *) firstPacket) + CAER_EVENT_PACKET_HEADER_SIZE,
+		((const uint8_t *) secondPacket) + CAER_EVENT_PACKET_HEADER_SIZE, memCmpSize) != 0) {
+		return (false);
+	}
+
+	return (true);
 }
 
+/**
+ * Clear a packet by zeroing out all events.
+ * Capacity doesn't change, event number is set to zero.
+ *
+ * @param packet an event packet to clear out.
+ */
 static inline void caerEventPacketClear(caerEventPacketHeader packet) {
+	// Handle empty event packets.
+	if (packet == NULL) {
+		return;
+	}
 
+	// Set events up to eventNumber to zero. The remaining events up to
+	// eventCapacity are by definition all zeroed out, so nothing to do
+	// there. Also reset the eventValid and eventNumber header fields.
+	size_t memZeroSize = (size_t) (caerEventPacketHeaderGetEventNumber(packet)
+		* caerEventPacketHeaderGetEventSize(packet));
+	memset(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE, 0, memZeroSize);
+
+	caerEventPacketHeaderSetEventValid(packet, 0);
+	caerEventPacketHeaderSetEventNumber(packet, 0);
 }
 
 /**
@@ -656,8 +709,7 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	// Zero out new event memory (all events invalid).
 	size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (oldEventCapacity * eventSize);
 
-	memset(((uint8_t *) packet) + oldEventPacketSize, 0,
-		(size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
+	memset(((uint8_t *) packet) + oldEventPacketSize, 0, (size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
 
 	// Update capacity header field.
 	caerEventPacketHeaderSetEventCapacity(packet, newEventCapacity);
