@@ -177,7 +177,7 @@ public:
 	// Copy constructor.
 	EventPacket(const EventPacket &rhs) {
 		// Full copy.
-		header = internalCopy(rhs.header);
+		header = internalCopy(rhs.header, copyTypes::FULL);
 	}
 
 	// Copy assignment.
@@ -191,7 +191,7 @@ public:
 
 			// They are, so we can make a copy, and if successful, put it in place
 			// of the old data. internalCopy() checks for nullptr.
-			caerEventPacketHeader copy = internalCopy(rhs.header);
+			caerEventPacketHeader copy = internalCopy(rhs.header, copyTypes::FULL);
 
 			free(header);
 
@@ -447,8 +447,14 @@ public:
 		}
 	}
 
-	EventPacket *copy() const {
-		return (copyInternal());
+	enum class copyTypes {
+		FULL,
+		EVENTS_ONLY,
+		VALID_EVENTS_ONLY
+	};
+
+	EventPacket *copy(copyTypes ct) const {
+		return (virtualCopy(ct));
 	}
 
 	// Swap two event packets.
@@ -484,38 +490,27 @@ public:
 
 protected:
 	// Internal copy functions.
-	virtual EventPacket *copyInternal() const {
-		return (new EventPacket(internalCopy(header)));
+	virtual EventPacket *virtualCopy(copyTypes ct) const {
+		return (new EventPacket(internalCopy(header, ct)));
 	}
 
-	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header) {
-		void *packetCopy = caerEventPacketCopy(header);
-		if (packetCopy == nullptr) {
-			throw std::bad_alloc();
+	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header, copyTypes ct) {
+		void *packetCopy = nullptr;
+
+		switch (ct) {
+			case copyTypes::FULL:
+				packetCopy = caerEventPacketCopy(header);
+				break;
+
+			case copyTypes::EVENTS_ONLY:
+				packetCopy = caerEventPacketCopyOnlyEvents(header);
+				break;
+
+			case copyTypes::VALID_EVENTS_ONLY:
+				packetCopy = caerEventPacketCopyOnlyValidEvents(header);
+				break;
 		}
 
-		return (static_cast<caerEventPacketHeader>(packetCopy));
-	}
-
-	static caerEventPacketHeader internalCopyOnlyEvents(caerEventPacketHeaderConst header) {
-		if (caerEventPacketHeaderGetEventNumber(header) == 0) {
-			throw std::runtime_error("Copy would result in empty result.");
-		}
-
-		void *packetCopy = caerEventPacketCopyOnlyEvents(header);
-		if (packetCopy == nullptr) {
-			throw std::bad_alloc();
-		}
-
-		return (static_cast<caerEventPacketHeader>(packetCopy));
-	}
-
-	static caerEventPacketHeader internalCopyOnlyValidEvents(caerEventPacketHeaderConst header) {
-		if (caerEventPacketHeaderGetEventValid(header) == 0) {
-			throw std::runtime_error("Copy would result in empty result.");
-		}
-
-		void *packetCopy = caerEventPacketCopyOnlyValidEvents(header);
 		if (packetCopy == nullptr) {
 			throw std::bad_alloc();
 		}
@@ -591,8 +586,8 @@ public:
 		return (getEvent(size() - 1));
 	}
 
-	PKT *copy() const {
-		return (copyInternal());
+	PKT *copy(copyTypes ct) const {
+		return (virtualCopy(ct));
 	}
 
 	// Iterator support.
@@ -652,8 +647,8 @@ public:
 	}
 
 protected:
-	virtual EventPacket *copyInternal() const override {
-		return (new PKT(internalCopy(header)));
+	virtual EventPacket *virtualCopy(copyTypes ct) const override {
+		return (new PKT(internalCopy(header, ct)));
 	}
 };
 
