@@ -63,6 +63,8 @@ struct ConfigurationEvent: public caer_configuration_event {
 	}
 };
 
+static_assert(std::is_pod<ConfigurationEvent>::value, "ConfigurationEvent is not POD.");
+
 class ConfigurationEventPacket: public EventPacketCommon<ConfigurationEventPacket, ConfigurationEvent> {
 public:
 	// Constructors.
@@ -92,6 +94,7 @@ public:
 		header = packetHeader;
 	}
 
+protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerConfigurationEvent evtBase = caerConfigurationEventPacketGetEvent(

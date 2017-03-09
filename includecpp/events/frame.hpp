@@ -8,8 +8,7 @@
 namespace libcaer {
 namespace events {
 
-class FrameEventPacket: public EventPacketHeader {
-public:
+struct FrameEvent: public caer_frame_event {
 	enum class colorChannels {
 		GRAYSCALE = 1, //!< Grayscale, one channel only.
 		RGB = 3,       //!< Red Green Blue, 3 color channels.
@@ -28,367 +27,328 @@ public:
 		BWRG = 8,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 4.
 	};
 
-	using FrameEventBase = struct caer_frame_event;
+	int32_t getTSStartOfFrame() const noexcept {
+		return (caerFrameEventGetTSStartOfFrame(this));
+	}
 
-	struct FrameEvent: public FrameEventBase {
-		int32_t getTSStartOfFrame() const noexcept {
-			return (caerFrameEventGetTSStartOfFrame(this));
+	int64_t getTSStartOfFrame64(const EventPacket &packet) const noexcept {
+		return (caerFrameEventGetTSStartOfFrame64(this,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTSStartOfFrame(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
 		}
 
-		int64_t getTSStartOfFrame64(const FrameEventPacket &packet) const noexcept {
-			return (caerFrameEventGetTSStartOfFrame64(this, reinterpret_cast<caerFrameEventPacketConst>(packet.header)));
+		caerFrameEventSetTSStartOfFrame(this, ts);
+	}
+
+	int32_t getTSEndOfFrame() const noexcept {
+		return (caerFrameEventGetTSEndOfFrame(this));
+	}
+
+	int64_t getTSEndOfFrame64(const EventPacket &packet) const noexcept {
+		return (caerFrameEventGetTSEndOfFrame64(this,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTSEndOfFrame(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
 		}
 
-		void setTSStartOfFrame(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
+		caerFrameEventSetTSEndOfFrame(this, ts);
+	}
 
-			caerFrameEventSetTSStartOfFrame(this, ts);
+	int32_t getTSStartOfExposure() const noexcept {
+		return (caerFrameEventGetTSStartOfExposure(this));
+	}
+
+	int64_t getTSStartOfExposure64(const EventPacket &packet) const noexcept {
+		return (caerFrameEventGetTSStartOfExposure64(this,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTSStartOfExposure(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
 		}
 
-		int32_t getTSEndOfFrame() const noexcept {
-			return (caerFrameEventGetTSEndOfFrame(this));
+		caerFrameEventSetTSStartOfExposure(this, ts);
+	}
+
+	int32_t getTSEndOfExposure() const noexcept {
+		return (caerFrameEventGetTSEndOfExposure(this));
+	}
+
+	int64_t getTSEndOfExposure64(const EventPacket &packet) const noexcept {
+		return (caerFrameEventGetTSEndOfExposure64(this,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTSEndOfExposure(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
 		}
 
-		int64_t getTSEndOfFrame64(const FrameEventPacket &packet) const noexcept {
-			return (caerFrameEventGetTSEndOfFrame64(this, reinterpret_cast<caerFrameEventPacketConst>(packet.header)));
+		caerFrameEventSetTSEndOfExposure(this, ts);
+	}
+
+	int32_t getTimestamp() const noexcept {
+		return (caerFrameEventGetTimestamp(this));
+	}
+
+	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
+		return (caerFrameEventGetTimestamp64(this,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	int32_t getExposureLength() const noexcept {
+		return (caerFrameEventGetExposureLength(this));
+	}
+
+	bool isValid() const noexcept {
+		return (caerFrameEventIsValid(this));
+	}
+
+	void validate(EventPacket &packet) noexcept {
+		caerFrameEventValidate(this, reinterpret_cast<caerFrameEventPacket>(packet.getHeaderPointer()));
+	}
+
+	void invalidate(EventPacket &packet) noexcept {
+		caerFrameEventInvalidate(this, reinterpret_cast<caerFrameEventPacket>(packet.getHeaderPointer()));
+	}
+
+	uint8_t getROIIdentifier() const noexcept {
+		return (caerFrameEventGetROIIdentifier(this));
+	}
+
+	void setROIIdentifier(uint8_t roiIdent) noexcept {
+		caerFrameEventSetROIIdentifier(this, roiIdent);
+	}
+
+	colorFilter getColorFilter() const noexcept {
+		return (static_cast<colorFilter>(caerFrameEventGetColorFilter(this)));
+	}
+
+	void setColorFilter(colorFilter cFilter) noexcept {
+		caerFrameEventSetColorFilter(this,
+			static_cast<enum caer_frame_event_color_filter>(static_cast<typename std::underlying_type<colorFilter>::type>(cFilter)));
+	}
+
+	int32_t getLengthX() const noexcept {
+		return (caerFrameEventGetLengthX(this));
+	}
+
+	int32_t getLengthY() const noexcept {
+		return (caerFrameEventGetLengthY(this));
+	}
+
+	colorChannels getChannelNumber() const noexcept {
+		return (static_cast<colorChannels>(caerFrameEventGetChannelNumber(this)));
+	}
+
+	void setLengthXLengthYChannelNumber(int32_t lenX, int32_t lenY, colorChannels cNumber, const EventPacket &packet) {
+		// Verify lengths and color channels number don't exceed allocated space.
+		enum caer_frame_event_color_channels cNumberEnum =
+			static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<colorChannels>::type>(cNumber));
+
+		size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY) * cNumberEnum);
+
+		if (neededMemory
+			> caerFrameEventPacketGetPixelsSize(
+				reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()))) {
+			throw std::invalid_argument("Given values result in memory usage higher than allocated frame event size.");
 		}
 
-		void setTSEndOfFrame(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
+		caerFrameEventSetLengthXLengthYChannelNumber(this, lenX, lenY, cNumberEnum,
+			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()));
+	}
 
-			caerFrameEventSetTSEndOfFrame(this, ts);
+	size_t getPixelsMaxIndex() const noexcept {
+		return (caerFrameEventGetPixelsMaxIndex(this));
+	}
+
+	size_t getPixelsSize() const noexcept {
+		return (caerFrameEventGetPixelsSize(this));
+	}
+
+	int32_t getPositionX() const noexcept {
+		return (caerFrameEventGetPositionX(this));
+	}
+
+	void setPositionX(int32_t posX) noexcept {
+		caerFrameEventSetPositionX(this, posX);
+	}
+
+	int32_t getPositionY() const noexcept {
+		return (caerFrameEventGetPositionY(this));
+	}
+
+	void setPositionY(int32_t posY) noexcept {
+		caerFrameEventSetPositionY(this, posY);
+	}
+
+	uint16_t getPixel(int32_t xAddress, int32_t yAddress) const {
+		// Check frame bounds first.
+		if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
+			throw std::invalid_argument("Invalid Y address.");
 		}
 
-		int32_t getTSStartOfExposure() const noexcept {
-			return (caerFrameEventGetTSStartOfExposure(this));
+		int32_t xLength = caerFrameEventGetLengthX(this);
+
+		if (xAddress < 0 || xAddress >= xLength) {
+			throw std::invalid_argument("Invalid X address.");
 		}
 
-		int64_t getTSStartOfExposure64(const FrameEventPacket &packet) const noexcept {
-			return (caerFrameEventGetTSStartOfExposure64(this,
-				reinterpret_cast<caerFrameEventPacketConst>(packet.header)));
+		// Get pixel value at specified position.
+		return (le16toh(this->pixels[(yAddress * xLength) + xAddress]));
+	}
+
+	void setPixel(int32_t xAddress, int32_t yAddress, uint16_t pixelValue) {
+		// Check frame bounds first.
+		if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
+			throw std::invalid_argument("Invalid Y address.");
 		}
 
-		void setTSStartOfExposure(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
+		int32_t xLength = caerFrameEventGetLengthX(this);
 
-			caerFrameEventSetTSStartOfExposure(this, ts);
+		if (xAddress < 0 || xAddress >= xLength) {
+			throw std::invalid_argument("Invalid X address.");
 		}
 
-		int32_t getTSEndOfExposure() const noexcept {
-			return (caerFrameEventGetTSEndOfExposure(this));
+		// Set pixel value at specified position.
+		this->pixels[(yAddress * xLength) + xAddress] = htole16(pixelValue);
+	}
+
+	uint16_t getPixel(int32_t xAddress, int32_t yAddress, uint8_t channel) const {
+		// Check frame bounds first.
+		if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
+			throw std::invalid_argument("Invalid Y address.");
 		}
 
-		int64_t getTSEndOfExposure64(const FrameEventPacket &packet) const noexcept {
-			return (caerFrameEventGetTSEndOfExposure64(this, reinterpret_cast<caerFrameEventPacketConst>(packet.header)));
+		int32_t xLength = caerFrameEventGetLengthX(this);
+
+		if (xAddress < 0 || xAddress >= xLength) {
+			throw std::invalid_argument("Invalid X address.");
 		}
 
-		void setTSEndOfExposure(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
+		uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
 
-			caerFrameEventSetTSEndOfExposure(this, ts);
+		if (channel >= channelNumber) {
+			throw std::invalid_argument("Invalid channel number.");
 		}
 
-		int32_t getTimestamp() const noexcept {
-			return (caerFrameEventGetTimestamp(this));
+		// Get pixel value at specified position.
+		return (le16toh(this->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel]));
+	}
+
+	void setPixel(int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) {
+		// Check frame bounds first.
+		if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
+			throw std::invalid_argument("Invalid Y address.");
 		}
 
-		int64_t getTimestamp64(const FrameEventPacket &packet) const noexcept {
-			return (caerFrameEventGetTimestamp64(this, reinterpret_cast<caerFrameEventPacketConst>(packet.header)));
+		int32_t xLength = caerFrameEventGetLengthX(this);
+
+		if (xAddress < 0 || xAddress >= xLength) {
+			throw std::invalid_argument("Invalid X address.");
 		}
 
-		int32_t getExposureLength() const noexcept {
-			return (caerFrameEventGetExposureLength(this));
+		uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
+
+		if (channel >= channelNumber) {
+			throw std::invalid_argument("Invalid channel number.");
 		}
 
-		bool isValid() const noexcept {
-			return (caerFrameEventIsValid(this));
-		}
+		// Set pixel value at specified position.
+		this->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel] = htole16(pixelValue);
+	}
 
-		void validate(FrameEventPacket &packet) noexcept {
-			caerFrameEventValidate(this, reinterpret_cast<caerFrameEventPacket>(packet.header));
-		}
+	uint16_t getPixelUnsafe(int32_t xAddress, int32_t yAddress) const noexcept {
+		// Get pixel value at specified position.
+		return (le16toh(this->pixels[(yAddress * caerFrameEventGetLengthX(this)) + xAddress]));
+	}
 
-		void invalidate(FrameEventPacket &packet) noexcept {
-			caerFrameEventInvalidate(this, reinterpret_cast<caerFrameEventPacket>(packet.header));
-		}
+	void setPixelUnsafe(int32_t xAddress, int32_t yAddress, uint16_t pixelValue) noexcept {
+		// Set pixel value at specified position.
+		this->pixels[(yAddress * caerFrameEventGetLengthX(this)) + xAddress] = htole16(pixelValue);
+	}
 
-		uint8_t getROIIdentifier() const noexcept {
-			return (caerFrameEventGetROIIdentifier(this));
-		}
+	uint16_t getPixelUnsafe(int32_t xAddress, int32_t yAddress, uint8_t channel) const noexcept {
+		uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
+		// Get pixel value at specified position.
+		return (le16toh(
+			this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel]));
+	}
 
-		void setROIIdentifier(uint8_t roiIdent) noexcept {
-			caerFrameEventSetROIIdentifier(this, roiIdent);
-		}
+	void setPixelUnsafe(int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) noexcept {
+		uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
+		// Set pixel value at specified position.
+		this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel] = htole16(
+			pixelValue);
+	}
 
-		colorFilter getColorFilter() const noexcept {
-			return (static_cast<colorFilter>(caerFrameEventGetColorFilter(this)));
-		}
+	uint16_t *getPixelArrayUnsafe() noexcept {
+		return (this->pixels);
+	}
 
-		void setColorFilter(colorFilter cFilter) noexcept {
-			caerFrameEventSetColorFilter(this,
-				static_cast<enum caer_frame_event_color_filter>(static_cast<typename std::underlying_type<colorFilter>::type>(cFilter)));
-		}
+	const uint16_t *getPixelArrayUnsafe() const noexcept {
+		return (this->pixels);
+	}
+};
 
-		int32_t getLengthX() const noexcept {
-			return (caerFrameEventGetLengthX(this));
-		}
+static_assert(std::is_pod<FrameEvent>::value, "FrameEvent is not POD.");
 
-		int32_t getLengthY() const noexcept {
-			return (caerFrameEventGetLengthY(this));
-		}
-
-		colorChannels getChannelNumber() const noexcept {
-			return (static_cast<colorChannels>(caerFrameEventGetChannelNumber(this)));
-		}
-
-		void setLengthXLengthYChannelNumber(int32_t lenX, int32_t lenY, colorChannels cNumber,
-			const FrameEventPacket &packet) {
-			// Verify lengths and color channels number don't exceed allocated space.
-			enum caer_frame_event_color_channels cNumberEnum =
-				static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<
-					colorChannels>::type>(cNumber));
-
-			size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY)
-				* cNumberEnum);
-
-			if (neededMemory > packet.getPixelsSize()) {
-				throw std::invalid_argument(
-					"Given values result in memory usage higher than allocated frame event size.");
-			}
-
-			caerFrameEventSetLengthXLengthYChannelNumber(this, lenX, lenY, cNumberEnum,
-				reinterpret_cast<caerFrameEventPacketConst>(packet.header));
-		}
-
-		size_t getPixelsMaxIndex() const noexcept {
-			return (caerFrameEventGetPixelsMaxIndex(this));
-		}
-
-		size_t getPixelsSize() const noexcept {
-			return (caerFrameEventGetPixelsSize(this));
-		}
-
-		int32_t getPositionX() const noexcept {
-			return (caerFrameEventGetPositionX(this));
-		}
-
-		void setPositionX(int32_t posX) noexcept {
-			caerFrameEventSetPositionX(this, posX);
-		}
-
-		int32_t getPositionY() const noexcept {
-			return (caerFrameEventGetPositionY(this));
-		}
-
-		void setPositionY(int32_t posY) noexcept {
-			caerFrameEventSetPositionY(this, posY);
-		}
-
-		uint16_t getPixel(int32_t xAddress, int32_t yAddress) const {
-			// Check frame bounds first.
-			if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
-				throw std::invalid_argument("Invalid Y address.");
-			}
-
-			int32_t xLength = caerFrameEventGetLengthX(this);
-
-			if (xAddress < 0 || xAddress >= xLength) {
-				throw std::invalid_argument("Invalid X address.");
-			}
-
-			// Get pixel value at specified position.
-			return (le16toh(this->pixels[(yAddress * xLength) + xAddress]));
-		}
-
-		void setPixel(int32_t xAddress, int32_t yAddress, uint16_t pixelValue) {
-			// Check frame bounds first.
-			if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
-				throw std::invalid_argument("Invalid Y address.");
-			}
-
-			int32_t xLength = caerFrameEventGetLengthX(this);
-
-			if (xAddress < 0 || xAddress >= xLength) {
-				throw std::invalid_argument("Invalid X address.");
-			}
-
-			// Set pixel value at specified position.
-			this->pixels[(yAddress * xLength) + xAddress] = htole16(pixelValue);
-		}
-
-		uint16_t getPixel(int32_t xAddress, int32_t yAddress, uint8_t channel) const {
-			// Check frame bounds first.
-			if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
-				throw std::invalid_argument("Invalid Y address.");
-			}
-
-			int32_t xLength = caerFrameEventGetLengthX(this);
-
-			if (xAddress < 0 || xAddress >= xLength) {
-				throw std::invalid_argument("Invalid X address.");
-			}
-
-			uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
-
-			if (channel >= channelNumber) {
-				throw std::invalid_argument("Invalid channel number.");
-			}
-
-			// Get pixel value at specified position.
-			return (le16toh(this->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel]));
-		}
-
-		void setPixel(int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) {
-			// Check frame bounds first.
-			if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(this)) {
-				throw std::invalid_argument("Invalid Y address.");
-			}
-
-			int32_t xLength = caerFrameEventGetLengthX(this);
-
-			if (xAddress < 0 || xAddress >= xLength) {
-				throw std::invalid_argument("Invalid X address.");
-			}
-
-			uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
-
-			if (channel >= channelNumber) {
-				throw std::invalid_argument("Invalid channel number.");
-			}
-
-			// Set pixel value at specified position.
-			this->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel] = htole16(pixelValue);
-		}
-
-		uint16_t getPixelUnsafe(int32_t xAddress, int32_t yAddress) const noexcept {
-			// Get pixel value at specified position.
-			return (le16toh(this->pixels[(yAddress * caerFrameEventGetLengthX(this)) + xAddress]));
-		}
-
-		void setPixelUnsafe(int32_t xAddress, int32_t yAddress, uint16_t pixelValue) noexcept {
-			// Set pixel value at specified position.
-			this->pixels[(yAddress * caerFrameEventGetLengthX(this)) + xAddress] = htole16(pixelValue);
-		}
-
-		uint16_t getPixelUnsafe(int32_t xAddress, int32_t yAddress, uint8_t channel) const noexcept {
-			uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
-			// Get pixel value at specified position.
-			return (le16toh(
-				this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel]));
-		}
-
-		void setPixelUnsafe(int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) noexcept {
-			uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
-			// Set pixel value at specified position.
-			this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel] =
-				htole16(pixelValue);
-		}
-
-		uint16_t *getPixelArrayUnsafe() noexcept {
-			return (this->pixels);
-		}
-
-		const uint16_t *getPixelArrayUnsafe() const noexcept {
-			return (this->pixels);
-		}
-	};
-
+class FrameEventPacket: public EventPacketCommon<FrameEventPacket, FrameEvent> {
+public:
 	// Constructors.
-	FrameEventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxLengthX,
+	FrameEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxLengthX,
 		int32_t maxLengthY, int16_t maxChannelNumber) {
-		if (eventCapacity <= 0) {
-			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
-		}
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
 
 		caerFrameEventPacket packet = caerFrameEventPacketAllocate(eventCapacity, eventSource, tsOverflow, maxLengthX,
 			maxLengthY, maxChannelNumber);
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to allocate frame event packet.");
-		}
+		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
 	}
 
 	FrameEventPacket(caerFrameEventPacket packet) {
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
-		}
+		constructorCheckNullptr(packet);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != FRAME_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
-		}
+		constructorCheckEventType(&packet->packetHeader, FRAME_EVENT);
 
 		header = &packet->packetHeader;
 	}
 
 	FrameEventPacket(caerEventPacketHeader packetHeader) {
-		if (packetHeader == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
-		}
+		constructorCheckNullptr(packetHeader);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(packetHeader) != FRAME_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
-		}
+		constructorCheckEventType(packetHeader, FRAME_EVENT);
 
 		header = packetHeader;
 	}
 
-	// EventPacketHeader's destructor takes care of freeing above memory.
-	// Same for all copy/move constructor/assignment, use EventPacketHeader.
-
-	FrameEvent &getEvent(int32_t index) {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		FrameEventBase *evtBase = caerFrameEventPacketGetEvent(reinterpret_cast<caerFrameEventPacket>(header), index);
+protected:
+	// Event access methods.
+	reference virtualGetEvent(size_type index) noexcept override {
+		caerFrameEvent evtBase = caerFrameEventPacketGetEvent(reinterpret_cast<caerFrameEventPacket>(header), index);
 		FrameEvent *evt = static_cast<FrameEvent *>(evtBase);
 
 		return (*evt);
 	}
 
-	const FrameEvent &getEvent(int32_t index) const {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const FrameEventBase *evtBase = caerFrameEventPacketGetEventConst(
+	const_reference virtualGetEvent(size_type index) const noexcept override {
+		caerFrameEventConst evtBase = caerFrameEventPacketGetEventConst(
 			reinterpret_cast<caerFrameEventPacketConst>(header), index);
 		const FrameEvent *evt = static_cast<const FrameEvent *>(evtBase);
 
 		return (*evt);
 	}
 
-	FrameEvent &operator[](size_t index) {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	const FrameEvent &operator[](size_t index) const {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	virtual FrameEventPacket *copy() const override {
-		return (new FrameEventPacket(internalCopy(header)));
-	}
-
-	virtual FrameEventPacket *copyOnlyEvents() const override {
-		return (new FrameEventPacket(internalCopyOnlyEvents(header)));
-	}
-
-	virtual FrameEventPacket *copyOnlyValidEvents() const override {
-		return (new FrameEventPacket(internalCopyOnlyValidEvents(header)));
-	}
-
+public:
 	size_t getPixelsSize() const noexcept {
 		return (caerFrameEventPacketGetPixelsSize(reinterpret_cast<caerFrameEventPacketConst>(header)));
 	}
@@ -418,12 +378,6 @@ public:
 		EDGE_AWARE = 1,
 	};
 
-	enum class opencvContrast {
-		NORMALIZATION = 0,
-		HISTOGRAM_EQUALIZATION = 1,
-		CLAHE = 2,
-	};
-
 	FrameEventPacket demosaic(opencvDemosaic demosaicType) const {
 		caerFrameEventPacket colorPacket =
 			caerFrameUtilsOpenCVDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
@@ -435,6 +389,12 @@ public:
 
 		return (FrameEventPacket(colorPacket));
 	}
+
+	enum class opencvContrast {
+		NORMALIZATION = 0,
+		HISTOGRAM_EQUALIZATION = 1,
+		CLAHE = 2,
+	};
 
 	void contrast(opencvContrast contrastType) noexcept {
 		caerFrameUtilsOpenCVContrast(reinterpret_cast<caerFrameEventPacket>(header),

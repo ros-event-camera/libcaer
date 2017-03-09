@@ -7,141 +7,98 @@
 namespace libcaer {
 namespace events {
 
-class SampleEventPacket: public EventPacketHeader {
+struct SampleEvent: public caer_sample_event {
+	int32_t getTimestamp() const noexcept {
+		return (caerSampleEventGetTimestamp(this));
+	}
+
+	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
+		return (caerSampleEventGetTimestamp64(this,
+			reinterpret_cast<caerSampleEventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTimestamp(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
+		}
+
+		caerSampleEventSetTimestamp(this, ts);
+	}
+
+	bool isValid() const noexcept {
+		return (caerSampleEventIsValid(this));
+	}
+
+	void validate(EventPacket &packet) noexcept {
+		caerSampleEventValidate(this, reinterpret_cast<caerSampleEventPacket>(packet.getHeaderPointer()));
+	}
+
+	void invalidate(EventPacket &packet) noexcept {
+		caerSampleEventInvalidate(this, reinterpret_cast<caerSampleEventPacket>(packet.getHeaderPointer()));
+	}
+
+	uint8_t getType() const noexcept {
+		return (caerSampleEventGetType(this));
+	}
+
+	void setType(uint8_t t) noexcept {
+		return (caerSampleEventSetType(this, t));
+	}
+
+	uint32_t getSample() const noexcept {
+		return (caerSampleEventGetSample(this));
+	}
+
+	void setSample(uint32_t s) noexcept {
+		return (caerSampleEventSetSample(this, s));
+	}
+};
+
+static_assert(std::is_pod<SampleEvent>::value, "SampleEvent is not POD.");
+
+class SampleEventPacket: public EventPacketCommon<SampleEventPacket, SampleEvent> {
 public:
-	using SampleEventBase = struct caer_sample_event;
-
-	struct SampleEvent: public SampleEventBase {
-		int32_t getTimestamp() const noexcept {
-			return (caerSampleEventGetTimestamp(this));
-		}
-
-		int64_t getTimestamp64(const SampleEventPacket &packet) const noexcept {
-			return (caerSampleEventGetTimestamp64(this, reinterpret_cast<caerSampleEventPacketConst>(packet.header)));
-		}
-
-		void setTimestamp(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
-
-			caerSampleEventSetTimestamp(this, ts);
-		}
-
-		bool isValid() const noexcept {
-			return (caerSampleEventIsValid(this));
-		}
-
-		void validate(SampleEventPacket &packet) noexcept {
-			caerSampleEventValidate(this, reinterpret_cast<caerSampleEventPacket>(packet.header));
-		}
-
-		void invalidate(SampleEventPacket &packet) noexcept {
-			caerSampleEventInvalidate(this, reinterpret_cast<caerSampleEventPacket>(packet.header));
-		}
-
-		uint8_t getType() const noexcept {
-			return (caerSampleEventGetType(this));
-		}
-
-		void setType(uint8_t t) noexcept {
-			return (caerSampleEventSetType(this, t));
-		}
-
-		uint32_t getSample() const noexcept {
-			return (caerSampleEventGetSample(this));
-		}
-
-		void setSample(uint32_t s) noexcept {
-			return (caerSampleEventSetSample(this, s));
-		}
-	};
-
 	// Constructors.
-	SampleEventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-		if (eventCapacity <= 0) {
-			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
-		}
+	SampleEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
 
 		caerSampleEventPacket packet = caerSampleEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to allocate sample event packet.");
-		}
+		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
 	}
 
 	SampleEventPacket(caerSampleEventPacket packet) {
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
-		}
+		constructorCheckNullptr(packet);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != SAMPLE_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
-		}
+		constructorCheckEventType(&packet->packetHeader, SAMPLE_EVENT);
 
 		header = &packet->packetHeader;
 	}
 
 	SampleEventPacket(caerEventPacketHeader packetHeader) {
-		if (packetHeader == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
-		}
+		constructorCheckNullptr(packetHeader);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(packetHeader) != SAMPLE_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
-		}
+		constructorCheckEventType(packetHeader, SAMPLE_EVENT);
 
 		header = packetHeader;
 	}
 
-	// EventPacketHeader's destructor takes care of freeing above memory.
-	// Same for all copy/move constructor/assignment, use EventPacketHeader.
-
-	SampleEvent &getEvent(int32_t index) {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		SampleEventBase *evtBase = caerSampleEventPacketGetEvent(reinterpret_cast<caerSampleEventPacket>(header),
-			index);
+protected:
+	// Event access methods.
+	reference virtualGetEvent(size_type index) noexcept override {
+		caerSampleEvent evtBase = caerSampleEventPacketGetEvent(reinterpret_cast<caerSampleEventPacket>(header), index);
 		SampleEvent *evt = static_cast<SampleEvent *>(evtBase);
 
 		return (*evt);
 	}
 
-	const SampleEvent &getEvent(int32_t index) const {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const SampleEventBase *evtBase = caerSampleEventPacketGetEventConst(
+	const_reference virtualGetEvent(size_type index) const noexcept override {
+		caerSampleEventConst evtBase = caerSampleEventPacketGetEventConst(
 			reinterpret_cast<caerSampleEventPacketConst>(header), index);
 		const SampleEvent *evt = static_cast<const SampleEvent *>(evtBase);
 
 		return (*evt);
-	}
-
-	SampleEvent &operator[](size_t index) {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	const SampleEvent &operator[](size_t index) const {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	virtual SampleEventPacket *copy() const override {
-		return (new SampleEventPacket(internalCopy(header)));
-	}
-
-	virtual SampleEventPacket *copyOnlyEvents() const override {
-		return (new SampleEventPacket(internalCopyOnlyEvents(header)));
-	}
-
-	virtual SampleEventPacket *copyOnlyValidEvents() const override {
-		return (new SampleEventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 

@@ -7,180 +7,137 @@
 namespace libcaer {
 namespace events {
 
-class IMU6EventPacket: public EventPacketHeader {
+struct IMU6Event: public caer_imu6_event {
+	int32_t getTimestamp() const noexcept {
+		return (caerIMU6EventGetTimestamp(this));
+	}
+
+	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
+		return (caerIMU6EventGetTimestamp64(this, reinterpret_cast<caerIMU6EventPacketConst>(packet.getHeaderPointer())));
+	}
+
+	void setTimestamp(int32_t ts) {
+		if (ts < 0) {
+			throw std::invalid_argument("Negative timestamp not allowed.");
+		}
+
+		caerIMU6EventSetTimestamp(this, ts);
+	}
+
+	bool isValid() const noexcept {
+		return (caerIMU6EventIsValid(this));
+	}
+
+	void validate(EventPacket &packet) noexcept {
+		caerIMU6EventValidate(this, reinterpret_cast<caerIMU6EventPacket>(packet.getHeaderPointer()));
+	}
+
+	void invalidate(EventPacket &packet) noexcept {
+		caerIMU6EventInvalidate(this, reinterpret_cast<caerIMU6EventPacket>(packet.getHeaderPointer()));
+	}
+
+	float getAccelX() const noexcept {
+		return (caerIMU6EventGetAccelX(this));
+	}
+
+	void setAccelX(float accelX) noexcept {
+		caerIMU6EventSetAccelX(this, accelX);
+	}
+
+	float getAccelY() const noexcept {
+		return (caerIMU6EventGetAccelY(this));
+	}
+
+	void setAccelY(float accelY) noexcept {
+		caerIMU6EventSetAccelY(this, accelY);
+	}
+
+	float getAccelZ() const noexcept {
+		return (caerIMU6EventGetAccelZ(this));
+	}
+
+	void setAccelZ(float accelZ) noexcept {
+		caerIMU6EventSetAccelZ(this, accelZ);
+	}
+
+	float getGyroX() const noexcept {
+		return (caerIMU6EventGetGyroX(this));
+	}
+
+	void setGyroX(float gyroX) noexcept {
+		caerIMU6EventSetGyroX(this, gyroX);
+	}
+
+	float getGyroY() const noexcept {
+		return (caerIMU6EventGetGyroY(this));
+	}
+
+	void setGyroY(float gyroY) noexcept {
+		caerIMU6EventSetGyroY(this, gyroY);
+	}
+
+	float getGyroZ() const noexcept {
+		return (caerIMU6EventGetGyroZ(this));
+	}
+
+	void setGyroZ(float gyroZ) noexcept {
+		caerIMU6EventSetGyroZ(this, gyroZ);
+	}
+
+	float getTemp() const noexcept {
+		return (caerIMU6EventGetTemp(this));
+	}
+
+	void setTemp(float t) noexcept {
+		caerIMU6EventSetTemp(this, t);
+	}
+};
+
+static_assert(std::is_pod<IMU6Event>::value, "IMU6Event is not POD.");
+
+class IMU6EventPacket: public EventPacketCommon<IMU6EventPacket, IMU6Event> {
 public:
-	using IMU6EventBase = struct caer_imu6_event;
-
-	struct IMU6Event: public IMU6EventBase {
-		int32_t getTimestamp() const noexcept {
-			return (caerIMU6EventGetTimestamp(this));
-		}
-
-		int64_t getTimestamp64(const IMU6EventPacket &packet) const noexcept {
-			return (caerIMU6EventGetTimestamp64(this, reinterpret_cast<caerIMU6EventPacketConst>(packet.header)));
-		}
-
-		void setTimestamp(int32_t ts) {
-			if (ts < 0) {
-				throw std::invalid_argument("Negative timestamp not allowed.");
-			}
-
-			caerIMU6EventSetTimestamp(this, ts);
-		}
-
-		bool isValid() const noexcept {
-			return (caerIMU6EventIsValid(this));
-		}
-
-		void validate(IMU6EventPacket &packet) noexcept {
-			caerIMU6EventValidate(this, reinterpret_cast<caerIMU6EventPacket>(packet.header));
-		}
-
-		void invalidate(IMU6EventPacket &packet) noexcept {
-			caerIMU6EventInvalidate(this, reinterpret_cast<caerIMU6EventPacket>(packet.header));
-		}
-
-		float getAccelX() const noexcept {
-			return (caerIMU6EventGetAccelX(this));
-		}
-
-		void setAccelX(float accelX) noexcept {
-			caerIMU6EventSetAccelX(this, accelX);
-		}
-
-		float getAccelY() const noexcept {
-			return (caerIMU6EventGetAccelY(this));
-		}
-
-		void setAccelY(float accelY) noexcept {
-			caerIMU6EventSetAccelY(this, accelY);
-		}
-
-		float getAccelZ() const noexcept {
-			return (caerIMU6EventGetAccelZ(this));
-		}
-
-		void setAccelZ(float accelZ) noexcept {
-			caerIMU6EventSetAccelZ(this, accelZ);
-		}
-
-		float getGyroX() const noexcept {
-			return (caerIMU6EventGetGyroX(this));
-		}
-
-		void setGyroX(float gyroX) noexcept {
-			caerIMU6EventSetGyroX(this, gyroX);
-		}
-
-		float getGyroY() const noexcept {
-			return (caerIMU6EventGetGyroY(this));
-		}
-
-		void setGyroY(float gyroY) noexcept {
-			caerIMU6EventSetGyroY(this, gyroY);
-		}
-
-		float getGyroZ() const noexcept {
-			return (caerIMU6EventGetGyroZ(this));
-		}
-
-		void setGyroZ(float gyroZ) noexcept {
-			caerIMU6EventSetGyroZ(this, gyroZ);
-		}
-
-		float getTemp() const noexcept {
-			return (caerIMU6EventGetTemp(this));
-		}
-
-		void setTemp(float t) noexcept {
-			caerIMU6EventSetTemp(this, t);
-		}
-	};
-
 	// Constructors.
-	IMU6EventPacket(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-		if (eventCapacity <= 0) {
-			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
-		}
+	IMU6EventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
 
 		caerIMU6EventPacket packet = caerIMU6EventPacketAllocate(eventCapacity, eventSource, tsOverflow);
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to allocate IMU6 event packet.");
-		}
+		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
 	}
 
 	IMU6EventPacket(caerIMU6EventPacket packet) {
-		if (packet == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: null pointer.");
-		}
+		constructorCheckNullptr(packet);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(&packet->packetHeader) != IMU6_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet: wrong type.");
-		}
+		constructorCheckEventType(&packet->packetHeader, IMU6_EVENT);
 
 		header = &packet->packetHeader;
 	}
 
 	IMU6EventPacket(caerEventPacketHeader packetHeader) {
-		if (packetHeader == nullptr) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: null pointer.");
-		}
+		constructorCheckNullptr(packetHeader);
 
-		// Check for proper event type too!
-		if (caerEventPacketHeaderGetEventType(packetHeader) != IMU6_EVENT) {
-			throw std::runtime_error("Failed to initialize event packet from existing C packet header: wrong type.");
-		}
+		constructorCheckEventType(packetHeader, IMU6_EVENT);
 
 		header = packetHeader;
 	}
 
-	// EventPacketHeader's destructor takes care of freeing above memory.
-	// Same for all copy/move constructor/assignment, use EventPacketHeader.
-
-	IMU6Event &getEvent(int32_t index) {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		IMU6EventBase *evtBase = caerIMU6EventPacketGetEvent(reinterpret_cast<caerIMU6EventPacket>(header), index);
+protected:
+	// Event access methods.
+	reference virtualGetEvent(size_type index) noexcept override {
+		caerIMU6Event evtBase = caerIMU6EventPacketGetEvent(reinterpret_cast<caerIMU6EventPacket>(header), index);
 		IMU6Event *evt = static_cast<IMU6Event *>(evtBase);
 
 		return (*evt);
 	}
 
-	const IMU6Event &getEvent(int32_t index) const {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const IMU6EventBase *evtBase = caerIMU6EventPacketGetEventConst(
+	const_reference virtualGetEvent(size_type index) const noexcept override {
+		caerIMU6EventConst evtBase = caerIMU6EventPacketGetEventConst(
 			reinterpret_cast<caerIMU6EventPacketConst>(header), index);
 		const IMU6Event *evt = static_cast<const IMU6Event *>(evtBase);
 
 		return (*evt);
-	}
-
-	IMU6Event &operator[](size_t index) {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	const IMU6Event &operator[](size_t index) const {
-		return (getEvent(static_cast<int32_t>(index)));
-	}
-
-	virtual IMU6EventPacket *copy() const override {
-		return (new IMU6EventPacket(internalCopy(header)));
-	}
-
-	virtual IMU6EventPacket *copyOnlyEvents() const override {
-		return (new IMU6EventPacket(internalCopyOnlyEvents(header)));
-	}
-
-	virtual IMU6EventPacket *copyOnlyValidEvents() const override {
-		return (new IMU6EventPacket(internalCopyOnlyValidEvents(header)));
 	}
 };
 
