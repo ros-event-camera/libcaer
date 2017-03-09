@@ -495,7 +495,7 @@ protected:
 	}
 
 	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header, copyTypes ct) {
-		void *packetCopy = nullptr;
+		caerEventPacketHeader packetCopy = nullptr;
 
 		switch (ct) {
 			case copyTypes::FULL:
@@ -515,7 +515,7 @@ protected:
 			throw std::bad_alloc();
 		}
 
-		return (static_cast<caerEventPacketHeader>(packetCopy));
+		return (packetCopy);
 	}
 
 	// Constructor checks.
