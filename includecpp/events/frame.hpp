@@ -154,7 +154,7 @@ struct FrameEvent: public caer_frame_event {
 		enum caer_frame_event_color_channels cNumberEnum =
 			static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<colorChannels>::type>(cNumber));
 
-		if (lenX <= 0 || lenY <= 0 || cNumber <= 0) {
+		if (lenX <= 0 || lenY <= 0 || cNumberEnum <= 0) {
 			throw std::invalid_argument("Negative lengths or channel number not allowed.");
 		}
 
