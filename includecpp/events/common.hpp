@@ -142,17 +142,17 @@ public:
 	}
 };
 
-class EventPacketHeader {
+class EventPacket {
 protected:
 	caerEventPacketHeader header;
 
 	// Constructors.
-	EventPacketHeader() :
+	EventPacket() :
 			header(nullptr) {
 	}
 
 public:
-	EventPacketHeader(caerEventPacketHeader packetHeader) {
+	EventPacket(caerEventPacketHeader packetHeader) {
 		if (packetHeader == nullptr) {
 			throw std::runtime_error(
 				"Failed to initialize EventPacketHeader from existing C packet header: null pointer.");
@@ -168,20 +168,20 @@ public:
 	}
 
 	// Destructor.
-	virtual ~EventPacketHeader() {
+	virtual ~EventPacket() {
 		// All EventPackets must have been allocated somewhere on the heap,
 		// and can thus always be passed to free(). free(nullptr) does nothing.
 		free(header);
 	}
 
 	// Copy constructor.
-	EventPacketHeader(const EventPacketHeader &rhs) {
+	EventPacket(const EventPacket &rhs) {
 		// Full copy.
 		header = internalCopy(rhs.header);
 	}
 
 	// Copy assignment.
-	EventPacketHeader &operator=(const EventPacketHeader &rhs) {
+	EventPacket &operator=(const EventPacket &rhs) {
 		// If both the same, do nothing.
 		if (this != &rhs) {
 			// Different packets, so we need to check if they are the same type.
@@ -202,7 +202,7 @@ public:
 	}
 
 	// Move constructor.
-	EventPacketHeader(EventPacketHeader &&rhs) noexcept {
+	EventPacket(EventPacket &&rhs) noexcept {
 		// Moved-from object must remain in a valid state. We can define
 		// valid-state-after-move to be nothing allowed but a destructor
 		// call, which is what normally happens, and helps us a lot here.
@@ -215,7 +215,7 @@ public:
 	}
 
 	// Move assignment.
-	EventPacketHeader &operator=(EventPacketHeader &&rhs) {
+	EventPacket &operator=(EventPacket &&rhs) {
 		assert(this != &rhs);
 
 		// Different packets, so we need to check if they are the same type.
@@ -240,11 +240,11 @@ public:
 	}
 
 	// Comparison operators.
-	bool operator==(const EventPacketHeader &rhs) const noexcept {
+	bool operator==(const EventPacket &rhs) const noexcept {
 		return (caerEventPacketEquals(header, rhs.header));
 	}
 
-	bool operator!=(const EventPacketHeader &rhs) const noexcept {
+	bool operator!=(const EventPacket &rhs) const noexcept {
 		return (!caerEventPacketEquals(header, rhs.header));
 	}
 
@@ -427,7 +427,7 @@ public:
 		}
 	}
 
-	void append(const EventPacketHeader &appendPacket) {
+	void append(const EventPacket &appendPacket) {
 		if (getEventType() != appendPacket.getEventType()) {
 			throw std::invalid_argument("Event type must be the same.");
 		}
@@ -447,20 +447,12 @@ public:
 		}
 	}
 
-	virtual EventPacketHeader *copy() const {
-		return (new EventPacketHeader(internalCopy(header)));
-	}
-
-	virtual EventPacketHeader *copyOnlyEvents() const {
-		return (new EventPacketHeader(internalCopyOnlyEvents(header)));
-	}
-
-	virtual EventPacketHeader *copyOnlyValidEvents() const {
-		return (new EventPacketHeader(internalCopyOnlyValidEvents(header)));
+	EventPacket *copy() const {
+		return (copyInternal());
 	}
 
 	// Swap two event packets.
-	void swap(EventPacketHeader &rhs) {
+	void swap(EventPacket &rhs) {
 		if (getEventType() != rhs.getEventType()) {
 			throw std::invalid_argument("Event type must be the same.");
 		}
@@ -492,6 +484,10 @@ public:
 
 protected:
 	// Internal copy functions.
+	virtual EventPacket *copyInternal() const {
+		return (new EventPacket(internalCopy(header)));
+	}
+
 	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header) {
 		void *packetCopy = caerEventPacketCopy(header);
 		if (packetCopy == nullptr) {
@@ -525,6 +521,139 @@ protected:
 		}
 
 		return (static_cast<caerEventPacketHeader>(packetCopy));
+	}
+
+	// Constructor checks.
+	static void constructorCheckCapacitySourceTSOverflow(size_type eventCapacity, int16_t eventSource,
+		int32_t tsOverflow) {
+		if (eventCapacity <= 0) {
+			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
+		}
+		if (eventSource < 0) {
+			throw std::invalid_argument("Negative event source not allowed.");
+		}
+		if (tsOverflow < 0) {
+			throw std::invalid_argument("Negative event TS overflow not allowed.");
+		}
+	}
+
+	static void constructorCheckNullptr(const void *packet) {
+		if (packet == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet: null pointer.");
+		}
+	}
+
+	static void constructorCheckEventType(caerEventPacketHeaderConst packet, int16_t type) {
+		if (caerEventPacketHeaderGetEventType(packet) != type) {
+			throw std::runtime_error("Failed to initialize event packet: wrong type.");
+		}
+	}
+};
+
+template<class PKT, class EVT>
+class EventPacketCommon: public EventPacket {
+public:
+	// Container traits.
+	using value_type = EVT;
+	using pointer = EVT *;
+	using const_pointer = const EVT *;
+	using reference = EVT &;
+	using const_reference = const EVT &;
+	using size_type = int32_t;
+	using difference_type = ptrdiff_t;
+
+	// Event access methods.
+	virtual reference getEvent(size_type index) = 0;
+
+	virtual const_reference getEvent(size_type index) const = 0;
+
+	reference operator[](size_type index) {
+		return (getEvent(index));
+	}
+
+	const_reference operator[](size_type index) const {
+		return (getEvent(index));
+	}
+
+	reference front() {
+		return (getEvent(0));
+	}
+
+	const_reference front() const {
+		return (getEvent(0));
+	}
+
+	reference back() {
+		return (getEvent(size() - 1));
+	}
+
+	const_reference back() const {
+		return (getEvent(size() - 1));
+	}
+
+	PKT *copy() const {
+		return (copyInternal());
+	}
+
+	// Iterator support.
+	using iterator = EventPacketIterator<value_type>;
+	using const_iterator = EventPacketIterator<const value_type>;
+	using reverse_iterator = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	iterator begin() noexcept {
+		return (iterator(reinterpret_cast<uint8_t *>(&front()), static_cast<size_t>(getEventSize())));
+	}
+
+	iterator end() noexcept {
+		return (iterator(reinterpret_cast<uint8_t *>(&front()) + (size() * getEventSize()),
+			static_cast<size_t>(getEventSize())));
+	}
+
+	const_iterator begin() const noexcept {
+		return (cbegin());
+	}
+
+	const_iterator end() const noexcept {
+		return (cend());
+	}
+
+	const_iterator cbegin() const noexcept {
+		return (const_iterator(reinterpret_cast<const uint8_t *>(&front()), static_cast<size_t>(getEventSize())));
+	}
+
+	const_iterator cend() const noexcept {
+		return (const_iterator(reinterpret_cast<const uint8_t *>(&front()) + (size() * getEventSize()),
+			static_cast<size_t>(getEventSize())));
+	}
+
+	reverse_iterator rbegin() noexcept {
+		return (reverse_iterator(end()));
+	}
+
+	reverse_iterator rend() noexcept {
+		return (reverse_iterator(begin()));
+	}
+
+	const_reverse_iterator rbegin() const noexcept {
+		return (crbegin());
+	}
+
+	const_reverse_iterator rend() const noexcept {
+		return (crend());
+	}
+
+	const_reverse_iterator crbegin() const noexcept {
+		return (const_reverse_iterator(cend()));
+	}
+
+	const_reverse_iterator crend() const noexcept {
+		return (const_reverse_iterator(cbegin()));
+	}
+
+protected:
+	virtual EventPacket *copyInternal() const override {
+		return (new PKT(internalCopy(header)));
 	}
 };
 
