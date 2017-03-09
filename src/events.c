@@ -56,7 +56,7 @@ void caerEventPacketContainerFree(caerEventPacketContainer container) {
 }
 
 caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -85,7 +85,7 @@ caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -115,7 +115,7 @@ caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, i
 
 caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
 	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -146,7 +146,7 @@ caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t
 }
 
 caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -175,7 +175,7 @@ caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t e
 }
 
 caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -204,7 +204,7 @@ caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t e
 }
 
 caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -233,7 +233,7 @@ caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16
 }
 
 caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -263,7 +263,7 @@ caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eve
 
 caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
 	int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -292,7 +292,7 @@ caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventC
 }
 
 caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -321,7 +321,7 @@ caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -350,7 +350,7 @@ caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint3DEventPacket caerPoint3DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -379,7 +379,7 @@ caerPoint3DEventPacket caerPoint3DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
@@ -408,7 +408,7 @@ caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
 		return (NULL);
 	}
 
