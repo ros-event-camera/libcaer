@@ -105,7 +105,7 @@ int main(void) {
 		printf("\nGot event container with %d packets (allocated).\n", packetNum);
 
 		for (int32_t i = 0; i < packetNum; i++) {
-			std::shared_ptr<libcaer::events::EventPacketHeader> packetHeader = (*packetContainer)[i];
+			std::shared_ptr<libcaer::events::EventPacket> packetHeader = (*packetContainer)[i];
 			if (packetHeader == nullptr) {
 				printf("Packet %d is empty (not present).\n", i);
 				continue; // Skip if nothing there.
@@ -120,7 +120,7 @@ int main(void) {
 					libcaer::events::PolarityEventPacket>(packetHeader);
 
 				// Get full timestamp and addresses of first event.
-				libcaer::events::PolarityEventPacket::PolarityEvent firstEvent = (*polarity)[0];
+				libcaer::events::PolarityEvent firstEvent = (*polarity)[0];
 
 				int32_t ts = firstEvent.getTimestamp();
 				uint16_t x = firstEvent.getX();

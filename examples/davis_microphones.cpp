@@ -96,10 +96,10 @@ int main(void) {
 		int32_t samplesNumber = samplePacket->getEventValid();
 
 		for (int32_t i = 0; i < samplePacket->size(); i++) {
-			libcaer::events::SampleEventPacket::SampleEvent sample = (*samplePacket)[i];
+			libcaer::events::SampleEvent sample = (*samplePacket)[i];
 
 			if (sample.isValid()) {
-				int16_t value = sample.getSample() >> 8;
+				int16_t value = static_cast<int16_t>(sample.getSample() >> 8);
 				samples.push_back(value);
 				meanValue += value;
 			}
