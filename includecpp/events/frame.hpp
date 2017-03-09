@@ -154,6 +154,10 @@ struct FrameEvent: public caer_frame_event {
 		enum caer_frame_event_color_channels cNumberEnum =
 			static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<colorChannels>::type>(cNumber));
 
+		if (lenX <= 0 || lenY <= 0 || cNumber <= 0) {
+			throw std::invalid_argument("Negative lengths or channel number not allowed.");
+		}
+
 		size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY) * cNumberEnum);
 
 		if (neededMemory
@@ -308,6 +312,16 @@ public:
 		int32_t maxLengthY, int16_t maxChannelNumber) {
 		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
 
+		if (maxLengthX <= 0) {
+			throw std::invalid_argument("Negative or zero maximum X length not allowed.");
+		}
+		if (maxLengthY <= 0) {
+			throw std::invalid_argument("Negative or zero maximum Y length not allowed.");
+		}
+		if (maxChannelNumber <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of channels not allowed.");
+		}
+
 		caerFrameEventPacket packet = caerFrameEventPacketAllocate(eventCapacity, eventSource, tsOverflow, maxLengthX,
 			maxLengthY, maxChannelNumber);
 		constructorCheckNullptr(packet);
@@ -357,13 +371,13 @@ public:
 		return (caerFrameEventPacketGetPixelsMaxIndex(reinterpret_cast<caerFrameEventPacketConst>(header)));
 	}
 
-	FrameEventPacket demosaic() const {
+	FrameEventPacket *demosaic() const {
 		caerFrameEventPacket colorPacket = caerFrameUtilsDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header));
 		if (colorPacket == nullptr) {
 			throw std::runtime_error("Failed to generate a demosaiced frame event packet.");
 		}
 
-		return (FrameEventPacket(colorPacket));
+		return (new FrameEventPacket(colorPacket));
 	}
 
 	void contrast() noexcept {
@@ -378,7 +392,7 @@ public:
 		EDGE_AWARE = 1,
 	};
 
-	FrameEventPacket demosaic(opencvDemosaic demosaicType) const {
+	FrameEventPacket *demosaic(opencvDemosaic demosaicType) const {
 		caerFrameEventPacket colorPacket =
 			caerFrameUtilsOpenCVDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
 				static_cast<enum caer_frame_utils_opencv_demosaic>(static_cast<typename std::underlying_type<
@@ -387,7 +401,7 @@ public:
 			throw std::runtime_error("Failed to generate a demosaiced frame event packet using OpenCV.");
 		}
 
-		return (FrameEventPacket(colorPacket));
+		return (new FrameEventPacket(colorPacket));
 	}
 
 	enum class opencvContrast {
