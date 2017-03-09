@@ -7,9 +7,7 @@
 namespace libcaer {
 namespace events {
 
-using ConfigurationEventBase = struct caer_configuration_event;
-
-struct ConfigurationEvent: public ConfigurationEventBase {
+struct ConfigurationEvent: public caer_configuration_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerConfigurationEventGetTimestamp(this));
 	}
@@ -95,24 +93,16 @@ public:
 	}
 
 	// Event access methods.
-	reference getEvent(size_type index) override {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		ConfigurationEventBase *evtBase = caerConfigurationEventPacketGetEvent(
+	reference virtualGetEvent(size_type index) noexcept override {
+		caerConfigurationEvent evtBase = caerConfigurationEventPacketGetEvent(
 			reinterpret_cast<caerConfigurationEventPacket>(header), index);
 		ConfigurationEvent *evt = static_cast<ConfigurationEvent *>(evtBase);
 
 		return (*evt);
 	}
 
-	const_reference getEvent(size_type index) const override {
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const ConfigurationEventBase *evtBase = caerConfigurationEventPacketGetEventConst(
+	const_reference virtualGetEvent(size_type index) const noexcept override {
+		caerConfigurationEventConst evtBase = caerConfigurationEventPacketGetEventConst(
 			reinterpret_cast<caerConfigurationEventPacketConst>(header), index);
 		const ConfigurationEvent *evt = static_cast<const ConfigurationEvent *>(evtBase);
 

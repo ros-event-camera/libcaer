@@ -558,9 +558,21 @@ public:
 	using difference_type = ptrdiff_t;
 
 	// Event access methods.
-	virtual reference getEvent(size_type index) = 0;
+	reference getEvent(size_type index) {
+		if (index < 0 || index >= capacity()) {
+			throw std::out_of_range("Index out of range.");
+		}
 
-	virtual const_reference getEvent(size_type index) const = 0;
+		return (virtualGetEvent(index));
+	}
+
+	const_reference getEvent(size_type index) const {
+		if (index < 0 || index >= capacity()) {
+			throw std::out_of_range("Index out of range.");
+		}
+
+		return (virtualGetEvent(index));
+	}
 
 	reference operator[](size_type index) {
 		return (getEvent(index));
@@ -647,9 +659,13 @@ public:
 	}
 
 protected:
-	virtual EventPacket *virtualCopy(copyTypes ct) const override {
+	EventPacket *virtualCopy(copyTypes ct) const override {
 		return (new PKT(internalCopy(header, ct)));
 	}
+
+	virtual reference virtualGetEvent(size_type index) noexcept = 0;
+
+	virtual const_reference virtualGetEvent(size_type index) const noexcept = 0;
 };
 
 }
