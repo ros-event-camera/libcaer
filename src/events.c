@@ -115,7 +115,8 @@ caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, i
 
 caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
 	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0 || maxLengthX <= 0 || maxLengthY <= 0
+		|| maxChannelNumber <= 0) {
 		return (NULL);
 	}
 

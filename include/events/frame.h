@@ -622,6 +622,13 @@ static inline enum caer_frame_event_color_channels caerFrameEventGetChannelNumbe
  */
 static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent event, int32_t lengthX, int32_t lengthY,
 	enum caer_frame_event_color_channels channelNumber, caerFrameEventPacketConst packet) {
+	if (lengthX <= 0 || lengthY <= 0 || channelNumber <= 0) {
+		// Negative means using the 31st bit!
+		caerLog(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetLengthXLengthYChannelNumber() with negative value(s)!");
+		return;
+	}
+
 	// Verify lengths and color channels number don't exceed allocated space.
 	size_t neededMemory = (sizeof(uint16_t) * (size_t) lengthX * (size_t) lengthY * channelNumber);
 
