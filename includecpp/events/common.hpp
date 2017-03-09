@@ -153,10 +153,7 @@ protected:
 
 public:
 	EventPacket(caerEventPacketHeader packetHeader) {
-		if (packetHeader == nullptr) {
-			throw std::runtime_error(
-				"Failed to initialize EventPacketHeader from existing C packet header: null pointer.");
-		}
+		constructorCheckNullptr(packetHeader);
 
 		if (caerEventPacketHeaderGetEventType(packetHeader) < CAER_DEFAULT_EVENT_TYPES_COUNT) {
 			throw std::runtime_error(
@@ -613,8 +610,8 @@ public:
 	}
 
 	iterator end() noexcept {
-		return (iterator(reinterpret_cast<uint8_t *>(&front()) + (size() * getEventSize()),
-			static_cast<size_t>(getEventSize())));
+		// Pointer must be to element one past the end!
+		return (iterator(reinterpret_cast<uint8_t *>(&back()) + getEventSize(), static_cast<size_t>(getEventSize())));
 	}
 
 	const_iterator begin() const noexcept {
@@ -630,7 +627,8 @@ public:
 	}
 
 	const_iterator cend() const noexcept {
-		return (const_iterator(reinterpret_cast<const uint8_t *>(&front()) + (size() * getEventSize()),
+		// Pointer must be to element one past the end!
+		return (const_iterator(reinterpret_cast<const uint8_t *>(&back()) + getEventSize(),
 			static_cast<size_t>(getEventSize())));
 	}
 
