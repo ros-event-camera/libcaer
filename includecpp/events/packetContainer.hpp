@@ -19,7 +19,7 @@ private:
 	/// Number of valid events contained within all the packets in this container.
 	int32_t eventsValidNumber;
 	/// Vector of pointers to the actual event packets.
-	std::vector<std::shared_ptr<EventPacketHeader>> eventPackets;
+	std::vector<std::shared_ptr<EventPacket>> eventPackets;
 
 public:
 	/**
@@ -85,7 +85,7 @@ public:
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	std::shared_ptr<EventPacketHeader> getEventPacket(size_t index) {
+	std::shared_ptr<EventPacket> getEventPacket(size_t index) {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -93,7 +93,7 @@ public:
 		return (eventPackets[index]);
 	}
 
-	std::shared_ptr<EventPacketHeader> operator[](size_t index) {
+	std::shared_ptr<EventPacket> operator[](size_t index) {
 		return (getEventPacket(index));
 	}
 
@@ -108,7 +108,7 @@ public:
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	std::shared_ptr<const EventPacketHeader> getEventPacket(size_t index) const {
+	std::shared_ptr<const EventPacket> getEventPacket(size_t index) const {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -116,7 +116,7 @@ public:
 		return (eventPackets[index]);
 	}
 
-	std::shared_ptr<const EventPacketHeader> operator[](size_t index) const {
+	std::shared_ptr<const EventPacket> operator[](size_t index) const {
 		return (getEventPacket(index));
 	}
 
@@ -129,7 +129,7 @@ public:
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	void setEventPacket(size_t index, std::shared_ptr<EventPacketHeader> packetHeader) {
+	void setEventPacket(size_t index, std::shared_ptr<EventPacket> packetHeader) {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -144,7 +144,7 @@ public:
 	 *
 	 * @param packetHeader a pointer to an event packet. Can be a nullptr.
 	 */
-	void add(std::shared_ptr<EventPacketHeader> packetHeader) {
+	void add(std::shared_ptr<EventPacket> packetHeader) {
 		eventPackets.push_back(packetHeader);
 
 		updateStatistics();
@@ -242,7 +242,7 @@ public:
 	 *
 	 * @return a pointer to an event packet with a certain type or nullptr if none found.
 	 */
-	std::shared_ptr<EventPacketHeader> findEventPacketByType(int16_t typeID) {
+	std::shared_ptr<EventPacket> findEventPacketByType(int16_t typeID) {
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
 				continue;
@@ -266,7 +266,7 @@ public:
 	 *
 	 * @return a pointer to a read-only event packet with a certain type or nullptr if none found.
 	 */
-	std::shared_ptr<const EventPacketHeader> findEventPacketByType(int16_t typeID) const {
+	std::shared_ptr<const EventPacket> findEventPacketByType(int16_t typeID) const {
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
 				continue;
@@ -299,7 +299,7 @@ public:
 				newContainer->add(nullptr);
 			}
 			else {
-				newContainer->add(std::shared_ptr<EventPacketHeader>(packet->copyOnlyEvents()));
+				newContainer->add(std::shared_ptr<EventPacket>(packet->copy(EventPacket::copyTypes::EVENTS_ONLY)));
 			}
 		}
 
@@ -326,7 +326,8 @@ public:
 				newContainer->add(nullptr);
 			}
 			else {
-				newContainer->add(std::shared_ptr<EventPacketHeader>(packet->copyOnlyValidEvents()));
+				newContainer->add(
+					std::shared_ptr<EventPacket>(packet->copy(EventPacket::copyTypes::VALID_EVENTS_ONLY)));
 			}
 		}
 

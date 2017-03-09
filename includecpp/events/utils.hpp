@@ -21,9 +21,9 @@ namespace libcaer {
 namespace events {
 namespace utils {
 
-std::shared_ptr<EventPacketHeader> constructFromCStruct(caerEventPacketHeader packet);
+std::shared_ptr<EventPacket> constructFromCStruct(caerEventPacketHeader packet);
 
-std::shared_ptr<EventPacketHeader> constructFromCStruct(caerEventPacketHeader packet) {
+std::shared_ptr<EventPacket> constructFromCStruct(caerEventPacketHeader packet) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::make_shared<SpecialEventPacket>(packet));
@@ -78,7 +78,7 @@ std::shared_ptr<EventPacketHeader> constructFromCStruct(caerEventPacketHeader pa
 			break;
 
 		default:
-			return (std::make_shared<EventPacketHeader>(packet));
+			return (std::make_shared<EventPacket>(packet));
 			break;
 	}
 }
