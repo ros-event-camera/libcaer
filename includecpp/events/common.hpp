@@ -363,6 +363,7 @@ public:
 
 	// Container traits.
 	using value_type = const GenericEvent;
+	using const_value_type = const GenericEvent;
 	using pointer = const GenericEvent *;
 	using const_pointer = const GenericEvent *;
 	using reference = const GenericEvent &;
@@ -548,6 +549,7 @@ class EventPacketCommon: public EventPacket {
 public:
 	// Container traits.
 	using value_type = EVT;
+	using const_value_type = const EVT;
 	using pointer = EVT *;
 	using const_pointer = const EVT *;
 	using reference = EVT &;
