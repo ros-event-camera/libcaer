@@ -10,137 +10,133 @@ namespace events {
 
 class EventPacketContainerDeepConstIterator {
 private:
-	const std::vector<std::shared_ptr<EventPacket>> *eventPackets;
-	size_t index;
-	mutable const std::shared_ptr<EventPacket> *currSharedPtr;
+	using internalConstIterator = std::vector<std::shared_ptr<EventPacket>>::const_iterator;
+
+	internalConstIterator eventPacketsIterator;
+	mutable std::shared_ptr<const EventPacket> currElement;
 
 public:
 	// Iterator traits.
-	using iterator_category = std::random_access_iterator_tag;
-	using value_type = const std::shared_ptr<const EventPacket>;
+	using iterator_category = internalConstIterator::iterator_category;
+	using value_type = std::shared_ptr<const EventPacket>;
 	using pointer = const std::shared_ptr<const EventPacket> *;
 	using reference = const std::shared_ptr<const EventPacket> &;
-	using difference_type = ptrdiff_t;
-	using size_type = size_t;
+	using difference_type = internalConstIterator::difference_type;
+	using size_type = internalConstIterator::difference_type;
 
 	// Constructors.
-	EventPacketContainerDeepConstIterator() :
-			eventPackets(nullptr),
-			index(0),
-			currSharedPtr(nullptr) {
+	EventPacketContainerDeepConstIterator() {
 	}
 
-	EventPacketContainerDeepConstIterator(const std::vector<std::shared_ptr<EventPacket>> *_eventPackets, size_t _index) :
-			eventPackets(_eventPackets),
-			index(_index),
-			currSharedPtr(&(*eventPackets)[index]) {
+	EventPacketContainerDeepConstIterator(internalConstIterator _eventPacketsIterator) :
+			eventPacketsIterator(_eventPacketsIterator) {
 	}
 
 	// Data access operators.
 	reference operator*() const noexcept {
-		currSharedPtr = &(*eventPackets)[index];
-		return (*currSharedPtr);
+		currElement = *eventPacketsIterator;
+		return (currElement);
 	}
 
 	pointer operator->() const noexcept {
-		currSharedPtr = &(*eventPackets)[index];
-		return (currSharedPtr);
+		currElement = *eventPacketsIterator;
+		return (&currElement);
 	}
 
 	reference operator[](size_type idx) const noexcept {
-		currSharedPtr = &(*eventPackets)[index + idx];
-		return (*currSharedPtr);
+		currElement = eventPacketsIterator[idx];
+		return (currElement);
 	}
 
 	// Comparison operators.
 	bool operator==(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index == rhs.index);
+		return (eventPacketsIterator == rhs.eventPacketsIterator);
 	}
 
 	bool operator!=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index != rhs.index);
+		return (eventPacketsIterator != rhs.eventPacketsIterator);
 	}
 
 	bool operator<(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index < rhs.index);
+		return (eventPacketsIterator < rhs.eventPacketsIterator);
 	}
 
 	bool operator>(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index > rhs.index);
+		return (eventPacketsIterator > rhs.eventPacketsIterator);
 	}
 
 	bool operator<=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index <= rhs.index);
+		return (eventPacketsIterator <= rhs.eventPacketsIterator);
 	}
 
 	bool operator>=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
-		return (index >= rhs.index);
+		return (eventPacketsIterator >= rhs.eventPacketsIterator);
 	}
 
 	// Prefix increment.
 	EventPacketContainerDeepConstIterator& operator++() noexcept {
-		index++;
+		++eventPacketsIterator;
 		return (*this);
 	}
 
 	// Postfix increment.
 	EventPacketContainerDeepConstIterator operator++(int) noexcept {
-		size_t currIndex = index;
-		index++;
-		return (EventPacketContainerDeepConstIterator(eventPackets, currIndex));
+		internalConstIterator currIterator = eventPacketsIterator;
+		++eventPacketsIterator;
+		return (EventPacketContainerDeepConstIterator(currIterator));
 	}
 
 	// Prefix decrement.
 	EventPacketContainerDeepConstIterator& operator--() noexcept {
-		index--;
+		--eventPacketsIterator;
 		return (*this);
 	}
 
 	// Postfix decrement.
 	EventPacketContainerDeepConstIterator operator--(int) noexcept {
-		size_t currIndex = index;
-		index--;
-		return (EventPacketContainerDeepConstIterator(eventPackets, currIndex));
+		internalConstIterator currIterator = eventPacketsIterator;
+		--eventPacketsIterator;
+		return (EventPacketContainerDeepConstIterator(currIterator));
 	}
 
 	// Iter += N.
 	EventPacketContainerDeepConstIterator& operator+=(size_type add) noexcept {
-		index += add;
+		eventPacketsIterator += add;
 		return (*this);
 	}
 
 	// Iter + N.
 	EventPacketContainerDeepConstIterator operator+(size_type add) const noexcept {
-		return (EventPacketContainerDeepConstIterator(eventPackets, index + add));
+		return (EventPacketContainerDeepConstIterator(eventPacketsIterator + add));
 	}
 
 	// N + Iter. Must be friend as Iter is right-hand-side.
 	friend EventPacketContainerDeepConstIterator operator+(size_type lhs,
 		const EventPacketContainerDeepConstIterator &rhs) noexcept {
-		return (EventPacketContainerDeepConstIterator(rhs.eventPackets, rhs.index + lhs));
+		return (EventPacketContainerDeepConstIterator(rhs.eventPacketsIterator + lhs));
 	}
 
 	// Iter -= N.
 	EventPacketContainerDeepConstIterator& operator-=(size_type sub) noexcept {
-		index -= sub;
+		eventPacketsIterator -= sub;
 		return (*this);
 	}
 
 	// Iter - N. (N - Iter doesn't make sense!)
 	EventPacketContainerDeepConstIterator operator-(size_type sub) const noexcept {
-		return (EventPacketContainerDeepConstIterator(eventPackets, index - sub));
+		return (EventPacketContainerDeepConstIterator(eventPacketsIterator - sub));
 	}
 
 	// Iter - Iter. (Iter + Iter doesn't make sense!)
 	difference_type operator-(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
 		// Distance in pointed-to-elements.
-		return (static_cast<difference_type>(index) - static_cast<difference_type>(rhs.index));
+		return (eventPacketsIterator - rhs.eventPacketsIterator);
 	}
 
 	// Swap two iterators.
 	void swap(EventPacketContainerDeepConstIterator &rhs) noexcept {
-		// Only swap index. Two iterators must reference same vector.
-		std::swap(index, rhs.index);
+		std::swap(eventPacketsIterator, rhs.eventPacketsIterator);
+		std::swap(currElement, rhs.currElement);
 	}
 };
 
@@ -188,7 +184,7 @@ public:
 			eventsNumber(0),
 			eventsValidNumber(0),
 			eventPackets(eventPacketsNumber) {
-		for (auto i = 0; i < eventPacketsNumber; i++) {
+		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
 		}
 	}
@@ -494,12 +490,12 @@ public:
 	}
 
 	const_iterator cbegin() const noexcept {
-		return (const_iterator(&eventPackets, 0));
+		return (const_iterator(eventPackets.cbegin()));
 	}
 
 	const_iterator cend() const noexcept {
 		// Pointer must be to element one past the end!
-		return (const_iterator(&eventPackets, size() + 1));
+		return (const_iterator(eventPackets.cend()));
 	}
 
 	const_reverse_iterator rbegin() const noexcept {
