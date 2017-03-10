@@ -86,15 +86,15 @@ public:
 		}
 	}
 
-	std::shared_ptr<libcaer::events::EventPacketContainer> dataGet() const {
+	std::unique_ptr<libcaer::events::EventPacketContainer> dataGet() const {
 		caerEventPacketContainer cContainer = caerDeviceDataGet(handle.get());
 		if (cContainer == nullptr) {
 			// NULL return means no data, forward that.
 			return (nullptr);
 		}
 
-		std::shared_ptr<libcaer::events::EventPacketContainer> cppContainer = std::make_shared<
-			libcaer::events::EventPacketContainer>();
+		std::unique_ptr<libcaer::events::EventPacketContainer> cppContainer = std::unique_ptr<
+			libcaer::events::EventPacketContainer>(new libcaer::events::EventPacketContainer());
 
 		for (int32_t i = 0; i < caerEventPacketContainerGetEventPacketsNumber(cContainer); i++) {
 			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(cContainer, i);

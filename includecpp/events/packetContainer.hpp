@@ -291,8 +291,9 @@ public:
 	 *
 	 * @return a deep copy of this event packet container, containing all events.
 	 */
-	EventPacketContainer *copyAllEvents() const {
-		EventPacketContainer *newContainer = new EventPacketContainer();
+	std::unique_ptr<EventPacketContainer> copyAllEvents() const {
+		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
+			new EventPacketContainer());
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
@@ -318,8 +319,9 @@ public:
 	 *
 	 * @return a deep copy of this event packet container, containing only valid events.
 	 */
-	EventPacketContainer *copyValidEvents() const {
-		EventPacketContainer *newContainer = new EventPacketContainer();
+	std::unique_ptr<EventPacketContainer> copyValidEvents() const {
+		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
+			new EventPacketContainer());
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {

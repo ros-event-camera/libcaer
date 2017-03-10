@@ -4,6 +4,7 @@
 #include <libcaer/events/common.h>
 #include "../libcaer.hpp"
 #include <cassert>
+#include <memory>
 
 namespace libcaer {
 namespace events {
@@ -450,7 +451,7 @@ public:
 		VALID_EVENTS_ONLY
 	};
 
-	EventPacket *copy(copyTypes ct) const {
+	std::unique_ptr<EventPacket> copy(copyTypes ct) const {
 		return (virtualCopy(ct));
 	}
 
@@ -487,8 +488,8 @@ public:
 
 protected:
 	// Internal copy functions.
-	virtual EventPacket *virtualCopy(copyTypes ct) const {
-		return (new EventPacket(internalCopy(header, ct)));
+	virtual std::unique_ptr<EventPacket> virtualCopy(copyTypes ct) const {
+		return (std::unique_ptr<EventPacket>(new EventPacket(internalCopy(header, ct))));
 	}
 
 	static caerEventPacketHeader internalCopy(caerEventPacketHeaderConst header, copyTypes ct) {
@@ -595,8 +596,8 @@ public:
 		return (getEvent(size() - 1));
 	}
 
-	PKT *copy(copyTypes ct) const {
-		return (virtualCopy(ct));
+	std::unique_ptr<PKT> copy(copyTypes ct) const {
+		return (std::unique_ptr<PKT>(static_cast<PKT *>(virtualCopy(ct).release())));
 	}
 
 	// Iterator support.
@@ -657,8 +658,8 @@ public:
 	}
 
 protected:
-	EventPacket *virtualCopy(copyTypes ct) const override {
-		return (new PKT(internalCopy(header, ct)));
+	std::unique_ptr<EventPacket> virtualCopy(copyTypes ct) const override {
+		return (std::unique_ptr<EventPacket>(new PKT(internalCopy(header, ct))));
 	}
 
 	virtual reference virtualGetEvent(size_type index) noexcept = 0;
