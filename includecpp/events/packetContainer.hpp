@@ -8,6 +8,142 @@
 namespace libcaer {
 namespace events {
 
+class EventPacketContainerDeepConstIterator {
+private:
+	const std::vector<std::shared_ptr<EventPacket>> *eventPackets;
+	size_t index;
+	mutable const std::shared_ptr<EventPacket> *currSharedPtr;
+
+public:
+	// Iterator traits.
+	using iterator_category = std::random_access_iterator_tag;
+	using value_type = const std::shared_ptr<const EventPacket>;
+	using pointer = const std::shared_ptr<const EventPacket> *;
+	using reference = const std::shared_ptr<const EventPacket> &;
+	using difference_type = ptrdiff_t;
+	using size_type = size_t;
+
+	// Constructors.
+	EventPacketContainerDeepConstIterator() :
+			eventPackets(nullptr),
+			index(0),
+			currSharedPtr(nullptr) {
+	}
+
+	EventPacketContainerDeepConstIterator(const std::vector<std::shared_ptr<EventPacket>> *_eventPackets, size_t _index) :
+			eventPackets(_eventPackets),
+			index(_index),
+			currSharedPtr(&(*eventPackets)[index]) {
+	}
+
+	// Data access operators.
+	reference operator*() const noexcept {
+		currSharedPtr = &(*eventPackets)[index];
+		return (*currSharedPtr);
+	}
+
+	pointer operator->() const noexcept {
+		currSharedPtr = &(*eventPackets)[index];
+		return (currSharedPtr);
+	}
+
+	reference operator[](size_type idx) const noexcept {
+		currSharedPtr = &(*eventPackets)[index + idx];
+		return (*currSharedPtr);
+	}
+
+	// Comparison operators.
+	bool operator==(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index == rhs.index);
+	}
+
+	bool operator!=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index != rhs.index);
+	}
+
+	bool operator<(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index < rhs.index);
+	}
+
+	bool operator>(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index > rhs.index);
+	}
+
+	bool operator<=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index <= rhs.index);
+	}
+
+	bool operator>=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		return (index >= rhs.index);
+	}
+
+	// Prefix increment.
+	EventPacketContainerDeepConstIterator& operator++() noexcept {
+		index++;
+		return (*this);
+	}
+
+	// Postfix increment.
+	EventPacketContainerDeepConstIterator operator++(int) noexcept {
+		size_t currIndex = index;
+		index++;
+		return (EventPacketContainerDeepConstIterator(eventPackets, currIndex));
+	}
+
+	// Prefix decrement.
+	EventPacketContainerDeepConstIterator& operator--() noexcept {
+		index--;
+		return (*this);
+	}
+
+	// Postfix decrement.
+	EventPacketContainerDeepConstIterator operator--(int) noexcept {
+		size_t currIndex = index;
+		index--;
+		return (EventPacketContainerDeepConstIterator(eventPackets, currIndex));
+	}
+
+	// Iter += N.
+	EventPacketContainerDeepConstIterator& operator+=(size_type add) noexcept {
+		index += add;
+		return (*this);
+	}
+
+	// Iter + N.
+	EventPacketContainerDeepConstIterator operator+(size_type add) const noexcept {
+		return (EventPacketContainerDeepConstIterator(eventPackets, index + add));
+	}
+
+	// N + Iter. Must be friend as Iter is right-hand-side.
+	friend EventPacketContainerDeepConstIterator operator+(size_type lhs,
+		const EventPacketContainerDeepConstIterator &rhs) noexcept {
+		return (EventPacketContainerDeepConstIterator(rhs.eventPackets, rhs.index + lhs));
+	}
+
+	// Iter -= N.
+	EventPacketContainerDeepConstIterator& operator-=(size_type sub) noexcept {
+		index -= sub;
+		return (*this);
+	}
+
+	// Iter - N. (N - Iter doesn't make sense!)
+	EventPacketContainerDeepConstIterator operator-(size_type sub) const noexcept {
+		return (EventPacketContainerDeepConstIterator(eventPackets, index - sub));
+	}
+
+	// Iter - Iter. (Iter + Iter doesn't make sense!)
+	difference_type operator-(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+		// Distance in pointed-to-elements.
+		return (static_cast<difference_type>(index) - static_cast<difference_type>(rhs.index));
+	}
+
+	// Swap two iterators.
+	void swap(EventPacketContainerDeepConstIterator &rhs) noexcept {
+		// Only swap index. Two iterators must reference same vector.
+		std::swap(index, rhs.index);
+	}
+};
+
 class EventPacketContainer {
 private:
 	/// Smallest event timestamp contained in this packet container.
@@ -22,6 +158,12 @@ private:
 	std::vector<std::shared_ptr<EventPacket>> eventPackets;
 
 public:
+	// Container traits (not really STL compatible).
+	using value_type = std::shared_ptr<EventPacket>;
+	using const_value_type = std::shared_ptr<const EventPacket>;
+	using size_type = size_t;
+	using difference_type = ptrdiff_t;
+
 	/**
 	 * Construct a new EventPacketContainer.
 	 */
@@ -40,13 +182,13 @@ public:
 	 * @param eventPacketsNumber the initial number of event packet pointers
 	 *                           that can be stored in this container.
 	 */
-	EventPacketContainer(size_t eventPacketsNumber) :
+	EventPacketContainer(size_type eventPacketsNumber) :
 			lowestEventTimestamp(-1),
 			highestEventTimestamp(-1),
 			eventsNumber(0),
 			eventsValidNumber(0),
 			eventPackets(eventPacketsNumber) {
-		for (size_t i = 0; i < eventPacketsNumber; i++) {
+		for (auto i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
 		}
 	}
@@ -59,11 +201,11 @@ public:
 	// as vector and shared_ptr take care of all the book-keeping.
 
 	// EventPackets vector accessors.
-	size_t capacity() const noexcept {
+	size_type capacity() const noexcept {
 		return (eventPackets.capacity());
 	}
 
-	size_t size() const noexcept {
+	size_type size() const noexcept {
 		return (eventPackets.size());
 	}
 
@@ -85,7 +227,7 @@ public:
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	std::shared_ptr<EventPacket> getEventPacket(size_t index) {
+	value_type getEventPacket(size_type index) {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -93,7 +235,7 @@ public:
 		return (eventPackets[index]);
 	}
 
-	std::shared_ptr<EventPacket> operator[](size_t index) {
+	value_type operator[](size_type index) {
 		return (getEventPacket(index));
 	}
 
@@ -108,7 +250,7 @@ public:
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	std::shared_ptr<const EventPacket> getEventPacket(size_t index) const {
+	const_value_type getEventPacket(size_type index) const {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -116,20 +258,21 @@ public:
 		return (eventPackets[index]);
 	}
 
-	std::shared_ptr<const EventPacket> operator[](size_t index) const {
+	const_value_type operator[](size_type index) const {
 		return (getEventPacket(index));
 	}
 
 	/**
 	 * Set the pointer to the event packet stored in this container
-	 * at the given index.
+	 * at the given index. The index must be valid already, this does
+	 * not change the container size.
 	 *
 	 * @param index the index of the event packet to set.
 	 * @param packetHeader a pointer to an event packet. Can be a nullptr.
 	 *
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
-	void setEventPacket(size_t index, std::shared_ptr<EventPacket> packetHeader) {
+	void setEventPacket(size_type index, value_type packetHeader) {
 		if (index >= eventPackets.size()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -141,10 +284,11 @@ public:
 
 	/**
 	 * Add an event packet pointer at the end of this container.
+	 * Increases container size by one.
 	 *
 	 * @param packetHeader a pointer to an event packet. Can be a nullptr.
 	 */
-	void add(std::shared_ptr<EventPacket> packetHeader) {
+	void addEventPacket(value_type packetHeader) {
 		eventPackets.push_back(packetHeader);
 
 		updateStatistics();
@@ -242,7 +386,7 @@ public:
 	 *
 	 * @return a pointer to an event packet with a certain type or nullptr if none found.
 	 */
-	std::shared_ptr<EventPacket> findEventPacketByType(int16_t typeID) {
+	value_type findEventPacketByType(int16_t typeID) {
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
 				continue;
@@ -266,7 +410,7 @@ public:
 	 *
 	 * @return a pointer to a read-only event packet with a certain type or nullptr if none found.
 	 */
-	std::shared_ptr<const EventPacket> findEventPacketByType(int16_t typeID) const {
+	const_value_type findEventPacketByType(int16_t typeID) const {
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
 				continue;
@@ -297,10 +441,11 @@ public:
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
-				newContainer->add(nullptr);
+				newContainer->addEventPacket(nullptr);
 			}
 			else {
-				newContainer->add(std::shared_ptr<EventPacket>(packet->copy(EventPacket::copyTypes::EVENTS_ONLY)));
+				newContainer->addEventPacket(
+					std::shared_ptr<EventPacket>(packet->copy(EventPacket::copyTypes::EVENTS_ONLY)));
 			}
 		}
 
@@ -325,15 +470,52 @@ public:
 
 		for (const auto &packet : eventPackets) {
 			if (packet == nullptr) {
-				newContainer->add(nullptr);
+				newContainer->addEventPacket(nullptr);
 			}
 			else {
-				newContainer->add(
+				newContainer->addEventPacket(
 					std::shared_ptr<EventPacket>(packet->copy(EventPacket::copyTypes::VALID_EVENTS_ONLY)));
 			}
 		}
 
 		return (newContainer);
+	}
+
+	// Iterator support (read-only, modifications only through setEventPacket() and addEventPacket()).
+	using const_iterator = EventPacketContainerDeepConstIterator;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	const_iterator begin() const noexcept {
+		return (cbegin());
+	}
+
+	const_iterator end() const noexcept {
+		return (cend());
+	}
+
+	const_iterator cbegin() const noexcept {
+		return (const_iterator(&eventPackets, 0));
+	}
+
+	const_iterator cend() const noexcept {
+		// Pointer must be to element one past the end!
+		return (const_iterator(&eventPackets, size() + 1));
+	}
+
+	const_reverse_iterator rbegin() const noexcept {
+		return (crbegin());
+	}
+
+	const_reverse_iterator rend() const noexcept {
+		return (crend());
+	}
+
+	const_reverse_iterator crbegin() const noexcept {
+		return (const_reverse_iterator(cend()));
+	}
+
+	const_reverse_iterator crend() const noexcept {
+		return (const_reverse_iterator(cbegin()));
 	}
 }
 ;

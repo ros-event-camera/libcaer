@@ -101,11 +101,11 @@ public:
 
 			// NULL packets just get added directly.
 			if (packet == nullptr) {
-				cppContainer->add(nullptr);
+				cppContainer->addEventPacket(nullptr);
 			}
 			else {
 				// Make sure the proper constructors are called when building the shared_ptr.
-				cppContainer->add(libcaer::events::utils::constructFromCStruct(packet));
+				cppContainer->addEventPacket(libcaer::events::utils::constructFromCStruct(packet));
 			}
 		}
 
