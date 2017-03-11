@@ -80,12 +80,12 @@ int main(void) {
 	std::vector<sf::Int16> samples;
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
-		std::shared_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
+		std::unique_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
 		if (packetContainer == nullptr) {
 			continue; // Skip if nothing there.
 		}
 
-		std::shared_ptr<libcaer::events::SampleEventPacket> samplePacket = static_pointer_cast<
+		std::shared_ptr<const libcaer::events::SampleEventPacket> samplePacket = static_pointer_cast<
 			libcaer::events::SampleEventPacket>(packetContainer->findEventPacketByType(SAMPLE_EVENT));
 		if (samplePacket == nullptr) {
 			continue; // Skip if nothing there.
@@ -95,9 +95,7 @@ int main(void) {
 		int64_t meanValue = 0;
 		int32_t samplesNumber = samplePacket->getEventValid();
 
-		for (int32_t i = 0; i < samplePacket->size(); i++) {
-			libcaer::events::SampleEvent sample = (*samplePacket)[i];
-
+		for (auto &sample : *samplePacket) {
 			if (sample.isValid()) {
 				int16_t value = static_cast<int16_t>(sample.getSample() >> 8);
 				samples.push_back(value);

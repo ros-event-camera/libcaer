@@ -76,32 +76,28 @@ int main(void) {
 	dvs128Handle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
-		std::shared_ptr<libcaer::events::EventPacketContainer> packetContainer = dvs128Handle.dataGet();
+		std::unique_ptr<libcaer::events::EventPacketContainer> packetContainer = dvs128Handle.dataGet();
 		if (packetContainer == nullptr) {
 			continue; // Skip if nothing there.
 		}
 
-		int32_t packetNum = packetContainer->size();
+		printf("\nGot event container with %d packets (allocated).\n", packetContainer->size());
 
-		printf("\nGot event container with %d packets (allocated).\n", packetNum);
-
-		for (int32_t i = 0; i < packetNum; i++) {
-			std::shared_ptr<libcaer::events::EventPacket> packetHeader = (*packetContainer)[i];
-			if (packetHeader == nullptr) {
-				printf("Packet %d is empty (not present).\n", i);
+		for (auto &packet : *packetContainer) {
+			if (packet == nullptr) {
+				printf("Packet is empty (not present).\n");
 				continue; // Skip if nothing there.
 			}
 
-			printf("Packet %d of type %d -> size is %d.\n", i, packetHeader->getEventType(),
-				packetHeader->getEventNumber());
+			printf("Packet of type %d -> %d events, %d capacity.\n", packet->getEventType(), packet->getEventNumber(),
+				packet->getEventCapacity());
 
-			// Packet 0 is always the special events packet for DAVIS, while packet is the polarity events packet.
-			if (i == POLARITY_EVENT) {
-				std::shared_ptr<libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
-					libcaer::events::PolarityEventPacket>(packetHeader);
+			if (packet->getEventType() == POLARITY_EVENT) {
+				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
+					libcaer::events::PolarityEventPacket>(packet);
 
 				// Get full timestamp and addresses of first event.
-				libcaer::events::PolarityEvent firstEvent = (*polarity)[0];
+				const libcaer::events::PolarityEvent &firstEvent = (*polarity)[0];
 
 				int32_t ts = firstEvent.getTimestamp();
 				uint16_t x = firstEvent.getX();
