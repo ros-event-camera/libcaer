@@ -21,7 +21,7 @@ private:
 public:
 	// Iterator traits.
 	using iterator_category = std::random_access_iterator_tag;
-	using value_type = T;
+	using value_type = typename std::remove_cv<T>::type;
 	using pointer = T *;
 	using reference = T &;
 	using difference_type = ptrdiff_t;
