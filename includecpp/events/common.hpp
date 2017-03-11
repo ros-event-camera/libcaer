@@ -373,7 +373,16 @@ public:
 
 	// Generic Event access methods.
 	const_value_type genericGetEvent(size_type index) const {
-		if (index < 0 || index >= capacity()) {
+		// Support negative indexes to go from the end of the event packet.
+		if (index < 0) {
+			index = size() + index;
+		}
+
+		// Accessing elements after size() but before capacity() doesn't
+		// make any sense here for Generic Events, as we only support
+		// reading/querying data from those events, and that would always
+		// fail for those empty events.
+		if (index < 0 || index >= size()) {
 			throw std::out_of_range("Index out of range.");
 		}
 
