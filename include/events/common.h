@@ -381,7 +381,7 @@ static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader head
  * type the packet is containing.
  *
  * @param headerPtr a valid EventPacket header pointer. Cannot be NULL.
- * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
+ * @param n the index of the returned event. Must be within [0,eventNumber[ bounds.
  *
  * @return a generic pointer to the requested event. NULL on error.
  *         This points to unmodifiable memory, as it should never be used for anything
@@ -391,10 +391,14 @@ static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader head
  */
 static inline const void *caerGenericEventGetEvent(caerEventPacketHeaderConst headerPtr, int32_t n) {
 	// Check that we're not out of bounds.
-	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(headerPtr)) {
+	// Accessing elements after EventNumber() but before EventCapacity() doesn't
+	// make any sense here for the Generic Event getter, as we only support
+	// reading/querying data from those events, and that would always fail for
+	// those empty events, as they are all zeroed out.
+	if (n < 0 || n >= caerEventPacketHeaderGetEventNumber(headerPtr)) {
 		caerLog(CAER_LOG_CRITICAL, "Generic Event",
 			"Called caerGenericEventGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
-			n, caerEventPacketHeaderGetEventCapacity(headerPtr) - 1);
+			n, caerEventPacketHeaderGetEventNumber(headerPtr) - 1);
 		return (NULL);
 	}
 
