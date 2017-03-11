@@ -559,6 +559,11 @@ public:
 
 	// Event access methods.
 	reference getEvent(size_type index) {
+		// Support negative indexes to go from the end of the event packet.
+		if (index < 0) {
+			index = size() + index;
+		}
+
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -567,6 +572,11 @@ public:
 	}
 
 	const_reference getEvent(size_type index) const {
+		// Support negative indexes to go from the end of the event packet.
+		if (index < 0) {
+			index = size() + index;
+		}
+
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -591,11 +601,11 @@ public:
 	}
 
 	reference back() {
-		return (getEvent(size() - 1));
+		return (getEvent(-1));
 	}
 
 	const_reference back() const {
-		return (getEvent(size() - 1));
+		return (getEvent(-1));
 	}
 
 	std::unique_ptr<PKT> copy(copyTypes ct) const {
