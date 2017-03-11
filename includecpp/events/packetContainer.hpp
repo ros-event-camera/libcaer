@@ -384,7 +384,7 @@ public:
 			const auto firstEvent = packet->genericGetEvent(0);
 			int64_t currLowestEventTimestamp = firstEvent.getTimestamp64();
 
-			const auto lastEvent = packet->genericGetEvent(packet->size() - 1);
+			const auto lastEvent = packet->genericGetEvent(-1);
 			int64_t currHighestEventTimestamp = lastEvent.getTimestamp64();
 
 			// Update tracked timestamps (or initialize if needed).
