@@ -348,7 +348,7 @@ public:
 		int32_t events = 0;
 		int32_t eventsValid = 0;
 
-		for (const auto &packet : eventPackets) {
+		for (auto &packet : *this) {
 			if (packet == nullptr) {
 				continue;
 			}
@@ -362,7 +362,7 @@ public:
 			const auto firstEvent = packet->genericGetEvent(0);
 			int64_t currLowestEventTimestamp = firstEvent.getTimestamp64();
 
-			const auto lastEvent = packet->genericGetEvent(packet->getEventNumber() - 1);
+			const auto lastEvent = packet->genericGetEvent(packet->size() - 1);
 			int64_t currHighestEventTimestamp = lastEvent.getTimestamp64();
 
 			// Update tracked timestamps (or initialize if needed).
@@ -395,7 +395,7 @@ public:
 	 * @return a pointer to an event packet with a certain type or nullptr if none found.
 	 */
 	value_type findEventPacketByType(int16_t typeID) {
-		for (const auto &packet : eventPackets) {
+		for (auto &packet : *this) {
 			if (packet == nullptr) {
 				continue;
 			}
@@ -419,7 +419,7 @@ public:
 	 * @return a pointer to a read-only event packet with a certain type or nullptr if none found.
 	 */
 	const_value_type findEventPacketByType(int16_t typeID) const {
-		for (const auto &packet : eventPackets) {
+		for (auto &packet : *this) {
 			if (packet == nullptr) {
 				continue;
 			}
@@ -447,7 +447,7 @@ public:
 		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
 			new EventPacketContainer());
 
-		for (const auto &packet : eventPackets) {
+		for (auto &packet : *this) {
 			if (packet == nullptr) {
 				newContainer->addEventPacket(nullptr);
 			}
@@ -476,7 +476,7 @@ public:
 		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
 			new EventPacketContainer());
 
-		for (const auto &packet : eventPackets) {
+		for (auto &packet : *this) {
 			if (packet == nullptr) {
 				newContainer->addEventPacket(nullptr);
 			}
