@@ -362,17 +362,17 @@ public:
 	};
 
 	// Container traits.
-	using value_type = const GenericEvent;
+	using value_type = GenericEvent;
 	using const_value_type = const GenericEvent;
-	using pointer = const GenericEvent *;
+	using pointer = GenericEvent *;
 	using const_pointer = const GenericEvent *;
-	using reference = const GenericEvent &;
+	using reference = GenericEvent &;
 	using const_reference = const GenericEvent &;
 	using size_type = int32_t;
 	using difference_type = ptrdiff_t;
 
 	// Generic Event access methods.
-	value_type genericGetEvent(size_type index) const {
+	const_value_type genericGetEvent(size_type index) const {
 		if (index < 0 || index >= capacity()) {
 			throw std::out_of_range("Index out of range.");
 		}
@@ -604,7 +604,7 @@ public:
 
 	// Iterator support.
 	using iterator = EventPacketIterator<value_type>;
-	using const_iterator = EventPacketIterator<const value_type>;
+	using const_iterator = EventPacketIterator<const_value_type>;
 	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -661,7 +661,7 @@ public:
 
 protected:
 	std::unique_ptr<EventPacket> virtualCopy(copyTypes ct) const override {
-		return (std::unique_ptr<EventPacket>(new PKT(internalCopy(header, ct))));
+		return (std::unique_ptr<PKT>(new PKT(internalCopy(header, ct))));
 	}
 
 	virtual reference virtualGetEvent(size_type index) noexcept = 0;
