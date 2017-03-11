@@ -12,7 +12,14 @@ class EventPacketContainerDeepConstIterator {
 private:
 	using internalConstIterator = std::vector<std::shared_ptr<EventPacket>>::const_iterator;
 
+	// Original vector const_iterator.
 	internalConstIterator eventPacketsIterator;
+
+	// currElement acts as a kind of cache: not only does it allow us
+	// to add the deep-constness we want, but it also stores a copy of
+	// the shared_ptr we're iterating over, effectively increasing its
+	// reference count by one until it is in use by the iterator and its
+	// user, thus ensuring the object can never disappear from under us.
 	mutable std::shared_ptr<const EventPacket> currElement;
 
 public:
@@ -26,10 +33,16 @@ public:
 
 	// Constructors.
 	EventPacketContainerDeepConstIterator() {
+		// Empty constructor fine here, results in calls to default
+		// constructors for members:
+		// - eventPacketsIterator() => empty/nothing iterator
+		// - currElement() => empty/nullptr shared_ptr
 	}
 
 	EventPacketContainerDeepConstIterator(internalConstIterator _eventPacketsIterator) :
 			eventPacketsIterator(_eventPacketsIterator) {
+		// Don't initialize currElement, it is initialized/updated
+		// right before every use.
 	}
 
 	// Data access operators.
