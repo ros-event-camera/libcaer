@@ -169,7 +169,7 @@ public:
 	// Container traits (not really STL compatible).
 	using value_type = std::shared_ptr<EventPacket>;
 	using const_value_type = std::shared_ptr<const EventPacket>;
-	using size_type = size_t;
+	using size_type = int32_t;
 	using difference_type = ptrdiff_t;
 
 	/**
@@ -189,13 +189,20 @@ public:
 	 *
 	 * @param eventPacketsNumber the initial number of event packet pointers
 	 *                           that can be stored in this container.
+	 *                           Must be equal to one or higher.
 	 */
 	EventPacketContainer(size_type eventPacketsNumber) :
 			lowestEventTimestamp(-1),
 			highestEventTimestamp(-1),
 			eventsNumber(0),
-			eventsValidNumber(0),
-			eventPackets(eventPacketsNumber) {
+			eventsValidNumber(0) {
+		if (eventPacketsNumber <= 0) {
+			throw std::invalid_argument("Negative or zero capacity not allowed on explicit construction.");
+		}
+
+		// Initialize and fill vector after having checked size value.
+		eventPackets = std::vector<std::shared_ptr<EventPacket>>(static_cast<size_t>(eventPacketsNumber));
+
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
 		}
@@ -210,11 +217,11 @@ public:
 
 	// EventPackets vector accessors.
 	size_type capacity() const noexcept {
-		return (eventPackets.capacity());
+		return (static_cast<size_type>(eventPackets.capacity()));
 	}
 
 	size_type size() const noexcept {
-		return (eventPackets.size());
+		return (static_cast<size_type>(eventPackets.size()));
 	}
 
 	bool empty() const noexcept {
@@ -236,11 +243,16 @@ public:
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
 	value_type getEventPacket(size_type index) {
-		if (index >= eventPackets.size()) {
+		// Support negative indexes to go from the end of the event packet container.
+		if (index < 0) {
+			index = size() + index;
+		}
+
+		if (index < 0 || index >= size()) {
 			throw std::out_of_range("Index out of range.");
 		}
 
-		return (eventPackets[index]);
+		return (eventPackets[static_cast<size_t>(index)]);
 	}
 
 	value_type operator[](size_type index) {
@@ -259,11 +271,16 @@ public:
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
 	const_value_type getEventPacket(size_type index) const {
-		if (index >= eventPackets.size()) {
+		// Support negative indexes to go from the end of the event packet container.
+		if (index < 0) {
+			index = size() + index;
+		}
+
+		if (index < 0 || index >= size()) {
 			throw std::out_of_range("Index out of range.");
 		}
 
-		return (eventPackets[index]);
+		return (eventPackets[static_cast<size_t>(index)]);
 	}
 
 	const_value_type operator[](size_type index) const {
@@ -281,11 +298,16 @@ public:
 	 * @exception std:out_of_range no packet exists at given index.
 	 */
 	void setEventPacket(size_type index, value_type packetHeader) {
-		if (index >= eventPackets.size()) {
+		// Support negative indexes to go from the end of the event packet container.
+		if (index < 0) {
+			index = size() + index;
+		}
+
+		if (index < 0 || index >= size()) {
 			throw std::out_of_range("Index out of range.");
 		}
 
-		eventPackets[index] = packetHeader;
+		eventPackets[static_cast<size_t>(index)] = packetHeader;
 
 		updateStatistics();
 	}
