@@ -8,38 +8,37 @@
 namespace libcaer {
 namespace events {
 
-class EventPacketContainerDeepConstIterator {
+template<class InteralIterator, class SharedPtrType>
+class EventPacketContainerCopyIterator {
 private:
-	using internalConstIterator = std::vector<std::shared_ptr<EventPacket>>::const_iterator;
-
-	// Original vector const_iterator.
-	internalConstIterator eventPacketsIterator;
+	// Original vector iterator or const_iterator.
+	InteralIterator eventPacketsIterator;
 
 	// currElement acts as a kind of cache: not only does it allow us
-	// to add the deep-constness we want, but it also stores a copy of
+	// to add deep-constness (when needed), but it also stores a copy of
 	// the shared_ptr we're iterating over, effectively increasing its
 	// reference count by one until it is in use by the iterator and its
 	// user, thus ensuring the object can never disappear from under us.
-	mutable std::shared_ptr<const EventPacket> currElement;
+	mutable SharedPtrType currElement;
 
 public:
 	// Iterator traits.
-	using iterator_category = internalConstIterator::iterator_category;
-	using value_type = std::shared_ptr<const EventPacket>;
-	using pointer = const std::shared_ptr<const EventPacket> *;
-	using reference = const std::shared_ptr<const EventPacket> &;
-	using difference_type = internalConstIterator::difference_type;
-	using size_type = internalConstIterator::difference_type;
+	using iterator_category = typename InteralIterator::iterator_category;
+	using value_type = SharedPtrType;
+	using pointer = const SharedPtrType *;
+	using reference = const SharedPtrType &;
+	using difference_type = typename InteralIterator::difference_type;
+	using size_type = typename InteralIterator::difference_type;
 
 	// Constructors.
-	EventPacketContainerDeepConstIterator() {
+	EventPacketContainerCopyIterator() {
 		// Empty constructor fine here, results in calls to default
 		// constructors for members:
 		// - eventPacketsIterator() => empty/nothing iterator
 		// - currElement() => empty/nullptr shared_ptr
 	}
 
-	EventPacketContainerDeepConstIterator(internalConstIterator _eventPacketsIterator) :
+	EventPacketContainerCopyIterator(InteralIterator _eventPacketsIterator) :
 			eventPacketsIterator(_eventPacketsIterator) {
 		// Don't initialize currElement, it is initialized/updated
 		// right before every use.
@@ -62,92 +61,92 @@ public:
 	}
 
 	// Comparison operators.
-	bool operator==(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator==(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator == rhs.eventPacketsIterator);
 	}
 
-	bool operator!=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator!=(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator != rhs.eventPacketsIterator);
 	}
 
-	bool operator<(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator<(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator < rhs.eventPacketsIterator);
 	}
 
-	bool operator>(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator>(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator > rhs.eventPacketsIterator);
 	}
 
-	bool operator<=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator<=(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator <= rhs.eventPacketsIterator);
 	}
 
-	bool operator>=(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	bool operator>=(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		return (eventPacketsIterator >= rhs.eventPacketsIterator);
 	}
 
 	// Prefix increment.
-	EventPacketContainerDeepConstIterator& operator++() noexcept {
+	EventPacketContainerCopyIterator& operator++() noexcept {
 		++eventPacketsIterator;
 		return (*this);
 	}
 
 	// Postfix increment.
-	EventPacketContainerDeepConstIterator operator++(int) noexcept {
-		internalConstIterator currIterator = eventPacketsIterator;
+	EventPacketContainerCopyIterator operator++(int) noexcept {
+		InteralIterator currIterator = eventPacketsIterator;
 		++eventPacketsIterator;
-		return (EventPacketContainerDeepConstIterator(currIterator));
+		return (EventPacketContainerCopyIterator(currIterator));
 	}
 
 	// Prefix decrement.
-	EventPacketContainerDeepConstIterator& operator--() noexcept {
+	EventPacketContainerCopyIterator& operator--() noexcept {
 		--eventPacketsIterator;
 		return (*this);
 	}
 
 	// Postfix decrement.
-	EventPacketContainerDeepConstIterator operator--(int) noexcept {
-		internalConstIterator currIterator = eventPacketsIterator;
+	EventPacketContainerCopyIterator operator--(int) noexcept {
+		InteralIterator currIterator = eventPacketsIterator;
 		--eventPacketsIterator;
-		return (EventPacketContainerDeepConstIterator(currIterator));
+		return (EventPacketContainerCopyIterator(currIterator));
 	}
 
 	// Iter += N.
-	EventPacketContainerDeepConstIterator& operator+=(size_type add) noexcept {
+	EventPacketContainerCopyIterator& operator+=(size_type add) noexcept {
 		eventPacketsIterator += add;
 		return (*this);
 	}
 
 	// Iter + N.
-	EventPacketContainerDeepConstIterator operator+(size_type add) const noexcept {
-		return (EventPacketContainerDeepConstIterator(eventPacketsIterator + add));
+	EventPacketContainerCopyIterator operator+(size_type add) const noexcept {
+		return (EventPacketContainerCopyIterator(eventPacketsIterator + add));
 	}
 
 	// N + Iter. Must be friend as Iter is right-hand-side.
-	friend EventPacketContainerDeepConstIterator operator+(size_type lhs,
-		const EventPacketContainerDeepConstIterator &rhs) noexcept {
-		return (EventPacketContainerDeepConstIterator(rhs.eventPacketsIterator + lhs));
+	friend EventPacketContainerCopyIterator operator+(size_type lhs, const EventPacketContainerCopyIterator &rhs)
+		noexcept {
+		return (EventPacketContainerCopyIterator(rhs.eventPacketsIterator + lhs));
 	}
 
 	// Iter -= N.
-	EventPacketContainerDeepConstIterator& operator-=(size_type sub) noexcept {
+	EventPacketContainerCopyIterator& operator-=(size_type sub) noexcept {
 		eventPacketsIterator -= sub;
 		return (*this);
 	}
 
 	// Iter - N. (N - Iter doesn't make sense!)
-	EventPacketContainerDeepConstIterator operator-(size_type sub) const noexcept {
-		return (EventPacketContainerDeepConstIterator(eventPacketsIterator - sub));
+	EventPacketContainerCopyIterator operator-(size_type sub) const noexcept {
+		return (EventPacketContainerCopyIterator(eventPacketsIterator - sub));
 	}
 
 	// Iter - Iter. (Iter + Iter doesn't make sense!)
-	difference_type operator-(const EventPacketContainerDeepConstIterator &rhs) const noexcept {
+	difference_type operator-(const EventPacketContainerCopyIterator &rhs) const noexcept {
 		// Distance in pointed-to-elements.
 		return (eventPacketsIterator - rhs.eventPacketsIterator);
 	}
 
 	// Swap two iterators.
-	void swap(EventPacketContainerDeepConstIterator &rhs) noexcept {
+	void swap(EventPacketContainerCopyIterator &rhs) noexcept {
 		std::swap(eventPacketsIterator, rhs.eventPacketsIterator);
 		std::swap(currElement, rhs.currElement);
 	}
@@ -490,9 +489,20 @@ public:
 		return (newContainer);
 	}
 
-	// Iterator support (read-only, modifications only through setEventPacket() and addEventPacket()).
-	using const_iterator = EventPacketContainerDeepConstIterator;
+	// Iterator support (the returned shared_ptr are always read-only copies, so actual modifications to
+	// what is pointed to can only happen through setEventPacket() and addEventPacket()).
+	using iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::iterator, std::shared_ptr<EventPacket>>;
+	using const_iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::const_iterator, std::shared_ptr<const EventPacket>>;
+	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	iterator begin() noexcept {
+		return (iterator(eventPackets.begin()));
+	}
+
+	iterator end() noexcept {
+		return (iterator(eventPackets.end()));
+	}
 
 	const_iterator begin() const noexcept {
 		return (cbegin());
@@ -507,8 +517,15 @@ public:
 	}
 
 	const_iterator cend() const noexcept {
-		// Pointer must be to element one past the end!
 		return (const_iterator(eventPackets.cend()));
+	}
+
+	reverse_iterator rbegin() noexcept {
+		return (reverse_iterator(end()));
+	}
+
+	reverse_iterator rend() noexcept {
+		return (reverse_iterator(begin()));
 	}
 
 	const_reverse_iterator rbegin() const noexcept {
