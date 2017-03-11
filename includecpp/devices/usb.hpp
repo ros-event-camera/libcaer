@@ -105,7 +105,7 @@ public:
 			}
 			else {
 				// Make sure the proper constructors are called when building the shared_ptr.
-				cppContainer->addEventPacket(libcaer::events::utils::constructFromCStruct(packet));
+				cppContainer->addEventPacket(libcaer::events::utils::makeSharedFromCStruct(packet));
 			}
 		}
 
