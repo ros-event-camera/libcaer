@@ -40,15 +40,15 @@ public:
 
 	// Data access operators.
 	reference operator*() const noexcept {
-		return (*static_cast<pointer>(eventPtr));
+		return (*reinterpret_cast<pointer>(eventPtr));
 	}
 
 	pointer operator->() const noexcept {
-		return (static_cast<pointer>(eventPtr));
+		return (reinterpret_cast<pointer>(eventPtr));
 	}
 
 	reference operator[](size_type index) const noexcept {
-		return (*static_cast<pointer>(eventPtr + (index * eventSize)));
+		return (*reinterpret_cast<pointer>(eventPtr + (index * eventSize)));
 	}
 
 	// Comparison operators.
