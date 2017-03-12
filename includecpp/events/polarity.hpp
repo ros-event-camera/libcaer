@@ -74,22 +74,25 @@ public:
 		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
-	PolarityEventPacket(caerPolarityEventPacket packet) {
+	PolarityEventPacket(caerPolarityEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
 		constructorCheckEventType(&packet->packetHeader, POLARITY_EVENT);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
-	PolarityEventPacket(caerEventPacketHeader packetHeader) {
+	PolarityEventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		constructorCheckEventType(packetHeader, POLARITY_EVENT);
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:

@@ -146,14 +146,16 @@ public:
 class EventPacket {
 protected:
 	caerEventPacketHeader header;
+	bool isMemoryOwner;
 
 	// Constructors.
 	EventPacket() :
-			header(nullptr) {
+			header(nullptr),
+			isMemoryOwner(true) {
 	}
 
 public:
-	EventPacket(caerEventPacketHeader packetHeader) {
+	EventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		if (caerEventPacketHeaderGetEventType(packetHeader) < CAER_DEFAULT_EVENT_TYPES_COUNT) {
@@ -163,19 +165,24 @@ public:
 		}
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 	// Destructor.
 	virtual ~EventPacket() {
-		// All EventPackets must have been allocated somewhere on the heap,
-		// and can thus always be passed to free(). free(nullptr) does nothing.
-		free(header);
+		// Support not freeing memory, when this packet doesn't own the memory.
+		if (isMemoryOwner) {
+			// All EventPackets must have been allocated somewhere on the heap,
+			// and can thus always be passed to free(). free(nullptr) does nothing.
+			free(header);
+		}
 	}
 
 	// Copy constructor.
 	EventPacket(const EventPacket &rhs) {
 		// Full copy.
 		header = internalCopy(rhs.header, copyTypes::FULL);
+		isMemoryOwner = true; // Always memory owner on copy!
 	}
 
 	// Copy assignment.
@@ -191,9 +198,13 @@ public:
 			// of the old data. internalCopy() checks for nullptr.
 			caerEventPacketHeader copy = internalCopy(rhs.header, copyTypes::FULL);
 
-			free(header);
+			// Destroy current data, only if actually owned.
+			if (isMemoryOwner) {
+				free(header);
+			}
 
 			header = copy;
+			isMemoryOwner = true; // Always memory owner on copy!
 		}
 
 		return (*this);
@@ -207,6 +218,7 @@ public:
 
 		// Move data here.
 		header = rhs.header;
+		isMemoryOwner = rhs.isMemoryOwner; // Move memory ownership too!
 
 		// Reset old data (ready for destruction).
 		rhs.header = nullptr;
@@ -225,11 +237,14 @@ public:
 		// valid-state-after-move to be nothing allowed but a destructor
 		// call, which is what normally happens, and helps us a lot here.
 
-		// Destroy current data.
-		free(header);
+		// Destroy current data, only if actually owned.
+		if (isMemoryOwner) {
+			free(header);
+		}
 
 		// Move data here.
 		header = rhs.header;
+		isMemoryOwner = rhs.isMemoryOwner; // Move memory ownership too!
 
 		// Reset old data (ready for destruction).
 		rhs.header = nullptr;
@@ -472,6 +487,7 @@ public:
 		}
 
 		std::swap(header, rhs.header);
+		std::swap(isMemoryOwner, rhs.isMemoryOwner);
 	}
 
 	// Direct underlying pointer access.
@@ -481,6 +497,11 @@ public:
 
 	caerEventPacketHeaderConst getHeaderPointer() const noexcept {
 		return (header);
+	}
+
+	// Memory ownership information.
+	bool isPacketMemoryOwner() const noexcept {
+		return (isMemoryOwner);
 	}
 
 	// Convenience methods.

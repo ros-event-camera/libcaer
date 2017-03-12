@@ -81,22 +81,25 @@ public:
 		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
-	EarEventPacket(caerEarEventPacket packet) {
+	EarEventPacket(caerEarEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
 		constructorCheckEventType(&packet->packetHeader, EAR_EVENT);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
-	EarEventPacket(caerEventPacketHeader packetHeader) {
+	EarEventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		constructorCheckEventType(packetHeader, EAR_EVENT);
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:

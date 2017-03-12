@@ -129,22 +129,25 @@ public:
 		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
-	IMU9EventPacket(caerIMU9EventPacket packet) {
+	IMU9EventPacket(caerIMU9EventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
 		constructorCheckEventType(&packet->packetHeader, IMU9_EVENT);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
-	IMU9EventPacket(caerEventPacketHeader packetHeader) {
+	IMU9EventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		constructorCheckEventType(packetHeader, IMU9_EVENT);
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:

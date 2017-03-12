@@ -327,22 +327,25 @@ public:
 		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
-	FrameEventPacket(caerFrameEventPacket packet) {
+	FrameEventPacket(caerFrameEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
 		constructorCheckEventType(&packet->packetHeader, FRAME_EVENT);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
-	FrameEventPacket(caerEventPacketHeader packetHeader) {
+	FrameEventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		constructorCheckEventType(packetHeader, FRAME_EVENT);
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:

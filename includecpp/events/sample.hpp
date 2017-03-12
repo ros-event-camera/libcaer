@@ -66,22 +66,25 @@ public:
 		constructorCheckNullptr(packet);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
-	SampleEventPacket(caerSampleEventPacket packet) {
+	SampleEventPacket(caerSampleEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
 		constructorCheckEventType(&packet->packetHeader, SAMPLE_EVENT);
 
 		header = &packet->packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
-	SampleEventPacket(caerEventPacketHeader packetHeader) {
+	SampleEventPacket(caerEventPacketHeader packetHeader, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packetHeader);
 
 		constructorCheckEventType(packetHeader, SAMPLE_EVENT);
 
 		header = packetHeader;
+		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
