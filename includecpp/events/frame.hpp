@@ -374,13 +374,13 @@ public:
 		return (caerFrameEventPacketGetPixelsMaxIndex(reinterpret_cast<caerFrameEventPacketConst>(header)));
 	}
 
-	FrameEventPacket *demosaic() const {
+	std::unique_ptr<FrameEventPacket> demosaic() const {
 		caerFrameEventPacket colorPacket = caerFrameUtilsDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header));
 		if (colorPacket == nullptr) {
 			throw std::runtime_error("Failed to generate a demosaiced frame event packet.");
 		}
 
-		return (new FrameEventPacket(colorPacket));
+		return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(colorPacket)));
 	}
 
 	void contrast() noexcept {
@@ -395,7 +395,7 @@ public:
 		EDGE_AWARE = 1,
 	};
 
-	FrameEventPacket *demosaic(opencvDemosaic demosaicType) const {
+	std::unique_ptr<FrameEventPacket> demosaic(opencvDemosaic demosaicType) const {
 		caerFrameEventPacket colorPacket =
 			caerFrameUtilsOpenCVDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
 				static_cast<enum caer_frame_utils_opencv_demosaic>(static_cast<typename std::underlying_type<
@@ -404,7 +404,7 @@ public:
 			throw std::runtime_error("Failed to generate a demosaiced frame event packet using OpenCV.");
 		}
 
-		return (new FrameEventPacket(colorPacket));
+		return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(colorPacket)));
 	}
 
 	enum class opencvContrast {
