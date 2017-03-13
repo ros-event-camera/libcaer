@@ -430,6 +430,22 @@ public:
 		return (nullptr);
 	}
 
+	std::unique_ptr<std::vector<value_type>> findEventPacketsByType(int16_t typeID) {
+		auto results = std::unique_ptr<std::vector<value_type>>(new std::vector<value_type>());
+
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventType() == typeID) {
+				results->push_back(packet);
+			}
+		}
+
+		return (results);
+	}
+
 	/**
 	 * Get the pointer to a read-only event packet stored in this container
 	 * with the given event type. This returns the first found event packet
@@ -452,6 +468,22 @@ public:
 		}
 
 		return (nullptr);
+	}
+
+	std::unique_ptr<std::vector<const_value_type>> findEventPacketsByType(int16_t typeID) const {
+		auto results = std::unique_ptr<std::vector<const_value_type>>(new std::vector<const_value_type>());
+
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventType() == typeID) {
+				results->push_back(packet);
+			}
+		}
+
+		return (results);
 	}
 
 	/**
@@ -478,6 +510,22 @@ public:
 		return (nullptr);
 	}
 
+	std::unique_ptr<std::vector<value_type>> findEventPacketsBySource(int16_t sourceID) {
+		auto results = std::unique_ptr<std::vector<value_type>>(new std::vector<value_type>());
+
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventSource() == sourceID) {
+				results->push_back(packet);
+			}
+		}
+
+		return (results);
+	}
+
 	/**
 	 * Get the pointer to a read-only event packet stored in this container
 	 * from the given event source. This returns the first found event packet
@@ -500,6 +548,22 @@ public:
 		}
 
 		return (nullptr);
+	}
+
+	std::unique_ptr<std::vector<const_value_type>> findEventPacketsBySource(int16_t sourceID) const {
+		auto results = std::unique_ptr<std::vector<const_value_type>>(new std::vector<const_value_type>());
+
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventSource() == sourceID) {
+				results->push_back(packet);
+			}
+		}
+
+		return (results);
 	}
 
 	/**
