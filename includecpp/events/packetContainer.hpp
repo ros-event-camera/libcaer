@@ -455,6 +455,54 @@ public:
 	}
 
 	/**
+	 * Get the pointer to an event packet stored in this container
+	 * from the given event source. This returns the first found event packet
+	 * with that source ID, or nullptr if we get to the end without finding any
+	 * such event packet.
+	 *
+	 * @param sourceID the event source to search for.
+	 *
+	 * @return a pointer to an event packet with a certain source or nullptr if none found.
+	 */
+	value_type findEventPacketBySource(int16_t sourceID) {
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventSource() == sourceID) {
+				return (packet);
+			}
+		}
+
+		return (nullptr);
+	}
+
+	/**
+	 * Get the pointer to a read-only event packet stored in this container
+	 * from the given event source. This returns the first found event packet
+	 * with that source ID, or nullptr if we get to the end without finding any
+	 * such event packet.
+	 *
+	 * @param sourceID the event source to search for.
+	 *
+	 * @return a pointer to a read-only event packet with a certain source or nullptr if none found.
+	 */
+	const_value_type findEventPacketBySource(int16_t sourceID) const {
+		for (auto &packet : *this) {
+			if (packet == nullptr) {
+				continue;
+			}
+
+			if (packet->getEventSource() == sourceID) {
+				return (packet);
+			}
+		}
+
+		return (nullptr);
+	}
+
+	/**
 	 * Make a deep copy of this event packet container and all of its
 	 * event packets and their current events.
 	 * A normal copy (using copy constructor or assignment) copies all the
