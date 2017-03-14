@@ -3145,13 +3145,13 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						stride = caerFrameEventGetLengthY(state->currentFrameEvent[0]);
 
 						// Flip Y address to conform to CG format.
-						yPos = U16T((state->apsSizeX - 1) - yPos);
+						yPos = U16T(caerFrameEventGetLengthX(state->currentFrameEvent[0]) - 1 - yPos);
 					}
 					else {
 						stride = caerFrameEventGetLengthX(state->currentFrameEvent[0]);
 
 						// Flip Y address to conform to CG format.
-						yPos = U16T((state->apsSizeY - 1) - yPos);
+						yPos = U16T(caerFrameEventGetLengthY(state->currentFrameEvent[0]) - 1 - yPos);
 					}
 
 					size_t pixelPosition = (size_t) (yPos * stride) + xPos;
