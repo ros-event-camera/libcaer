@@ -56,7 +56,7 @@ static inline void initFrame(davisHandle handle) {
 	}
 
 	// Skip frame if ROI region is disabled.
-	if (state->apsROISizeX[0] >= state->apsSizeX) {
+	if (state->apsROIPositionX[0] >= state->apsSizeX) {
 		return;
 	}
 
