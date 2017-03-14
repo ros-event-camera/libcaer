@@ -22,15 +22,18 @@ static inline void updateROISizes(davisState state) {
 		uint16_t endRow = state->apsROISizeY[i];
 
 		// Position is already set to startCol/Row, so we don't have to reset
-		// it here. We only have to calculate size from start and end.
-		if (startColumn < state->apsSizeX) {
+		// it here. We only have to calculate size from start and end Col/Row.
+		if (startColumn < state->apsSizeX && endColumn < state->apsSizeX && startRow < state->apsSizeY && endRow < state->apsSizeY) {
 			state->apsROISizeX[i] = U16T(endColumn + 1 - startColumn);
 			state->apsROISizeY[i] = U16T(endRow + 1 - startRow);
+
+			// Invert Y position to deal with (0, 0) being in upper left corner.
+			state->apsROIPositionY[i] = U16T(state->apsSizeY - 1 - endRow);
 		}
 		else {
 			// Turn off this ROI region.
-			state->apsROISizeX[i] = state->apsROISizeY[i] = 0;
-			state->apsROIPositionX[i] = state->apsROIPositionY[i] = 0;
+			state->apsROISizeX[i] = state->apsROIPositionX[i] = U16T(state->apsSizeX);
+			state->apsROISizeY[i] = state->apsROIPositionY[i] = U16T(state->apsSizeY);
 		}
 	}
 }
@@ -52,6 +55,11 @@ static inline void initFrame(davisHandle handle) {
 		updateROISizes(state);
 	}
 
+	// Skip frame if ROI region is disabled.
+	if (state->apsROISizeX[0] >= state->apsSizeX) {
+		return;
+	}
+
 	// Write out start of frame timestamp.
 	caerFrameEventSetTSStartOfFrame(state->currentFrameEvent[0], state->currentTimestamp);
 
@@ -64,12 +72,20 @@ static inline void initFrame(davisHandle handle) {
 	state->currentSpecialPacketPosition++;
 
 	// Setup frame. Only ROI region 0 is supported currently.
-	caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeX[0],
-		state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentFramePacket);
-	caerFrameEventSetROIIdentifier(state->currentFrameEvent[0], 0);
 	caerFrameEventSetColorFilter(state->currentFrameEvent[0], handle->info.apsColorFilter);
-	caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionX[0]);
-	caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionY[0]);
+	caerFrameEventSetROIIdentifier(state->currentFrameEvent[0], 0);
+	if (state->apsInvertXY) {
+		caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeY[0],
+			state->apsROISizeX[0], APS_ADC_CHANNELS, state->currentFramePacket);
+		caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionY[0]);
+		caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionX[0]);
+	}
+	else {
+		caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeX[0],
+			state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentFramePacket);
+		caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionX[0]);
+		caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionY[0]);
+	}
 }
 
 static inline float calculateIMUAccelScale(uint8_t imuAccelScale) {
@@ -2176,26 +2192,10 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	// Default APS settings (for event parsing).
 	state->apsADCShift = (16 - APS_ADC_DEPTH);
 
-	uint32_t param32start = 0;
-	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, &param32start);
-
-	// If StartColumn0 is bigger or equal to APS size X, disable ROI region 0.
-	if (param32start < U32T(state->apsSizeX)) {
-		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, &param32);
-
-		state->apsROISizeX[0] = U16T(param32 + 1 - param32start);
-		state->apsROIPositionX[0] = U16T(param32start);
-
-		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, &param32start);
-		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, &param32);
-
-		state->apsROISizeY[0] = U16T(param32 + 1 - param32start);
-		state->apsROIPositionY[0] = U16T(param32start);
-	}
-	else {
-		// Disable ROI region 0 by setting all parameters to zero.
-		state->apsROISizeX[0] = state->apsROIPositionX[0] = 0;
-		state->apsROISizeY[0] = state->apsROIPositionY[0] = 0;
+	// Disable all ROI regions by setting them to -1.
+	for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
+		state->apsROISizeX[i] = state->apsROIPositionX[i] = U16T(state->apsSizeX);
+		state->apsROISizeY[i] = state->apsROIPositionY[i] = U16T(state->apsSizeY);
 	}
 
 	// Ignore multi-part events (APS and IMU) at startup, so that any initial
@@ -2882,8 +2882,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Next Misc8 APS ROI Size events will refer to ROI region 0.
 							// 0/1 used to distinguish between X and Y sizes.
 							state->apsROIUpdate = (0 << 2);
-							state->apsROISizeX[0] = state->apsROISizeY[0] = 0;
-							state->apsROIPositionX[0] = state->apsROIPositionY[0] = 0;
+							state->apsROISizeX[0] = state->apsROIPositionX[0] = U16T(state->apsSizeX);
+							state->apsROISizeY[0] = state->apsROIPositionY[0] = U16T(state->apsSizeY);
 							break;
 						}
 
@@ -2891,8 +2891,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
 							state->apsROIUpdate = (1 << 2);
-							state->apsROISizeX[1] = state->apsROISizeY[1] = 0;
-							state->apsROIPositionX[1] = state->apsROIPositionY[1] = 0;
+							state->apsROISizeX[1] = state->apsROIPositionX[1] = U16T(state->apsSizeX);
+							state->apsROISizeY[1] = state->apsROIPositionY[1] = U16T(state->apsSizeY);
 							break;
 						}
 
@@ -2900,8 +2900,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
 							state->apsROIUpdate = (2 << 2);
-							state->apsROISizeX[2] = state->apsROISizeY[2] = 0;
-							state->apsROIPositionX[2] = state->apsROIPositionY[2] = 0;
+							state->apsROISizeX[2] = state->apsROIPositionX[2] = U16T(state->apsSizeX);
+							state->apsROISizeY[2] = state->apsROIPositionY[2] = U16T(state->apsSizeY);
 							break;
 						}
 
@@ -2909,8 +2909,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
 							state->apsROIUpdate = (3 << 2);
-							state->apsROISizeX[3] = state->apsROISizeY[3] = 0;
-							state->apsROIPositionX[3] = state->apsROIPositionY[3] = 0;
+							state->apsROISizeX[3] = state->apsROIPositionX[3] = U16T(state->apsSizeX);
+							state->apsROISizeY[3] = state->apsROIPositionY[3] = U16T(state->apsSizeY);
 							break;
 						}
 
