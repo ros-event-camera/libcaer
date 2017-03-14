@@ -1053,47 +1053,20 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					}
 					break;
 
-					// TODO: no support on host-side for QuadROI and multi-frame decoding.
 				case DAVIS_CONFIG_APS_START_COLUMN_1:
 				case DAVIS_CONFIG_APS_END_COLUMN_1:
 				case DAVIS_CONFIG_APS_START_COLUMN_2:
 				case DAVIS_CONFIG_APS_END_COLUMN_2:
 				case DAVIS_CONFIG_APS_START_COLUMN_3:
 				case DAVIS_CONFIG_APS_END_COLUMN_3:
-					if (handle->info.apsHasQuadROI) {
-						if (state->apsInvertXY) {
-							// Convert to row if X/Y inverted.
-							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1),
-								param));
-						}
-						else {
-							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
-						}
-					}
-					else {
-						return (false);
-					}
-					break;
-
 				case DAVIS_CONFIG_APS_START_ROW_1:
 				case DAVIS_CONFIG_APS_END_ROW_1:
 				case DAVIS_CONFIG_APS_START_ROW_2:
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
-					if (handle->info.apsHasQuadROI) {
-						if (state->apsInvertXY) {
-							// Convert to column if X/Y inverted.
-							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1),
-								param));
-						}
-						else {
-							return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
-						}
-					}
-					else {
-						return (false);
-					}
+					// TODO: no support on host-side for QuadROI and multi-frame decoding.
+					return (false);
 					break;
 
 				case DAVIS_CONFIG_APS_USE_INTERNAL_ADC:
@@ -1723,40 +1696,14 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_END_COLUMN_2:
 				case DAVIS_CONFIG_APS_START_COLUMN_3:
 				case DAVIS_CONFIG_APS_END_COLUMN_3:
-					if (handle->info.apsHasQuadROI) {
-						if (state->apsInvertXY) {
-							// Convert to row if X/Y inverted.
-							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr + 1),
-								param));
-						}
-						else {
-							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
-						}
-					}
-					else {
-						return (false);
-					}
-					break;
-
 				case DAVIS_CONFIG_APS_START_ROW_1:
 				case DAVIS_CONFIG_APS_END_ROW_1:
 				case DAVIS_CONFIG_APS_START_ROW_2:
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
-					if (handle->info.apsHasQuadROI) {
-						if (state->apsInvertXY) {
-							// Convert to column if X/Y inverted.
-							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, U8T(paramAddr - 1),
-								param));
-						}
-						else {
-							return (spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr, param));
-						}
-					}
-					else {
-						return (false);
-					}
+					// TODO: no support on host-side for QuadROI and multi-frame decoding.
+					return (false);
 					break;
 
 				case DAVIS_CONFIG_APS_USE_INTERNAL_ADC:
