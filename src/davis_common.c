@@ -27,7 +27,8 @@ static inline void updateROISizes(davisState state) {
 			state->apsROISizeX[i] = U16T(endColumn + 1 - startColumn);
 			state->apsROISizeY[i] = U16T(endRow + 1 - startRow);
 
-			// Invert Y position to deal with (0, 0) being in upper left corner.
+			// Y position needs to be inverted with endRow to account for the
+			// origin (0, 0) being in the upper left corner.
 			state->apsROIPositionY[i] = U16T(state->apsSizeY - 1 - endRow);
 		}
 		else {
@@ -74,18 +75,10 @@ static inline void initFrame(davisHandle handle) {
 	// Setup frame. Only ROI region 0 is supported currently.
 	caerFrameEventSetColorFilter(state->currentFrameEvent[0], handle->info.apsColorFilter);
 	caerFrameEventSetROIIdentifier(state->currentFrameEvent[0], 0);
-	if (state->apsInvertXY) {
-		caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeY[0],
-			state->apsROISizeX[0], APS_ADC_CHANNELS, state->currentFramePacket);
-		caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionY[0]);
-		caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionX[0]);
-	}
-	else {
-		caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeX[0],
-			state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentFramePacket);
-		caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionX[0]);
-		caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionY[0]);
-	}
+	caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeX[0],
+		state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentFramePacket);
+	caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionX[0]);
+	caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionY[0]);
 }
 
 static inline float calculateIMUAccelScale(uint8_t imuAccelScale) {
@@ -1016,7 +1009,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0,
-							U32T(state->apsSizeY) - 1 - param));
+							U32T(state->apsSizeX) - 1 - param));
 					}
 					else {
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0,
@@ -1038,7 +1031,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0,
-							U32T(state->apsSizeY) - 1 - param));
+							U32T(state->apsSizeX) - 1 - param));
 					}
 					else {
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0,
