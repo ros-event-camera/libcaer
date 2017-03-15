@@ -27,9 +27,17 @@ static inline void updateROISizes(davisState state) {
 			state->apsROISizeX[i] = U16T(endColumn + 1 - startColumn);
 			state->apsROISizeY[i] = U16T(endRow + 1 - startRow);
 
-			// Y position needs to be inverted with endRow to account for the
-			// origin (0, 0) being in the upper left corner.
-			state->apsROIPositionY[i] = U16T(state->apsSizeY - 1 - endRow);
+			if (state->apsInvertXY) {
+				// Inverted, so X[StartColumn] becomes endColumn. Y[endRow] becomes startRow.
+				// Same accounting for origin in upper left corner, but on the other axis here.
+				state->apsROIPositionX[i] = U16T(state->apsSizeX - 1 - endColumn);
+				state->apsROIPositionY[i] = startRow;
+			}
+			else {
+				// Y position needs to be inverted with endRow to account for the
+				// origin (0, 0) being in the upper left corner. X is fine as startColumn.
+				state->apsROIPositionY[i] = U16T(state->apsSizeY - 1 - endRow);
+			}
 		}
 		else {
 			// Turn off this ROI region.
@@ -57,7 +65,7 @@ static inline void initFrame(davisHandle handle) {
 	}
 
 	// Skip frame if ROI region is disabled.
-	if (state->apsROIPositionX[0] >= state->apsSizeX) {
+	if (state->apsROIPositionX[0] >= state->apsSizeX || state->apsROIPositionY[0] >= state->apsSizeY) {
 		return;
 	}
 
