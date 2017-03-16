@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.0-rf7ebc7ea120fbfb5881744a3e35f62e7d3500234</span>
+   &#160;<span id="projectnumber">2.0.1-r9f6d57b528c46a01a2a38e1cf11cec439e619c66</span>
    </div>
   </td>
  </tr>
@@ -224,10 +224,10 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Allocate a new EventPacketContainer with enough space to store up to the given number of EventPacket references. All packet references will be NULL initially.</p>
+<p>Allocate a new EventPacketContainer with enough space to store up to the given number of EventPacket pointers. All packet pointers will be NULL initially.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eventPacketsNumber</td><td>the maximum number of EventPacket references that can be stored in this container.</td></tr>
+    <tr><td class="paramname">eventPacketsNumber</td><td>the maximum number of EventPacket pointers that can be stored in this container.</td></tr>
   </table>
   </dd>
 </dl>
@@ -336,7 +336,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the reference for an EventPacket stored in this container with the given event type. This returns the first found event packet with that type ID, or NULL if we get to the end without finding any such event packet.</p>
+<p>Get the pointer to an EventPacket stored in this container with the given event type. This returns the first found event packet with that type ID, or NULL if we get to the end without finding any such event packet.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
@@ -344,7 +344,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a reference to an EventPacket with a certain type or NULL if none found. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a pointer to an EventPacket with a certain type or NULL if none found. </dd></dl>
 
 </div>
 </div>
@@ -381,7 +381,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the reference for a read-only EventPacket stored in this container with the given event type. This returns the first found event packet with that type ID, or NULL if we get to the end without finding any such event packet.</p>
+<p>Get the pointer to a read-only EventPacket stored in this container with the given event type. This returns the first found event packet with that type ID, or NULL if we get to the end without finding any such event packet.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
@@ -389,7 +389,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a reference to a read-only EventPacket with a certain type or NULL if none found. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a pointer to a read-only EventPacket with a certain type or NULL if none found. </dd></dl>
 
 </div>
 </div>
@@ -408,7 +408,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Free the memory occupied by an EventPacketContainer, as well as freeing all of its contained EventPackets and their memory. If you don't want the contained EventPackets to be freed, make sure that you set their reference to NULL before calling this.</p>
+<p>Free the memory occupied by an EventPacketContainer, as well as freeing all of its contained EventPackets and their memory. If you don't want the contained EventPackets to be freed, make sure that you set their pointers to NULL before calling this.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>the container to be freed. </td></tr>
@@ -451,7 +451,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the reference for the EventPacket stored in this container at the given index.</p>
+<p>Get the pointer to the EventPacket stored in this container at the given index.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
@@ -459,7 +459,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a reference to an EventPacket or NULL on error. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a pointer to an EventPacket or NULL on error. </dd></dl>
 
 </div>
 </div>
@@ -496,7 +496,7 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the reference for the EventPacket stored in this container at the given index. This is a read-only EventPacket, do not change its contents in any way!</p>
+<p>Get the pointer to the EventPacket stored in this container at the given index. This is a read-only EventPacket, do not change its contents in any way!</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, returns NULL too. </td></tr>
@@ -504,7 +504,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>a reference to a read-only EventPacket or NULL on error. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>a pointer to a read-only EventPacket or NULL on error. </dd></dl>
 
 </div>
 </div>
@@ -531,14 +531,14 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Get the maximum number of EventPacket references that can be stored in this particular EventPacketContainer.</p>
+<p>Get the maximum number of EventPacket pointers that can be stored in this particular EventPacketContainer.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, zero is returned.</td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the number of EventPacket references that can be contained. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the number of EventPacket pointers that can be contained. </dd></dl>
 
 </div>
 </div>
@@ -717,12 +717,12 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Set the reference for the EventPacket stored in this container at the given index.</p>
+<p>Set the pointer to the EventPacket stored in this container at the given index.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, nothing happens. </td></tr>
     <tr><td class="paramname">n</td><td>the index of the EventPacket to set. </td></tr>
-    <tr><td class="paramname">packetHeader</td><td>a reference to an EventPacket's header. Can be NULL. </td></tr>
+    <tr><td class="paramname">packetHeader</td><td>a pointer to an EventPacket's header. Can be NULL. </td></tr>
   </table>
   </dd>
 </dl>
@@ -762,11 +762,11 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Set the maximum number of EventPacket references that can be stored in this particular EventPacketContainer. This should never be used directly, <a class="el" href="packetContainer_8h.html#a5aaf0f7157fba799d27a751e2d8325a1">caerEventPacketContainerAllocate()</a> sets this for you.</p>
+<p>Set the maximum number of EventPacket pointers that can be stored in this particular EventPacketContainer. This should never be used directly, <a class="el" href="packetContainer_8h.html#a5aaf0f7157fba799d27a751e2d8325a1">caerEventPacketContainerAllocate()</a> sets this for you.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">container</td><td>a valid EventPacketContainer handle. If NULL, nothing happens. </td></tr>
-    <tr><td class="paramname">eventPacketsNumber</td><td>the number of EventPacket references that can be contained. </td></tr>
+    <tr><td class="paramname">eventPacketsNumber</td><td>the number of EventPacket pointers that can be contained. </td></tr>
   </table>
   </dd>
 </dl>
