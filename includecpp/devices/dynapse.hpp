@@ -24,7 +24,7 @@ public:
 		return (caerDynapseInfoGet(handle.get()));
 	}
 
-	void sendDataToUSB(const uint32_t *data, int numConfig) const {
+	void sendDataToUSB(const uint32_t *data, size_t numConfig) const {
 		bool success = caerDynapseSendDataToUSB(handle.get(), data, numConfig);
 		if (!success) {
 			throw std::runtime_error("Failed to send config data to device.");

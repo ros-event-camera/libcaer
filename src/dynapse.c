@@ -3,7 +3,38 @@
 static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
 static int dynapseDataAcquisitionThread(void *inPtr);
 static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle);
-uint32_t dynapseCalculateIndexNeu(uint32_t columns, uint32_t, uint32_t y);
+
+// i = index, x = amount of columns, y = amount of rows
+static inline uint32_t dynapseCalculateCoordinatesNeuX(uint32_t index, uint32_t columns, uint32_t rows) {
+	//for each row
+	for (size_t i = 0; i < rows; i++) {
+		//check if the index parameter is in the row
+		if (index < (columns * i) + columns && index >= columns * i) {
+			//return x, y
+			return (U32T(index - columns * i));
+		}
+	}
+
+	return (0);
+}
+
+static inline uint32_t dynapseCalculateCoordinatesNeuY(uint32_t index, uint32_t columns, uint32_t rows) {
+	//for each row
+	for (size_t i = 0; i < rows; i++) {
+		//check if the index parameter is in the row
+		if (index < (columns * i) + columns && index >= columns * i) {
+			//return x, y
+			return (U32T(i));
+		}
+	}
+
+	return (0);
+}
+
+// columns = amount of columns, x = column, y = row
+//static inline uint32_t dynapseCalculateIndexNeu(uint32_t columns, uint32_t x, uint32_t y) {
+//	return ((y * columns) + x);
+//}
 
 static inline void checkStrictMonotonicTimestamp(dynapseHandle handle) {
 	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
@@ -62,7 +93,6 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	// Set main deviceType correctly right away.
 	handle->deviceType = CAER_DEVICE_DYNAPSE;
 	dynapseState state = &handle->state;
-
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
 	atomic_store_explicit(&state->dataExchangeBufferSize, 64, memory_order_relaxed);
@@ -178,73 +208,6 @@ bool dynapseClose(caerDeviceHandle cdh) {
 	return (true);
 }
 
-
-bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, int numConfig) {
-	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
-
-	// Check if the pointer is valid.
-	if (handle == NULL) {
-		//struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
-
-	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
-		//struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
-		return (false);
-	}
-
-	// if array exceeds max size don't send anything
-	if(DYNAPSE_MAX_USER_USB_PACKET_SIZE < numConfig){
-		return(false);
-	}
-
-	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE*6] = { 0 };
-	uint32_t idxConfig = 0;
-
-	// all cores
-	for(size_t i=0; i<numConfig; i++){
-			spiMultiConfig[(i * 6) + 0] = DYNAPSE_CONFIG_CHIP;
-			spiMultiConfig[(i * 6) + 1] =
-			DYNAPSE_CONFIG_CHIP_CONTENT;
-			spiMultiConfig[(i * 6) + 2] = (pointer[i] >> 24) & 0x0FF;
-			spiMultiConfig[(i * 6) + 3] = (pointer[i] >> 16) & 0x0FF;
-			spiMultiConfig[(i * 6) + 4] = (pointer[i] >> 8) & 0x0FF;
-			spiMultiConfig[(i * 6) + 5] = (pointer[i] >> 0) & 0x0FF;
-	}
-	while (numConfig > 0) {
-		int configNum = (numConfig > 85) ? (85) : (numConfig);
-		int configSize = configNum * 6;
-
-		int result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
-		if (result != configSize) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed with error %d.", result);
-			return (false);
-		}
-
-		uint8_t check[2] = { 0 };
-		result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
-
-		if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed on verification.");
-			return (false);
-		}
-
-		numConfig -= configNum;
-		idxConfig += configSize;
-	}
-
-	// return true
-	return (true);
-}
-
 struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
@@ -265,47 +228,13 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle cdh) {
 }
 
 bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX,
-	DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET, false);
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX,
-	DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX,
-	DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL, false);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET, false);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL, false);
 
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB,
-	DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
 
 	return (true);
-}
-
-//i = index, x = amount of columns, y = amount of rows
-uint32_t dynapseCalculateCoordinatesNeuX(uint32_t index, uint32_t columns, uint32_t rows) {
-	//for each row
-	for (size_t i = 0; i < rows; i++) {
-		//check if the index parameter is in the row
-		if (index < (columns * i) + columns && index >= columns * i) {
-			//return x, y
-			return (index - columns * i);
-		}
-	}
-	return (0);
-}
-
-uint32_t dynapseCalculateCoordinatesNeuY(uint32_t index, uint32_t columns, uint32_t rows) {
-	//for each row
-	for (size_t i = 0; i < rows; i++) {
-		//check if the index parameter is in the row
-		if (index < (columns * i) + columns && index >= columns * i) {
-			//return x, y
-			return (i);
-		}
-	}
-	return (0);
-}
-
-//columns = amount of columns, x = column, y = row
-uint32_t dynapseCalculateIndexNeu(uint32_t columns, uint32_t x, uint32_t y) {
-	return ((y * columns) + x);
 }
 
 bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
@@ -374,11 +303,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					break;
 			}
 			break;
+
 		case DYNAPSE_CONFIG_SRAM:
 			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
 			break;
+
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
-		    return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
 
 		case DYNAPSE_CONFIG_MUX:
 			switch (paramAddr) {
@@ -386,8 +317,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN:
 				case DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
 				case DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL:
-					return (spiConfigSend(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_MUX, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET: {
@@ -431,8 +361,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_AER_ACK_EXTENSION:
 				case DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL:
 				case DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL:
-					return (spiConfigSend(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_AER, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_AER, paramAddr, param));
 					break;
 
 				default:
@@ -447,8 +376,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_CHIP_ID:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
-					return (spiConfigSend(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_CHIP, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_CHIP_CONTENT: {
@@ -497,8 +425,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
 				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigSend(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_USB, paramAddr, param));
+					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -509,39 +436,37 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 		case DYNAPSE_CONFIG_CLEAR_CAM: {
 			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS * 6] = { 0 };
-			uint32_t numConfig = 0;
-			uint32_t idxConfig = 0;
+
+			size_t numConfig = 0;
 
 			// all cores
 			for (size_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 				// all rows
 				for (size_t row = 0; row < DYNAPSE_CONFIG_NUMNEURONS; row++) {
-
-					//for(size_t col = 0; col < DYNAPSE_CONFIG_CAMCOL; col){
-
-					uint32_t bits = row << 5 | core << 15 | 1 << 17;
+					uint32_t bits = U32T(row << 5 | core << 15 | 1 << 17);
 
 					spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
-					spiMultiConfig[(numConfig * 6) + 1] =
-					DYNAPSE_CONFIG_CHIP_CONTENT;
-					spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-					spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-					spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-					spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+					spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+					spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+					spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+					spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+					spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 					numConfig++;
-					//}
-
 				}
 			}
+
+			size_t idxConfig = 0;
+
 			while (numConfig > 0) {
 				size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 				size_t configSize = configNum * 6;
 
 				int result = libusb_control_transfer(state->usbState.deviceHandle,
 					LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
-				if (result != configSize) {
+					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+					U16T(configSize), 0);
+				if (result != (int) configSize) {
 					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 						"Failed to clear CAM, USB transfer failed with error %d.", result);
 					return (false);
@@ -561,12 +486,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				numConfig -= configNum;
 				idxConfig += configSize;
 			}
+
 			break;
 		}
 
 		case DYNAPSE_CONFIG_MONITOR_NEU: {
-			uint32_t neuid = (uint32_t) param;
-			uint32_t coreid = (uint32_t) paramAddr;
+			uint32_t neuid = param;
+			uint32_t coreid = paramAddr;
 			uint32_t bits = 0;
 			uint32_t col, row;
 
@@ -580,10 +506,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				return (false);
 			}
 			else {
-				col = dynapseCalculateCoordinatesNeuX(neuid, DYNAPSE_CONFIG_NEUROW,
-				DYNAPSE_CONFIG_NEUCOL);
-				row = dynapseCalculateCoordinatesNeuY(neuid, DYNAPSE_CONFIG_NEUROW,
-				DYNAPSE_CONFIG_NEUCOL);
+				col = dynapseCalculateCoordinatesNeuX(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
+				row = dynapseCalculateCoordinatesNeuY(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
 				caerLog(CAER_LOG_NOTICE, handle->info.deviceString, "Neuron ID %d results in neu at col: %d row: %d.",
 					neuid, col, row);
 				bits = coreid << 8 | 0 << 10 | 0 << 11 | 0 << 12 | 0 << 13 | 0 << 16 | 0 << 17 | row << 4 | col;
@@ -593,17 +517,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			// organize data for USB send
 			spiMultiConfig[0] = DYNAPSE_CONFIG_CHIP;
 			spiMultiConfig[1] = DYNAPSE_CONFIG_CHIP_CONTENT;
-			spiMultiConfig[2] = (reset >> 24) & 0x0FF;
-			spiMultiConfig[3] = (reset >> 16) & 0x0FF;
-			spiMultiConfig[4] = (reset >> 8) & 0x0FF;
-			spiMultiConfig[5] = (reset >> 0) & 0x0FF;
+			spiMultiConfig[2] = U8T((reset >> 24) & 0x0FF);
+			spiMultiConfig[3] = U8T((reset >> 16) & 0x0FF);
+			spiMultiConfig[4] = U8T((reset >> 8) & 0x0FF);
+			spiMultiConfig[5] = U8T((reset >> 0) & 0x0FF);
 
 			spiMultiConfig[6] = DYNAPSE_CONFIG_CHIP;
 			spiMultiConfig[7] = DYNAPSE_CONFIG_CHIP_CONTENT;
-			spiMultiConfig[8] = (bits >> 24) & 0x0FF;
-			spiMultiConfig[9] = (bits >> 16) & 0x0FF;
-			spiMultiConfig[10] = (bits >> 8) & 0x0FF;
-			spiMultiConfig[11] = (bits >> 0) & 0x0FF;
+			spiMultiConfig[8] = U8T((bits >> 24) & 0x0FF);
+			spiMultiConfig[9] = U8T((bits >> 16) & 0x0FF);
+			spiMultiConfig[10] = U8T((bits >> 8) & 0x0FF);
+			spiMultiConfig[11] = U8T((bits >> 0) & 0x0FF);
 
 			//usb send
 			int result = libusb_control_transfer(state->usbState.deviceHandle,
@@ -625,54 +549,46 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					"Failed to monitor neuron, USB transfer failed on verification.");
 				return (false);
 			}
+
 			break;
 		}
 
 		case DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY: {
 			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_SRAMROW * DYNAPSE_CONFIG_NUMSRAM_NEU * 6] =
 				{ 0 }; // 6 pieces made of 8 bytes each
-			uint32_t numConfig = 0;
-			uint32_t idxConfig = 0;
-			uint32_t bits;
 
-			uint8_t sourcechipid;
-			uint8_t sign;
-			uint8_t distance;
-			uint8_t sourcecoreid;
+			size_t numConfig = 0;
 
 			// route output neurons differently depending on the position on the board
 			switch (paramAddr) {
-
 				case DYNAPSE_CONFIG_DYNAPSE_U0:
 				case DYNAPSE_CONFIG_DYNAPSE_U1:
-				case DYNAPSE_CONFIG_DYNAPSE_U3:
 				case DYNAPSE_CONFIG_DYNAPSE_U2:
-
+				case DYNAPSE_CONFIG_DYNAPSE_U3:
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					// all cores
-					for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
+					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
 						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_SRAMROW; row_neuronid++) {
-							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
+							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 
-								bits = row_neuronid << 5 | core << 15 | 1 << 17 | row_sram | 1 << 4; // init content to zero
+								uint32_t bits = row_neuronid << 5 | core << 15 | 1 << 17 | row_sram | 1 << 4; // init content to zero
 
 								// organize data for USB send
-								spiMultiConfig[(numConfig * 6) + 0] =
-								DYNAPSE_CONFIG_CHIP;
-								spiMultiConfig[(numConfig * 6) + 1] =
-								DYNAPSE_CONFIG_CHIP_CONTENT;
-								spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+								spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+								spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+								spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 								numConfig++;
-
 							}
 						}
 					}
+
+					size_t idxConfig = 0;
 
 					while (numConfig > 0) {
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
@@ -680,9 +596,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
-							configSize, 0);
-						if (result != configSize) {
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+							U16T(configSize), 0);
+						if (result != (int) configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to clear SRAM, USB transfer failed with error %d.", result);
 							return (false);
@@ -704,43 +620,44 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						idxConfig += configSize;
 					}
 			}
+
 			break;
 		}
 
 		case DYNAPSE_CONFIG_DEFAULT_SRAM: {
-
 			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS_CORE * DYNAPSE_CONFIG_NUMSRAM_NEU
 				* 6] = { 0 }; // 6 pieces made of 8 bytes each
-			uint32_t numConfig = 0;
-			uint32_t idxConfig = 0;
-			uint32_t bits;
 
-			uint8_t sourcechipid;
-			uint8_t sign;
-			uint8_t distance;
-			uint8_t dx;
-			uint8_t dy;
-			uint8_t sx;
-			uint8_t sy;
-			uint8_t sourcecoreid;
+			size_t numConfig = 0;
+			size_t idxConfig = 0;
+
+			uint32_t bits;
+			uint32_t sourcechipid;
+			uint32_t sign;
+			uint32_t distance;
+			uint32_t dx;
+			uint32_t dy;
+			uint32_t sx;
+			uint32_t sy;
+			uint32_t sourcecoreid;
 
 			// route output neurons differently depending on the position on the board
 			switch (paramAddr) {
-
 				case DYNAPSE_CONFIG_DYNAPSE_U0: {
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					// all cores
-					for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
+					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
 						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_NUMNEURONS_CORE; row_neuronid++) {
-							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
+							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 								// use first sram for monitoring
 								if (row_sram == 0) {
-									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U0 + 1;			// same as chip id
+									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U0 + 1; // same as chip id
 									sign = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG; // -1
 									distance = 2;
 									sourcecoreid = core;
+
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
 										| sourcechipid << 18 | sign << 27 | distance << 25 | sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
 								}
@@ -749,17 +666,14 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 								}
 
 								// organize data for USB send
-								spiMultiConfig[(numConfig * 6) + 0] =
-								DYNAPSE_CONFIG_CHIP;
-								spiMultiConfig[(numConfig * 6) + 1] =
-								DYNAPSE_CONFIG_CHIP_CONTENT;
-								spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+								spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+								spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+								spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 								numConfig++;
-
 							}
 						}
 					}
@@ -770,9 +684,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
-							configSize, 0);
-						if (result != configSize) {
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+							U16T(configSize), 0);
+						if (result != (int) configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed with error %d.", result);
 							return (false);
@@ -794,24 +708,26 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						idxConfig += configSize;
 					}
 
-				}
 					break;
+				}
+
 				case DYNAPSE_CONFIG_DYNAPSE_U1: {
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					// all cores
-					for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
+					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
 						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_NUMNEURONS_CORE; row_neuronid++) {
-							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
+							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 								// use first sram for monitoring
 								if (row_sram == 0) {
-									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U1;			// same as chip id
+									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U1; // same as chip id
 									sx = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG; // -1
 									dx = 1; // ns
 									dy = 2;
 									sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 									sourcecoreid = core;
+
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
 										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22
 										| sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
@@ -821,17 +737,14 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 								}
 
 								// organize data for USB send
-								spiMultiConfig[(numConfig * 6) + 0] =
-								DYNAPSE_CONFIG_CHIP;
-								spiMultiConfig[(numConfig * 6) + 1] =
-								DYNAPSE_CONFIG_CHIP_CONTENT;
-								spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+								spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+								spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+								spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 								numConfig++;
-
 							}
 						}
 					}
@@ -842,9 +755,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
-							configSize, 0);
-						if (result != configSize) {
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+							U16T(configSize), 0);
+						if (result != (int) configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed with error %d.", result);
 							return (false);
@@ -866,22 +779,24 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						idxConfig += configSize;
 					}
 
-				}
 					break;
+				}
+
 				case DYNAPSE_CONFIG_DYNAPSE_U2: {
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					// all cores
-					for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
+					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
 						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_NUMNEURONS_CORE; row_neuronid++) {
-							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
+							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 								// use first sram for monitoring
 								if (row_sram == 0) {
-									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U2;			// same as chip id
+									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U2; // same as chip id
 									sign = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG; // -1
 									distance = 1;
 									sourcecoreid = core;
+
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
 										| sourcechipid << 18 | sign << 27 | distance << 25 | sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
 								}
@@ -890,17 +805,14 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 								}
 
 								// organize data for USB send
-								spiMultiConfig[(numConfig * 6) + 0] =
-								DYNAPSE_CONFIG_CHIP;
-								spiMultiConfig[(numConfig * 6) + 1] =
-								DYNAPSE_CONFIG_CHIP_CONTENT;
-								spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+								spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+								spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+								spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 								numConfig++;
-
 							}
 						}
 					}
@@ -911,9 +823,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
-							configSize, 0);
-						if (result != configSize) {
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+							U16T(configSize), 0);
+						if (result != (int) configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed with error %d.", result);
 							return (false);
@@ -935,24 +847,26 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						idxConfig += configSize;
 					}
 
-				}
 					break;
+				}
+
 				case DYNAPSE_CONFIG_DYNAPSE_U3: {
 					// route all neurons to the output south interface with
 					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U3
 					// all cores
-					for (uint8_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
+					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
 						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_NUMNEURONS_CORE; row_neuronid++) {
-							for (uint8_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
+							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 								// use first sram for monitoring
 								if (row_sram == 0) {
-									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U3;			// same as chip id
+									sourcechipid = DYNAPSE_CONFIG_DYNAPSE_U3; // same as chip id
 									sx = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG; // -1
 									dx = 1; // ns
 									dy = 1;
 									sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 									sourcecoreid = core;
+
 									bits = row_neuronid << 7 | row_sram << 5 | core << 15 | 1 << 17 | 1 << 4
 										| sourcechipid << 18 | sy << 27 | dy << 25 | sx << 24 | dx << 22
 										| sourcecoreid << 28; // init content chip id and set correct destinations for monitoring
@@ -962,17 +876,14 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 								}
 
 								// organize data for USB send
-								spiMultiConfig[(numConfig * 6) + 0] =
-								DYNAPSE_CONFIG_CHIP;
-								spiMultiConfig[(numConfig * 6) + 1] =
-								DYNAPSE_CONFIG_CHIP_CONTENT;
-								spiMultiConfig[(numConfig * 6) + 2] = (bits >> 24) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 3] = (bits >> 16) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 4] = (bits >> 8) & 0x0FF;
-								spiMultiConfig[(numConfig * 6) + 5] = (bits >> 0) & 0x0FF;
+								spiMultiConfig[(numConfig * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+								spiMultiConfig[(numConfig * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+								spiMultiConfig[(numConfig * 6) + 2] = U8T((bits >> 24) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 3] = U8T((bits >> 16) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 4] = U8T((bits >> 8) & 0x0FF);
+								spiMultiConfig[(numConfig * 6) + 5] = U8T((bits >> 0) & 0x0FF);
 
 								numConfig++;
-
 							}
 						}
 					}
@@ -983,9 +894,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						int result = libusb_control_transfer(state->usbState.deviceHandle,
 							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig,
-							configSize, 0);
-						if (result != configSize) {
+							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
+							U16T(configSize), 0);
+						if (result != (int) configSize) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed with error %d.", result);
 							return (false);
@@ -1007,9 +918,10 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						idxConfig += configSize;
 					}
 
+					break;
 				}
-				break;
 			}
+
 			break;
 		}
 
@@ -1088,8 +1000,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN:
 				case DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
 				case DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL:
-					return (spiConfigReceive(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_MUX, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET:
@@ -1102,9 +1013,11 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					break;
 			}
 			break;
+
 		case DYNAPSE_CONFIG_SRAM:
 			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
 			break;
+
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
 			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
 			break;
@@ -1116,8 +1029,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_AER_ACK_EXTENSION:
 				case DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL:
 				case DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL:
-					return (spiConfigReceive(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_AER, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_AER, paramAddr, param));
 					break;
 
 				default:
@@ -1133,8 +1045,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_CHIP_CONTENT:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
-					return (spiConfigReceive(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_CHIP, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
 
 				default:
@@ -1149,8 +1060,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER:
 				case DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER:
 				case DYNAPSE_CONFIG_SYSINFO_LOGIC_CLOCK:
-					return (spiConfigReceive(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_SYSINFO, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO, paramAddr, param));
 					break;
 
 				default:
@@ -1163,8 +1073,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
 				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigReceive(state->usbState.deviceHandle,
-					DYNAPSE_CONFIG_USB, paramAddr, param));
+					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -1206,8 +1115,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	}
 
 	// Allocate packets.
-	state->currentPacketContainer = caerEventPacketContainerAllocate(
-	DYNAPSE_EVENT_TYPES);
+	state->currentPacketContainer = caerEventPacketContainerAllocate(DYNAPSE_EVENT_TYPES);
 	if (state->currentPacketContainer == NULL) {
 		freeAllDataMemory(state);
 
@@ -1215,8 +1123,8 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	state->currentSpikePacket = caerSpikeEventPacketAllocate(
-	DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	state->currentSpikePacket = caerSpikeEventPacketAllocate(DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID),
+		0);
 	if (state->currentSpikePacket == NULL) {
 		freeAllDataMemory(state);
 
@@ -1224,8 +1132,8 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	state->currentSpecialPacket = caerSpecialEventPacketAllocate(
-	DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	state->currentSpecialPacket = caerSpecialEventPacketAllocate(DYNAPSE_SPECIAL_DEFAULT_SIZE,
+		I16T(handle->info.deviceID), 0);
 	if (state->currentSpecialPacket == NULL) {
 		freeAllDataMemory(state);
 
@@ -1256,16 +1164,11 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 	// Stop data acquisition thread.
 	if (atomic_load(&state->dataExchangeStopProducers)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN,
-		false);
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX,
-		DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX,
-		DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN,
-		false);
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN,
-		false);
+		dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
+		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
+		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
+		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, false);
+		dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, false);
 	}
 
 	atomic_store(&state->dataAcquisitionThreadRun, false);
@@ -1461,10 +1364,6 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 							// Commit packets when doing a reset to clearly separate them.
 							tsReset = true;
 
-							// Update Master/Slave status on incoming TS resets. Done in main thread
-							// to avoid deadlock inside callback.
-							atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 1);
-
 							break;
 						}
 
@@ -1529,8 +1428,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 							state->currentSpecialPacket, state->currentSpecialPacketPosition);
-						caerSpecialEventSetTimestamp(currentSpecialEvent,
-						INT32_MAX);
+						caerSpecialEventSetTimestamp(currentSpecialEvent, INT32_MAX);
 						caerSpecialEventSetType(currentSpecialEvent, TIMESTAMP_WRAP);
 						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 						state->currentSpecialPacketPosition++;
@@ -1708,14 +1606,10 @@ static int dynapseDataAcquisitionThread(void *inPtr) {
 
 	if (atomic_load(&state->dataExchangeStartProducers)) {
 		// Enable data transfer on USB end-point 2.
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_USB,
-		DYNAPSE_CONFIG_USB_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX,
-		DYNAPSE_CONFIG_MUX_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX,
-		DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_AER,
-		DYNAPSE_CONFIG_AER_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, true);
 	}
 
 	// Create buffers as specified in config file.
@@ -1731,11 +1625,10 @@ static int dynapseDataAcquisitionThread(void *inPtr) {
 	// Handle USB events (1 second timeout).
 	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
 
-	while (atomic_load_explicit(&state->dataAcquisitionThreadRun,
-		memory_order_relaxed) && state->usbState.activeDataTransfers > 0) {
+	while (atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)
+		&& state->usbState.activeDataTransfers > 0) {
 		// Check config refresh, in this case to adjust buffer sizes.
-		if (atomic_load_explicit(&state->dataAcquisitionThreadConfigUpdate,
-			memory_order_relaxed) != 0) {
+		if (atomic_load_explicit(&state->dataAcquisitionThreadConfigUpdate, memory_order_relaxed) != 0) {
 			dynapseDataAcquisitionThreadConfig(handle);
 		}
 
@@ -1770,69 +1663,137 @@ static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
 		// Do buffer size change: cancel all and recreate them.
 		usbDeallocateTransfers(&state->usbState);
 		usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
-			U32T(atomic_load(&state->usbBufferSize)),
-			USB_DEFAULT_DATA_ENDPOINT);
+			U32T(atomic_load(&state->usbBufferSize)), USB_DEFAULT_DATA_ENDPOINT);
+	}
+}
+
+bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, size_t numConfig) {
+	dynapseHandle handle = (dynapseHandle) cdh;
+
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		return (false);
 	}
 
-	if ((configUpdate >> 1) & 0x01) {
-		// Get new Master/Slave information from device. Done here to prevent deadlock
-		// inside asynchronous callback.
-		uint32_t param32 = 0;
-
-		spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO,
-		DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
-
-		atomic_thread_fence(memory_order_seq_cst);
-		handle->info.deviceIsMaster = param32;
-		atomic_thread_fence(memory_order_seq_cst);
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		return (false);
 	}
+
+	dynapseState state = &handle->state;
+
+	// if array exceeds max size don't send anything
+	if (numConfig > DYNAPSE_MAX_USER_USB_PACKET_SIZE) {
+		return (false);
+	}
+
+	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE * 6] = { 0 };
+
+	// all cores
+	for (size_t i = 0; i < numConfig; i++) {
+		spiMultiConfig[(i * 6) + 0] = DYNAPSE_CONFIG_CHIP;
+		spiMultiConfig[(i * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
+		spiMultiConfig[(i * 6) + 2] = U8T((pointer[i] >> 24) & 0x0FF);
+		spiMultiConfig[(i * 6) + 3] = U8T((pointer[i] >> 16) & 0x0FF);
+		spiMultiConfig[(i * 6) + 4] = U8T((pointer[i] >> 8) & 0x0FF);
+		spiMultiConfig[(i * 6) + 5] = U8T((pointer[i] >> 0) & 0x0FF);
+	}
+
+	size_t idxConfig = 0;
+
+	while (numConfig > 0) {
+		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
+		size_t configSize = configNum * 6;
+
+		int result = libusb_control_transfer(state->usbState.deviceHandle,
+			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize),
+			0);
+		if (result != (int) configSize) {
+			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+				"Failed to clear CAM, USB transfer failed with error %d.", result);
+			return (false);
+		}
+
+		uint8_t check[2] = { 0 };
+		result = libusb_control_transfer(state->usbState.deviceHandle,
+			LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+
+		if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+				"Failed to clear CAM, USB transfer failed on verification.");
+			return (false);
+		}
+
+		numConfig -= configNum;
+		idxConfig += configSize;
+	}
+
+	// return true
+	return (true);
 }
 
 bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint32_t baseAddr, uint32_t numWords) {
 	dynapseHandle handle = (dynapseHandle) cdh;
+
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		return (false);
+	}
+
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		return (false);
+	}
+
 	dynapseState state = &handle->state;
-	uint32_t idxConfig = 0;
-	int numConfig = numWords * 2;
-	//we need malloc because allocating dynamically sized arrays on the stack is not allowed.
-	uint8_t *spiMultiConfig = malloc(numConfig*6*sizeof(*spiMultiConfig));
 
-	if ( spiMultiConfig == NULL ) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-			"Failed to malloc spiMultiConfigArray" );
-		return(false); // No memory allocated, don't need to free.
+	size_t numConfig = numWords * 2;
+
+	// We need malloc because allocating dynamically sized arrays on the stack is not allowed.
+	uint8_t *spiMultiConfig = malloc(numConfig * 6 * sizeof(*spiMultiConfig));
+
+	if (spiMultiConfig == NULL) {
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to malloc spiMultiConfigArray");
+		return (false); // No memory allocated, don't need to free.
 	}
 
-	for( uint32_t i = 0; i<numWords; i++ ) {
+	for (size_t i = 0; i < numWords; i++) {
 		// Data word configuration
-		spiMultiConfig[i*12+0] = DYNAPSE_CONFIG_SRAM;
-		spiMultiConfig[i*12+1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
-		spiMultiConfig[i*12+2] = 0;
-		spiMultiConfig[i*12+3] = 0;
-		spiMultiConfig[i*12+4] = (data[i] >> 8) & 0x0FF;
-		spiMultiConfig[i*12+5] = (data[i] >> 0) & 0x0FF;
-		// Address configuration
-		spiMultiConfig[i*12+6] = DYNAPSE_CONFIG_SRAM;
-		spiMultiConfig[i*12+7] = DYNAPSE_CONFIG_SRAM_ADDRESS;
-		spiMultiConfig[i*12+8] = 0;
-		spiMultiConfig[i*12+9] = ((baseAddr+i) >> 16) & 0x0FF;
-		spiMultiConfig[i*12+10] = ((baseAddr+i) >> 8) & 0x0FF;
-		spiMultiConfig[i*12+11] = ((baseAddr+i) >> 0) & 0x0FF;
-	}
+		spiMultiConfig[i * 12 + 0] = DYNAPSE_CONFIG_SRAM;
+		spiMultiConfig[i * 12 + 1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
+		spiMultiConfig[i * 12 + 2] = 0;
+		spiMultiConfig[i * 12 + 3] = 0;
+		spiMultiConfig[i * 12 + 4] = U8T((data[i] >> 8) & 0x0FF);
+		spiMultiConfig[i * 12 + 5] = U8T((data[i] >> 0) & 0x0FF);
 
+		// Address configuration
+		spiMultiConfig[i * 12 + 6] = DYNAPSE_CONFIG_SRAM;
+		spiMultiConfig[i * 12 + 7] = DYNAPSE_CONFIG_SRAM_ADDRESS;
+		spiMultiConfig[i * 12 + 8] = 0;
+		spiMultiConfig[i * 12 + 9] = U8T(((baseAddr + i) >> 16) & 0x0FF);
+		spiMultiConfig[i * 12 + 10] = U8T(((baseAddr + i) >> 8) & 0x0FF);
+		spiMultiConfig[i * 12 + 11] = U8T(((baseAddr + i) >> 0) & 0x0FF);
+	}
 
 	// Prepare the SRAM controller for writing
 	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
 
+	size_t idxConfig = 0;
+
 	// Start writing data
-	while ( numConfig > 0 ) {
+	while (numConfig > 0) {
 		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 		size_t configSize = configNum * 6;
+
 		int result = libusb_control_transfer(state->usbState.deviceHandle,
-						    LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						    VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, configNum, 0, spiMultiConfig + idxConfig, configSize, 0);
-		if ( result != configSize ) {
+			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize), 0);
+		if (result != (int) configSize) {
 			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 				"Failed to send chip config, USB transfer failed with error %d.", result);
+
 			free(spiMultiConfig);
 			return (false);
 		}
@@ -1843,13 +1804,35 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 
 	free(spiMultiConfig);
 
-	return(true);
+	return (true);
 }
 
-bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
+bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
+	int16_t synapseType) {
+	dynapseHandle handle = (dynapseHandle) cdh;
 
-	uint32_t bits;
-	uint32_t ei = (synapseType & 0x2) >> 1;
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		return (false);
+	}
+
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		return (false);
+	}
+
+	uint32_t bits = caerDynapseGenerateCamBits(preNeuronAddr, postNeuronAddr, camId, synapseType);
+
+	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false) {
+		return (false);
+	}
+
+	return (true);
+}
+
+uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
+	int16_t synapseType) {
+	uint32_t ei = (U32T(synapseType) & 0x2) >> 1;
 	uint32_t fs = synapseType & 0x1;
 	uint32_t address = preNeuronAddr & 0xff;
 	uint32_t source_core = (preNeuronAddr & 0x300) >> 8;
@@ -1858,42 +1841,33 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 	uint32_t synapse_row = camId;
 	uint32_t row = neuron_row << 6 | synapse_row;
 	uint32_t column = postNeuronAddr & 0xf;
-	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
-			| coreId << 15 | row << 5 | column;
 
-	if(caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false){
-		return(false);
+	uint32_t bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17 | coreId << 15 | row << 5
+		| column;
+
+	return (bits);
+}
+
+bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx,
+	uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore) {
+	dynapseHandle handle = (dynapseHandle) cdh;
+
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		return (false);
 	}
 
-	return(true);
-}
-
-uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType){
-
-	uint32_t bits;
-	uint32_t ei = (synapseType & 0x2) >> 1;
-	uint32_t fs = synapseType & 0x1;
-	uint32_t address = preNeuronAddr & 0xff;
-	uint32_t source_core = (preNeuronAddr & 0x300) >> 8;
-	uint32_t coreId = (postNeuronAddr & 0x300) >> 8;
-	uint32_t neuron_row = (postNeuronAddr & 0xf0) >> 4;
-	uint32_t synapse_row = camId;
-	uint32_t row = neuron_row << 6 | synapse_row;
-	uint32_t column = postNeuronAddr & 0xf;
-	bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17
-			| coreId << 15 | row << 5 | column;
-
-	return(bits);
-}
-
-bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore){
-
-	uint32_t bits =  neuronId << 7 | sramId << 5 | coreId << 15 | 1 << 17 | 1 << 4
-								| destinationCore << 18 | sy << 27 | dy << 25 | dx << 22 | sx << 24 | virtualCoreId << 28;
-
-	if(caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false){
-		return(false);
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		return (false);
 	}
-	return(true);
-}
 
+	uint32_t bits = neuronId << 7| U32T(sramId << 5) | U32T(coreId << 15) | 1 << 17 | 1 << 4 | U32T(destinationCore << 18)
+		| U32T(sy << 27) | U32T(dy << 25) | U32T(dx << 22) | U32T(sx << 24) | U32T(virtualCoreId << 28);
+
+	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false) {
+		return (false);
+	}
+
+	return (true);
+}
