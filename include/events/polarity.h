@@ -20,7 +20,7 @@ extern "C" {
 /**
  * Shift and mask values for the polarity, X and Y addresses
  * of a polarity event.
- * Addresses up to 14 bit are supported. Polarity is ON(=1) or OFF(=0).
+ * Addresses up to 15 bit are supported. Polarity is ON(=1) or OFF(=0).
  * Bit 0 is the valid mark, see 'common.h' for more details.
  */
 //@{

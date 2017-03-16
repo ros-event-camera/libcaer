@@ -1,3 +1,74 @@
+Release 2.0.1 - 16.03.2017
+NOTE: this release is numbered 2.0.1 and not 2.0.0, because 2.0.0 was the
+development version. To ensure people can depend on the now actually released
+version, the version number was increased to 2.0.1 for the official release.
+
+INCOMPATIBLE CHANGES
+- The Frame Event format changed to have the origin (0, 0) in the upper left
+  corner of the image, following standard computer graphics conventions now.
+  Before it was in the lower left corner, following the OpenGL convention.
+  This was changed to more easily be able to benefit from the wealth of
+  computer graphics libraries available, such as OpenCV.
+  caerFrameEventGetPixelArrayCGFormat() has been removed as a consequence.
+- The Polarity Event format has also changed its origin to the upper left corner.
+- Device INFO structures have additional data members now, be sure to
+  recompile anything depending on those!
+- CAER_HOST_CONFIG_PACKETS_MAX_*_SIZE and MAX_*_INTERVAL options have been
+  removed, the whole data packeting system is now much simpler with only
+  two configuration options to control it:
+  - CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE
+  - CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL
+  These act at the event packet container level. See packetContainer.h
+  documentation on more information for how this works.
+- Removed LIBCAER_LOG_NONE define from headers, it is now not possible
+  to completely suppress log output anymore.
+- caerGenericEventGetEvent() has had its bounds restricted to [0,eventNumber[
+  instead of [0,eventCapacity[.
+- Event packet copy functions have been renamed to:
+  - caerEventPacketCopy()
+  - caerEventPacketCopyOnlyEvents()
+  - caerEventPacketCopyOnlyValidEvents()
+
+NEW FEATURES
+- Support for the iniLabs DYNAP-SE neuromorphic chip was added.
+- Added new event type Spike Event for spiking neurons.
+- Added new event types Point1D, Point2D, Point3D and Point4D to
+  hold floating point data in multiple dimensions.
+- New event packet functions were added:
+  - caerEventPacketEquals()
+  - caerEventPacketClear()
+  - caerEventPacketClean()
+  - caerEventPacketResize()
+  - caerEventPacketGrow()
+  - caerEventPacketAppend()
+- Full native support for C++11 through header library (libcaercpp).
+- Improved const-qualification of functions, to allow better compile
+  time checks for read-only data. A GetEventConst() function was added
+  to each event type as part of this, to get read-only events.
+- Const, reverse and const-reverse iterators were added to all event types.
+- davis.h: added support for stereo microphones on DAVIS346mini.
+- davis.h: added support for extra signal detectors.
+- network.h: added header with functions to help parse AEDAT 3.X
+  network stream headers.
+- frame.h: added support for more color filter configurations.
+- packetContainer.h: better documentation, now tracks lowest and highest
+  timestamps contained, as well as number of total and valid events.
+- packetContainer.h: added caerEventPacketContainerUpdateStatistics() to
+  update above statistics. Automatically called on each addition or
+  removal of an event packet from the container.
+- packetContainer.h: added caerEventPacketContainerFindEventPacketByType*(),
+  caerEventPacketContainerCopyAllEvents() and caerEventPacketContainerCopyValidEvents()
+  functions to search for event packets by type and to make deep-copies of them.
+- special.h: added new Special Event types, to support extra signal detection
+  schemes and add Frame Event related timing information.
+- special.h: added caerSpecialEventPacketFindEventByType*() and
+  caerSpecialEventPacketFindValidEventByType*() functions to search for
+  a specified type of special event.
+- libcaer.h: added LIBCAER_VERSION, LIBCAER_NAME_STRING,
+  LIBCAER_VERSION_STRING and LIBCAER_HAVE_OPENCV defines.
+- log.h: added caerLogVA() function to pass va_list arguments directly.
+
+
 Release 1.0.3 - 28.03.2016
 INCOMPATIBLE CHANGES
 - davis_fx2.c: removed specific FX2 code, now uses same backend as FX3
