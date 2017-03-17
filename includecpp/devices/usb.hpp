@@ -27,7 +27,7 @@ protected:
 			throw std::runtime_error("Failed to open device.");
 		}
 
-		// Use stateless lambda, more efficient according to Effective Modern C++ #18.
+		// Use stateless lambda for shared_ptr custom deleter.
 		auto deleteDeviceHandle = [](caerDeviceHandle h) {
 			// Run destructor, free all memory.
 			// Never fails in current implementation.
