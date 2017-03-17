@@ -10,14 +10,6 @@ namespace libcaer {
 namespace devices {
 
 class usb {
-private:
-	// Private deleter class for shared_ptr.
-	static void deleteDeviceHandle(caerDeviceHandle h) {
-		// Run destructor, free all memory.
-		// Never fails in current implementation.
-		caerDeviceClose(&h);
-	}
-
 protected:
 	std::shared_ptr<struct caer_device_handle> handle;
 
@@ -35,7 +27,14 @@ protected:
 			throw std::runtime_error("Failed to open device.");
 		}
 
-		handle = std::shared_ptr<struct caer_device_handle>(h, &deleteDeviceHandle);
+		// Use stateless lambda, more efficient according to Effective Modern C++ #18.
+		auto deleteDeviceHandle = [](caerDeviceHandle h) {
+			// Run destructor, free all memory.
+			// Never fails in current implementation.
+			caerDeviceClose(&h);
+		};
+
+		handle = std::shared_ptr<struct caer_device_handle>(h, deleteDeviceHandle);
 	}
 
 public:
