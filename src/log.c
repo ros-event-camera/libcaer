@@ -34,15 +34,18 @@ void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *fo
 }
 
 void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) {
+	caerLogVAFull(atomic_load_explicit(&caerLogFileDescriptor1, memory_order_relaxed),
+		atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed),
+		atomic_load_explicit(&caerLogLevel, memory_order_relaxed), logLevel, subSystem, format, args);
+}
+
+void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, enum caer_log_level logLevel,
+	const char *subSystem, const char *format, va_list args) {
 	// Check that subSystem and format are defined correctly.
 	if (subSystem == NULL || format == NULL) {
 		caerLog(CAER_LOG_ERROR, "Logger", "Missing subSystem or format strings. Neither can be NULL.");
 		return;
 	}
-
-	// Only log messages if there is a destination (file-descriptor) to write them to.
-	int logFileDescriptor1 = atomic_load_explicit(&caerLogFileDescriptor1, memory_order_relaxed);
-	int logFileDescriptor2 = atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed);
 
 	if (logFileDescriptor1 < 0 && logFileDescriptor2 < 0) {
 		// Logging is disabled.
@@ -50,7 +53,7 @@ void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *
 	}
 
 	// Only log messages above the specified severity level.
-	if (logLevel > atomic_load_explicit(&caerLogLevel, memory_order_relaxed)) {
+	if (logLevel > systemLogLevel) {
 		return;
 	}
 
