@@ -26,6 +26,14 @@ void caerLogFileDescriptorsSet(int fd1, int fd2) {
 	atomic_store_explicit(&caerLogFileDescriptor2, fd2, memory_order_relaxed);
 }
 
+int caerLogFileDescriptorsGetFirst(void) {
+	return (atomic_load_explicit(&caerLogFileDescriptor1, memory_order_relaxed));
+}
+
+int caerLogFileDescriptorsGetSecond(void) {
+	return (atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed));
+}
+
 void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);

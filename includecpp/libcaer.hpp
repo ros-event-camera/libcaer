@@ -37,6 +37,14 @@ void fileDescriptorsSet(int fd1, int fd2) noexcept {
 	caerLogFileDescriptorsSet(fd1, fd2);
 }
 
+int fileDescriptorsGetFirst() noexcept {
+	return (caerLogFileDescriptorsGetFirst());
+}
+
+int fileDescriptorsGetSecond() noexcept {
+	return (caerLogFileDescriptorsGetSecond());
+}
+
 void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
 	va_list argumentList;
 	va_start(argumentList, format);

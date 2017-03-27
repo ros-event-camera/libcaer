@@ -88,6 +88,20 @@ enum caer_log_level caerLogLevelGet(void);
 void caerLogFileDescriptorsSet(int fd1, int fd2);
 
 /**
+ * Get the current output file descriptor 1.
+ *
+ * @return the current output file descriptor 1.
+ */
+int caerLogFileDescriptorsGetFirst(void);
+
+/**
+ * Get the current output file descriptor 2.
+ *
+ * @return the current output file descriptor 2.
+ */
+int caerLogFileDescriptorsGetSecond(void);
+
+/**
  * Main logging function.
  * This function takes messages, formats them and sends them out to a file descriptor,
  * respecting the system-wide log level setting and prepending the current time, the
