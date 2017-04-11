@@ -191,6 +191,14 @@ extern "C" {
 #define DYNAPSE_CONFIG_SRAM_READ 0
 
 /**
+* Parameter address for module DYNAPSE_CONFIG_SRAM:
+* Burst mode enable for fast writing. Disables updates on address change and instead updates on data change,
+* while automatically incrementing the writing address. Two 16-bit words are written per 32-bit word sent
+* to the SPI controller starting with the least significant half word.
+*/
+#define DYNAPSE_CONFIG_SRAM_BURSTMODE 5
+
+/**
  * Parameter address for module DYNAPSE_CONFIG_MUX:
  * run the Multiplexer state machine, which is responsible for
  * mixing the various event types at the device level, timestamping
