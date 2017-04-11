@@ -37,6 +37,14 @@ void fileDescriptorsSet(int fd1, int fd2) noexcept {
 	caerLogFileDescriptorsSet(fd1, fd2);
 }
 
+int fileDescriptorsGetFirst() noexcept {
+	return (caerLogFileDescriptorsGetFirst());
+}
+
+int fileDescriptorsGetSecond() noexcept {
+	return (caerLogFileDescriptorsGetSecond());
+}
+
 void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
 	va_list argumentList;
 	va_start(argumentList, format);
@@ -48,6 +56,13 @@ void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
 void logVA(logLevel l, const char *subSystem, const char *format, va_list args) noexcept {
 	caerLogVA(static_cast<enum caer_log_level>(static_cast<typename std::underlying_type<logLevel>::type>(l)),
 		subSystem, format, args);
+}
+
+void logVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, logLevel l,
+	const char *subSystem, const char *format, va_list args) noexcept {
+	caerLogVAFull(logFileDescriptor1, logFileDescriptor2, systemLogLevel,
+		static_cast<enum caer_log_level>(static_cast<typename std::underlying_type<logLevel>::type>(l)), subSystem,
+		format, args);
 }
 
 }

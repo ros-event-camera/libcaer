@@ -21,14 +21,15 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 	#if defined(__USE_MINGW_ANSI_STDIO)
-		#define ATTRIBUTE_FORMAT __attribute__ ((format (gnu_printf, 3, 4)))
-		#define ATTRIBUTE_FORMAT_VA __attribute__ ((format (gnu_printf, 3, 0)))
+		#define ATTRIBUTE_FORMAT(N) __attribute__ ((format (gnu_printf, N, (N+1))))
+		#define ATTRIBUTE_FORMAT_VA(N) __attribute__ ((format (gnu_printf, N, 0)))
 	#else
-		#define ATTRIBUTE_FORMAT __attribute__ ((format (printf, 3, 4)))
-		#define ATTRIBUTE_FORMAT_VA __attribute__ ((format (printf, 3, 0)))
+		#define ATTRIBUTE_FORMAT(N) __attribute__ ((format (printf, N, (N+1))))
+		#define ATTRIBUTE_FORMAT_VA(N) __attribute__ ((format (printf, N, 0)))
 	#endif
 #else
-	#define ATTRIBUTE_FORMAT
+	#define ATTRIBUTE_FORMAT(N)
+	#define ATTRIBUTE_FORMAT_VA(N)
 #endif
 
 #ifdef __cplusplus
@@ -87,6 +88,20 @@ enum caer_log_level caerLogLevelGet(void);
 void caerLogFileDescriptorsSet(int fd1, int fd2);
 
 /**
+ * Get the current output file descriptor 1.
+ *
+ * @return the current output file descriptor 1.
+ */
+int caerLogFileDescriptorsGetFirst(void);
+
+/**
+ * Get the current output file descriptor 2.
+ *
+ * @return the current output file descriptor 2.
+ */
+int caerLogFileDescriptorsGetSecond(void);
+
+/**
  * Main logging function.
  * This function takes messages, formats them and sends them out to a file descriptor,
  * respecting the system-wide log level setting and prepending the current time, the
@@ -99,7 +114,7 @@ void caerLogFileDescriptorsSet(int fd1, int fd2);
  * @param format the message format string (see printf()).
  * @param ... the parameters to be formatted according to the format string (see printf()).
  */
-void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT;
+void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT(3);
 
 /**
  * Secondary logging function.
@@ -117,7 +132,30 @@ void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *fo
  * @param args the parameters to be formatted according to the format string (see printf()).
  *             This is an argument list as returned by va_start().
  */
-void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA;
+void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(3);
+
+/**
+ * Tertiary logging function.
+ * This function takes messages, formats them and sends them out to up to two file
+ * descriptors, fully specified by the user; allows a user-given system log level
+ * setting to also be specified, and then prepends the current time, the message
+ * log level and a user-specified common string to the actual formatted output.
+ * The format is specified exactly as with the printf() family of functions.
+ * The argument list is a va_list as returned by va_start(), following the vprintf()
+ * family of functions in its functionality.
+ * Please see their manual-page for more information.
+ *
+ * @param logFileDescriptor1 first output file descriptor.
+ * @param logFileDescriptor2 second output file descriptor.
+ * @param systemLogLevel the system-wide log level.
+ * @param logLevel the message-specific log level.
+ * @param subSystem a common, user-specified string to prepend before the message.
+ * @param format the message format string (see printf()).
+ * @param args the parameters to be formatted according to the format string (see printf()).
+ *             This is an argument list as returned by va_start().
+ */
+void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, enum caer_log_level logLevel,
+	const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(6);
 
 #ifdef __cplusplus
 }

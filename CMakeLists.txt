@@ -167,7 +167,7 @@ IF (CC_GCC OR CC_CLANG)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARN_COMMON_FLAGS} ${WARN_CXX_FLAGS}")
 ENDIF()
 
-# Search for external libraries with pkg-config
+# Search for external libraries with pkg-config.
 INCLUDE(FindPkgConfig)
 
 # Basic USB device support
