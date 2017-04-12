@@ -1749,7 +1749,26 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 
 	dynapseState state = &handle->state;
 
-	size_t numConfig = numWords * 2;
+	size_t numConfig = 0;
+	// Handle even and odd numbers of words to write
+	if ( numWords % 2 == 0 ) {
+		numConfig = numWords/2;
+	}
+	else {
+		// Handle the case where we have 1 trailing word
+		// by just writing it manually
+		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND,
+			      DYNAPSE_CONFIG_SRAM_WRITE);
+		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, data[numWords-1]);
+		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr+(numWords-1));
+
+		// reduce numWords to the, now even, number of remaining words.
+		// Otherwise the spiMultiConfig array filling loop will be incorrect
+		numWords--;
+		numConfig = numWords/2;
+
+	}
+
 
 	// We need malloc because allocating dynamically sized arrays on the stack is not allowed.
 	uint8_t *spiMultiConfig = malloc(numConfig * 6 * sizeof(*spiMultiConfig));
@@ -1759,26 +1778,23 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		return (false); // No memory allocated, don't need to free.
 	}
 
-	for (size_t i = 0; i < numWords; i++) {
+	for (size_t i = 0; i < numConfig; i++) {
 		// Data word configuration
-		spiMultiConfig[i * 12 + 0] = DYNAPSE_CONFIG_SRAM;
-		spiMultiConfig[i * 12 + 1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
-		spiMultiConfig[i * 12 + 2] = 0;
-		spiMultiConfig[i * 12 + 3] = 0;
-		spiMultiConfig[i * 12 + 4] = U8T((data[i] >> 8) & 0x0FF);
-		spiMultiConfig[i * 12 + 5] = U8T((data[i] >> 0) & 0x0FF);
-
-		// Address configuration
-		spiMultiConfig[i * 12 + 6] = DYNAPSE_CONFIG_SRAM;
-		spiMultiConfig[i * 12 + 7] = DYNAPSE_CONFIG_SRAM_ADDRESS;
-		spiMultiConfig[i * 12 + 8] = 0;
-		spiMultiConfig[i * 12 + 9] = U8T(((baseAddr + i) >> 16) & 0x0FF);
-		spiMultiConfig[i * 12 + 10] = U8T(((baseAddr + i) >> 8) & 0x0FF);
-		spiMultiConfig[i * 12 + 11] = U8T(((baseAddr + i) >> 0) & 0x0FF);
+		spiMultiConfig[i * 6 + 0] = DYNAPSE_CONFIG_SRAM;
+		spiMultiConfig[i * 6 + 1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
+		spiMultiConfig[i * 6 + 2] = U8T((data[i*2+1] >> 8) & 0x0FF);
+		spiMultiConfig[i * 6 + 3] = U8T((data[i*2+1] >> 0) & 0x0FF);
+		spiMultiConfig[i * 6 + 4] = U8T((data[i*2] >> 8) & 0x0FF);
+		spiMultiConfig[i * 6 + 5] = U8T((data[i*2] >> 0) & 0x0FF);
 	}
 
 	// Prepare the SRAM controller for writing
+	// First we write the base address by writing a spoof word to it
 	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, 0x0);
+	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr);
+	// Then we enable burst mode
+	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 1);
 
 	size_t idxConfig = 0;
 
@@ -1801,6 +1817,9 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		numConfig -= configNum;
 		idxConfig += configSize;
 	}
+
+	// Disable burst mode again or things will go wrong when accessing the SRAM in the future
+	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 0);
 
 	free(spiMultiConfig);
 
