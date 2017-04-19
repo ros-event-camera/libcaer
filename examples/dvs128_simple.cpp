@@ -17,12 +17,14 @@ int main(void) {
 	// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
-		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
+		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
+			"Failed to set signal handler for SIGTERM. Error: %d.", errno);
 		return (EXIT_FAILURE);
 	}
 
 	if (signal(SIGINT, &globalShutdownSignalHandler) == SIG_ERR) {
-		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGINT. Error: %d.", errno);
+		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
+			"Failed to set signal handler for SIGINT. Error: %d.", errno);
 		return (EXIT_FAILURE);
 	}
 #else
@@ -35,12 +37,14 @@ int main(void) {
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
 
 	if (sigaction(SIGTERM, &shutdownAction, NULL) == -1) {
-		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
+		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
+			"Failed to set signal handler for SIGTERM. Error: %d.", errno);
 		return (EXIT_FAILURE);
 	}
 
 	if (sigaction(SIGINT, &shutdownAction, NULL) == -1) {
-		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGINT. Error: %d.", errno);
+		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
+			"Failed to set signal handler for SIGINT. Error: %d.", errno);
 		return (EXIT_FAILURE);
 	}
 #endif
