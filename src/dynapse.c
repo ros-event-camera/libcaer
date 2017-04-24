@@ -310,6 +310,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
 			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			break;
+
+		case DYNAPSE_CONFIG_SPIKEGEN:
+			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
+			break;
 
 		case DYNAPSE_CONFIG_MUX:
 			switch (paramAddr) {
@@ -1020,6 +1025,9 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
 			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			break;
+		case DYNAPSE_CONFIG_SPIKEGEN:
+			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_AER:
@@ -1765,6 +1773,11 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		// reduce numWords to the, now even, number of remaining words.
 		// Otherwise the spiMultiConfig array filling loop will be incorrect
 		numWords--;
+
+		// return if there was only 1 word to write
+		if (numWords == 0) {
+			return true;
+		}
 		numConfig = numWords/2;
 
 	}

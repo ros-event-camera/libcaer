@@ -88,10 +88,10 @@ extern "C" {
 
 /**
  * Module address: device side SRAM controller configuration.
- * The module supports holds an address, a word to be written to SRAM
+ * The module holds an address, a word to be written to SRAM
  * the most recent word read using a read command, and a read/write command.
  * Reads/writes are triggered when the address field is changed
- * ex: caerDynapseWriteSRAM(moduleData->moduleState, SRAMData, baseAddr, numWords);
+ * ex: caerDynapseWriteSramWords(moduleData->moduleState, SRAMData, baseAddr, numWords);
  * Writes numWords words from array SRAMData to the SRAM, starting at baseAddr.
  */
 
@@ -107,6 +107,53 @@ extern "C" {
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG 15
 
 /**
+* Module address: Device side spike generator module configuration.
+* Provides start/stop control of spike train application and selection
+* of fixed/variable interspike intervals and their location in memory.
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN 16
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Instructs the spike generator to start applying the configurated
+* spike train when the parameter changes from false to true.
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_RUN 0
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Selects variable interspike interval mode (true) or fixed interspike
+* interval (false).
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_VARMODE 1
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Sets the start address of a spike train in memory.
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_BASEADDR 2
+
+/**
+* Paramter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Sets the number of events to read from memory for a single application
+* of a spike train.
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_STIMCOUNT 3
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Sets the interspike interval that will be used in fixed ISI mode (VARMODE false).
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_ISI 4
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+* Sets the time base resolution for interspike intervals as the number
+* of FPGA clock cycles.
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_ISIBASE 5
+
+/**
 * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
 * Run control. Starts and stops handshaking with DVS.
 */
@@ -114,8 +161,8 @@ extern "C" {
 
 /**
 * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
-* Bits 16 downto 12 select the address in the global kernel table
-* and bits 11 downto 0 specify the data.
+* Bits 16 down to 12 select the address in the global kernel table
+* and bits 11 down to 0 specify the data.
 * The 12 data bits are split into 4*3 synaptic weight bits which map
 * onto positive/negative polarity events from 2 DVS pixels.
 */
