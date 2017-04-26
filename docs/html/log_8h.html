@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.1-rbb4537fdc2bda88b519972b844537e80b1930539</span>
+   &#160;<span id="projectnumber">2.0.2-r8d962f65a462287c6bd430ea5e754cd507ca4d3b</span>
    </div>
   </td>
  </tr>
@@ -72,6 +72,15 @@ $(function() {
 </div>
 <p><a href="log_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:aa2f67a84abf675fa65b697b845ab5d10"><td class="memItemLeft" align="right" valign="top"><a id="aa2f67a84abf675fa65b697b845ab5d10"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>ATTRIBUTE_FORMAT</b>(N)</td></tr>
+<tr class="separator:aa2f67a84abf675fa65b697b845ab5d10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1da0c37dc6227eeaae4bc4e1e8aed11"><td class="memItemLeft" align="right" valign="top"><a id="af1da0c37dc6227eeaae4bc4e1e8aed11"></a>
+#define&#160;</td><td class="memItemRight" valign="bottom"><b>ATTRIBUTE_FORMAT_VA</b>(N)</td></tr>
+<tr class="separator:af1da0c37dc6227eeaae4bc4e1e8aed11"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
 <tr class="memitem:a5988fb14bd47761d15fb79b651338b50"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> { <br />
@@ -96,10 +105,16 @@ Functions</h2></td></tr>
 <tr class="separator:a7f3a980270b0df01546c3213a2d516ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad5d975dbf2a216cedfed263afa0f8e0b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad5d975dbf2a216cedfed263afa0f8e0b">caerLogFileDescriptorsSet</a> (int fd1, int fd2)</td></tr>
 <tr class="separator:ad5d975dbf2a216cedfed263afa0f8e0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a30123d179e22994b733f80d173327625"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a30123d179e22994b733f80d173327625">caerLog</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format,...) ATTRIBUTE_FORMAT</td></tr>
-<tr class="separator:a30123d179e22994b733f80d173327625"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a726499cc47780d49e5fad0d74bec406c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a726499cc47780d49e5fad0d74bec406c">caerLogVA</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA</td></tr>
-<tr class="separator:a726499cc47780d49e5fad0d74bec406c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb95822660d10c02741a735640b5a040"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#afb95822660d10c02741a735640b5a040">caerLogFileDescriptorsGetFirst</a> (void)</td></tr>
+<tr class="separator:afb95822660d10c02741a735640b5a040"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad8e02d71cb9fdc6069af41ccc754a103"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#ad8e02d71cb9fdc6069af41ccc754a103">caerLogFileDescriptorsGetSecond</a> (void)</td></tr>
+<tr class="separator:ad8e02d71cb9fdc6069af41ccc754a103"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfc7bc7e39e820af7e65e6a2da50eaa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#adfc7bc7e39e820af7e65e6a2da50eaa9">caerLog</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format,...) ATTRIBUTE_FORMAT(3)</td></tr>
+<tr class="separator:adfc7bc7e39e820af7e65e6a2da50eaa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8fae53f4f33a4036532f1d43021fe24c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a8fae53f4f33a4036532f1d43021fe24c">caerLogVA</a> (enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(3)</td></tr>
+<tr class="separator:a8fae53f4f33a4036532f1d43021fe24c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8b58773ce8c066639a23c2665a5777e0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="log_8h.html#a8b58773ce8c066639a23c2665a5777e0">caerLogVAFull</a> (int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a> logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(6)</td></tr>
+<tr class="separator:a8b58773ce8c066639a23c2665a5777e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Logging functions to print useful messages for the user. </p>
@@ -115,13 +130,13 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Log levels for <a class="el" href="log_8h.html#a30123d179e22994b733f80d173327625">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#af3ca8e708844b4efcaea5f45dc8353ee">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
+<p>Log levels for <a class="el" href="log_8h.html#adfc7bc7e39e820af7e65e6a2da50eaa9">caerLog()</a> logging function. Log messages only get printed if their log level is equal or above the global system log level, which can be set with <a class="el" href="log_8h.html#af3ca8e708844b4efcaea5f45dc8353ee">caerLogLevelSet()</a>. The default log level is CAER_LOG_ERROR. CAER_LOG_EMERGENCY is the most urgent log level and will always be printed, while CAER_LOG_DEBUG is the least urgent log level and will only be delivered if configured by the user. </p>
 
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a30123d179e22994b733f80d173327625"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a30123d179e22994b733f80d173327625">&#9670;&nbsp;</a></span>caerLog()</h2>
+<a id="adfc7bc7e39e820af7e65e6a2da50eaa9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adfc7bc7e39e820af7e65e6a2da50eaa9">&#9670;&nbsp;</a></span>caerLog()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -167,6 +182,46 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="afb95822660d10c02741a735640b5a040"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afb95822660d10c02741a735640b5a040">&#9670;&nbsp;</a></span>caerLogFileDescriptorsGetFirst()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int caerLogFileDescriptorsGetFirst </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get the current output file descriptor 1.</p>
+<dl class="section return"><dt>Returns</dt><dd>the current output file descriptor 1. </dd></dl>
+
+</div>
+</div>
+<a id="ad8e02d71cb9fdc6069af41ccc754a103"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad8e02d71cb9fdc6069af41ccc754a103">&#9670;&nbsp;</a></span>caerLogFileDescriptorsGetSecond()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int caerLogFileDescriptorsGetSecond </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Get the current output file descriptor 2.</p>
+<dl class="section return"><dt>Returns</dt><dd>the current output file descriptor 2. </dd></dl>
 
 </div>
 </div>
@@ -251,8 +306,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a726499cc47780d49e5fad0d74bec406c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a726499cc47780d49e5fad0d74bec406c">&#9670;&nbsp;</a></span>caerLogVA()</h2>
+<a id="a8fae53f4f33a4036532f1d43021fe24c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8fae53f4f33a4036532f1d43021fe24c">&#9670;&nbsp;</a></span>caerLogVA()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -291,6 +346,77 @@ Functions</h2></td></tr>
 <p>Secondary logging function. This function takes messages, formats them and sends them out to a file descriptor, respecting the system-wide log level setting and prepending the current time, the log level and a user-specified common string to the actual formatted output. The format is specified exactly as with the printf() family of functions. The argument list is a va_list as returned by va_start(), following the vprintf() family of functions in its functionality. Please see their manual-page for more information.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">logLevel</td><td>the message-specific log level. </td></tr>
+    <tr><td class="paramname">subSystem</td><td>a common, user-specified string to prepend before the message. </td></tr>
+    <tr><td class="paramname">format</td><td>the message format string (see printf()). </td></tr>
+    <tr><td class="paramname">args</td><td>the parameters to be formatted according to the format string (see printf()). This is an argument list as returned by va_start(). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8b58773ce8c066639a23c2665a5777e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b58773ce8c066639a23c2665a5777e0">&#9670;&nbsp;</a></span>caerLogVAFull()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void caerLogVAFull </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>logFileDescriptor1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>logFileDescriptor2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t&#160;</td>
+          <td class="paramname"><em>systemLogLevel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">enum <a class="el" href="log_8h.html#a5988fb14bd47761d15fb79b651338b50">caer_log_level</a>&#160;</td>
+          <td class="paramname"><em>logLevel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>subSystem</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>format</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">va_list&#160;</td>
+          <td class="paramname"><em>args</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Tertiary logging function. This function takes messages, formats them and sends them out to up to two file descriptors, fully specified by the user; allows a user-given system log level setting to also be specified, and then prepends the current time, the message log level and a user-specified common string to the actual formatted output. The format is specified exactly as with the printf() family of functions. The argument list is a va_list as returned by va_start(), following the vprintf() family of functions in its functionality. Please see their manual-page for more information.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">logFileDescriptor1</td><td>first output file descriptor. </td></tr>
+    <tr><td class="paramname">logFileDescriptor2</td><td>second output file descriptor. </td></tr>
+    <tr><td class="paramname">systemLogLevel</td><td>the system-wide log level. </td></tr>
     <tr><td class="paramname">logLevel</td><td>the message-specific log level. </td></tr>
     <tr><td class="paramname">subSystem</td><td>a common, user-specified string to prepend before the message. </td></tr>
     <tr><td class="paramname">format</td><td>the message format string (see printf()). </td></tr>
