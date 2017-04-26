@@ -1,3 +1,14 @@
+Release 2.0.2 - 27.04.2017
+NEW FEATURES
+- Logging: added caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond()
+  functions to get the two file descriptors where log messages go to.
+- Logging: added caerLogVAFull() function to allow full control over all
+  parameters involved in logging, especially the log-level.
+- Dynap-se: added support for experimental DYNAPSE_CONFIG_SPIKEGEN
+  control and improved DYNAPSE_CONFIG_SRAM control (thanks to Carsten Nielsen).
+- Updated C++ examples to use C++ logging functions.
+- Updated C++ interface to reflect above changes.
+
 Release 2.0.1 - 16.03.2017
 NOTE: this release is numbered 2.0.1 and not 2.0.0, because 2.0.0 was the
 development version. To ensure people can depend on the now actually released
