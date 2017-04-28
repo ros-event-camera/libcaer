@@ -8,6 +8,17 @@
 namespace libcaer {
 namespace log {
 
+// Undefine the log-level names, to avoid conflicts with macros
+// on Windows/MinGW for example.
+#undef EMERGENCY
+#undef ALERT
+#undef CRITICAL
+#undef ERROR
+#undef WARNING
+#undef NOTICE
+#undef INFO
+#undef DEBUG
+
 enum class logLevel {
 	EMERGENCY = 0,
 	ALERT = 1,
