@@ -1,3 +1,8 @@
+Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
+BUG FIXES
+- libcaer.hpp: undefine log-level names to avoid name clashes.
+
+
 Release 2.0.2 - 27.04.2017
 NEW FEATURES
 - Logging: added caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond()
@@ -8,6 +13,7 @@ NEW FEATURES
   control and improved DYNAPSE_CONFIG_SRAM control (thanks to Carsten Nielsen).
 - Updated C++ examples to use C++ logging functions.
 - Updated C++ interface to reflect above changes.
+
 
 Release 2.0.1 - 16.03.2017
 NOTE: this release is numbered 2.0.1 and not 2.0.0, because 2.0.0 was the
@@ -93,6 +99,7 @@ NEW FEATURES
   standard computer graphics format (pixel (0, 0) in upper left
   corner) efficently.
 - davis.h: add DAVIS_CONFIG_APS_ADC_TEST_MODE parameter to APS module.
+
 
 Release 1.0.2 - 08.01.2016
 IMCOMPATIBLE CHANGES
