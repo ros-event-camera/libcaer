@@ -23,7 +23,8 @@ static inline void updateROISizes(davisState state) {
 
 		// Position is already set to startCol/Row, so we don't have to reset
 		// it here. We only have to calculate size from start and end Col/Row.
-		if (startColumn < state->apsSizeX && endColumn < state->apsSizeX && startRow < state->apsSizeY && endRow < state->apsSizeY) {
+		if (startColumn < state->apsSizeX && endColumn < state->apsSizeX && startRow < state->apsSizeY
+			&& endRow < state->apsSizeY) {
 			state->apsROISizeX[i] = U16T(endColumn + 1 - startColumn);
 			state->apsROISizeY[i] = U16T(endRow + 1 - startRow);
 
@@ -432,6 +433,7 @@ bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint3
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, U16T(handle->info.apsSizeX - 1));
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, U16T(handle->info.apsSizeY - 1));
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4000); // in µs, converted to cycles @ ADCClock later
+	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_FRAME_DELAY, 1000); // in µs, converted to cycles @ ADCClock later
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
 	(*configSet)(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLUMN_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
@@ -1006,48 +1008,67 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_START_COLUMN_0:
 					if (state->apsInvertXY) {
 						// Convert to row if X/Y inverted.
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_START_ROW_0, param));
 					}
 					else {
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_START_COLUMN_0, param));
 					}
 					break;
 
 				case DAVIS_CONFIG_APS_START_ROW_0:
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0,
-							U32T(state->apsSizeX) - 1 - param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_END_COLUMN_0,
+						U32T(state->apsSizeX) - 1 - param));
 					}
 					else {
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0,
-							U32T(state->apsSizeY) - 1 - param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_END_ROW_0,
+						U32T(state->apsSizeY) - 1 - param));
 					}
 					break;
 
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 					if (state->apsInvertXY) {
 						// Convert to row if X/Y inverted.
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_END_ROW_0, param));
 					}
 					else {
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_END_COLUMN_0, param));
 					}
 					break;
 
 				case DAVIS_CONFIG_APS_END_ROW_0:
 					if (state->apsInvertXY) {
 						// Convert to column if X/Y inverted.
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0,
-							U32T(state->apsSizeX) - 1 - param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_START_COLUMN_0,
+						U32T(state->apsSizeX) - 1 - param));
 					}
 					else {
-						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0,
-							U32T(state->apsSizeY) - 1 - param));
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+						DAVIS_CONFIG_APS_START_ROW_0,
+						U32T(state->apsSizeY) - 1 - param));
 					}
 					break;
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
+					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
+					// by multiplying with ADC clock value.
+					if (!state->apsAutoExposure) {
+						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr,
+							param * U16T(handle->info.adcClock)));
+					}
+					else {
+						return (false);
+					}
+					break;
+
 				case DAVIS_CONFIG_APS_FRAME_DELAY:
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
@@ -1059,7 +1080,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					if (handle->info.apsHasGlobalShutter) {
 						// Keep in sync with chip config module GlobalShutter parameter.
 						if (!spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_CHIP,
-							DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
+						DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
 							return (false);
 						}
 
@@ -1142,6 +1163,10 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					}
 					break;
 				}
+
+				case DAVIS_CONFIG_APS_AUTOEXPOSURE:
+					state->apsAutoExposure = param;
+					break;
 
 				default:
 					return (false);
@@ -1379,7 +1404,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 						if (handle->info.apsHasGlobalShutter) {
 							// Keep in sync with APS module GlobalShutter parameter.
 							if (!spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
-								DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
+							DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
 								return (false);
 							}
 
@@ -1755,6 +1780,10 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_SNAPSHOT:
 					// Always false because it's an impulse, it resets itself automatically.
 					*param = false;
+					break;
+
+				case DAVIS_CONFIG_APS_AUTOEXPOSURE:
+					return (state->apsAutoExposure);
 					break;
 
 				default:
@@ -2165,7 +2194,8 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 		return (false);
 	}
 
-	state->currentSamplePacket = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	state->currentSamplePacket = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID),
+		0);
 	if (state->currentSamplePacket == NULL) {
 		freeAllDataMemory(state);
 
@@ -2691,6 +2721,17 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 									(sizeof(struct caer_frame_event) - sizeof(uint16_t))
 										+ caerFrameEventGetPixelsSize(state->currentFrameEvent[0]));
 								state->currentFramePacketPosition++;
+
+								// Automatic exposure control support.
+								if (state->apsAutoExposure) {
+									int32_t newExposureValue = autoExposureCalculate(&state->apsAutoExposureState,
+										currentFrameEvent);
+
+									if (newExposureValue >= 0) {
+										spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+											DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureValue) * U16T(handle->info.adcClock));
+									}
+								}
 							}
 
 							break;

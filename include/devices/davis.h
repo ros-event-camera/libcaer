@@ -842,7 +842,16 @@ extern "C" {
  * quicker readiness for the next one, since the delay is
  * always observed after taking a frame.
  */
-#define DAVIS_CONFIG_APS_SNAPSHOT 80
+#define DAVIS_CONFIG_APS_SNAPSHOT       80
+
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * automatic exposure control, tries to set the exposure value
+ * automatically to an appropriate value to maximize information
+ * in the scene and minimize under- and over-exposure.
+ */
+#define DAVIS_CONFIG_APS_AUTOEXPOSURE   81
+
 
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
