@@ -3813,7 +3813,7 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 	if ((configUpdate >> 2) & 0x01) {
 		uint32_t newExposureValue = U32T(atomic_load(&state->apsAutoExposureValue));
 
-		caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+		caerLog(CAER_LOG_WARNING, handle->info.deviceString,
 			"Automatic exposure control set exposure to %" PRIu32 " µs.", newExposureValue);
 
 		spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE,
