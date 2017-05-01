@@ -1,6 +1,8 @@
 Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
 BUG FIXES
 - libcaer.hpp: undefine log-level names to avoid name clashes.
+- davis.h: added automatic exposure control, can be turned on/off with
+  the DAVIS_CONFIG_APS_AUTOEXPOSURE configuration parameter, defaults to off.
 
 
 Release 2.0.2 - 27.04.2017
