@@ -98,8 +98,9 @@ struct davis_state {
 	uint16_t apsROISizeY[APS_ROI_REGIONS_MAX];
 	uint16_t apsROIPositionX[APS_ROI_REGIONS_MAX];
 	uint16_t apsROIPositionY[APS_ROI_REGIONS_MAX];
-	atomic_bool apsAutoExposure;
-	atomic_uint_fast32_t apsAutoExposureValue;
+	atomic_bool apsAutoExposureEnabled;
+	atomic_uint_fast32_t apsAutoExposureLastSetValue;
+	atomic_uint_fast32_t apsAutoExposureNewValue;
 	struct auto_exposure_state apsAutoExposureState;
 	// IMU specific fields
 	bool imuIgnoreEvents;

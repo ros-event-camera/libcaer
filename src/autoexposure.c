@@ -1,38 +1,61 @@
 #include "autoexposure.h"
 
-int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame) {
-	int32_t currentExposureTime = caerFrameEventGetExposureLength(frame);
+int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame, uint32_t exposureLastSetValue) {
 	int32_t frameSizeX = caerFrameEventGetLengthX(frame);
 	int32_t frameSizeY = caerFrameEventGetLengthY(frame);
 	const uint16_t *framePixels = caerFrameEventGetPixelArrayUnsafeConst(frame);
 
-	// Simplest implementation imaginable: try to push average color value to mid-gray.
-	// Just for initial testing purposes, needs better algorithm.
-	int64_t accumulator = 0;
-	uint16_t maxVal = 0;
+	// Reset histogram.
+	for (size_t i = 0; i < AUTOEXPOSURE_MIDDLEGRAY_MSV; i++) {
+		state->pixelHistogram[i] = 0;
+	}
 
+	// Fill histogram with 5 regions for MSV.
 	for (int32_t y = 0; y < frameSizeY; y++) {
 		for (int32_t x = 0; x < frameSizeX; x++) {
-			accumulator += framePixels[(y * frameSizeX) + x];
+			uint16_t pixelValue = framePixels[(y * frameSizeX) + x];
 
-			if (framePixels[(y * frameSizeX) + x] > maxVal) {
-				maxVal = framePixels[(y * frameSizeX) + x];
-			}
+			size_t index = pixelValue / ((UINT16_MAX + 1) / AUTOEXPOSURE_MIDDLEGRAY_MSV);
+
+			state->pixelHistogram[index] += pixelValue;
 		}
 	}
 
-	accumulator /= (frameSizeX * frameSizeY);
-
-	caerLog(CAER_LOG_WARNING, "AutoExposure", "Current exposure value is %" PRIi32 " µs.", currentExposureTime);
-	caerLog(CAER_LOG_WARNING, "AutoExposure", "Accumulator value is %" PRIi64 ".", accumulator);
-	caerLog(CAER_LOG_WARNING, "AutoExposure", "Maximum pixel value is %" PRIu16 ".", maxVal);
-
-	if (accumulator > ((UINT16_MAX / 2) + 2000)) {
-		return (currentExposureTime - 100);
-	}
-	else if (accumulator < ((UINT16_MAX / 2) - 2000)) {
-		return (currentExposureTime + 100);
+	// Histogram mean sample value.
+	float meanSampleValueNum = 0;
+	for (size_t i = 0; i < AUTOEXPOSURE_MIDDLEGRAY_MSV; i++) {
+		meanSampleValueNum += (i + 1.0f) * state->pixelHistogram[i];
 	}
 
-	return (-1);
+	float meanSampleValueDenom = 0;
+	for (size_t i = 0; i < AUTOEXPOSURE_MIDDLEGRAY_MSV; i++) {
+		meanSampleValueDenom += state->pixelHistogram[i];
+	}
+
+	float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
+	float meanSampleValueError = (AUTOEXPOSURE_MIDDLEGRAY_MSV / 2.0f) - meanSampleValue;
+
+	int32_t newExposure = -1;
+
+	if (meanSampleValueError > 0.1f) {
+		// Underexposed.
+		newExposure = I32T(exposureLastSetValue) + I32T(2000.0f * meanSampleValueError * meanSampleValueError);
+
+		// Clip exposure at maximum (1s = 1000000µs).
+		if (newExposure > 1000000) {
+			newExposure = 1000000;
+		}
+	}
+	else if (meanSampleValueError < -0.1f) {
+		// Overexposed.
+		newExposure = I32T(exposureLastSetValue) - I32T(2000.0f * meanSampleValueError * meanSampleValueError);
+
+		// Clip exposure at minimum (0µs).
+		if (newExposure < 0) {
+			newExposure = 0;
+		}
+	}
+
+	// Exposure okay.
+	return (newExposure);
 }

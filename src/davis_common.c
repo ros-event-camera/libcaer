@@ -1060,7 +1060,8 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				case DAVIS_CONFIG_APS_EXPOSURE:
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
-					if (!atomic_load(&state->apsAutoExposure)) {
+					if (!atomic_load(&state->apsAutoExposureEnabled)) {
+						atomic_store(&state->apsAutoExposureLastSetValue, param);
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr,
 							param * U16T(handle->info.adcClock)));
 					}
@@ -1165,7 +1166,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 				}
 
 				case DAVIS_CONFIG_APS_AUTOEXPOSURE:
-					atomic_store(&state->apsAutoExposure, param);
+					atomic_store(&state->apsAutoExposureEnabled, param);
 					break;
 
 				default:
@@ -1709,6 +1710,10 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					break;
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
+					// Use stored value, no need to call out to USB for this one.
+					*param = U32T(atomic_load(&state->apsAutoExposureLastSetValue));
+					break;
+
 				case DAVIS_CONFIG_APS_FRAME_DELAY: {
 					// Exposure and Frame Delay are in µs, must be converted from native FPGA cycles
 					// by dividing with ADC clock value.
@@ -1783,7 +1788,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					break;
 
 				case DAVIS_CONFIG_APS_AUTOEXPOSURE:
-					*param = atomic_load(&state->apsAutoExposure);
+					*param = atomic_load(&state->apsAutoExposureEnabled);
 					break;
 
 				default:
@@ -2723,13 +2728,13 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								state->currentFramePacketPosition++;
 
 								// Automatic exposure control support.
-								if (atomic_load_explicit(&state->apsAutoExposure, memory_order_relaxed)) {
+								if (atomic_load_explicit(&state->apsAutoExposureEnabled, memory_order_relaxed)) {
 									int32_t newExposureValue = autoExposureCalculate(&state->apsAutoExposureState,
-										currentFrameEvent);
+										currentFrameEvent, U32T(atomic_load(&state->apsAutoExposureLastSetValue)));
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
-										atomic_store(&state->apsAutoExposureValue, U32T(newExposureValue));
+										atomic_store(&state->apsAutoExposureNewValue, U32T(newExposureValue));
 										atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 2);
 									}
 								}
@@ -3820,11 +3825,12 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 	}
 
 	if ((configUpdate >> 2) & 0x01) {
-		uint32_t newExposureValue = U32T(atomic_load(&state->apsAutoExposureValue));
+		uint32_t newExposureValue = U32T(atomic_load(&state->apsAutoExposureNewValue));
 
-		caerLog(CAER_LOG_WARNING, handle->info.deviceString,
+		caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
 			"Automatic exposure control set exposure to %" PRIu32 " µs.", newExposureValue);
 
+		atomic_store(&state->apsAutoExposureLastSetValue, newExposureValue);
 		spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE,
 			newExposureValue * U16T(handle->info.adcClock));
 	}
