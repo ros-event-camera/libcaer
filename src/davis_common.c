@@ -3241,6 +3241,15 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 						pixelValue = pixelValue << state->apsADCShift;
 
+						// DAVIS240 has a reduced dynamic range due to external
+						// ADC high/low ref resistors not having optimal values.
+						if (IS_DAVIS240(handle->info.chipID)) {
+							pixelValue *= 1.89f;
+
+							// Check for overflow.
+							pixelValue = (pixelValue > UINT16_MAX) ? (UINT16_MAX) : (pixelValue);
+						}
+
 						caerFrameEventGetPixelArrayUnsafe(state->currentFrameEvent[0])[pixelPosition] = htole16(
 							U16T(pixelValue));
 					}
