@@ -22,13 +22,9 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	}
 
 	// Histogram mean sample value.
-	float meanSampleValueNum = 0;
+	float meanSampleValueNum = 0, meanSampleValueDenom = 0;
 	for (size_t i = 0; i < AUTOEXPOSURE_MIDDLEGRAY_MSV; i++) {
 		meanSampleValueNum += (i + 1.0f) * state->pixelHistogram[i];
-	}
-
-	float meanSampleValueDenom = 0;
-	for (size_t i = 0; i < AUTOEXPOSURE_MIDDLEGRAY_MSV; i++) {
 		meanSampleValueDenom += state->pixelHistogram[i];
 	}
 
