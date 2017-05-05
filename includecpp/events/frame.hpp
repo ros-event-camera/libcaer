@@ -5,6 +5,13 @@
 #include <libcaer/frame_utils.h>
 #include "common.hpp"
 
+#if defined(LIBCAER_HAVE_OPENCV)
+
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+
+#endif
+
 namespace libcaer {
 namespace events {
 
@@ -301,6 +308,24 @@ struct FrameEvent: public caer_frame_event {
 	const uint16_t *getPixelArrayUnsafe() const noexcept {
 		return (this->pixels);
 	}
+
+#if defined(LIBCAER_HAVE_OPENCV)
+
+	cv::Mat getOpenCVMat() noexcept {
+		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
+		cv::Mat frameMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(this)),
+			reinterpret_cast<void *>(this->pixels));
+		return (frameMat);
+	}
+
+	const cv::Mat getOpenCVMat() const noexcept {
+		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
+		const cv::Mat frameMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(this)),
+			reinterpret_cast<void *>(const_cast<uint16_t *>(this->pixels)));
+		return (frameMat);
+	}
+
+#endif
 };
 
 static_assert(std::is_pod<FrameEvent>::value, "FrameEvent is not POD.");
