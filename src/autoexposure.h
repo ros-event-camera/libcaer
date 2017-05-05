@@ -8,6 +8,7 @@
 
 struct auto_exposure_state {
 	size_t pixelHistogram[AUTOEXPOSURE_MIDDLEGRAY_MSV];
+	float previousError;
 };
 
 typedef struct auto_exposure_state *autoExposureState;

@@ -31,11 +31,23 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
 	float meanSampleValueError = (AUTOEXPOSURE_MIDDLEGRAY_MSV / 2.0f) - meanSampleValue;
 
+	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
+	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
+
+	if ((meanSampleValueError > 0.1f && state->previousError > 0 && meanSampleValueError > (state->previousError + 0.001f))
+		|| (meanSampleValueError < -0.1f && state->previousError < 0 && meanSampleValueError < (state->previousError - 0.001f))) {
+		// Error is getting worse and worse in same direction.
+		// Did we hit a local minima before? Stop now!
+		state->previousError = meanSampleValueError;
+		return (-1);
+	}
+
+	// Exposure okay by default.
 	int32_t newExposure = -1;
 
 	if (meanSampleValueError > 0.1f) {
 		// Underexposed.
-		newExposure = I32T(exposureLastSetValue) + I32T(2000.0f * meanSampleValueError * meanSampleValueError);
+		newExposure = I32T(exposureLastSetValue) + I32T(200.0f * meanSampleValueError * meanSampleValueError);
 
 		// Clip exposure at maximum (1s = 1000000µs).
 		if (newExposure > 1000000) {
@@ -44,7 +56,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	}
 	else if (meanSampleValueError < -0.1f) {
 		// Overexposed.
-		newExposure = I32T(exposureLastSetValue) - I32T(2000.0f * meanSampleValueError * meanSampleValueError);
+		newExposure = I32T(exposureLastSetValue) - I32T(200.0f * meanSampleValueError * meanSampleValueError);
 
 		// Clip exposure at minimum (0µs).
 		if (newExposure < 0) {
@@ -52,6 +64,6 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		}
 	}
 
-	// Exposure okay.
+	state->previousError = meanSampleValueError;
 	return (newExposure);
 }
