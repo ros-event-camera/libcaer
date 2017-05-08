@@ -318,11 +318,17 @@ struct FrameEvent: public caer_frame_event {
 		return (frameMat);
 	}
 
-	const cv::Mat getOpenCVMat() const noexcept {
+	const cv::Mat getOpenCVMat(bool copyPixels = true) const noexcept {
 		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
 		const cv::Mat frameMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(this)),
 			reinterpret_cast<void *>(const_cast<uint16_t *>(this->pixels)));
-		return (frameMat);
+
+		if (copyPixels) {
+			return (frameMat.clone());
+		}
+		else {
+			return (frameMat);
+		}
 	}
 
 #endif
