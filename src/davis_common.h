@@ -79,7 +79,6 @@ struct davis_state {
 	// APS specific fields
 	int16_t apsSizeX;
 	int16_t apsSizeY;
-	uint16_t apsADCShift;
 	bool apsInvertXY;
 	bool apsFlipX;
 	bool apsFlipY;

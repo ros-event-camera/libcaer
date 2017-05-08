@@ -1,8 +1,17 @@
 Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
-BUG FIXES
-- libcaer.hpp: undefine log-level names to avoid name clashes.
+NEW FEATURES
 - davis.h: added automatic exposure control, can be turned on/off with
   the DAVIS_CONFIG_APS_AUTOEXPOSURE configuration parameter, defaults to off.
+- C++ events/frame.hpp: added new function getOpenCVMat() to frame event, if
+  OpenCV is enabled. Returns a cv::Mat representing the frame's pixels, with
+  support for deep-const by cloning (can be disabled for efficiency).
+
+BUG FIXES
+- libcaer.hpp: undefine log-level names to avoid name clashes.
+- DAVIS: removed variable APS ADC Shift, is not used by any camera currently
+  offered, all have 10 bits precision.
+- DAVIS: fix black APS pixels on very high illumination.
+- DAVIS240: fix low range of APS pixels due to reduced ADC dynamic range.
 
 
 Release 2.0.2 - 27.04.2017

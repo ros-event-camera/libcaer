@@ -2225,9 +2225,6 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, &param32);
 	state->imuGyroScale = calculateIMUGyroScale(U8T(param32));
 
-	// Default APS settings (for event parsing).
-	state->apsADCShift = (16 - APS_ADC_DEPTH);
-
 	// Disable all ROI regions by setting them to -1.
 	for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
 		state->apsROISizeX[i] = state->apsROIPositionX[i] = U16T(state->apsSizeX);
@@ -3224,7 +3221,20 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							pixelValue = (state->apsCurrentResetFrame[pixelPosition]);
 #else
 							// Both/CDS done.
-							pixelValue = (data - state->apsCurrentResetFrame[pixelPosition]);
+							if (data < 512 || state->apsCurrentResetFrame[pixelPosition] == 0) {
+								// If the signal value is 0, that is only possible if the camera
+								// has seen tons of light. In that case, the photo-diode current
+								// may be greater than the reset current, and the reset value
+								// never goes back up fully, which results in black spots where
+								// there is too much light. This confuses algorithms, so we filter
+								// this out here by setting the pixel to white in that case.
+								// Another effect of the same thing is the reset value not going
+								// back up to a decent value, so we also filter that out here.
+								pixelValue = 1023;
+							}
+							else {
+								pixelValue = (data - state->apsCurrentResetFrame[pixelPosition]);
+							}
 #endif
 						}
 						else {
@@ -3236,7 +3246,20 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							pixelValue = (data);
 #else
 							// Both/CDS done.
-							pixelValue = (state->apsCurrentResetFrame[pixelPosition] - data);
+							if (state->apsCurrentResetFrame[pixelPosition] < 512 || data == 0) {
+								// If the signal value is 0, that is only possible if the camera
+								// has seen tons of light. In that case, the photo-diode current
+								// may be greater than the reset current, and the reset value
+								// never goes back up fully, which results in black spots where
+								// there is too much light. This confuses algorithms, so we filter
+								// this out here by setting the pixel to white in that case.
+								// Another effect of the same thing is the reset value not going
+								// back up to a decent value, so we also filter that out here.
+								pixelValue = 1023;
+							}
+							else {
+								pixelValue = (state->apsCurrentResetFrame[pixelPosition] - data);
+							}
 #endif
 						}
 
@@ -3244,12 +3267,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						pixelValue = (pixelValue < 0) ? (0) : (pixelValue);
 
 						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
-						pixelValue = pixelValue << state->apsADCShift;
+						pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
 
 						// DAVIS240 has a reduced dynamic range due to external
 						// ADC high/low ref resistors not having optimal values.
 						if (IS_DAVIS240(handle->info.chipID)) {
-							pixelValue *= 1.89f;
+							pixelValue = pixelValue << 1;
 
 							// Check for overflow.
 							pixelValue = (pixelValue > UINT16_MAX) ? (UINT16_MAX) : (pixelValue);
@@ -3439,7 +3462,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 3: {
 							// APS ADC depth info, use directly as ADC depth.
 							// 16 bits is the maximum supported depth for APS.
-							state->apsADCShift = U16T(16 - misc8Data);
+							// Currently not being used by anything!
 							break;
 						}
 
