@@ -3201,6 +3201,17 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 					size_t pixelPosition = (size_t) (yPos * stride) + xPos;
 
+					// DAVIS240 has a reduced dynamic range due to external
+					// ADC high/low ref resistors not having optimal values.
+					// To fix this multiply by 1.95 to 2.15, so we choose to
+					// just shift by one (multiply by 2.00) for efficiency.
+					if (IS_DAVIS240(handle->info.chipID)) {
+						data = U16T(data << 1);
+
+						// Check for overflow.
+						data = (data > 1023) ? (1023) : (data);
+					}
+
 					if ((state->apsCurrentReadoutType == APS_READOUT_RESET
 						&& !(IS_DAVISRGB(handle->info.chipID) && state->apsGlobalShutter))
 						|| (state->apsCurrentReadoutType == APS_READOUT_SIGNAL
@@ -3268,15 +3279,6 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 						pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
-
-						// DAVIS240 has a reduced dynamic range due to external
-						// ADC high/low ref resistors not having optimal values.
-						if (IS_DAVIS240(handle->info.chipID)) {
-							pixelValue = pixelValue << 1;
-
-							// Check for overflow.
-							pixelValue = (pixelValue > UINT16_MAX) ? (UINT16_MAX) : (pixelValue);
-						}
 
 						caerFrameEventGetPixelArrayUnsafe(state->currentFrameEvent[0])[pixelPosition] = htole16(
 							U16T(pixelValue));
