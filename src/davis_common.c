@@ -3207,9 +3207,6 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					// just shift by one (multiply by 2.00) for efficiency.
 					if (IS_DAVIS240(handle->info.chipID)) {
 						data = U16T(data << 1);
-
-						// Check for overflow.
-						data = (data > 1023) ? (1023) : (data);
 					}
 
 					if ((state->apsCurrentReadoutType == APS_READOUT_RESET
@@ -3219,63 +3216,43 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						state->apsCurrentResetFrame[pixelPosition] = data;
 					}
 					else {
-						int32_t pixelValue = 0;
+						uint16_t resetValue = 0;
+						uint16_t signalValue = 0;
 
 						if (IS_DAVISRGB(handle->info.chipID) && state->apsGlobalShutter) {
 							// DAVIS RGB GS has inverted samples, signal read comes first
 							// and was stored above inside state->apsCurrentResetFrame.
-#if APS_DEBUG_FRAME == 1
-							// Reset read only.
-							pixelValue = (data);
-#elif APS_DEBUG_FRAME == 2
-							// Signal read only.
-							pixelValue = (state->apsCurrentResetFrame[pixelPosition]);
-#else
-							// Both/CDS done.
-							if (data < 512 || state->apsCurrentResetFrame[pixelPosition] == 0) {
-								// If the signal value is 0, that is only possible if the camera
-								// has seen tons of light. In that case, the photo-diode current
-								// may be greater than the reset current, and the reset value
-								// never goes back up fully, which results in black spots where
-								// there is too much light. This confuses algorithms, so we filter
-								// this out here by setting the pixel to white in that case.
-								// Another effect of the same thing is the reset value not going
-								// back up to a decent value, so we also filter that out here.
-								pixelValue = 1023;
-							}
-							else {
-								pixelValue = (data - state->apsCurrentResetFrame[pixelPosition]);
-							}
-#endif
+							resetValue = data;
+							signalValue = state->apsCurrentResetFrame[pixelPosition];
 						}
 						else {
-#if APS_DEBUG_FRAME == 1
-							// Reset read only.
-							pixelValue = (state->apsCurrentResetFrame[pixelPosition]);
-#elif APS_DEBUG_FRAME == 2
-							// Signal read only.
-							pixelValue = (data);
-#else
-							// Both/CDS done.
-							if (state->apsCurrentResetFrame[pixelPosition] < 512 || data == 0) {
-								// If the signal value is 0, that is only possible if the camera
-								// has seen tons of light. In that case, the photo-diode current
-								// may be greater than the reset current, and the reset value
-								// never goes back up fully, which results in black spots where
-								// there is too much light. This confuses algorithms, so we filter
-								// this out here by setting the pixel to white in that case.
-								// Another effect of the same thing is the reset value not going
-								// back up to a decent value, so we also filter that out here.
-								pixelValue = 1023;
-							}
-							else {
-								pixelValue = (state->apsCurrentResetFrame[pixelPosition] - data);
-							}
-#endif
+							resetValue = state->apsCurrentResetFrame[pixelPosition];
+							signalValue = data;
 						}
 
-						// Check for underflow.
-						pixelValue = (pixelValue < 0) ? (0) : (pixelValue);
+						int32_t pixelValue = 0;
+
+						if (resetValue < 512 || signalValue == 0) {
+							// If the signal value is 0, that is only possible if the camera
+							// has seen tons of light. In that case, the photo-diode current
+							// may be greater than the reset current, and the reset value
+							// never goes back up fully, which results in black spots where
+							// there is too much light. This confuses algorithms, so we filter
+							// this out here by setting the pixel to white in that case.
+							// Another effect of the same thing is the reset value not going
+							// back up to a decent value, so we also filter that out here.
+							pixelValue = 1023;
+						}
+						else {
+							// Do CDS.
+							pixelValue = resetValue - signalValue;
+
+							// Check for underflow.
+							pixelValue = (pixelValue < 0) ? (0) : (pixelValue);
+
+							// Check for overflow.
+							pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
+						}
 
 						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 						pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
