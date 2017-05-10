@@ -84,7 +84,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	float pixelsFracLow = (float) pixelsSumLow / (float) pixelsSum;
 	float pixelsFracHigh = (float) pixelsSumHigh / (float) pixelsSum;
 
-	caerLog(CAER_LOG_WARNING, "AutoExposure",
+	caerLog(CAER_LOG_DEBUG, "AutoExposure",
 		"BinLow: %zu, BinHigh: %zu, Sum: %zu, SumLow: %zu, SumHigh: %zu, FracLow: %f, FracHigh: %f.", pixelsBinLow,
 		pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow, (double) pixelsFracHigh);
 
@@ -92,6 +92,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	int32_t newExposure = -1;
 
 	if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
+		// Underexposed but not overexposed.
 		float underExposureError = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
 
 		newExposure = I32T(
@@ -99,7 +100,8 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 		newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 	}
-	else if ((pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC)) {
+	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
+		// Overexposed but not underexposed.
 		float overExposureError = pixelsFracHigh - AUTOEXPOSURE_UNDEROVER_FRAC;
 
 		newExposure = I32T(
