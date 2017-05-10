@@ -29,18 +29,8 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 }
 
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame, uint32_t exposureLastSetValue) {
-	// Wait for frames to actually catch up with last set value.
-	uint32_t exposureFrameValue = U32T(caerFrameEventGetExposureLength(frame));
-	uint32_t exposureLastSetValueEpsilonLower = (exposureLastSetValue < 10) ? (0) : (exposureLastSetValue - 10);
-	uint32_t exposureLastSetValueEpsilonUpper = exposureLastSetValue + 10;
-
-	if (exposureFrameValue < exposureLastSetValueEpsilonLower
-		|| exposureFrameValue > exposureLastSetValueEpsilonUpper) {
-		return (-1);
-	}
-
 	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
-	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Frame exposure value was: %d.", exposureFrameValue);
+	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Frame exposure value was: %d.", caerFrameEventGetExposureLength(frame));
 
 	int32_t frameSizeX = caerFrameEventGetLengthX(frame);
 	int32_t frameSizeY = caerFrameEventGetLengthY(frame);
@@ -93,19 +83,13 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 	if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Underexposed but not overexposed.
-		float underExposureError = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
-
-		newExposure = I32T(
-			exposureLastSetValue) + I32T(AUTOEXPOSURE_OVUN_CORRECTION * underExposureError * underExposureError);
+		newExposure = I32T(exposureLastSetValue) + I32T(AUTOEXPOSURE_OVUN_CORRECTION * pixelsFracLow);
 
 		newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 	}
 	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Overexposed but not underexposed.
-		float overExposureError = pixelsFracHigh - AUTOEXPOSURE_UNDEROVER_FRAC;
-
-		newExposure = I32T(
-			exposureLastSetValue) - I32T(AUTOEXPOSURE_OVUN_CORRECTION * overExposureError * overExposureError);
+		newExposure = I32T(exposureLastSetValue) - I32T(AUTOEXPOSURE_OVUN_CORRECTION * pixelsFracHigh);
 
 		newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 	}
