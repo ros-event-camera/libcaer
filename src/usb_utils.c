@@ -435,6 +435,9 @@ void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer) {
 	libusb_free_transfer(transfer);
 }
 
+// Async SPI config exists to avoid the problem described in
+// https://sourceforge.net/p/libusb/mailman/message/34129129/
+// where the config function after the loop is never entered.
 void LIBUSB_CALL usbConfigSendCallback(struct libusb_transfer *transfer) {
 	// We just wanted to send something, that is done, so just free here
 	// without caring about transfer status.

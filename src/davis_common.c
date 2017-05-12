@@ -3806,6 +3806,11 @@ static int davisDataAcquisitionThread(void *inPtr) {
 	return (EXIT_SUCCESS);
 }
 
+
+// Async SPI config exists to avoid the problem described in
+// https://sourceforge.net/p/libusb/mailman/message/34129129/
+// where this config function is never entered in the main USB
+// event handling loop above. Do not add things here lightly!
 static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 	davisState state = &handle->state;
 
