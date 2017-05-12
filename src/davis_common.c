@@ -3,6 +3,7 @@
 static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static int davisDataAcquisitionThread(void *inPtr);
 static void davisDataAcquisitionThreadConfig(davisHandle handle);
+static void davisTSMasterStatusUpdater(void *userData, uint32_t param);
 
 static inline void checkStrictMonotonicTimestamp(davisHandle handle) {
 	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
@@ -2543,10 +2544,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Commit packets when doing a reset to clearly separate them.
 							tsReset = true;
 
-							// Update Master/Slave status on incoming TS resets. Done in main thread
-							// to avoid deadlock inside callback.
-							atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 1);
-
+							// Update Master/Slave status on incoming TS resets.
+							// Async call to not deadlock here.
+							spiConfigReceiveAsync(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO,
+							DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &davisTSMasterStatusUpdater, &handle->info);
 							break;
 						}
 
@@ -2727,12 +2728,18 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								// Automatic exposure control support.
 								if (atomic_load_explicit(&state->apsAutoExposureEnabled, memory_order_relaxed)) {
 									int32_t newExposureValue = autoExposureCalculate(&state->apsAutoExposureState,
-										currentFrameEvent, U32T(atomic_load(&state->apsAutoExposureLastSetValue)));
+										currentFrameEvent, state->apsAutoExposureLastSetValue);
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
-										atomic_store(&state->apsAutoExposureNewValue, U32T(newExposureValue));
-										atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 2);
+										caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+											"Automatic exposure control set exposure to %" PRIu32 " µs.",
+											newExposureValue);
+
+										state->apsAutoExposureLastSetValue = U32T(newExposureValue);
+										spiConfigSendAsync(state->usbState.deviceHandle, DAVIS_CONFIG_APS,
+										DAVIS_CONFIG_APS_EXPOSURE,
+											U32T(newExposureValue * U16T(handle->info.adcClock)));
 									}
 								}
 							}
@@ -3812,30 +3819,16 @@ static void davisDataAcquisitionThreadConfig(davisHandle handle) {
 		usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
 			U32T(atomic_load(&state->usbBufferSize)), USB_DEFAULT_DATA_ENDPOINT);
 	}
+}
 
-	if ((configUpdate >> 1) & 0x01) {
-		// Get new Master/Slave information from device. Done here to prevent deadlock
-		// inside asynchronous callback.
-		uint32_t param32 = 0;
+static void davisTSMasterStatusUpdater(void *userData, uint32_t param) {
+	// Get new Master/Slave information from device. Done here to prevent deadlock
+	// inside asynchronous callback.
+	struct caer_davis_info *info = userData;
 
-		spiConfigReceive(state->usbState.deviceHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER,
-			&param32);
-
-		atomic_thread_fence(memory_order_seq_cst);
-		handle->info.deviceIsMaster = param32;
-		atomic_thread_fence(memory_order_seq_cst);
-	}
-
-	if ((configUpdate >> 2) & 0x01) {
-		uint32_t newExposureValue = U32T(atomic_load(&state->apsAutoExposureNewValue));
-
-		caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-			"Automatic exposure control set exposure to %" PRIu32 " µs.", newExposureValue);
-
-		atomic_store(&state->apsAutoExposureLastSetValue, newExposureValue);
-		spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE,
-			newExposureValue * U16T(handle->info.adcClock));
-	}
+	atomic_thread_fence(memory_order_seq_cst);
+	info->deviceIsMaster = param;
+	atomic_thread_fence(memory_order_seq_cst);
 }
 
 uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias) {
