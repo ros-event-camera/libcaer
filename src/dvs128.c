@@ -100,7 +100,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	}
 
 	// Setup USB.
-	usbSetUserCallback(&state->usbState, &dvs128EventTranslator, handle);
+	usbSetDataCallback(&state->usbState, &dvs128EventTranslator, handle);
 	usbSetDataEndpoint(&state->usbState, DVS_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 4096);
@@ -461,8 +461,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	state->dataNotifyIncrease = dataNotifyIncrease;
 	state->dataNotifyDecrease = dataNotifyDecrease;
 	state->dataNotifyUserPtr = dataNotifyUserPtr;
-	state->dataShutdownNotify = dataShutdownNotify;
-	state->dataShutdownUserPtr = dataShutdownUserPtr;
+	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
 	// Set wanted time interval to uninitialized. Getting the first TS or TS_RESET
 	// will then set this correctly.
@@ -943,10 +942,6 @@ static int dvs128DataAcquisitionThread(void *inPtr) {
 	}
 
 	usbThreadRun(&state->usbState);
-
-	if (state->dataShutdownNotify != NULL) {
-		state->dataShutdownNotify(state->dataShutdownUserPtr);
-	}
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "data acquisition thread shut down.");
 

@@ -42,8 +42,6 @@ struct dvs128_state {
 	void (*dataNotifyIncrease)(void *ptr);
 	void (*dataNotifyDecrease)(void *ptr);
 	void *dataNotifyUserPtr;
-	void (*dataShutdownNotify)(void *ptr);
-	void *dataShutdownUserPtr;
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields

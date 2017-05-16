@@ -23,7 +23,7 @@ struct usb_state {
 	libusb_context *deviceContext;
 	libusb_device_handle *deviceHandle;
 	// USB thread state
-	char usbThreadName[15 + 1]; // +1 for terminating NUL character.
+	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
 	thrd_t usbThread;
 	atomic_bool usbThreadRun;
 	// USB Transfer Settings
@@ -35,9 +35,12 @@ struct usb_state {
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
-	// User data pointer/callback
-	void *userData;
-	void (*userCallback)(void *handle, uint8_t *buffer, size_t bytesSent);
+	// USB Data Transfer shutdown callback
+	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
+	void *usbShutdownCallbackPtr;
+	// USB Data handling callback
+	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
+	void *usbDataCallbackPtr;
 };
 
 typedef struct usb_state *usbState;
@@ -49,15 +52,16 @@ struct usb_info {
 	char *deviceString;
 };
 
-
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion);
 void usbDeviceClose(usbState state);
 
 void usbSetThreadName(usbState state, const char *threadName);
-void usbSetUserCallback(usbState state, void (*userCallback)(void *userData, uint8_t *buffer, size_t bytesSent),
-	void *userData);
+void usbSetDataCallback(usbState state,
+	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
+void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
+	void *usbShutdownCallbackPtr);
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber);
 void usbSetTransfersSize(usbState state, uint32_t transfersSize);
 uint32_t usbGetTransfersNumber(usbState state);

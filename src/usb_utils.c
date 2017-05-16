@@ -11,174 +11,6 @@ void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer);
 void LIBUSB_CALL usbConfigSendCallback(struct libusb_transfer *transfer);
 void LIBUSB_CALL usbConfigReceiveCallback(struct libusb_transfer *transfer);
 
-struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID) {
-	// At this point we can get some more precise data on the device and update
-	// the logging string to reflect that and be more informative.
-	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
-	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
-
-	char serialNumber[8 + 1] = { 0 };
-	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
-		8 + 1);
-
-	// Check serial number success and length.
-	if (getStringDescResult < 0 || getStringDescResult > 8) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to get serial number for %s device.", deviceName);
-
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
-	}
-
-	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-		deviceName, deviceID, serialNumber, busNumber, devAddress);
-
-	char *fullLogString = malloc(fullLogStringLength + 1);
-	if (fullLogString == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to allocate memory for %s device info string.",
-			deviceName);
-
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
-	}
-
-	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
-		deviceID, serialNumber, busNumber, devAddress);
-
-	struct usb_info usbInfo;
-
-	usbInfo.busNumber = busNumber;
-	usbInfo.devAddress = devAddress;
-	strncpy(usbInfo.serialNumber, serialNumber, 8 + 1);
-	usbInfo.deviceString = fullLogString;
-
-	return (usbInfo);
-}
-
-bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (libusb_control_transfer(state->deviceHandle,
-		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) == sizeof(spiConfig));
-}
-
-bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	struct libusb_transfer *controlTransfer = libusb_alloc_transfer(0);
-	if (controlTransfer == NULL) {
-		return (false);
-	}
-
-	// Create data buffer.
-	uint8_t *controlTransferBuffer = calloc(1, (LIBUSB_CONTROL_SETUP_SIZE + sizeof(uint32_t)));
-	if (controlTransferBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-			"Unable to allocate buffer for libusb control transfer. Error: %d.",
-			errno);
-
-		libusb_free_transfer(controlTransfer);
-
-		return (false);
-	}
-
-	// Initialize Transfer.
-	libusb_fill_control_setup(controlTransferBuffer,
-		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t));
-
-	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, &usbConfigSendCallback,
-	NULL, 0);
-
-	controlTransfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
-
-	// Put data in buffer.
-	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 0] = U8T(param >> 24);
-	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 1] = U8T(param >> 16);
-	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 2] = U8T(param >> 8);
-	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 3] = U8T(param >> 0);
-
-	if ((errno = libusb_submit_transfer(controlTransfer)) != LIBUSB_SUCCESS) {
-		// The transfer buffer is freed automatically here thanks to
-		// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
-		libusb_free_transfer(controlTransfer);
-
-		return (false);
-	}
-
-	return (true);
-}
-
-bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	if (libusb_control_transfer(state->deviceHandle,
-		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
-		return (false);
-	}
-
-	*param = 0;
-	*param |= U32T(spiConfig[0] << 24);
-	*param |= U32T(spiConfig[1] << 16);
-	*param |= U32T(spiConfig[2] << 8);
-	*param |= U32T(spiConfig[3] << 0);
-
-	return (true);
-}
-
-bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
-	void (*userCallback)(void *userData, uint32_t param), void *userData) {
-	struct libusb_transfer *controlTransfer = libusb_alloc_transfer(0);
-	if (controlTransfer == NULL) {
-		return (false);
-	}
-
-	// Create data buffer.
-	uint8_t *controlTransferBuffer = calloc(1,
-		(LIBUSB_CONTROL_SETUP_SIZE + sizeof(uint32_t) + sizeof(struct usb_config_receive_struct)));
-	if (controlTransferBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-			"Unable to allocate buffer for libusb control transfer. Error: %d.",
-			errno);
-
-		libusb_free_transfer(controlTransfer);
-
-		return (false);
-	}
-
-	// Put additional data in the unused part of the transfer buffer, this way
-	// all memory is in one block and freed when the transfer is freed.
-	usbConfigReceiveStruct configReceive = (usbConfigReceiveStruct) &controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE
-		+ sizeof(uint32_t)];
-
-	configReceive->userCallback = userCallback;
-	configReceive->userData = userData;
-
-	// Initialize Transfer.
-	libusb_fill_control_setup(controlTransferBuffer,
-		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t));
-
-	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, &usbConfigReceiveCallback,
-		configReceive, 0);
-
-	controlTransfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
-
-	if ((errno = libusb_submit_transfer(controlTransfer)) != LIBUSB_SUCCESS) {
-		// The transfer buffer is freed automatically here thanks to
-		// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
-		libusb_free_transfer(controlTransfer);
-
-		return (false);
-	}
-
-	return (true);
-}
-
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
 	// Search for device and open it.
@@ -362,45 +194,25 @@ void usbDeviceClose(usbState state) {
 	libusb_exit(state->deviceContext);
 }
 
-bool usbThreadStart(usbState state, int (*usbThread)(void *inPtr), void *inPtr) {
-	if ((errno = thrd_create(&state->usbThread, usbThread, inPtr)) != thrd_success) {
-		return (false);
-	}
-
-	// Wait for the data acquisition thread to be ready.
-	while (!atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
-		;
-	}
-
-	return (true);
-}
-
-bool usbThreadStop(usbState state) {
-	atomic_store(&state->usbThreadRun, false);
-	usbCancelTransfersAsync(state);
-
-	// Wait for data acquisition thread to terminate...
-	if ((errno = thrd_join(state->usbThread, NULL)) != thrd_success) {
-		// This should never happen!
-		return (false);
-	}
-
-	return (true);
-}
-
 void usbSetThreadName(usbState state, const char *threadName) {
 	strncpy(state->usbThreadName, threadName, MAX_THREAD_NAME_LENGTH);
 	state->usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 }
 
-void usbSetUserCallback(usbState state, void (*userCallback)(void *userData, uint8_t *buffer, size_t bytesSent),
-	void *userData) {
-	state->userCallback = userCallback;
-	state->userData = userData;
+void usbSetDataCallback(usbState state,
+	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr) {
+	state->usbDataCallback = usbDataCallback;
+	state->usbDataCallbackPtr = usbDataCallbackPtr;
 }
 
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint) {
 	state->dataEndPoint = dataEndPoint;
+}
+
+void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
+	void *usbShutdownCallbackPtr) {
+	state->usbShutdownCallback = usbShutdownCallback;
+	state->usbShutdownCallbackPtr = usbShutdownCallbackPtr;
 }
 
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
@@ -427,32 +239,47 @@ libusb_device_handle *usbGetDeviceHandle(usbState state) {
 	return (state->deviceHandle);
 }
 
-void usbThreadRun(usbState state) {
-	// Set thread name.
-	thrd_set_name(state->usbThreadName);
+struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID) {
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
+	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
 
-	// Create buffers as specified by settings.
-	usbAllocateTransfers(state);
+	char serialNumber[8 + 1] = { 0 };
+	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
+		8 + 1);
 
-	// Signal data thread ready back to start function.
-	atomic_store(&state->usbThreadRun, true);
+	// Check serial number success and length.
+	if (getStringDescResult < 0 || getStringDescResult > 8) {
+		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to get serial number for %s device.", deviceName);
 
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "usb thread ready.");
-
-	// Handle USB events (1 second timeout).
-	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
-
-	while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
-		libusb_handle_events_timeout(state->deviceContext, &te);
+		struct usb_info emptyInfo = { 0, .deviceString = NULL };
+		return (emptyInfo);
 	}
 
-	// Ensure run is set to false, so other calls that may want to cancel transfers
-	// can check this and fail.
-	atomic_store(&state->usbThreadRun, false);
+	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceName, deviceID, serialNumber, busNumber, devAddress);
 
-	// If no more active transfers, deallocate old ones.
-	usbDeallocateTransfers(state);
+	char *fullLogString = malloc(fullLogStringLength + 1);
+	if (fullLogString == NULL) {
+		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to allocate memory for %s device info string.",
+			deviceName);
 
+		struct usb_info emptyInfo = { 0, .deviceString = NULL };
+		return (emptyInfo);
+	}
+
+	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
+		deviceID, serialNumber, busNumber, devAddress);
+
+	struct usb_info usbInfo;
+
+	usbInfo.busNumber = busNumber;
+	usbInfo.devAddress = devAddress;
+	strncpy(usbInfo.serialNumber, serialNumber, 8 + 1);
+	usbInfo.deviceString = fullLogString;
+
+	return (usbInfo);
 }
 
 void usbAllocateTransfers(usbState state) {
@@ -583,7 +410,7 @@ void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer) {
 
 	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
 		// Handle data.
-		(*state->userCallback)(state->userData, transfer->buffer, (size_t) transfer->actual_length);
+		(*state->usbDataCallback)(state->usbDataCallbackPtr, transfer->buffer, (size_t) transfer->actual_length);
 	}
 
 	if (transfer->status != LIBUSB_TRANSFER_CANCELLED && transfer->status != LIBUSB_TRANSFER_NO_DEVICE) {
@@ -597,6 +424,189 @@ void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer) {
 	// Signal this by adjusting the counter and exiting.
 	// Freeing the transfers is taken care of by usbDeallocateTransfers().
 	atomic_fetch_sub(&state->activeDataTransfers, 1);
+}
+
+bool usbThreadStart(usbState state, int (*usbThread)(void *inPtr), void *inPtr) {
+	if ((errno = thrd_create(&state->usbThread, usbThread, inPtr)) != thrd_success) {
+		return (false);
+	}
+
+	// Wait for the data acquisition thread to be ready.
+	while (!atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
+		;
+	}
+
+	return (true);
+}
+
+bool usbThreadStop(usbState state) {
+	atomic_store(&state->usbThreadRun, false);
+	usbCancelTransfersAsync(state);
+
+	// Wait for data acquisition thread to terminate...
+	if ((errno = thrd_join(state->usbThread, NULL)) != thrd_success) {
+		// This should never happen!
+		return (false);
+	}
+
+	return (true);
+}
+
+void usbThreadRun(usbState state) {
+	// Set thread name.
+	thrd_set_name(state->usbThreadName);
+
+	// Create buffers as specified by settings.
+	usbAllocateTransfers(state);
+
+	// Signal data thread ready back to start function.
+	atomic_store(&state->usbThreadRun, true);
+
+	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "usb thread ready.");
+
+	// Handle USB events (1 second timeout).
+	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
+
+	while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
+		libusb_handle_events_timeout(state->deviceContext, &te);
+	}
+
+	// Ensure run is set to false, so other calls that may want to cancel transfers
+	// can check this and fail.
+	atomic_store(&state->usbThreadRun, false);
+
+	// If no more active transfers, deallocate old ones.
+	usbDeallocateTransfers(state);
+
+
+	if (state->usbShutdownCallback != NULL) {
+		state->usbShutdownCallback(state->usbShutdownCallbackPtr);
+	}
+}
+
+bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	uint8_t spiConfig[4] = { 0 };
+
+	spiConfig[0] = U8T(param >> 24);
+	spiConfig[1] = U8T(param >> 16);
+	spiConfig[2] = U8T(param >> 8);
+	spiConfig[3] = U8T(param >> 0);
+
+	return (libusb_control_transfer(state->deviceHandle,
+		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) == sizeof(spiConfig));
+}
+
+bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	struct libusb_transfer *controlTransfer = libusb_alloc_transfer(0);
+	if (controlTransfer == NULL) {
+		return (false);
+	}
+
+	// Create data buffer.
+	uint8_t *controlTransferBuffer = calloc(1, (LIBUSB_CONTROL_SETUP_SIZE + sizeof(uint32_t)));
+	if (controlTransferBuffer == NULL) {
+		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
+			"Unable to allocate buffer for libusb control transfer. Error: %d.",
+			errno);
+
+		libusb_free_transfer(controlTransfer);
+
+		return (false);
+	}
+
+	// Initialize Transfer.
+	libusb_fill_control_setup(controlTransferBuffer,
+		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t));
+
+	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, &usbConfigSendCallback,
+	NULL, 0);
+
+	controlTransfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
+
+	// Put data in buffer.
+	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 0] = U8T(param >> 24);
+	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 1] = U8T(param >> 16);
+	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 2] = U8T(param >> 8);
+	controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + 3] = U8T(param >> 0);
+
+	if ((errno = libusb_submit_transfer(controlTransfer)) != LIBUSB_SUCCESS) {
+		// The transfer buffer is freed automatically here thanks to
+		// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
+		libusb_free_transfer(controlTransfer);
+
+		return (false);
+	}
+
+	return (true);
+}
+
+bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+	uint8_t spiConfig[4] = { 0 };
+
+	if (libusb_control_transfer(state->deviceHandle,
+		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
+		return (false);
+	}
+
+	*param = 0;
+	*param |= U32T(spiConfig[0] << 24);
+	*param |= U32T(spiConfig[1] << 16);
+	*param |= U32T(spiConfig[2] << 8);
+	*param |= U32T(spiConfig[3] << 0);
+
+	return (true);
+}
+
+bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
+	void (*userCallback)(void *userData, uint32_t param), void *userData) {
+	struct libusb_transfer *controlTransfer = libusb_alloc_transfer(0);
+	if (controlTransfer == NULL) {
+		return (false);
+	}
+
+	// Create data buffer.
+	uint8_t *controlTransferBuffer = calloc(1,
+		(LIBUSB_CONTROL_SETUP_SIZE + sizeof(uint32_t) + sizeof(struct usb_config_receive_struct)));
+	if (controlTransferBuffer == NULL) {
+		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
+			"Unable to allocate buffer for libusb control transfer. Error: %d.",
+			errno);
+
+		libusb_free_transfer(controlTransfer);
+
+		return (false);
+	}
+
+	// Put additional data in the unused part of the transfer buffer, this way
+	// all memory is in one block and freed when the transfer is freed.
+	usbConfigReceiveStruct configReceive = (usbConfigReceiveStruct) &controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE
+		+ sizeof(uint32_t)];
+
+	configReceive->userCallback = userCallback;
+	configReceive->userData = userData;
+
+	// Initialize Transfer.
+	libusb_fill_control_setup(controlTransferBuffer,
+		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t));
+
+	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, &usbConfigReceiveCallback,
+		configReceive, 0);
+
+	controlTransfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
+
+	if ((errno = libusb_submit_transfer(controlTransfer)) != LIBUSB_SUCCESS) {
+		// The transfer buffer is freed automatically here thanks to
+		// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
+		libusb_free_transfer(controlTransfer);
+
+		return (false);
+	}
+
+	return (true);
 }
 
 // Async SPI config exists to avoid the problem described in
