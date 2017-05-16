@@ -10,6 +10,7 @@
 #endif
 
 #define MAX_THREAD_NAME_LENGTH 15
+#define MAX_SERIAL_NUMBER_LENGTH 8
 
 #define USB_DEFAULT_DEVICE_VID 0x152A
 
@@ -35,12 +36,12 @@ struct usb_state {
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
-	// USB Data Transfer shutdown callback
-	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
-	void *usbShutdownCallbackPtr;
 	// USB Data handling callback
 	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
 	void *usbDataCallbackPtr;
+	// USB Data Transfer shutdown callback
+	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
+	void *usbShutdownCallbackPtr;
 };
 
 typedef struct usb_state *usbState;
@@ -59,9 +60,9 @@ void usbDeviceClose(usbState state);
 void usbSetThreadName(usbState state, const char *threadName);
 void usbSetDataCallback(usbState state,
 	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
-void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
 void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
 	void *usbShutdownCallbackPtr);
+void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber);
 void usbSetTransfersSize(usbState state, uint32_t transfersSize);
 uint32_t usbGetTransfersNumber(usbState state);
@@ -70,21 +71,20 @@ libusb_device_handle *usbGetDeviceHandle(usbState state);
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
 
-void usbAllocateTransfers(usbState state);
 void usbCancelTransfersAsync(usbState state);
-void usbDeallocateTransfers(usbState state);
 
 static inline bool usbThreadIsRunning(usbState state) {
 	return (atomic_load(&state->usbThreadRun));
 }
-bool usbThreadStart(usbState state, int (*usbThread)(void *inPtr), void *inPtr);
+bool usbThreadStart(usbState state);
 bool usbThreadStop(usbState state);
-void usbThreadRun(usbState state);
 
 bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
-bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
+bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr);
 bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
 bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
-	void (*userCallback)(void *userData, uint32_t param), void *userData);
+	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
+	void *configReceiveCallbackPtr);
 
 #endif /* LIBCAER_SRC_USB_UTILS_H_ */

@@ -2,7 +2,6 @@
 
 static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
-static int dvs128DataAcquisitionThread(void *inPtr);
 
 static inline void checkMonotonicTimestamp(dvs128Handle handle) {
 	if (handle->state.currentTimestamp < handle->state.lastTimestamp) {
@@ -107,7 +106,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, 8 + 1);
+	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString = usbInfo.deviceString;
@@ -461,6 +460,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	state->dataNotifyIncrease = dataNotifyIncrease;
 	state->dataNotifyDecrease = dataNotifyDecrease;
 	state->dataNotifyUserPtr = dataNotifyUserPtr;
+
 	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
 	// Set wanted time interval to uninitialized. Getting the first TS or TS_RESET
@@ -501,12 +501,17 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 		return (false);
 	}
 
-	if (!usbThreadStart(&state->usbState, &dvs128DataAcquisitionThread, handle)) {
+	if (!usbThreadStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
 		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data acquisition thread. Error: %d.",
 		errno);
 		return (false);
+	}
+
+	if (atomic_load(&state->dataExchangeStartProducers)) {
+		// Enable data transfer on USB end-point 6.
+		dvs128ConfigSet((caerDeviceHandle) handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, true);
 	}
 
 	return (true);
@@ -516,7 +521,6 @@ bool dvs128DataStop(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
 	dvs128State state = &handle->state;
 
-	// Stop data acquisition thread.
 	if (atomic_load(&state->dataExchangeStopProducers)) {
 		// Disable data transfer on USB end-point 6.
 		dvs128ConfigSet((caerDeviceHandle) handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, false);
@@ -927,23 +931,4 @@ static bool dvs128SendBiases(dvs128State state) {
 		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 		VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->biases, (BIAS_NUMBER * BIAS_LENGTH), 0)
 		== (BIAS_NUMBER * BIAS_LENGTH));
-}
-
-static int dvs128DataAcquisitionThread(void *inPtr) {
-	// inPtr is a pointer to device handle.
-	dvs128Handle handle = inPtr;
-	dvs128State state = &handle->state;
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Initializing data acquisition thread ...");
-
-	if (atomic_load(&state->dataExchangeStartProducers)) {
-		// Enable data transfer on USB end-point 6.
-		dvs128ConfigSet((caerDeviceHandle) handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, true);
-	}
-
-	usbThreadRun(&state->usbState);
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "data acquisition thread shut down.");
-
-	return (EXIT_SUCCESS);
 }
