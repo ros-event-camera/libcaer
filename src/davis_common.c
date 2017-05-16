@@ -1062,7 +1062,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
 					if (!atomic_load(&state->apsAutoExposureEnabled)) {
-						atomic_store(&state->apsAutoExposureLastSetValue, param);
+						state->apsAutoExposureLastSetValue = param;
 						return (spiConfigSend(state->usbState.deviceHandle, DAVIS_CONFIG_APS, paramAddr,
 							param * U16T(handle->info.adcClock)));
 					}
@@ -1712,7 +1712,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
 					// Use stored value, no need to call out to USB for this one.
-					*param = U32T(atomic_load(&state->apsAutoExposureLastSetValue));
+					*param = state->apsAutoExposureLastSetValue;
 					break;
 
 				case DAVIS_CONFIG_APS_FRAME_DELAY: {
