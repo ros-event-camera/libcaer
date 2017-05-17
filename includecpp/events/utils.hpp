@@ -21,125 +21,125 @@ namespace libcaer {
 namespace events {
 namespace utils {
 
-std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet);
-std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet);
+std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
+std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 
-std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet) {
+std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
-			return (std::unique_ptr<SpecialEventPacket>(new SpecialEventPacket(packet)));
+			return (std::unique_ptr<SpecialEventPacket>(new SpecialEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POLARITY_EVENT:
-			return (std::unique_ptr<PolarityEventPacket>(new PolarityEventPacket(packet)));
+			return (std::unique_ptr<PolarityEventPacket>(new PolarityEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case FRAME_EVENT:
-			return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(packet)));
+			return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case IMU6_EVENT:
-			return (std::unique_ptr<IMU6EventPacket>(new IMU6EventPacket(packet)));
+			return (std::unique_ptr<IMU6EventPacket>(new IMU6EventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case IMU9_EVENT:
-			return (std::unique_ptr<IMU9EventPacket>(new IMU9EventPacket(packet)));
+			return (std::unique_ptr<IMU9EventPacket>(new IMU9EventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case SAMPLE_EVENT:
-			return (std::unique_ptr<SampleEventPacket>(new SampleEventPacket(packet)));
+			return (std::unique_ptr<SampleEventPacket>(new SampleEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case EAR_EVENT:
-			return (std::unique_ptr<EarEventPacket>(new EarEventPacket(packet)));
+			return (std::unique_ptr<EarEventPacket>(new EarEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case CONFIG_EVENT:
-			return (std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet)));
+			return (std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT1D_EVENT:
-			return (std::unique_ptr<Point1DEventPacket>(new Point1DEventPacket(packet)));
+			return (std::unique_ptr<Point1DEventPacket>(new Point1DEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT2D_EVENT:
-			return (std::unique_ptr<Point2DEventPacket>(new Point2DEventPacket(packet)));
+			return (std::unique_ptr<Point2DEventPacket>(new Point2DEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT3D_EVENT:
-			return (std::unique_ptr<Point3DEventPacket>(new Point3DEventPacket(packet)));
+			return (std::unique_ptr<Point3DEventPacket>(new Point3DEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT4D_EVENT:
-			return (std::unique_ptr<Point4DEventPacket>(new Point4DEventPacket(packet)));
+			return (std::unique_ptr<Point4DEventPacket>(new Point4DEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case SPIKE_EVENT:
-			return (std::unique_ptr<SpikeEventPacket>(new SpikeEventPacket(packet)));
+			return (std::unique_ptr<SpikeEventPacket>(new SpikeEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		default:
-			return (std::unique_ptr<EventPacket>(new EventPacket(packet)));
+			return (std::unique_ptr<EventPacket>(new EventPacket(packet, takeMemoryOwnership)));
 			break;
 	}
 }
 
-std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet) {
+std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
-			return (std::make_shared<SpecialEventPacket>(packet));
+			return (std::make_shared<SpecialEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case POLARITY_EVENT:
-			return (std::make_shared<PolarityEventPacket>(packet));
+			return (std::make_shared<PolarityEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case FRAME_EVENT:
-			return (std::make_shared<FrameEventPacket>(packet));
+			return (std::make_shared<FrameEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case IMU6_EVENT:
-			return (std::make_shared<IMU6EventPacket>(packet));
+			return (std::make_shared<IMU6EventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case IMU9_EVENT:
-			return (std::make_shared<IMU9EventPacket>(packet));
+			return (std::make_shared<IMU9EventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case SAMPLE_EVENT:
-			return (std::make_shared<SampleEventPacket>(packet));
+			return (std::make_shared<SampleEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case EAR_EVENT:
-			return (std::make_shared<EarEventPacket>(packet));
+			return (std::make_shared<EarEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case CONFIG_EVENT:
-			return (std::make_shared<ConfigurationEventPacket>(packet));
+			return (std::make_shared<ConfigurationEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case POINT1D_EVENT:
-			return (std::make_shared<Point1DEventPacket>(packet));
+			return (std::make_shared<Point1DEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case POINT2D_EVENT:
-			return (std::make_shared<Point2DEventPacket>(packet));
+			return (std::make_shared<Point2DEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case POINT3D_EVENT:
-			return (std::make_shared<Point3DEventPacket>(packet));
+			return (std::make_shared<Point3DEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case POINT4D_EVENT:
-			return (std::make_shared<Point4DEventPacket>(packet));
+			return (std::make_shared<Point4DEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		case SPIKE_EVENT:
-			return (std::make_shared<SpikeEventPacket>(packet));
+			return (std::make_shared<SpikeEventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		default:
-			return (std::make_shared<EventPacket>(packet));
+			return (std::make_shared<EventPacket>(packet, takeMemoryOwnership));
 			break;
 	}
 }

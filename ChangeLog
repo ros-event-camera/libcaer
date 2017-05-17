@@ -2,11 +2,14 @@ Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
 NEW FEATURES
 - davis.h: added automatic exposure control, can be turned on/off with
   the DAVIS_CONFIG_APS_AUTOEXPOSURE configuration parameter, defaults to off.
+- EventPackets: added caerEventPacketGetDataSize() and caerEventPacketGetSize()
+  functions to easily get packet size in bytes.
 - C++ FrameEvent: added new function getOpenCVMat() to frame event, if
   OpenCV is enabled. Returns a cv::Mat representing the frame's pixels, with
   support for deep-const by cloning (can be disabled for efficiency).
-- EventPackets: added caerEventPacketGetDataSize() and caerEventPacketGetSize()
-  functions to easily get packet size in bytes.
+- C++ Utils: enhanced makeUniqueFromCStruct() and makeSharedFromCStruct() to
+  also allow a 'takeMemoryOwnership' parameter that is forwarded to the event
+  packet constructors; it defaults to true like the constructors themselves.
 
 BUG FIXES
 - libcaer.hpp: undefine log-level names to avoid name clashes.
