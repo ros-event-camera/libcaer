@@ -13,9 +13,17 @@ typedef struct usb_control_struct *usbControl;
 struct usb_data_completion_struct {
 	atomic_uint_fast32_t completed;
 	uint8_t *data;
+	size_t dataSize;
 };
 
 typedef struct usb_data_completion_struct *usbDataCompletion;
+
+struct usb_config_receive_struct {
+	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param);
+	void *configReceiveCallbackPtr;
+};
+
+typedef struct usb_config_receive_struct *usbConfigReceive;
 
 static void usbAllocateTransfers(usbState state);
 static void usbDeallocateTransfers(usbState state);
@@ -30,6 +38,7 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
 static void syncControlInCallback(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
@@ -676,7 +685,7 @@ bool usbControlTransferOut(usbState state, uint8_t bRequest, uint16_t wValue, ui
 
 bool usbControlTransferIn(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize) {
-	struct usb_data_completion_struct dataCompletion = { ATOMIC_VAR_INIT(0), data };
+	struct usb_data_completion_struct dataCompletion = { ATOMIC_VAR_INIT(0), data, dataSize };
 
 	bool retVal = usbControlTransferInAsync(state, bRequest, wValue, wIndex, dataSize, &syncControlInCallback,
 		&dataCompletion);
@@ -717,9 +726,9 @@ static void syncControlOutCallback(void *controlOutCallbackPtr, int status) {
 static void syncControlInCallback(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize) {
 	usbDataCompletion dataCompletion = controlInCallbackPtr;
 
-	if (status == LIBUSB_TRANSFER_COMPLETED) {
+	if (status == LIBUSB_TRANSFER_COMPLETED && bufferSize == dataCompletion->dataSize) {
 		// Copy data to location given by user.
-		memcpy(dataCompletion->data, buffer, bufferSize);
+		memcpy(dataCompletion->data, buffer, dataCompletion->dataSize);
 
 		atomic_store(&dataCompletion->completed, 1);
 	}
@@ -736,22 +745,27 @@ bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32
 	spiConfig[2] = U8T(param >> 8);
 	spiConfig[3] = U8T(param >> 0);
 
-	return (libusb_control_transfer(state->deviceHandle,
-		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) == sizeof(spiConfig));
+	return (usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
+		sizeof(spiConfig)));
 }
 
 bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
 	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	uint8_t spiConfig[4] = { 0 };
 
+	spiConfig[0] = U8T(param >> 24);
+	spiConfig[1] = U8T(param >> 16);
+	spiConfig[2] = U8T(param >> 8);
+	spiConfig[3] = U8T(param >> 0);
+
+	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
+		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
 }
 
 bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
 	uint8_t spiConfig[4] = { 0 };
 
-	if (libusb_control_transfer(state->deviceHandle,
-		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
+	if (!usbControlTransferIn(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig))) {
 		return (false);
 	}
 
@@ -767,5 +781,38 @@ bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uin
 bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
 	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
 	void *configReceiveCallbackPtr) {
+	usbConfigReceive config = calloc(1, sizeof(*config));
+	if (config == NULL) {
+		return (false);
+	}
 
+	config->configReceiveCallback = configReceiveCallback;
+	config->configReceiveCallbackPtr = configReceiveCallbackPtr;
+
+	bool retVal = usbControlTransferInAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t),
+		&spiConfigReceiveCallback, config);
+	if (!retVal) {
+		free(config);
+
+		return (false);
+	}
+
+	return (true);
+}
+
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, uint8_t *buffer, size_t bufferSize) {
+	usbConfigReceive config = configReceiveCallbackPtr;
+
+	uint32_t param = 0;
+
+	if (status == LIBUSB_TRANSFER_COMPLETED && bufferSize == sizeof(uint32_t)) {
+		param |= U32T(buffer[0] << 24);
+		param |= U32T(buffer[1] << 16);
+		param |= U32T(buffer[2] << 8);
+		param |= U32T(buffer[3] << 0);
+	}
+
+	(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
+
+	free(config);
 }
