@@ -246,18 +246,14 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
 					if (param && !atomic_load(&state->dvsRunning)) {
-						if (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_START_TRANSFER, 0, 0, NULL, 0, 0) != 0) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_START_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
 
 						atomic_store(&state->dvsRunning, true);
 					}
 					else if (!param && atomic_load(&state->dvsRunning)) {
-						if (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_STOP_TRANSFER, 0, 0, NULL, 0, 0) != 0) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_STOP_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
 
@@ -267,9 +263,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 				case DVS128_CONFIG_DVS_TIMESTAMP_RESET:
 					if (param) {
-						if (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_RESET_TS, 0, 0, NULL, 0, 0) != 0) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET_TS, 0, 0, NULL, 0)) {
 							return (false);
 						}
 					}
@@ -277,18 +271,15 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 				case DVS128_CONFIG_DVS_ARRAY_RESET:
 					if (param) {
-						if (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_RESET_ARRAY, 0, 0, NULL, 0, 0) != 0) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET_ARRAY, 0, 0, NULL, 0)) {
 							return (false);
 						}
 					}
 					break;
 
 				case DVS128_CONFIG_DVS_TS_MASTER:
-					if (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-						LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_TS_MASTER, (param & 0x01), 0, NULL, 0, 0) != 0) {
+					if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_TS_MASTER, (param & 0x01), 0, NULL,
+						0)) {
 						return (false);
 					}
 					atomic_store(&state->dvsIsMaster, (param & 0x01));
@@ -927,8 +918,6 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 static bool dvs128SendBiases(dvs128State state) {
 	// Biases are already stored in an array with the same format as expected by
 	// the device, we can thus send it directly.
-	return (libusb_control_transfer(usbGetDeviceHandle(&state->usbState),
-		LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-		VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->biases, (BIAS_NUMBER * BIAS_LENGTH), 0)
-		== (BIAS_NUMBER * BIAS_LENGTH));
+	return (usbControlTransferOut(&state->usbState, VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->biases,
+		(BIAS_NUMBER * BIAS_LENGTH)));
 }
