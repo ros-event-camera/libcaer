@@ -490,6 +490,30 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
 #define CAER_ITERATOR_VALID_END }
 
 /**
+ * Get the data size of an event packet, in bytes.
+ * This is only the size of the data portion, excluding the header.
+ *
+ * @param header a valid EventPacket header pointer. Cannot be NULL.
+ *
+ * @return the event packet data size in bytes.
+ */
+static inline int64_t caerEventPacketGetDataSize(caerEventPacketHeaderConst header) {
+	return (I64T(caerEventPacketHeaderGetEventSize(header)) * I64T(caerEventPacketHeaderGetEventCapacity(header)));
+}
+
+/**
+ * Get the full size of an event packet, in bytes.
+ * This includes both the header and the data portion.
+ *
+ * @param header a valid EventPacket header pointer. Cannot be NULL.
+ *
+ * @return the event packet size in bytes.
+ */
+static inline int64_t caerEventPacketGetSize(caerEventPacketHeaderConst header) {
+	return (CAER_EVENT_PACKET_HEADER_SIZE + caerEventPacketGetDataSize(header));
+}
+
+/**
  * Verify if two event packets are equal. This means that the
  * header and all events are equal.
  *
