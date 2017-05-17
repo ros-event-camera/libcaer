@@ -435,6 +435,13 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// Signal this by adjusting the counter and exiting.
 	// Freeing the transfers is taken care of by usbDeallocateTransfers().
 	atomic_fetch_sub(&state->activeDataTransfers, 1);
+
+	// If we got here but were not cancelled, it means the device went away
+	// or some other, unrecoverable error happened. So we make sure the
+	// USB thread can be terminated correctly.
+	if (transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		atomic_store(&state->usbThreadRun, false);
+	}
 }
 
 bool usbThreadStart(usbState state) {
@@ -451,6 +458,7 @@ bool usbThreadStart(usbState state) {
 }
 
 bool usbThreadStop(usbState state) {
+	// Shut down USB thread.
 	atomic_store(&state->usbThreadRun, false);
 	usbCancelTransfersAsync(state);
 
@@ -482,17 +490,28 @@ static int usbThreadRun(void *usbStatePtr) {
 	// Handle USB events (1 second timeout).
 	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
 
-	while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
+	handleUSBEvents: while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
 		libusb_handle_events_timeout(state->deviceContext, &te);
+	}
+
+	// activeDataTransfers drops to zero in three cases:
+	// - the device went away
+	// - the thread was shutdown, which cancels all transfers
+	// - the USB buffer number/size changed, which cancels all transfers
+	// In the first two cases we want to exit, in the third we want to go back
+	// to the loop and continue handling USB events. Both the device dying and
+	// the thread being shutdown set usbThreadRun to false, so we can use it
+	// to discriminate between the cases.
+	if (usbThreadIsRunning(state)) {
+		usbDeallocateTransfers(state);
+		usbAllocateTransfers(state);
+
+		goto handleUSBEvents;
 	}
 
 	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "Shutting down USB thread ...");
 
-	// Ensure run is set to false, so others checking for this notice, as this
-	// might have exited due to device being gone.
-	atomic_store(&state->usbThreadRun, false);
-
-	// If no more active transfers, deallocate old ones.
+	// Cleanup transfers.
 	usbDeallocateTransfers(state);
 
 	if (state->usbShutdownCallback != NULL) {

@@ -49,7 +49,7 @@ typedef struct usb_state *usbState;
 struct usb_info {
 	uint8_t busNumber;
 	uint8_t devAddress;
-	char serialNumber[8 + 1];
+	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1];
 	char *deviceString;
 };
 
