@@ -32,7 +32,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
-	void *controlCallbackPtr);
+	void *controlCallbackPtr, bool directionOut);
 static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
@@ -551,23 +551,14 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
-	void *controlCallbackPtr) {
-	// Check inputs. If both or neither callbacks are present,
-	// that's an error, since only IN or OUT is possible.
-	if (controlOutCallback == NULL && controlInCallback == NULL) {
-		return (false);
-	}
-	if (controlOutCallback != NULL && controlInCallback != NULL) {
-		return (false);
-	}
-
+	void *controlCallbackPtr, bool directionOut) {
 	// If doing IN, data must always be NULL, the callback will handle it.
-	if (controlInCallback != NULL && data != NULL) {
+	if (!directionOut && data != NULL) {
 		return (false);
 	}
 
 	// If doing OUT and data is NULL (no data), dataSize must be zero!
-	if (controlOutCallback != NULL && data == NULL && dataSize != 0) {
+	if (directionOut && data == NULL && dataSize != 0) {
 		return (false);
 	}
 
@@ -593,21 +584,16 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 	// all memory is in one block and freed when the transfer is freed.
 	usbControl extraControlData = (usbControl) &controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + dataSize];
 
-	if (controlOutCallback != NULL) {
-		extraControlData->controlOutCallback = controlOutCallback;
-	}
-	if (controlInCallback != NULL) {
-		extraControlData->controlInCallback = controlInCallback;
-	}
+	extraControlData->controlOutCallback = controlOutCallback;
+	extraControlData->controlInCallback = controlInCallback;
 	extraControlData->controlCallbackPtr = controlCallbackPtr;
 
 	// Initialize Transfer.
-	uint8_t direction = (controlOutCallback != NULL) ? (LIBUSB_ENDPOINT_OUT) : (LIBUSB_ENDPOINT_IN);
+	uint8_t direction = (directionOut) ? (LIBUSB_ENDPOINT_OUT) : (LIBUSB_ENDPOINT_IN);
 	libusb_fill_control_setup(controlTransferBuffer, direction | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 		bRequest, wValue, wIndex, U16T(dataSize));
 
-	libusb_transfer_cb_fn controlCallback =
-		(controlOutCallback != NULL) ? (&usbControlOutCallback) : (&usbControlInCallback);
+	libusb_transfer_cb_fn controlCallback = (directionOut) ? (&usbControlOutCallback) : (&usbControlInCallback);
 	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, controlCallback,
 		extraControlData, 0);
 
@@ -632,14 +618,14 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status), void *controlOutCallbackPtr) {
 	return (usbControlTransferAsync(state, bRequest, wValue, wIndex, data, dataSize, controlOutCallback, NULL,
-		controlOutCallbackPtr));
+		controlOutCallbackPtr, true));
 }
 
 bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, size_t dataSize,
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
 	void *controlInCallbackPtr) {
 	return (usbControlTransferAsync(state, bRequest, wValue, wIndex, NULL, dataSize, NULL, controlInCallback,
-		controlInCallbackPtr));
+		controlInCallbackPtr, false));
 }
 
 // Async USB control exists to avoid the problem described in
@@ -648,7 +634,9 @@ bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue
 static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer) {
 	usbControl extraControlData = transfer->user_data;
 
-	(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, transfer->status);
+	if (extraControlData->controlOutCallback != NULL) {
+		(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, transfer->status);
+	}
 
 	libusb_free_transfer(transfer);
 }
@@ -656,8 +644,10 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer) 
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer) {
 	usbControl extraControlData = transfer->user_data;
 
-	(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, transfer->status,
-		libusb_control_transfer_get_data(transfer), (size_t) transfer->actual_length);
+	if (extraControlData->controlInCallback != NULL) {
+		(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, transfer->status,
+			libusb_control_transfer_get_data(transfer), (size_t) transfer->actual_length);
+	}
 
 	libusb_free_transfer(transfer);
 }
@@ -823,7 +813,9 @@ static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status,
 		param |= U32T(buffer[3] << 0);
 	}
 
-	(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
+	if (config->configReceiveCallback != NULL) {
+		(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
+	}
 
 	free(config);
 }
