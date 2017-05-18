@@ -266,7 +266,7 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
 	// Cancel transfers, wait for them to terminate, deallocate, and
 	// then reallocate with new size/number.
 	mtx_lock(&state->dataTransfersLock);
-	if (atomic_load(&state->activeDataTransfers) > 0) {
+	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
 		usbAllocateTransfers(state);
 	}
@@ -279,7 +279,7 @@ void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
 	// Cancel transfers, wait for them to terminate, deallocate, and
 	// then reallocate with new size/number.
 	mtx_lock(&state->dataTransfersLock);
-	if (atomic_load(&state->activeDataTransfers) > 0) {
+	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
 		usbAllocateTransfers(state);
 	}
@@ -392,6 +392,9 @@ static int usbThreadRun(void *usbStatePtr) {
 bool usbDataTransfersStart(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
 	bool retVal = usbAllocateTransfers(state);
+	if (retVal) {
+		atomic_store(&state->dataTrasfersRun, true);
+	}
 	mtx_unlock(&state->dataTransfersLock);
 
 	return (retVal);
@@ -399,6 +402,7 @@ bool usbDataTransfersStart(usbState state) {
 
 void usbDataTransfersStop(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
+	atomic_store(&state->dataTrasfersRun, false);
 	usbCancelAndDeallocateTransfers(state);
 	mtx_unlock(&state->dataTransfersLock);
 }

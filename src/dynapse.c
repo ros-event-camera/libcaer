@@ -1190,7 +1190,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
 	// then any subsequent buffers should also detect shut-down and not be handled.
-	if (!usbThreadIsRunning(&state->usbState)) {
+	if (!usbDataTransfersAreRunning(&state->usbState)) {
 		return;
 	}
 
@@ -1511,7 +1511,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 					// Prevent dead-lock if shutdown is requested and nothing is consuming
 					// data anymore, but the ring-buffer is full (and would thus never empty),
 					// thus blocking the USB handling thread in this loop.
-					if (!usbThreadIsRunning(&state->usbState)) {
+					if (!usbDataTransfersAreRunning(&state->usbState)) {
 						return;
 					}
 				}
