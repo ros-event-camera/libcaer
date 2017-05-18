@@ -231,6 +231,7 @@ var searchData=
   ['davis_5fchip_5fdavisrgb',['DAVIS_CHIP_DAVISRGB',['../davis_8h.html#a16064e0f19eda7c80454a3326fcac4ea',1,'davis.h']]],
   ['davis_5fconfig_5faps',['DAVIS_CONFIG_APS',['../davis_8h.html#ac009a2c4ecd3abccc4265f8542c417bf',1,'davis.h']]],
   ['davis_5fconfig_5faps_5fadc_5ftest_5fmode',['DAVIS_CONFIG_APS_ADC_TEST_MODE',['../davis_8h.html#a9ac98785c6dd26dff0b2df0f477be095',1,'davis.h']]],
+  ['davis_5fconfig_5faps_5fautoexposure',['DAVIS_CONFIG_APS_AUTOEXPOSURE',['../davis_8h.html#afa469b34e95f8b91ef19994b2d06eab3',1,'davis.h']]],
   ['davis_5fconfig_5faps_5fcolor_5ffilter',['DAVIS_CONFIG_APS_COLOR_FILTER',['../davis_8h.html#abecc0ea5728b28d41a24a0a867746a39',1,'davis.h']]],
   ['davis_5fconfig_5faps_5fcolumn_5fsettle',['DAVIS_CONFIG_APS_COLUMN_SETTLE',['../davis_8h.html#a2df3dc23ea6f5a7fabae1717f9b2f0e0',1,'davis.h']]],
   ['davis_5fconfig_5faps_5fend_5fcolumn_5f0',['DAVIS_CONFIG_APS_END_COLUMN_0',['../davis_8h.html#add0ed47af21fe0a52b93d46ca2a79c57',1,'davis.h']]],

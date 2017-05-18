@@ -269,6 +269,8 @@ var searchData=
   ['caereventpacketcopyonlyevents',['caerEventPacketCopyOnlyEvents',['../common_8h.html#abe3edd377948bfe1e947cfa0f19d2e23',1,'common.h']]],
   ['caereventpacketcopyonlyvalidevents',['caerEventPacketCopyOnlyValidEvents',['../common_8h.html#ae3e2c277cdacc0620ec105ae3c6ee907',1,'common.h']]],
   ['caereventpacketequals',['caerEventPacketEquals',['../common_8h.html#a5826a679cd1af5b4cee766ba4cd1cb50',1,'common.h']]],
+  ['caereventpacketgetdatasize',['caerEventPacketGetDataSize',['../common_8h.html#a08794f81b3573f84d45977f0d18341fe',1,'common.h']]],
+  ['caereventpacketgetsize',['caerEventPacketGetSize',['../common_8h.html#a2d1d2edfd1d4f6940b75fd93395243a3',1,'common.h']]],
   ['caereventpacketgrow',['caerEventPacketGrow',['../common_8h.html#a2c7635af422fd3f9a4010acf472a48b2',1,'common.h']]],
   ['caereventpacketheader',['caerEventPacketHeader',['../common_8h.html#a50d5a2cac67297bc95751bf66fe865a9',1,'common.h']]],
   ['caereventpacketheadergeteventcapacity',['caerEventPacketHeaderGetEventCapacity',['../common_8h.html#a47a7339cb0e38605dd4d32597a84d109',1,'common.h']]],
@@ -568,7 +570,6 @@ var searchData=
   ['config_5fevent',['CONFIG_EVENT',['../common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019a5b5c1a4e48942794a64ab4b98e210b40',1,'common.h']]],
   ['config_5fmodule_5faddr_5fmask',['CONFIG_MODULE_ADDR_MASK',['../config_8h.html#abf0a58ffac82095dc250df0fa7e06252',1,'config.h']]],
   ['config_5fmodule_5faddr_5fshift',['CONFIG_MODULE_ADDR_SHIFT',['../config_8h.html#a58d3a5297c57cbf1a1ac8e7bfcc5a10a',1,'config.h']]],
-  ['currentlevel',['currentLevel',['../structcaer__bias__dynapse.html#a2c059a73fbe35b865f338b1efc473dc5',1,'caer_bias_dynapse']]],
-  ['currentlevelnormal',['currentLevelNormal',['../structcaer__bias__coarsefine.html#a5850c5a3966f12314c35c3166ba8fd9e',1,'caer_bias_coarsefine']]],
+  ['currentlevelnormal',['currentLevelNormal',['../structcaer__bias__coarsefine.html#a5850c5a3966f12314c35c3166ba8fd9e',1,'caer_bias_coarsefine::currentLevelNormal()'],['../structcaer__bias__dynapse.html#ad619b633ebd807322dc84baeb1c2937a',1,'caer_bias_dynapse::currentLevelNormal()']]],
   ['currentvalue',['currentValue',['../structcaer__bias__vdac.html#a799a36b63f7dd01bdb9352a3cb48aa74',1,'caer_bias_vdac']]]
 ];

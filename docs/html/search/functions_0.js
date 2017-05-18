@@ -69,6 +69,8 @@ var searchData=
   ['caereventpacketcopyonlyevents',['caerEventPacketCopyOnlyEvents',['../common_8h.html#abe3edd377948bfe1e947cfa0f19d2e23',1,'common.h']]],
   ['caereventpacketcopyonlyvalidevents',['caerEventPacketCopyOnlyValidEvents',['../common_8h.html#ae3e2c277cdacc0620ec105ae3c6ee907',1,'common.h']]],
   ['caereventpacketequals',['caerEventPacketEquals',['../common_8h.html#a5826a679cd1af5b4cee766ba4cd1cb50',1,'common.h']]],
+  ['caereventpacketgetdatasize',['caerEventPacketGetDataSize',['../common_8h.html#a08794f81b3573f84d45977f0d18341fe',1,'common.h']]],
+  ['caereventpacketgetsize',['caerEventPacketGetSize',['../common_8h.html#a2d1d2edfd1d4f6940b75fd93395243a3',1,'common.h']]],
   ['caereventpacketgrow',['caerEventPacketGrow',['../common_8h.html#a2c7635af422fd3f9a4010acf472a48b2',1,'common.h']]],
   ['caereventpacketheadergeteventcapacity',['caerEventPacketHeaderGetEventCapacity',['../common_8h.html#a47a7339cb0e38605dd4d32597a84d109',1,'common.h']]],
   ['caereventpacketheadergeteventnumber',['caerEventPacketHeaderGetEventNumber',['../common_8h.html#add6c4f5f40ae7210e337f415d156e98c',1,'common.h']]],

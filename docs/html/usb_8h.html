@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.2-r8d962f65a462287c6bd430ea5e754cd507ca4d3b</span>
+   &#160;<span id="projectnumber">2.0.2-r6ec01651e3ccb6cff2c8dce5fa5983ad9c072900</span>
    </div>
   </td>
  </tr>
@@ -513,14 +513,14 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Start getting data from the device, setting up the USB data transfer thread and starting the data producers (see CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS). Supports notification of new data and shutdown events via user-defined call-backs.</p>
+<p>Start getting data from the device, setting up the USB data transfers and starting the data producers (see CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS). Supports notification of new data and exceptional shutdown events via user-defined call-backs.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">handle</td><td>a valid device handle. </td></tr>
     <tr><td class="paramname">dataNotifyIncrease</td><td>function pointer, called every time a new piece of data available and has been put in the FIFO buffer for consumption. dataNotifyUserPtr will be passed as parameter to the function. </td></tr>
     <tr><td class="paramname">dataNotifyDecrease</td><td>function pointer, called every time a new piece of data has been consumed from the FIFO buffer inside <a class="el" href="usb_8h.html#a7bcefa4856f654ffa97fc804e3518e21">caerDeviceDataGet()</a>. dataNotifyUserPtr will be passed as parameter to the function. </td></tr>
     <tr><td class="paramname">dataNotifyUserPtr</td><td>pointer that will be passed to the dataNotifyIncrease and dataNotifyDecrease functions. Can be NULL. </td></tr>
-    <tr><td class="paramname">dataShutdownNotify</td><td>function pointer, called on shut-down of the USB data transfer thread. This can be used to detect exceptional shut-downs that do not come from calling <a class="el" href="usb_8h.html#ab43e79e5b066b30ef4a2b5cdaed66095">caerDeviceDataStop()</a>, such as when the device is disconnected or all USB transfers fail. </td></tr>
+    <tr><td class="paramname">dataShutdownNotify</td><td>function pointer, called on exceptional shut-down of the USB data transfers. This is used to detect exceptional shut-downs that do not come from calling <a class="el" href="usb_8h.html#ab43e79e5b066b30ef4a2b5cdaed66095">caerDeviceDataStop()</a>, such as when the device is disconnected or all USB transfers fail. </td></tr>
     <tr><td class="paramname">dataShutdownUserPtr</td><td>pointer that will be passed to the dataShutdownNotify function. Can be NULL.</td></tr>
   </table>
   </dd>
@@ -544,7 +544,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Stop getting data from the device, shutting down the USB data transfer thread and stopping the data producers (see CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS). This normal shut-down will also generate a notification (see <a class="el" href="usb_8h.html#af0d30b59677a59d39c4b228e7aab12fa">caerDeviceDataStart()</a>).</p>
+<p>Stop getting data from the device, shutting down the USB data transfers and stopping the data producers (see CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS). This normal shut-down will not generate a notification (see <a class="el" href="usb_8h.html#af0d30b59677a59d39c4b228e7aab12fa">caerDeviceDataStart()</a>).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">handle</td><td>a valid device handle.</td></tr>

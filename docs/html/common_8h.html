@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.2-r8d962f65a462287c6bd430ea5e754cd507ca4d3b</span>
+   &#160;<span id="projectnumber">2.0.2-r6ec01651e3ccb6cff2c8dce5fa5983ad9c072900</span>
    </div>
   </td>
  </tr>
@@ -173,6 +173,10 @@ Functions</h2></td></tr>
 <tr class="separator:a2ebfb707a75cbb7695f40a80b41cb053"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad30cbeb465cea71059ad3663bb9651a5"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="common_8h.html#ad30cbeb465cea71059ad3663bb9651a5">caerGenericEventIsValid</a> (const void *eventPtr)</td></tr>
 <tr class="separator:ad30cbeb465cea71059ad3663bb9651a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08794f81b3573f84d45977f0d18341fe"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="common_8h.html#a08794f81b3573f84d45977f0d18341fe">caerEventPacketGetDataSize</a> (caerEventPacketHeaderConst header)</td></tr>
+<tr class="separator:a08794f81b3573f84d45977f0d18341fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d1d2edfd1d4f6940b75fd93395243a3"><td class="memItemLeft" align="right" valign="top">static int64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="common_8h.html#a2d1d2edfd1d4f6940b75fd93395243a3">caerEventPacketGetSize</a> (caerEventPacketHeaderConst header)</td></tr>
+<tr class="separator:a2d1d2edfd1d4f6940b75fd93395243a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5826a679cd1af5b4cee766ba4cd1cb50"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="common_8h.html#a5826a679cd1af5b4cee766ba4cd1cb50">caerEventPacketEquals</a> (caerEventPacketHeaderConst firstPacket, caerEventPacketHeaderConst secondPacket)</td></tr>
 <tr class="separator:a5826a679cd1af5b4cee766ba4cd1cb50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6a4b45a87762a15c0b864ba44fd89c2f"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="common_8h.html#a6a4b45a87762a15c0b864ba44fd89c2f">caerEventPacketClear</a> (<a class="el" href="common_8h.html#a50d5a2cac67297bc95751bf66fe865a9">caerEventPacketHeader</a> packet)</td></tr>
@@ -696,6 +700,74 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if both are the same, false otherwise. </dd></dl>
+
+</div>
+</div>
+<a id="a08794f81b3573f84d45977f0d18341fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08794f81b3573f84d45977f0d18341fe">&#9670;&nbsp;</a></span>caerEventPacketGetDataSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int64_t caerEventPacketGetDataSize </td>
+          <td>(</td>
+          <td class="paramtype">caerEventPacketHeaderConst&#160;</td>
+          <td class="paramname"><em>header</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the data size of an event packet, in bytes. This is only the size of the data portion, excluding the header.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">header</td><td>a valid EventPacket header pointer. Cannot be NULL.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the event packet data size in bytes. </dd></dl>
+
+</div>
+</div>
+<a id="a2d1d2edfd1d4f6940b75fd93395243a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d1d2edfd1d4f6940b75fd93395243a3">&#9670;&nbsp;</a></span>caerEventPacketGetSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static int64_t caerEventPacketGetSize </td>
+          <td>(</td>
+          <td class="paramtype">caerEventPacketHeaderConst&#160;</td>
+          <td class="paramname"><em>header</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Get the full size of an event packet, in bytes. This includes both the header and the data portion.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">header</td><td>a valid EventPacket header pointer. Cannot be NULL.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>the event packet size in bytes. </dd></dl>
 
 </div>
 </div>

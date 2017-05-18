@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.2-r8d962f65a462287c6bd430ea5e754cd507ca4d3b</span>
+   &#160;<span id="projectnumber">2.0.2-r6ec01651e3ccb6cff2c8dce5fa5983ad9c072900</span>
    </div>
   </td>
  </tr>
@@ -316,6 +316,8 @@ Macros</h2></td></tr>
 <tr class="separator:a5f77f78610f5d94d154dbc468df7dec6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8ed290180489313d73043b705538f08"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#ab8ed290180489313d73043b705538f08">DAVIS_CONFIG_APS_SNAPSHOT</a>&#160;&#160;&#160;80</td></tr>
 <tr class="separator:ab8ed290180489313d73043b705538f08"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa469b34e95f8b91ef19994b2d06eab3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#afa469b34e95f8b91ef19994b2d06eab3">DAVIS_CONFIG_APS_AUTOEXPOSURE</a>&#160;&#160;&#160;81</td></tr>
+<tr class="separator:afa469b34e95f8b91ef19994b2d06eab3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc552d829285214f17c105fc9f81efa8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#adc552d829285214f17c105fc9f81efa8">DAVIS_CONFIG_IMU_RUN</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:adc552d829285214f17c105fc9f81efa8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae195d3bb8c5bf85ccbba217f424775e2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#ae195d3bb8c5bf85ccbba217f424775e2">DAVIS_CONFIG_IMU_TEMP_STANDBY</a>&#160;&#160;&#160;1</td></tr>
@@ -5020,6 +5022,21 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Parameter address for module DAVIS_CONFIG_APS: put all APS pixels into reset, while keeping everything else running. This is only useful for testing and characterizing the internal ADC, to minimize noise. </p>
+
+</div>
+</div>
+<a id="afa469b34e95f8b91ef19994b2d06eab3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa469b34e95f8b91ef19994b2d06eab3">&#9670;&nbsp;</a></span>DAVIS_CONFIG_APS_AUTOEXPOSURE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DAVIS_CONFIG_APS_AUTOEXPOSURE&#160;&#160;&#160;81</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Parameter address for module DAVIS_CONFIG_APS: automatic exposure control, tries to set the exposure value automatically to an appropriate value to maximize information in the scene and minimize under- and over-exposure. </p>
 
 </div>
 </div>
