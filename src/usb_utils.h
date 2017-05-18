@@ -27,19 +27,18 @@ struct usb_state {
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
 	thrd_t usbThread;
 	atomic_bool usbThreadRun;
-	// USB Transfer Settings
+	// USB Data Transfers
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
-	// USB Data Transfers
 	uint8_t dataEndPoint;
 	mtx_t dataTransfersLock;
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
-	// USB Data handling callback
+	// USB Data Transfers handling callback
 	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
 	void *usbDataCallbackPtr;
-	// USB Data Transfer shutdown callback
+	// USB Data Transfers shutdown callback
 	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
 	void *usbShutdownCallbackPtr;
 };
@@ -70,13 +69,14 @@ uint32_t usbGetTransfersSize(usbState state);
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
 
-void usbCancelTransfersAsync(usbState state);
-
 static inline bool usbThreadIsRunning(usbState state) {
 	return (atomic_load(&state->usbThreadRun));
 }
 bool usbThreadStart(usbState state);
-bool usbThreadStop(usbState state);
+void usbThreadStop(usbState state);
+
+bool usbDataTransfersStart(usbState state);
+void usbDataTransfersStop(usbState state);
 
 bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status), void *controlOutCallbackPtr);

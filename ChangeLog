@@ -1,4 +1,11 @@
 Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
+INCOMPATIBLE CHANGES
+- usb.h: the 'dataShutdownNotify' callback of caerDeviceDataStart() will only
+  be called on exceptional shutdowns now. Normal shutdowns, such as those from
+  calling caerDeviceDataStop(), will not execute the callback anymore.
+  The documentation for caerDeviceDataStart() and caerDeviceDataStop() has been
+  updated accordingly.
+
 NEW FEATURES
 - davis.h: added automatic exposure control, can be turned on/off with
   the DAVIS_CONFIG_APS_AUTOEXPOSURE configuration parameter, defaults to off.

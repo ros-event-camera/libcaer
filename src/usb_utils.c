@@ -25,10 +25,9 @@ struct usb_config_receive_struct {
 
 typedef struct usb_config_receive_struct *usbConfigReceive;
 
-static void usbAllocateTransfers(usbState state);
-static void usbDeallocateTransfers(usbState state);
 static int usbThreadRun(void *usbStatePtr);
-
+static bool usbAllocateTransfers(usbState state);
+static void usbCancelAndDeallocateTransfers(usbState state);
 static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer);
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
@@ -168,7 +167,22 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					uint32_t param32 = 0;
 
 					// Get logic version from generic SYSINFO module.
-					spiConfigReceive(state, 6, 0, &param32);
+					uint8_t spiConfig[4] = { 0 };
+
+					if (libusb_control_transfer(state->deviceHandle,
+						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
+						libusb_release_interface(devHandle, 0);
+						libusb_close(devHandle);
+						devHandle = NULL;
+
+						continue;
+					}
+
+					param32 |= U32T(spiConfig[0] << 24);
+					param32 |= U32T(spiConfig[1] << 16);
+					param32 |= U32T(spiConfig[2] << 8);
+					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic version.
 					if (param32 < U32T(requiredLogicRevision)) {
@@ -238,6 +252,8 @@ void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *us
 	void *usbShutdownCallbackPtr) {
 	state->usbShutdownCallback = usbShutdownCallback;
 	state->usbShutdownCallbackPtr = usbShutdownCallbackPtr;
+
+	atomic_thread_fence(memory_order_seq_cst);
 }
 
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint) {
@@ -247,13 +263,27 @@ void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint) {
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
 	atomic_store(&state->usbBufferNumber, transfersNumber);
 
-	usbCancelTransfersAsync(state);
+	// Cancel transfers, wait for them to terminate, deallocate, and
+	// then reallocate with new size/number.
+	mtx_lock(&state->dataTransfersLock);
+	if (atomic_load(&state->activeDataTransfers) > 0) {
+		usbCancelAndDeallocateTransfers(state);
+		usbAllocateTransfers(state);
+	}
+	mtx_unlock(&state->dataTransfersLock);
 }
 
 void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
 	atomic_store(&state->usbBufferSize, transfersSize);
 
-	usbCancelTransfersAsync(state);
+	// Cancel transfers, wait for them to terminate, deallocate, and
+	// then reallocate with new size/number.
+	mtx_lock(&state->dataTransfersLock);
+	if (atomic_load(&state->activeDataTransfers) > 0) {
+		usbCancelAndDeallocateTransfers(state);
+		usbAllocateTransfers(state);
+	}
+	mtx_unlock(&state->dataTransfersLock);
 }
 
 uint32_t usbGetTransfersNumber(usbState state) {
@@ -307,10 +337,74 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 	return (usbInfo);
 }
 
-static void usbAllocateTransfers(usbState state) {
-	// Lock mutex.
-	mtx_lock(&state->dataTransfersLock);
+bool usbThreadStart(usbState state) {
+	// Start USB thread.
+	if ((errno = thrd_create(&state->usbThread, &usbThreadRun, state)) != thrd_success) {
+		return (false);
+	}
 
+	// Wait for USB thread to be ready.
+	while (!atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
+		;
+	}
+
+	return (true);
+}
+
+void usbThreadStop(usbState state) {
+	// Shut down USB thread.
+	atomic_store(&state->usbThreadRun, false);
+
+	// Wait for USB thread to terminate.
+	if ((errno = thrd_join(state->usbThread, NULL)) != thrd_success) {
+		// This should never happen!
+		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Failed to join USB thread. Error: %d.", errno);
+	}
+}
+
+// This thread handles all USB events exclusively, from when it starts up
+// after device open to when it shuts down at device close.
+static int usbThreadRun(void *usbStatePtr) {
+	usbState state = usbStatePtr;
+
+	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "Starting USB thread ...");
+
+	// Set thread name.
+	thrd_set_name(state->usbThreadName);
+
+	// Signal data thread ready back to start function.
+	atomic_store(&state->usbThreadRun, true);
+
+	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread running.");
+
+	// Handle USB events (1 second timeout).
+	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
+
+	while (atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
+		libusb_handle_events_timeout(state->deviceContext, &te);
+	}
+
+	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread shut down.");
+
+	return (EXIT_SUCCESS);
+}
+
+bool usbDataTransfersStart(usbState state) {
+	mtx_lock(&state->dataTransfersLock);
+	bool retVal = usbAllocateTransfers(state);
+	mtx_unlock(&state->dataTransfersLock);
+
+	return (retVal);
+}
+
+void usbDataTransfersStop(usbState state) {
+	mtx_lock(&state->dataTransfersLock);
+	usbCancelAndDeallocateTransfers(state);
+	mtx_unlock(&state->dataTransfersLock);
+}
+
+// MUST LOCK ON 'dataTransfersLock'.
+static bool usbAllocateTransfers(usbState state) {
 	uint32_t bufferNum = usbGetTransfersNumber(state);
 	uint32_t bufferSize = usbGetTransfersSize(state);
 
@@ -319,8 +413,7 @@ static void usbAllocateTransfers(usbState state) {
 	if (state->dataTransfers == NULL) {
 		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
 			"Failed to allocate memory for %" PRIu32 " libusb transfers. Error: %d.", bufferNum, errno);
-		mtx_unlock(&state->dataTransfersLock);
-		return;
+		return (false);
 	}
 	state->dataTransfersLength = bufferNum;
 
@@ -379,14 +472,14 @@ static void usbAllocateTransfers(usbState state) {
 		state->dataTransfersLength = 0;
 
 		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to allocate any libusb transfers.");
+		return (false);
 	}
 
-	mtx_unlock(&state->dataTransfersLock);
+	return (true);
 }
 
-void usbCancelTransfersAsync(usbState state) {
-	mtx_lock(&state->dataTransfersLock);
-
+// MUST LOCK ON 'dataTransfersLock'.
+static void usbCancelAndDeallocateTransfers(usbState state) {
 	// Cancel all current transfers.
 	for (size_t i = 0; i < state->dataTransfersLength; i++) {
 		if (state->dataTransfers[i] != NULL) {
@@ -399,22 +492,15 @@ void usbCancelTransfersAsync(usbState state) {
 		}
 	}
 
-	mtx_unlock(&state->dataTransfersLock);
-}
+	// Wait for all transfers to go away.
+	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
 
-// Handle events until no more transfers exist, then deallocate them all.
-// Use this in conjunction with usbCancelTransfers() above.
-static void usbDeallocateTransfers(usbState state) {
-	// Wait for all transfers to go away (0.1 seconds timeout).
-	struct timeval te = { .tv_sec = 0, .tv_usec = 100000 };
-
-	while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
-		libusb_handle_events_timeout(state->deviceContext, &te);
+	while (atomic_load(&state->activeDataTransfers) > 0) {
+		// Sleep for 1ms to avoid busy loop.
+		thrd_sleep(&waitForTerminationSleep, NULL);
 	}
 
 	// No more transfers in flight, deallocate them all here.
-	mtx_lock(&state->dataTransfersLock);
-
 	for (size_t i = 0; i < state->dataTransfersLength; i++) {
 		if (state->dataTransfers[i] != NULL) {
 			libusb_free_transfer(state->dataTransfers[i]);
@@ -426,8 +512,6 @@ static void usbDeallocateTransfers(usbState state) {
 	free(state->dataTransfers);
 	state->dataTransfers = NULL;
 	state->dataTransfersLength = 0;
-
-	mtx_unlock(&state->dataTransfersLock);
 }
 
 static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer) {
@@ -447,94 +531,21 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 
 	// Cannot recover (cancelled, no device, or other critical error).
 	// Signal this by adjusting the counter and exiting.
-	// Freeing the transfers is taken care of by usbDeallocateTransfers().
-	atomic_fetch_sub(&state->activeDataTransfers, 1);
-
-	// If we got here but were not cancelled, it means the device went away
-	// or some other, unrecoverable error happened. So we make sure the
-	// USB thread can be terminated correctly.
-	if (transfer->status != LIBUSB_TRANSFER_CANCELLED) {
-		atomic_store(&state->usbThreadRun, false);
-	}
-}
-
-bool usbThreadStart(usbState state) {
-	if ((errno = thrd_create(&state->usbThread, &usbThreadRun, state)) != thrd_success) {
-		return (false);
-	}
-
-	// Wait for the data acquisition thread to be ready.
-	while (!atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
-		;
-	}
-
-	return (true);
-}
-
-bool usbThreadStop(usbState state) {
-	// Shut down USB thread.
-	atomic_store(&state->usbThreadRun, false);
-	usbCancelTransfersAsync(state);
-
-	// Wait for data acquisition thread to terminate...
-	if ((errno = thrd_join(state->usbThread, NULL)) != thrd_success) {
-		// This should never happen!
-		return (false);
-	}
-
-	return (true);
-}
-
-static int usbThreadRun(void *usbStatePtr) {
-	usbState state = usbStatePtr;
-
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "Initializing USB thread ...");
-
-	// Set thread name.
-	thrd_set_name(state->usbThreadName);
-
-	// Create buffers as specified by settings.
-	usbAllocateTransfers(state);
-
-	// Signal data thread ready back to start function.
-	atomic_store(&state->usbThreadRun, true);
-
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread ready.");
-
-	// Handle USB events (1 second timeout).
-	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
-
-	handleUSBEvents: while (atomic_load_explicit(&state->activeDataTransfers, memory_order_relaxed) > 0) {
-		libusb_handle_events_timeout(state->deviceContext, &te);
-	}
-
-	// activeDataTransfers drops to zero in three cases:
+	// Freeing the transfers is taken care of by usbCancelAndDeallocateTransfers().
+	// 'activeDataTransfers' drops to zero in three cases:
 	// - the device went away
-	// - the thread was shutdown, which cancels all transfers
+	// - the data transfers were stopped, which cancels all transfers
 	// - the USB buffer number/size changed, which cancels all transfers
-	// In the first two cases we want to exit, in the third we want to go back
-	// to the loop and continue handling USB events. Both the device dying and
-	// the thread being shutdown set usbThreadRun to false, so we can use it
-	// to discriminate between the cases.
-	if (usbThreadIsRunning(state)) {
-		usbDeallocateTransfers(state);
-		usbAllocateTransfers(state);
+	// The second and third case are intentional user actions, so we don't notify.
+	// In the first case, the last transfer to go away calls the shutdown
+	// callback and notifies that we're exiting, and not via normal cancellation.
+	uint32_t count = U32T(atomic_fetch_sub(&state->activeDataTransfers, 1));
 
-		goto handleUSBEvents;
+	if (count == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		if (state->usbShutdownCallback != NULL) {
+			state->usbShutdownCallback(state->usbShutdownCallbackPtr);
+		}
 	}
-
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "Shutting down USB thread ...");
-
-	// Cleanup transfers.
-	usbDeallocateTransfers(state);
-
-	if (state->usbShutdownCallback != NULL) {
-		state->usbShutdownCallback(state->usbShutdownCallbackPtr);
-	}
-
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread shut down.");
-
-	return (EXIT_SUCCESS);
 }
 
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,

@@ -62,18 +62,17 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	dvs128State state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
-	atomic_store_explicit(&state->dataExchangeBufferSize, 64, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeBlocking, false, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeStartProducers, true, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeStopProducers, true, memory_order_relaxed);
+	atomic_store(&state->dataExchangeBufferSize, 64);
+	atomic_store(&state->dataExchangeBlocking, false);
+	atomic_store(&state->dataExchangeStartProducers, true);
+	atomic_store(&state->dataExchangeStopProducers, true);
 
 	// Packet settings (size (in events) and time interval (in µs)).
-	atomic_store_explicit(&state->maxPacketContainerPacketSize, 4096, memory_order_relaxed);
-	atomic_store_explicit(&state->maxPacketContainerInterval, 10000, memory_order_relaxed);
+	atomic_store(&state->maxPacketContainerPacketSize, 4096);
+	atomic_store(&state->maxPacketContainerInterval, 10000);
 
-	atomic_store_explicit(&state->dvsIsMaster, true, memory_order_relaxed); // Always master by default.
-
-	atomic_thread_fence(memory_order_release);
+	// Always master by default.
+	atomic_store(&state->dvsIsMaster, true);
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
@@ -104,6 +103,16 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 4096);
 
+	// Start USB handling thread.
+	if (!usbThreadStart(&state->usbState)) {
+		usbDeviceClose(&state->usbState);
+
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
+
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
@@ -128,14 +137,17 @@ bool dvs128Close(caerDeviceHandle cdh) {
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutting down ...");
 
+	// Shut down USB handling thread.
+	usbThreadStop(&state->usbState);
+
 	// Finally, close the device fully.
 	usbDeviceClose(&state->usbState);
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
 
 	// Free memory.
 	free(handle->info.deviceString);
 	free(handle);
+
+	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
 
 	return (true);
 }
@@ -492,11 +504,10 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 		return (false);
 	}
 
-	if (!usbThreadStart(&state->usbState)) {
+	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data acquisition thread. Error: %d.",
-		errno);
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data transfers.");
 		return (false);
 	}
 
@@ -517,12 +528,7 @@ bool dvs128DataStop(caerDeviceHandle cdh) {
 		dvs128ConfigSet((caerDeviceHandle) handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, false);
 	}
 
-	if (!usbThreadStop(&state->usbState)) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to join data acquisition thread. Error: %d.",
-		errno);
-
-		return (false);
-	}
+	usbDataTransfersStop(&state->usbState);
 
 	// Empty ringbuffer.
 	caerEventPacketContainer container;
