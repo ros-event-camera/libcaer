@@ -107,7 +107,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
 
-		free(handle->info.deviceString);
+		free(usbInfo.deviceString);
 		free(handle);
 
 		return (NULL);
