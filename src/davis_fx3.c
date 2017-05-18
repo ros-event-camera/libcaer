@@ -127,8 +127,8 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 	}
 }
 
-static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
-	// Cancel all current transfers first.
+static inline void cancelDebugTransfers(davisFX3Handle handle) {
+	// Cancel all current transfers.
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
 		if (handle->debugTransfers[i] != NULL) {
 			errno = libusb_cancel_transfer(handle->debugTransfers[i]);
@@ -140,6 +140,11 @@ static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
 			}
 		}
 	}
+}
+
+static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
+	// Cancel all transfers.
+	cancelDebugTransfers(handle);
 
 	// Wait for all transfers to go away.
 	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
@@ -147,6 +152,10 @@ static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
 	while (atomic_load(&handle->activeDebugTransfers) > 0) {
 		// Sleep for 1ms to avoid busy loop.
 		thrd_sleep(&waitForTerminationSleep, NULL);
+
+		// Continue trying to cancel all transfers until there are none left.
+		// It seems like the first cancel pass is not enough and some hang around.
+		cancelDebugTransfers(handle);
 	}
 
 	// No more transfers in flight, deallocate them all here.

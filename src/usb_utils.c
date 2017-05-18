@@ -482,8 +482,7 @@ static bool usbAllocateTransfers(usbState state) {
 	return (true);
 }
 
-// MUST LOCK ON 'dataTransfersLock'.
-static void usbCancelAndDeallocateTransfers(usbState state) {
+static inline void usbCancelTransfers(usbState state) {
 	// Cancel all current transfers.
 	for (size_t i = 0; i < state->dataTransfersLength; i++) {
 		if (state->dataTransfers[i] != NULL) {
@@ -495,6 +494,12 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 			}
 		}
 	}
+}
+
+// MUST LOCK ON 'dataTransfersLock'.
+static void usbCancelAndDeallocateTransfers(usbState state) {
+	// Cancel all transfers.
+	usbCancelTransfers(state);
 
 	// Wait for all transfers to go away.
 	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
@@ -502,6 +507,10 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 	while (atomic_load(&state->activeDataTransfers) > 0) {
 		// Sleep for 1ms to avoid busy loop.
 		thrd_sleep(&waitForTerminationSleep, NULL);
+
+		// Continue trying to cancel all transfers until there are none left.
+		// It seems like the first cancel pass is not enough and some hang around.
+		usbCancelTransfers(state);
 	}
 
 	// No more transfers in flight, deallocate them all here.
