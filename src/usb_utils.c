@@ -169,7 +169,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					// Get logic version from generic SYSINFO module.
 					uint8_t spiConfig[4] = { 0 };
 
-					if (libusb_control_transfer(state->deviceHandle,
+					if (libusb_control_transfer(devHandle,
 						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
 						libusb_release_interface(devHandle, 0);
