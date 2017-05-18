@@ -24,6 +24,12 @@ BUG FIXES
   offered, all have 10 bits precision.
 - DAVIS: fix black APS pixels on very high illumination.
 - DAVIS240: fix low range of APS pixels due to reduced ADC dynamic range.
+- USB: libusb-based USB communication completely rewritten, now there is one
+  thread responsible for USB event handling only, while transfers are sent,
+  started/stopped etc. from other threads. This avoids possible dead-locks,
+  or other threads stealing the USB event handling, or new settings not being
+  sent to the device under certain load conditions. This required a small
+  change in the API, please see "INCOMPATIBLE CHANGES" above for more details.
 
 
 Release 2.0.2 - 27.04.2017
