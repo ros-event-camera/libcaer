@@ -1,7 +1,7 @@
 #include "davis_fx3.h"
 
 static void allocateDebugTransfers(davisFX3Handle handle);
-static void deallocateDebugTransfers(davisFX3Handle handle);
+static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle);
 static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer);
 static void debugTranslator(davisFX3Handle handle, uint8_t *buffer, size_t bytesSent);
 
@@ -21,7 +21,7 @@ caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	bool openRetVal = davisCommonOpen((davisHandle) handle, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID,
 	DAVIS_FX3_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
-		DAVIS_FX3_REQUIRED_LOGIC_REVISION, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
+	DAVIS_FX3_REQUIRED_LOGIC_REVISION, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
 	if (!openRetVal) {
 		free(handle);
 
@@ -37,7 +37,7 @@ caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 bool davisFX3Close(caerDeviceHandle cdh) {
 	caerLog(CAER_LOG_DEBUG, ((davisHandle) cdh)->info.deviceString, "Shutting down ...");
 
-	deallocateDebugTransfers((davisFX3Handle) cdh);
+	cancelAndDeallocateDebugTransfers((davisFX3Handle) cdh);
 
 	return (davisCommonClose((davisHandle) cdh));
 }
@@ -104,7 +104,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 		handle->debugTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
 
 		if ((errno = libusb_submit_transfer(handle->debugTransfers[i])) == LIBUSB_SUCCESS) {
-			handle->activeDebugTransfers++;
+			atomic_fetch_add(&handle->activeDebugTransfers, 1);
 		}
 		else {
 			caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
@@ -120,13 +120,14 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 		}
 	}
 
-	if (handle->activeDebugTransfers == 0) {
+	if (atomic_load(&handle->activeDebugTransfers) == 0) {
 		// Didn't manage to allocate any USB transfers, log failure.
-		caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString, "Unable to allocate any libusb transfers.");
+		caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+			"Unable to allocate any libusb transfers (debug channel).");
 	}
 }
 
-static void deallocateDebugTransfers(davisFX3Handle handle) {
+static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
 	// Cancel all current transfers first.
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
 		if (handle->debugTransfers[i] != NULL) {
@@ -140,11 +141,20 @@ static void deallocateDebugTransfers(davisFX3Handle handle) {
 		}
 	}
 
-	// Wait for all transfers to go away (0.1 seconds timeout).
-	struct timeval te = { .tv_sec = 0, .tv_usec = 100000 };
+	// Wait for all transfers to go away.
+	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
 
-	while (handle->activeDebugTransfers > 0) {
-		libusb_handle_events_timeout(handle->h.state.usbState.deviceContext, &te);
+	while (atomic_load(&handle->activeDebugTransfers) > 0) {
+		// Sleep for 1ms to avoid busy loop.
+		thrd_sleep(&waitForTerminationSleep, NULL);
+	}
+
+	// No more transfers in flight, deallocate them all here.
+	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
+		if (handle->debugTransfers[i] != NULL) {
+			libusb_free_transfer(handle->debugTransfers[i]);
+			handle->debugTransfers[i] = NULL;
+		}
 	}
 }
 
@@ -164,15 +174,9 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 	}
 
 	// Cannot recover (cancelled, no device, or other critical error).
-	// Signal this by adjusting the counter, free and exit.
-	handle->activeDebugTransfers--;
-	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
-		// Remove from list, so we don't try to cancel it later on.
-		if (handle->debugTransfers[i] == transfer) {
-			handle->debugTransfers[i] = NULL;
-		}
-	}
-	libusb_free_transfer(transfer);
+	// Signal this by adjusting the counter and exiting.
+	// Freeing the transfers is taken care of by cancelAndDeallocateDebugTransfers().
+	atomic_fetch_sub(&handle->activeDebugTransfers, 1);
 }
 
 static void debugTranslator(davisFX3Handle handle, uint8_t *buffer, size_t bytesSent) {

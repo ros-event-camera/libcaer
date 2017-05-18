@@ -19,7 +19,7 @@ struct davis_fx3_handle {
 	struct davis_handle h;
 	// Debug transfer support (FX3 only).
 	struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
-	size_t activeDebugTransfers;
+	atomic_uint_fast32_t activeDebugTransfers;
 };
 
 typedef struct davis_fx3_handle *davisFX3Handle;
