@@ -584,8 +584,12 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 	// all memory is in one block and freed when the transfer is freed.
 	usbControl extraControlData = (usbControl) &controlTransferBuffer[LIBUSB_CONTROL_SETUP_SIZE + dataSize];
 
-	extraControlData->controlOutCallback = controlOutCallback;
-	extraControlData->controlInCallback = controlInCallback;
+	if (controlOutCallback != NULL) {
+		extraControlData->controlOutCallback = controlOutCallback;
+	}
+	if (controlInCallback != NULL) {
+		extraControlData->controlInCallback = controlInCallback;
+	}
 	extraControlData->controlCallbackPtr = controlCallbackPtr;
 
 	// Initialize Transfer.
