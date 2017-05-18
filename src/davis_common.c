@@ -3204,6 +3204,17 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 						int32_t pixelValue = 0;
 
+#if defined(APS_DEBUG_FRAME) && APS_DEBUG_FRAME == 1
+						pixelValue = resetValue;
+
+						// Check for overflow.
+						pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
+#elif defined(APS_DEBUG_FRAME) && APS_DEBUG_FRAME == 2
+						pixelValue = signalValue;
+
+						// Check for overflow.
+						pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
+#else
 						if (resetValue < 512 || signalValue == 0) {
 							// If the signal value is 0, that is only possible if the camera
 							// has seen tons of light. In that case, the photo-diode current
@@ -3225,6 +3236,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// Check for overflow.
 							pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
 						}
+#endif
 
 						// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 						pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
