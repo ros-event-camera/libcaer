@@ -1,8 +1,6 @@
 #include "dynapse.h"
 
 static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
-static int dynapseDataAcquisitionThread(void *inPtr);
-static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle);
 
 // i = index, x = amount of columns, y = amount of rows
 static inline uint32_t dynapseCalculateCoordinatesNeuX(uint32_t index, uint32_t columns, uint32_t rows) {
@@ -92,68 +90,53 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 
 	// Set main deviceType correctly right away.
 	handle->deviceType = CAER_DEVICE_DYNAPSE;
+
 	dynapseState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
-	atomic_store_explicit(&state->dataExchangeBufferSize, 64, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeBlocking, false, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeStartProducers, true, memory_order_relaxed);
-	atomic_store_explicit(&state->dataExchangeStopProducers, true, memory_order_relaxed);
-	atomic_store_explicit(&state->usbBufferNumber, 8, memory_order_relaxed);
-	atomic_store_explicit(&state->usbBufferSize, 8192, memory_order_relaxed);
+	atomic_store(&state->dataExchangeBufferSize, 64);
+	atomic_store(&state->dataExchangeBlocking, false);
+	atomic_store(&state->dataExchangeStartProducers, true);
+	atomic_store(&state->dataExchangeStopProducers, true);
 
 	// Packet settings (size (in events) and time interval (in µs)).
-	atomic_store_explicit(&state->maxPacketContainerPacketSize, 8192, memory_order_relaxed);
-	atomic_store_explicit(&state->maxPacketContainerInterval, 10000, memory_order_relaxed);
-
-	atomic_thread_fence(memory_order_release);
+	atomic_store(&state->maxPacketContainerPacketSize, 8192);
+	atomic_store(&state->maxPacketContainerInterval, 10000);
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
-	snprintf(state->deviceThreadName, 15 + 1, "%s ID-%" PRIu16,
-	DYNAPSE_DEVICE_NAME, deviceID);
-	state->deviceThreadName[15] = '\0';
+	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
+	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s ID-%" PRIu16, DYNAPSE_DEVICE_NAME, deviceID);
+	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
-	// Search for device and open it.
-	// Initialize libusb using a separate context for each device.
-	// This is to correctly support one thread per device.
-	// libusb may create its own threads at this stage, so we temporarly set
-	// a different thread name.
-	char originalThreadName[15 + 1]; // +1 for terminating NUL character.
-	thrd_get_name(originalThreadName, 15);
-	originalThreadName[15] = '\0';
-
-	thrd_set_name(state->deviceThreadName);
-	int res = libusb_init(&state->usbState.deviceContext);
-
-	thrd_set_name(originalThreadName);
-
-	if (res != LIBUSB_SUCCESS) {
-		free(handle);
-		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to initialize libusb context. Error: %d.", res);
-		return (NULL);
-	}
+	usbSetThreadName(&state->usbState, usbThreadName);
 
 	// Try to open a Dynap-se device on a specific USB port.
-	state->usbState.deviceHandle = usbDeviceOpen(state->usbState.deviceContext,
-	USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
-	DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION);
-	if (state->usbState.deviceHandle == NULL) {
-		libusb_exit(state->usbState.deviceContext);
+	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
+		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION)) {
 		free(handle);
 
-		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to open %s device.",
-		DYNAPSE_DEVICE_NAME);
 		return (NULL);
 	}
 
-	state->usbState.userData = handle;
-	state->usbState.userCallback = &dynapseEventTranslator;
-
-	struct usb_info usbInfo = usbGenerateInfo(state->usbState.deviceHandle,
-	DYNAPSE_DEVICE_NAME, deviceID);
+	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DYNAPSE_DEVICE_NAME, deviceID);
 	if (usbInfo.deviceString == NULL) {
-		usbDeviceClose(state->usbState.deviceHandle);
-		libusb_exit(state->usbState.deviceContext);
+		usbDeviceClose(&state->usbState);
+		free(handle);
+
+		return (NULL);
+	}
+
+	// Setup USB.
+	usbSetDataCallback(&state->usbState, &dynapseEventTranslator, handle);
+	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
+	usbSetTransfersNumber(&state->usbState, 8);
+	usbSetTransfersSize(&state->usbState, 8192);
+
+	// Start USB handling thread.
+	if (!usbThreadStart(&state->usbState)) {
+		usbDeviceClose(&state->usbState);
+
+		free(usbInfo.deviceString);
 		free(handle);
 
 		return (NULL);
@@ -167,17 +150,13 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString = usbInfo.deviceString;
-	spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO,
-	DYNAPSE_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
-	spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO,
-	DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
 	handle->info.deviceIsMaster = param32;
-	spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO,
-	DYNAPSE_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
 	handle->info.logicClock = I16T(param32);
-	spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO,
-	DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
 	handle->info.chipID = I16T(param32);
 
 	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
@@ -193,17 +172,17 @@ bool dynapseClose(caerDeviceHandle cdh) {
 
 	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutting down ...");
 
+	// Shut down USB handling thread.
+	usbThreadStop(&state->usbState);
+
 	// Finally, close the device fully.
-	usbDeviceClose(state->usbState.deviceHandle);
-
-	// Destroy libusb context.
-	libusb_exit(state->usbState.deviceContext);
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
+	usbDeviceClose(&state->usbState);
 
 	// Free memory.
 	free(handle->info.deviceString);
 	free(handle);
+
+	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
 
 	return (true);
 }
@@ -245,17 +224,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case CAER_HOST_CONFIG_USB:
 			switch (paramAddr) {
 				case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
-					atomic_store(&state->usbBufferNumber, param);
-
-					// Notify data acquisition thread to change buffers.
-					atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 0);
+					usbSetTransfersNumber(&state->usbState, param);
 					break;
 
 				case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
-					atomic_store(&state->usbBufferSize, param);
-
-					// Notify data acquisition thread to change buffers.
-					atomic_fetch_or(&state->dataAcquisitionThreadConfigUpdate, 1 << 0);
+					usbSetTransfersSize(&state->usbState, param);
 					break;
 
 				default:
@@ -305,15 +278,15 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_SRAM:
-			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
+			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
-			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_SPIKEGEN:
-			return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
+			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_MUX:
@@ -322,7 +295,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN:
 				case DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
 				case DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL:
-					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_MUX, paramAddr, param));
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET: {
@@ -345,10 +318,8 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						spiMultiConfig[10] = 0x00;
 						spiMultiConfig[11] = 0x00;
 
-						return (libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0)
-							== sizeof(spiMultiConfig));
+						return (usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, 2, 0,
+							spiMultiConfig, sizeof(spiMultiConfig)));
 					}
 					break;
 				}
@@ -366,7 +337,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_AER_ACK_EXTENSION:
 				case DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL:
 				case DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL:
-					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_AER, paramAddr, param));
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_AER, paramAddr, param));
 					break;
 
 				default:
@@ -381,7 +352,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_CHIP_ID:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
-					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_CHIP, paramAddr, param));
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_CHIP_CONTENT: {
@@ -392,21 +363,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					spiConfig[2] = U8T(param >> 8);
 					spiConfig[3] = U8T(param >> 0);
 
-					int result = libusb_control_transfer(state->usbState.deviceHandle,
-						LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG_AER, DYNAPSE_CONFIG_CHIP,
-						DYNAPSE_CONFIG_CHIP_CONTENT, spiConfig, sizeof(spiConfig), 0);
-					if (result != sizeof(spiConfig)) {
+					if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER, DYNAPSE_CONFIG_CHIP,
+					DYNAPSE_CONFIG_CHIP_CONTENT, spiConfig, sizeof(spiConfig))) {
 						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-							"Failed to send chip config, USB transfer failed with error %d.", result);
+							"Failed to send chip config, USB transfer failed.");
 						return (false);
 					}
 
 					uint8_t check[2] = { 0 };
-					result = libusb_control_transfer(state->usbState.deviceHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG_AER, 0, 0, check, sizeof(check), 0);
-					if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER || check[1] != 0) {
+					bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER, 0, 0, check,
+						sizeof(check));
+					if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER || check[1] != 0) {
 						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 							"Failed to send chip config, USB transfer failed on verification.");
 						return (false);
@@ -430,7 +397,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
 				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_USB, paramAddr, param));
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -467,22 +434,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 				size_t configSize = configNum * 6;
 
-				int result = libusb_control_transfer(state->usbState.deviceHandle,
-					LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-					U16T(configSize), 0);
-				if (result != (int) configSize) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to clear CAM, USB transfer failed with error %d.", result);
+				if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum),
+					0, spiMultiConfig + idxConfig, U16T(configSize))) {
+					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to clear CAM, USB transfer failed.");
 					return (false);
 				}
 
 				uint8_t check[2] = { 0 };
-				result = libusb_control_transfer(state->usbState.deviceHandle,
-					LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-					VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+				bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0,
+					check, sizeof(check));
 
-				if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+				if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 						"Failed to clear CAM, USB transfer failed on verification.");
 					return (false);
@@ -535,21 +497,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			spiMultiConfig[11] = U8T((bits >> 0) & 0x0FF);
 
 			//usb send
-			int result = libusb_control_transfer(state->usbState.deviceHandle,
-				LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-				VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 2, 0, spiMultiConfig, sizeof(spiMultiConfig), 0);
-			if (result != sizeof(spiMultiConfig)) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Failed to monitor neuron, USB transfer failed with error %d.", result);
+			if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 2, 0, spiMultiConfig,
+				sizeof(spiMultiConfig))) {
+				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to monitor neuron, USB transfer failed.");
 				return (false);
 			}
 
 			uint8_t check[2] = { 0 };
-			result = libusb_control_transfer(state->usbState.deviceHandle,
-				LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-				VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+			bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check,
+				sizeof(check));
 
-			if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+			if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 					"Failed to monitor neuron, USB transfer failed on verification.");
 				return (false);
@@ -599,23 +557,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 						size_t configSize = configNum * 6;
 
-						int result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-							U16T(configSize), 0);
-						if (result != (int) configSize) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
+							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to clear SRAM, USB transfer failed with error %d.", result);
+								"Failed to clear SRAM, USB transfer failed.");
 							return (false);
 						}
 
 						uint8_t check[2] = { 0 };
-						result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+						bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0,
+							0, check, sizeof(check));
 
-						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
-							|| check[1] != 0) {
+						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to clear SRAM, USB transfer failed on verification.");
 							return (false);
@@ -687,23 +640,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 						size_t configSize = configNum * 6;
 
-						int result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-							U16T(configSize), 0);
-						if (result != (int) configSize) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
+							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
 						uint8_t check[2] = { 0 };
-						result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+						bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0,
+							0, check, sizeof(check));
 
-						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
-							|| check[1] != 0) {
+						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
@@ -758,23 +706,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 						size_t configSize = configNum * 6;
 
-						int result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-							U16T(configSize), 0);
-						if (result != (int) configSize) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
+							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
 						uint8_t check[2] = { 0 };
-						result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+						bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0,
+							0, check, sizeof(check));
 
-						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
-							|| check[1] != 0) {
+						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
@@ -826,23 +769,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 						size_t configSize = configNum * 6;
 
-						int result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-							U16T(configSize), 0);
-						if (result != (int) configSize) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
+							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
 						uint8_t check[2] = { 0 };
-						result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+						bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0,
+							0, check, sizeof(check));
 
-						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
-							|| check[1] != 0) {
+						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
@@ -897,23 +835,18 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 						size_t configSize = configNum * 6;
 
-						int result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig,
-							U16T(configSize), 0);
-						if (result != (int) configSize) {
+						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
+							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed with error %d.", result);
+								"Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
 						uint8_t check[2] = { 0 };
-						result = libusb_control_transfer(state->usbState.deviceHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+						bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0,
+							0, check, sizeof(check));
 
-						if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE
-							|| check[1] != 0) {
+						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
@@ -946,11 +879,11 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case CAER_HOST_CONFIG_USB:
 			switch (paramAddr) {
 				case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
-					*param = U32T(atomic_load(&state->usbBufferNumber));
+					*param = usbGetTransfersNumber(&state->usbState);
 					break;
 
 				case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
-					*param = U32T(atomic_load(&state->usbBufferSize));
+					*param = usbGetTransfersSize(&state->usbState);
 					break;
 
 				default:
@@ -1005,7 +938,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN:
 				case DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
 				case DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL:
-					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_MUX, paramAddr, param));
+					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET:
@@ -1020,14 +953,14 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_SRAM:
-			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, paramAddr, param));
+			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SRAM, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
-			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
 			break;
 		case DYNAPSE_CONFIG_SPIKEGEN:
-			return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
+			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_AER:
@@ -1037,7 +970,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_AER_ACK_EXTENSION:
 				case DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL:
 				case DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL:
-					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_AER, paramAddr, param));
+					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_AER, paramAddr, param));
 					break;
 
 				default:
@@ -1053,7 +986,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_CHIP_CONTENT:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
-					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_CHIP, paramAddr, param));
+					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
 
 				default:
@@ -1068,7 +1001,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER:
 				case DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER:
 				case DYNAPSE_CONFIG_SYSINFO_LOGIC_CLOCK:
-					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_SYSINFO, paramAddr, param));
+					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, paramAddr, param));
 					break;
 
 				default:
@@ -1081,7 +1014,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
 				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
-					return (spiConfigReceive(state->usbState.deviceHandle, DYNAPSE_CONFIG_USB, paramAddr, param));
+					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
 
 				default:
@@ -1108,8 +1041,8 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	state->dataNotifyIncrease = dataNotifyIncrease;
 	state->dataNotifyDecrease = dataNotifyDecrease;
 	state->dataNotifyUserPtr = dataNotifyUserPtr;
-	state->dataShutdownNotify = dataShutdownNotify;
-	state->dataShutdownUserPtr = dataShutdownUserPtr;
+
+	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
 	// Set wanted time interval to uninitialized. Getting the first TS or TS_RESET
 	// will then set this correctly.
@@ -1149,17 +1082,19 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	if ((errno = thrd_create(&state->dataAcquisitionThread, &dynapseDataAcquisitionThread, handle)) != thrd_success) {
+	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data acquisition thread. Error: %d.",
-		errno);
+		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data transfers.");
 		return (false);
 	}
 
-	// Wait for the data acquisition thread to be ready.
-	while (!atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)) {
-		;
+	if (atomic_load(&state->dataExchangeStartProducers)) {
+		// Enable data transfer on USB end-point 2.
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, true);
+		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, true);
 	}
 
 	return (true);
@@ -1169,7 +1104,6 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
-	// Stop data acquisition thread.
 	if (atomic_load(&state->dataExchangeStopProducers)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
@@ -1179,15 +1113,7 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, false);
 	}
 
-	atomic_store(&state->dataAcquisitionThreadRun, false);
-
-	// Wait for data acquisition thread to terminate...
-	if ((errno = thrd_join(state->dataAcquisitionThread, NULL)) != thrd_success) {
-		// This should never happen!
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to join data acquisition thread. Error: %d.",
-		errno);
-		return (false);
-	}
+	usbDataTransfersStop(&state->usbState);
 
 	// Empty ringbuffer.
 	caerEventPacketContainer container;
@@ -1264,7 +1190,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
 	// then any subsequent buffers should also detect shut-down and not be handled.
-	if (!atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)) {
+	if (!usbThreadIsRunning(&state->usbState)) {
 		return;
 	}
 
@@ -1585,7 +1511,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 					// Prevent dead-lock if shutdown is requested and nothing is consuming
 					// data anymore, but the ring-buffer is full (and would thus never empty),
 					// thus blocking the USB handling thread in this loop.
-					if (!atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)) {
+					if (!usbThreadIsRunning(&state->usbState)) {
 						return;
 					}
 				}
@@ -1596,82 +1522,6 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				}
 			}
 		}
-	}
-}
-
-static int dynapseDataAcquisitionThread(void *inPtr) {
-	// inPtr is a pointer to device handle.
-	dynapseHandle handle = inPtr;
-	dynapseState state = &handle->state;
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Initializing data acquisition thread ...");
-
-	// Set thread name.
-	thrd_set_name(state->deviceThreadName);
-
-	// Reset configuration update, so as to not re-do work afterwards.
-	atomic_store(&state->dataAcquisitionThreadConfigUpdate, 0);
-
-	if (atomic_load(&state->dataExchangeStartProducers)) {
-		// Enable data transfer on USB end-point 2.
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, true);
-		dynapseConfigSet((caerDeviceHandle) handle, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, true);
-	}
-
-	// Create buffers as specified in config file.
-	usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
-		U32T(atomic_load(&state->usbBufferSize)),
-		USB_DEFAULT_DATA_ENDPOINT);
-
-	// Signal data thread ready back to start function.
-	atomic_store(&state->dataAcquisitionThreadRun, true);
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "data acquisition thread ready to process events.");
-
-	// Handle USB events (1 second timeout).
-	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
-
-	while (atomic_load_explicit(&state->dataAcquisitionThreadRun, memory_order_relaxed)
-		&& state->usbState.activeDataTransfers > 0) {
-		// Check config refresh, in this case to adjust buffer sizes.
-		if (atomic_load_explicit(&state->dataAcquisitionThreadConfigUpdate, memory_order_relaxed) != 0) {
-			dynapseDataAcquisitionThreadConfig(handle);
-		}
-
-		libusb_handle_events_timeout(state->usbState.deviceContext, &te);
-	}
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "shutting down data acquisition thread ...");
-
-	// Cancel all transfers and handle them.
-	usbDeallocateTransfers(&state->usbState);
-
-	// Ensure shutdown is stored and notified, could be because of all data transfers going away!
-	atomic_store(&state->dataAcquisitionThreadRun, false);
-
-	if (state->dataShutdownNotify != NULL) {
-		state->dataShutdownNotify(state->dataShutdownUserPtr);
-	}
-
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "data acquisition thread shut down.");
-
-	return (EXIT_SUCCESS);
-}
-
-static void dynapseDataAcquisitionThreadConfig(dynapseHandle handle) {
-	dynapseState state = &handle->state;
-
-	// Get the current value to examine by atomic exchange, since we don't
-	// want there to be any possible store between a load/store pair.
-	uint32_t configUpdate = U32T(atomic_exchange(&state->dataAcquisitionThreadConfigUpdate, 0));
-
-	if ((configUpdate >> 0) & 0x01) {
-		// Do buffer size change: cancel all and recreate them.
-		usbDeallocateTransfers(&state->usbState);
-		usbAllocateTransfers(&state->usbState, U32T(atomic_load(&state->usbBufferNumber)),
-			U32T(atomic_load(&state->usbBufferSize)), USB_DEFAULT_DATA_ENDPOINT);
 	}
 }
 
@@ -1713,22 +1563,17 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 		size_t configSize = configNum * 6;
 
-		int result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize),
-			0);
-		if (result != (int) configSize) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed with error %d.", result);
+		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0,
+			spiMultiConfig + idxConfig, U16T(configSize))) {
+			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to clear CAM, USB transfer failed.");
 			return (false);
 		}
 
 		uint8_t check[2] = { 0 };
-		result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check), 0);
+		bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check,
+			sizeof(check));
 
-		if (result != sizeof(check) || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+		if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
 			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
 				"Failed to clear CAM, USB transfer failed on verification.");
 			return (false);
@@ -1759,16 +1604,15 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 
 	size_t numConfig = 0;
 	// Handle even and odd numbers of words to write
-	if ( numWords % 2 == 0 ) {
-		numConfig = numWords/2;
+	if (numWords % 2 == 0) {
+		numConfig = numWords / 2;
 	}
 	else {
 		// Handle the case where we have 1 trailing word
 		// by just writing it manually
-		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND,
-			      DYNAPSE_CONFIG_SRAM_WRITE);
-		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, data[numWords-1]);
-		spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr+(numWords-1));
+		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, data[numWords - 1]);
+		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr + (numWords - 1));
 
 		// reduce numWords to the, now even, number of remaining words.
 		// Otherwise the spiMultiConfig array filling loop will be incorrect
@@ -1776,12 +1620,11 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 
 		// return if there was only 1 word to write
 		if (numWords == 0) {
-			return true;
+			return (true);
 		}
-		numConfig = numWords/2;
+		numConfig = numWords / 2;
 
 	}
-
 
 	// We need malloc because allocating dynamically sized arrays on the stack is not allowed.
 	uint8_t *spiMultiConfig = malloc(numConfig * 6 * sizeof(*spiMultiConfig));
@@ -1795,19 +1638,19 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		// Data word configuration
 		spiMultiConfig[i * 6 + 0] = DYNAPSE_CONFIG_SRAM;
 		spiMultiConfig[i * 6 + 1] = DYNAPSE_CONFIG_SRAM_WRITEDATA;
-		spiMultiConfig[i * 6 + 2] = U8T((data[i*2+1] >> 8) & 0x0FF);
-		spiMultiConfig[i * 6 + 3] = U8T((data[i*2+1] >> 0) & 0x0FF);
-		spiMultiConfig[i * 6 + 4] = U8T((data[i*2] >> 8) & 0x0FF);
-		spiMultiConfig[i * 6 + 5] = U8T((data[i*2] >> 0) & 0x0FF);
+		spiMultiConfig[i * 6 + 2] = U8T((data[i * 2 + 1] >> 8) & 0x0FF);
+		spiMultiConfig[i * 6 + 3] = U8T((data[i * 2 + 1] >> 0) & 0x0FF);
+		spiMultiConfig[i * 6 + 4] = U8T((data[i * 2] >> 8) & 0x0FF);
+		spiMultiConfig[i * 6 + 5] = U8T((data[i * 2] >> 0) & 0x0FF);
 	}
 
 	// Prepare the SRAM controller for writing
 	// First we write the base address by writing a spoof word to it
-	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
-	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, 0x0);
-	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr);
+	spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+	spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, 0x0);
+	spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr);
 	// Then we enable burst mode
-	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 1);
+	spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 1);
 
 	size_t idxConfig = 0;
 
@@ -1816,12 +1659,9 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		size_t configNum = (numConfig > 85) ? (85) : (numConfig);
 		size_t configSize = configNum * 6;
 
-		int result = libusb_control_transfer(state->usbState.deviceHandle,
-			LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-			VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize), 0);
-		if (result != (int) configSize) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to send chip config, USB transfer failed with error %d.", result);
+		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, U16T(configNum), 0,
+			spiMultiConfig + idxConfig, U16T(configSize))) {
+			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to send chip config, USB transfer failed.");
 
 			free(spiMultiConfig);
 			return (false);
@@ -1832,7 +1672,7 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	}
 
 	// Disable burst mode again or things will go wrong when accessing the SRAM in the future
-	spiConfigSend(state->usbState.deviceHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 0);
+	spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_BURSTMODE, 0);
 
 	free(spiMultiConfig);
 
@@ -1894,7 +1734,8 @@ bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuron
 		return (false);
 	}
 
-	uint32_t bits = neuronId << 7| U32T(sramId << 5) | U32T(coreId << 15) | 1 << 17 | 1 << 4 | U32T(destinationCore << 18)
+	uint32_t bits = neuronId
+		<< 7| U32T(sramId << 5) | U32T(coreId << 15) | 1 << 17 | 1 << 4 | U32T(destinationCore << 18)
 		| U32T(sy << 27) | U32T(dy << 25) | U32T(dx << 22) | U32T(sx << 24) | U32T(virtualCoreId << 28);
 
 	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false) {

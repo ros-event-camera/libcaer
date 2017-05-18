@@ -4,11 +4,6 @@
 #include "devices/dynapse.h"
 #include "ringbuffer/ringbuffer.h"
 #include "usb_utils.h"
-#include <stdatomic.h>
-
-#if defined(HAVE_PTHREADS)
-	#include "c11threads_posix.h"
-#endif
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"
 
@@ -36,18 +31,8 @@ struct dynapse_state {
 	void (*dataNotifyIncrease)(void *ptr);
 	void (*dataNotifyDecrease)(void *ptr);
 	void *dataNotifyUserPtr;
-	void (*dataShutdownNotify)(void *ptr);
-	void *dataShutdownUserPtr;
 	// USB Device State
-	char deviceThreadName[15 + 1]; // +1 for terminating NUL character.
 	struct usb_state usbState;
-	// USB Transfer Settings
-	atomic_uint_fast32_t usbBufferNumber;
-	atomic_uint_fast32_t usbBufferSize;
-	// Data Acquisition Thread
-	thrd_t dataAcquisitionThread;
-	atomic_bool dataAcquisitionThreadRun;
-	atomic_uint_fast32_t dataAcquisitionThreadConfigUpdate;
 	// Timestamp fields
 	int32_t wrapOverflow;
 	int32_t wrapAdd;
