@@ -268,7 +268,11 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
 	mtx_lock(&state->dataTransfersLock);
 	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
-		usbAllocateTransfers(state);
+
+		// Check again, for exceptional shutdown may have set this to false.
+		if (usbDataTransfersAreRunning(state)) {
+			usbAllocateTransfers(state);
+		}
 	}
 	mtx_unlock(&state->dataTransfersLock);
 }
@@ -281,7 +285,11 @@ void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
 	mtx_lock(&state->dataTransfersLock);
 	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
-		usbAllocateTransfers(state);
+
+		// Check again, for exceptional shutdown may have set this to false.
+		if (usbDataTransfersAreRunning(state)) {
+			usbAllocateTransfers(state);
+		}
 	}
 	mtx_unlock(&state->dataTransfersLock);
 }
@@ -547,13 +555,16 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// The second and third case are intentional user actions, so we don't notify.
 	// In the first case, the last transfer to go away calls the shutdown
 	// callback and notifies that we're exiting, and not via normal cancellation.
-	uint32_t count = U32T(atomic_fetch_sub(&state->activeDataTransfers, 1));
-
-	if (count == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+	if (atomic_load(&state->activeDataTransfers) == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
 		// Ensure run is set to false on exceptional shut-down.
 		atomic_store(&state->dataTrasfersRun, false);
+	}
 
-		// Call shut-down callback,
+	// We make sure to first set 'dataTransfersRun' to false on exceptional
+	// shut-down, before doing the subtraction, so that anyone waiting on
+	// 'activeDataTransfers' to become zero, will see RUN changed to false too.
+	if (atomic_fetch_sub(&state->activeDataTransfers, 1) == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		// Call exceptional shut-down callback,
 		if (state->usbShutdownCallback != NULL) {
 			state->usbShutdownCallback(state->usbShutdownCallbackPtr);
 		}

@@ -1,4 +1,4 @@
-Release 2.0.3 - XX.05.2017 - IN_DEVELOPMENT
+Release 2.1.0 - XX.05.2017 - IN_DEVELOPMENT
 INCOMPATIBLE CHANGES
 - usb.h: the 'dataShutdownNotify' callback of caerDeviceDataStart() will only
   be called on exceptional shutdowns now. Normal shutdowns, such as those from
