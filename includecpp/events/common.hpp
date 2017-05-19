@@ -407,6 +407,14 @@ public:
 	}
 
 	// Generic Event Packet methods.
+	int64_t getDataSize() const noexcept {
+		return (caerEventPacketGetDataSize(header));
+	}
+
+	int64_t getSize() const noexcept {
+		return (caerEventPacketGetSize(header));
+	}
+
 	void clear() noexcept {
 		caerEventPacketClear(header);
 	}
