@@ -482,35 +482,27 @@ static bool usbAllocateTransfers(usbState state) {
 	return (true);
 }
 
-static inline void usbCancelTransfers(usbState state) {
-	// Cancel all current transfers.
-	for (size_t i = 0; i < state->dataTransfersLength; i++) {
-		if (state->dataTransfers[i] != NULL) {
-			errno = libusb_cancel_transfer(state->dataTransfers[i]);
-			if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
-				caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-					"Unable to cancel libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
-				// Proceed with trying to cancel all transfers regardless of errors.
-			}
-		}
-	}
-}
-
 // MUST LOCK ON 'dataTransfersLock'.
 static void usbCancelAndDeallocateTransfers(usbState state) {
-	// Cancel all transfers.
-	usbCancelTransfers(state);
-
 	// Wait for all transfers to go away.
 	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
 
 	while (atomic_load(&state->activeDataTransfers) > 0) {
+		// Continue trying to cancel all transfers until there are none left.
+		// It seems like one cancel pass is not enough and some hang around.
+		for (size_t i = 0; i < state->dataTransfersLength; i++) {
+			if (state->dataTransfers[i] != NULL) {
+				errno = libusb_cancel_transfer(state->dataTransfers[i]);
+				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
+					caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
+						"Unable to cancel libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
+					// Proceed with trying to cancel all transfers regardless of errors.
+				}
+			}
+		}
+
 		// Sleep for 1ms to avoid busy loop.
 		thrd_sleep(&waitForTerminationSleep, NULL);
-
-		// Continue trying to cancel all transfers until there are none left.
-		// It seems like the first cancel pass is not enough and some hang around.
-		usbCancelTransfers(state);
 	}
 
 	// No more transfers in flight, deallocate them all here.
