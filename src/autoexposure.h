@@ -4,6 +4,8 @@
 #include "libcaer.h"
 #include "events/frame.h"
 
+#define AUTOEXPOSURE_ENABLE_DEBUG_LOGGING 0
+
 #define AUTOEXPOSURE_HISTOGRAM_PIXELS 256
 #define AUTOEXPOSURE_HISTOGRAM_MSV 5
 #define AUTOEXPOSURE_LOW_BOUNDARY 0.13f

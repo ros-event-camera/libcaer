@@ -29,8 +29,10 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 }
 
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame, uint32_t exposureLastSetValue) {
-	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
-	caerLog(CAER_LOG_DEBUG, "AutoExposure", "Frame exposure value was: %d.", caerFrameEventGetExposureLength(frame));
+#if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
+	caerLog(CAER_LOG_ERROR, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
+	caerLog(CAER_LOG_ERROR, "AutoExposure", "Frame exposure value was: %d.", caerFrameEventGetExposureLength(frame));
+#endif
 
 	int32_t frameSizeX = caerFrameEventGetLengthX(frame);
 	int32_t frameSizeY = caerFrameEventGetLengthY(frame);
@@ -74,9 +76,11 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	float pixelsFracLow = (float) pixelsSumLow / (float) pixelsSum;
 	float pixelsFracHigh = (float) pixelsSumHigh / (float) pixelsSum;
 
-	caerLog(CAER_LOG_DEBUG, "AutoExposure",
+#if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
+	caerLog(CAER_LOG_ERROR, "AutoExposure",
 		"BinLow: %zu, BinHigh: %zu, Sum: %zu, SumLow: %zu, SumHigh: %zu, FracLow: %f, FracHigh: %f.", pixelsBinLow,
 		pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow, (double) pixelsFracHigh);
+#endif
 
 	// Exposure okay by default.
 	int32_t newExposure = -1;
@@ -105,7 +109,9 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 //		float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
 //		float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0f) - meanSampleValue;
 //
-//		caerLog(CAER_LOG_DEBUG, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
+//#if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
+//		caerLog(CAER_LOG_ERROR, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
+//#endif
 //
 //		// If we're not too underexposed or overexposed, use MSV to optimize.
 //		if (meanSampleValueError > 0.1f) {
