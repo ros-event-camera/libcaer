@@ -550,6 +550,10 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	uint32_t count = U32T(atomic_fetch_sub(&state->activeDataTransfers, 1));
 
 	if (count == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		// Ensure run is set to false on exceptional shut-down.
+		atomic_store(&state->dataTrasfersRun, false);
+
+		// Call shut-down callback,
 		if (state->usbShutdownCallback != NULL) {
 			state->usbShutdownCallback(state->usbShutdownCallbackPtr);
 		}
