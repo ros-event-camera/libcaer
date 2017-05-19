@@ -1,6 +1,16 @@
 #include "dynapse.h"
 
+static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
+
+static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
+		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
+		format, argumentList);
+	va_end(argumentList);
+}
 
 // i = index, x = amount of columns, y = amount of rows
 static inline uint32_t dynapseCalculateCoordinatesNeuX(uint32_t index, uint32_t columns, uint32_t rows) {
@@ -36,7 +46,7 @@ static inline uint32_t dynapseCalculateCoordinatesNeuY(uint32_t index, uint32_t 
 
 static inline void checkStrictMonotonicTimestamp(dynapseHandle handle) {
 	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
+		dynapseLog(CAER_LOG_ALERT, handle,
 			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
 			handle->state.lastTimestamp, handle->state.currentTimestamp,
 			(handle->state.lastTimestamp - handle->state.currentTimestamp));
@@ -103,6 +113,11 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	atomic_store(&state->maxPacketContainerPacketSize, 8192);
 	atomic_store(&state->maxPacketContainerInterval, 10000);
 
+	// Logging settings (initialize to global log-level).
+	enum caer_log_level globalLogLevel = caerLogLevelGet();
+	atomic_store(&state->deviceLogLevel, globalLogLevel);
+	atomic_store(&state->usbState.usbLogLevel, globalLogLevel);
+
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
 	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s ID-%" PRIu16, DYNAPSE_DEVICE_NAME, deviceID);
@@ -159,9 +174,8 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
 	handle->info.chipID = I16T(param32);
 
-	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
-		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
-		usbInfo.devAddress);
+	dynapseLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+		usbInfo.busNumber, usbInfo.devAddress);
 
 	return ((caerDeviceHandle) handle);
 }
@@ -170,7 +184,7 @@ bool dynapseClose(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutting down ...");
+	dynapseLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Shut down USB handling thread.
 	usbThreadStop(&state->usbState);
@@ -182,7 +196,7 @@ bool dynapseClose(caerDeviceHandle cdh) {
 	free(handle->info.deviceString);
 	free(handle);
 
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
+	dynapseLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	return (true);
 }
@@ -269,6 +283,21 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
 					atomic_store(&state->maxPacketContainerInterval, param);
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					atomic_store(&state->deviceLogLevel, U8T(param));
+
+					// Set USB log-level to this value too.
+					atomic_store(&state->usbState.usbLogLevel, U8T(param));
 					break;
 
 				default:
@@ -365,8 +394,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 					if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER, DYNAPSE_CONFIG_CHIP,
 					DYNAPSE_CONFIG_CHIP_CONTENT, spiConfig, sizeof(spiConfig))) {
-						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-							"Failed to send chip config, USB transfer failed.");
+						dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send chip config, USB transfer failed.");
 						return (false);
 					}
 
@@ -374,7 +402,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER, 0, 0, check,
 						sizeof(check));
 					if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER || check[1] != 0) {
-						caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+						dynapseLog(CAER_LOG_CRITICAL, handle,
 							"Failed to send chip config, USB transfer failed on verification.");
 						return (false);
 					}
@@ -436,7 +464,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 				if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum),
 					0, spiMultiConfig + idxConfig, U16T(configSize))) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to clear CAM, USB transfer failed.");
+					dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed.");
 					return (false);
 				}
 
@@ -445,8 +473,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					check, sizeof(check));
 
 				if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to clear CAM, USB transfer failed on verification.");
+					dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed on verification.");
 					return (false);
 				}
 
@@ -468,15 +495,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			uint32_t reset = coreid << 8 | 1 << 11 | 0 << 12 | 0 << 13 | 0 << 16 | 0 << 17; // reset monitor for this core
 
 			if (neuid >= DYNAPSE_CONFIG_NUMNEURONS_CORE) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Failed to monitor neuron, neuron id: %d is invalid.", neuid);
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to monitor neuron, neuron id: %d is invalid.", neuid);
 				return (false);
 			}
 			else {
 				col = dynapseCalculateCoordinatesNeuX(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
 				row = dynapseCalculateCoordinatesNeuY(neuid, DYNAPSE_CONFIG_NEUROW, DYNAPSE_CONFIG_NEUCOL);
-				caerLog(CAER_LOG_NOTICE, handle->info.deviceString, "Neuron ID %d results in neu at col: %d row: %d.",
-					neuid, col, row);
+				dynapseLog(CAER_LOG_NOTICE, handle, "Neuron ID %d results in neu at col: %d row: %d.", neuid, col, row);
 				bits = coreid << 8 | 0 << 10 | 0 << 11 | 0 << 12 | 0 << 13 | 0 << 16 | 0 << 17 | row << 4 | col;
 
 			}
@@ -499,7 +524,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			//usb send
 			if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 2, 0, spiMultiConfig,
 				sizeof(spiMultiConfig))) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to monitor neuron, USB transfer failed.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to monitor neuron, USB transfer failed.");
 				return (false);
 			}
 
@@ -508,8 +533,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				sizeof(check));
 
 			if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-					"Failed to monitor neuron, USB transfer failed on verification.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to monitor neuron, USB transfer failed on verification.");
 				return (false);
 			}
 
@@ -559,8 +583,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
 							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to clear SRAM, USB transfer failed.");
+							dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear SRAM, USB transfer failed.");
 							return (false);
 						}
 
@@ -569,7 +592,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							0, check, sizeof(check));
 
 						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							dynapseLog(CAER_LOG_CRITICAL, handle,
 								"Failed to clear SRAM, USB transfer failed on verification.");
 							return (false);
 						}
@@ -642,8 +665,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
 							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed.");
+							dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
@@ -652,7 +674,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							0, check, sizeof(check));
 
 						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							dynapseLog(CAER_LOG_CRITICAL, handle,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
@@ -708,8 +730,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
 							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed.");
+							dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
@@ -718,7 +739,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							0, check, sizeof(check));
 
 						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							dynapseLog(CAER_LOG_CRITICAL, handle,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
@@ -771,8 +792,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
 							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed.");
+							dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
@@ -781,7 +801,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							0, check, sizeof(check));
 
 						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							dynapseLog(CAER_LOG_CRITICAL, handle,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
@@ -837,8 +857,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE,
 							U16T(configNum), 0, spiMultiConfig + idxConfig, U16T(configSize))) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-								"Failed to set SRAM, USB transfer failed.");
+							dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to set SRAM, USB transfer failed.");
 							return (false);
 						}
 
@@ -847,7 +866,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 							0, check, sizeof(check));
 
 						if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-							caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
+							dynapseLog(CAER_LOG_CRITICAL, handle,
 								"Failed to set SRAM, USB transfer failed on verification.");
 							return (false);
 						}
@@ -924,6 +943,18 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
 					*param = U32T(atomic_load(&state->maxPacketContainerInterval));
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					*param = atomic_load(&state->deviceLogLevel);
 					break;
 
 				default:
@@ -1051,7 +1082,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	// Initialize RingBuffer.
 	state->dataExchangeBuffer = ringBufferInit(atomic_load(&state->dataExchangeBufferSize));
 	if (state->dataExchangeBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to initialize data exchange buffer.");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
 
@@ -1060,7 +1091,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	if (state->currentPacketContainer == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 		return (false);
 	}
 
@@ -1069,7 +1100,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	if (state->currentSpikePacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate spike event packet.");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 		return (false);
 	}
 
@@ -1078,14 +1109,14 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	if (state->currentSpecialPacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data transfers.");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
 		return (false);
 	}
 
@@ -1196,8 +1227,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x01) != 0) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
-			"%zu bytes received via USB, which is not a multiple of two.", bytesSent);
+		dynapseLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bytesSent);
 		bytesSent &= (size_t) ~0x01;
 	}
 
@@ -1207,7 +1237,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			state->currentPacketContainer = caerEventPacketContainerAllocate(
 			DYNAPSE_EVENT_TYPES);
 			if (state->currentPacketContainer == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 				return;
 			}
 		}
@@ -1216,7 +1246,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			state->currentSpikePacket = caerSpikeEventPacketAllocate(
 			DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentSpikePacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate spike event packet.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 				return;
 			}
 		}
@@ -1227,7 +1257,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			caerSpikeEventPacket grownPacket = (caerSpikeEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpikePacket, state->currentSpikePacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow spike event packet.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to grow spike event packet.");
 				return;
 			}
 
@@ -1238,7 +1268,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
 			DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
@@ -1249,7 +1279,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow special event packet.");
+				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
@@ -1280,7 +1310,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				case 0: // Special event
 					switch (data) {
 						case 0: // Ignore this, but log it.
-							caerLog(CAER_LOG_ERROR, handle->info.deviceString, "Caught special reserved event!");
+							dynapseLog(CAER_LOG_ERROR, handle, "Caught special reserved event!");
 							break;
 
 						case 1: { // Timetamp reset
@@ -1291,7 +1321,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 							state->currentPacketContainerCommitTimestamp = -1;
 							initContainerCommitTimestamp(state);
 
-							caerLog(CAER_LOG_INFO, handle->info.deviceString, "Timestamp reset event received.");
+							dynapseLog(CAER_LOG_INFO, handle, "Timestamp reset event received.");
 
 							// Defer timestamp reset event to later, so we commit it
 							// alone, in its own packet.
@@ -1302,8 +1332,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						}
 
 						default:
-							caerLog(CAER_LOG_ERROR, handle->info.deviceString,
-								"Caught special event that can't be handled: %d.", data);
+							dynapseLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.", data);
 							break;
 					}
 					break;
@@ -1384,7 +1413,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						// Check monotonicity of timestamps.
 						checkStrictMonotonicTimestamp(handle);
 
-						caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+						dynapseLog(CAER_LOG_DEBUG, handle,
 							"Timestamp wrap event received with multiplier of %" PRIu16 ".", data);
 					}
 
@@ -1392,7 +1421,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				}
 
 				default:
-					caerLog(CAER_LOG_ERROR, handle->info.deviceString, "Caught event that can't be handled.");
+					dynapseLog(CAER_LOG_ERROR, handle, "Caught event that can't be handled.");
 					break;
 			}
 		}
@@ -1455,8 +1484,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
-					caerLog(CAER_LOG_INFO, handle->info.deviceString,
-						"Dropped EventPacket Container because ring-buffer full!");
+					dynapseLog(CAER_LOG_INFO, handle, "Dropped EventPacket Container because ring-buffer full!");
 
 					caerEventPacketContainerFree(state->currentPacketContainer);
 					state->currentPacketContainer = NULL;
@@ -1480,8 +1508,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				// Allocate packet container just for this event.
 				caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(DYNAPSE_EVENT_TYPES);
 				if (tsResetContainer == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset event packet container.");
+					dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
 					return;
 				}
 
@@ -1489,8 +1516,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
 					state->wrapOverflow);
 				if (tsResetPacket == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset special event packet.");
+					dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;
 				}
 
@@ -1565,7 +1591,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 
 		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0,
 			spiMultiConfig + idxConfig, U16T(configSize))) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to clear CAM, USB transfer failed.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed.");
 			return (false);
 		}
 
@@ -1574,8 +1600,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 			sizeof(check));
 
 		if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-				"Failed to clear CAM, USB transfer failed on verification.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed on verification.");
 			return (false);
 		}
 
@@ -1630,7 +1655,7 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	uint8_t *spiMultiConfig = malloc(numConfig * 6 * sizeof(*spiMultiConfig));
 
 	if (spiMultiConfig == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to malloc spiMultiConfigArray");
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to malloc spiMultiConfigArray");
 		return (false); // No memory allocated, don't need to free.
 	}
 
@@ -1661,7 +1686,7 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 
 		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, U16T(configNum), 0,
 			spiMultiConfig + idxConfig, U16T(configSize))) {
-			caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to send chip config, USB transfer failed.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send chip config, USB transfer failed.");
 
 			free(spiMultiConfig);
 			return (false);

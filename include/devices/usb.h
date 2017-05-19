@@ -33,6 +33,10 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * Module address: host-side event packets generation configuration.
  */
 #define CAER_HOST_CONFIG_PACKETS -3
+/**
+ * Module address: host-side logging configuration.
+ */
+#define CAER_HOST_CONFIG_LOG -4
 
 /**
  * Parameter address for module CAER_HOST_CONFIG_USB:
@@ -104,6 +108,14 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * types of events contained in the EventPacketContainer.
  */
 #define CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL    1
+
+/**
+ * Parameter address for module CAER_HOST_CONFIG_LOG:
+ * set the log-level for this device, to be used when logging
+ * messages. Defaults to the value of the global log-level
+ * when the device was first opened.
+ */
+#define CAER_HOST_CONFIG_LOG_LEVEL 0
 
 /**
  * Open a specified USB device, assign an ID to it and return a handle for further usage.

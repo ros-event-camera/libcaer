@@ -35,7 +35,7 @@ caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 }
 
 bool davisFX3Close(caerDeviceHandle cdh) {
-	caerLog(CAER_LOG_DEBUG, ((davisHandle) cdh)->info.deviceString, "Shutting down ...");
+	davisCommonLog(CAER_LOG_DEBUG, (davisHandle) cdh, "Shutting down ...");
 
 	cancelAndDeallocateDebugTransfers((davisFX3Handle) cdh);
 
@@ -75,7 +75,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
 		handle->debugTransfers[i] = libusb_alloc_transfer(0);
 		if (handle->debugTransfers[i] == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+			davisCommonLog(CAER_LOG_CRITICAL, (davisHandle) handle,
 				"Unable to allocate further libusb transfers (debug channel, %zu of %" PRIu32 ").", i,
 				DEBUG_TRANSFER_NUM);
 			continue;
@@ -85,7 +85,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 		handle->debugTransfers[i]->length = DEBUG_TRANSFER_SIZE;
 		handle->debugTransfers[i]->buffer = malloc(DEBUG_TRANSFER_SIZE);
 		if (handle->debugTransfers[i]->buffer == NULL) {
-			caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+			davisCommonLog(CAER_LOG_CRITICAL, (davisHandle) handle,
 				"Unable to allocate buffer for libusb transfer %zu (debug channel). Error: %d.", i, errno);
 
 			libusb_free_transfer(handle->debugTransfers[i]);
@@ -107,7 +107,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 			atomic_fetch_add(&handle->activeDebugTransfers, 1);
 		}
 		else {
-			caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+			davisCommonLog(CAER_LOG_CRITICAL, (davisHandle) handle,
 				"Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).", i, libusb_strerror(errno),
 				errno);
 
@@ -122,7 +122,7 @@ static void allocateDebugTransfers(davisFX3Handle handle) {
 
 	if (atomic_load(&handle->activeDebugTransfers) == 0) {
 		// Didn't manage to allocate any USB transfers, log failure.
-		caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+		davisCommonLog(CAER_LOG_CRITICAL, (davisHandle) handle,
 			"Unable to allocate any libusb transfers (debug channel).");
 	}
 }
@@ -138,7 +138,7 @@ static void cancelAndDeallocateDebugTransfers(davisFX3Handle handle) {
 			if (handle->debugTransfers[i] != NULL) {
 				errno = libusb_cancel_transfer(handle->debugTransfers[i]);
 				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
-					caerLog(CAER_LOG_CRITICAL, handle->h.info.deviceString,
+					davisCommonLog(CAER_LOG_CRITICAL, (davisHandle) handle,
 						"Unable to cancel libusb transfer %zu (debug channel). Error: %s (%d).", i,
 						libusb_strerror(errno),
 						errno);
@@ -188,11 +188,11 @@ static void debugTranslator(davisFX3Handle handle, uint8_t *buffer, size_t bytes
 	// Check if this is a debug message (length 7-64 bytes).
 	if (bytesSent >= 7 && buffer[0] == 0x00) {
 		// Debug message, log this.
-		caerLog(CAER_LOG_ERROR, handle->h.info.deviceString, "Error message: '%s' (code %u at time %u).", &buffer[6],
+		davisCommonLog(CAER_LOG_ERROR, (davisHandle) handle, "Error message: '%s' (code %u at time %u).", &buffer[6],
 			buffer[1], *((uint32_t *) &buffer[2]));
 	}
 	else {
 		// Unknown/invalid debug message, log this.
-		caerLog(CAER_LOG_WARNING, handle->h.info.deviceString, "Unknown/invalid debug message.");
+		davisCommonLog(CAER_LOG_WARNING, (davisHandle) handle, "Unknown/invalid debug message.");
 	}
 }

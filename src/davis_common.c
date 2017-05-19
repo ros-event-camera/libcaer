@@ -3,9 +3,18 @@
 static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static void davisTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
 
+void davisCommonLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
+		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
+		format, argumentList);
+	va_end(argumentList);
+}
+
 static inline void checkStrictMonotonicTimestamp(davisHandle handle) {
 	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
+		davisCommonLog(CAER_LOG_ALERT, handle,
 			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
 			handle->state.lastTimestamp, handle->state.currentTimestamp,
 			(handle->state.lastTimestamp - handle->state.currentTimestamp));
@@ -199,6 +208,11 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	atomic_store(&state->maxPacketContainerPacketSize, 8192);
 	atomic_store(&state->maxPacketContainerInterval, 10000);
 
+	// Logging settings (initialize to global log-level).
+	enum caer_log_level globalLogLevel = caerLogLevelGet();
+	atomic_store(&state->deviceLogLevel, globalLogLevel);
+	atomic_store(&state->usbState.usbLogLevel, globalLogLevel);
+
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
 	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s ID-%" PRIu16, deviceName, deviceID);
@@ -316,9 +330,8 @@ bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char 
 	state->imuFlipY = param32 & 0x02;
 	state->imuFlipZ = param32 & 0x01;
 
-	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
-		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
-		usbInfo.devAddress);
+	davisCommonLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+		usbInfo.busNumber, usbInfo.devAddress);
 
 	return (true);
 }
@@ -336,7 +349,7 @@ bool davisCommonClose(davisHandle handle) {
 	free(handle->info.deviceString);
 	free(handle);
 
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
+	davisCommonLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	return (true);
 }
@@ -819,6 +832,21 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
 					atomic_store(&state->maxPacketContainerInterval, param);
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					atomic_store(&state->deviceLogLevel, U8T(param));
+
+					// Set USB log-level to this value too.
+					atomic_store(&state->usbState.usbLogLevel, U8T(param));
 					break;
 
 				default:
@@ -1510,6 +1538,18 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 			}
 			break;
 
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					*param = atomic_load(&state->deviceLogLevel);
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DAVIS_CONFIG_MUX:
 			switch (paramAddr) {
 				case DAVIS_CONFIG_MUX_RUN:
@@ -2095,7 +2135,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	// Initialize RingBuffer.
 	state->dataExchangeBuffer = ringBufferInit(atomic_load(&state->dataExchangeBufferSize));
 	if (state->dataExchangeBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to initialize data exchange buffer.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
 
@@ -2104,7 +2144,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentPacketContainer == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 		return (false);
 	}
 
@@ -2113,7 +2153,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentPolarityPacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate polarity event packet.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
@@ -2122,7 +2162,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentSpecialPacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
@@ -2131,7 +2171,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentFramePacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate frame event packet.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 		return (false);
 	}
 
@@ -2143,7 +2183,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentFrameEvent[0] == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate ROI frame events.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate ROI frame events.");
 		return (false);
 	}
 
@@ -2157,7 +2197,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentIMU6Packet == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate IMU6 event packet.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 		return (false);
 	}
 
@@ -2166,7 +2206,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->currentSamplePacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
 		return (false);
 	}
 
@@ -2175,7 +2215,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (state->apsCurrentResetFrame == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate APS reset frame memory.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS reset frame memory.");
 		return (false);
 	}
 
@@ -2207,7 +2247,7 @@ bool davisCommonDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data transfers.");
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
 		return (false);
 	}
 
@@ -2341,8 +2381,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x01) != 0) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
-			"%zu bytes received via USB, which is not a multiple of two.", bytesSent);
+		davisCommonLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.",
+			bytesSent);
 		bytesSent &= (size_t) ~0x01;
 	}
 
@@ -2351,7 +2391,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		if (state->currentPacketContainer == NULL) {
 			state->currentPacketContainer = caerEventPacketContainerAllocate(DAVIS_EVENT_TYPES);
 			if (state->currentPacketContainer == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 				return;
 			}
 		}
@@ -2360,7 +2400,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			state->currentPolarityPacket = caerPolarityEventPacketAllocate(
 			DAVIS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentPolarityPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate polarity event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
@@ -2371,7 +2411,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow polarity event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
 				return;
 			}
 
@@ -2382,7 +2422,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
 			DAVIS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
@@ -2393,7 +2433,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow special event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
@@ -2405,7 +2445,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow, state->apsSizeX,
 				state->apsSizeY, 1);
 			if (state->currentFramePacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate frame event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
 			}
 		}
@@ -2416,7 +2456,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			caerFrameEventPacket grownPacket = (caerFrameEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentFramePacket, state->currentFramePacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow frame event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to grow frame event packet.");
 				return;
 			}
 
@@ -2427,7 +2467,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			state->currentIMU6Packet = caerIMU6EventPacketAllocate(
 			DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentIMU6Packet == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate IMU6 event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 				return;
 			}
 		}
@@ -2438,7 +2478,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			caerIMU6EventPacket grownPacket = (caerIMU6EventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentIMU6Packet, state->currentIMU6PacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow IMU6 event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to grow IMU6 event packet.");
 				return;
 			}
 
@@ -2449,7 +2489,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			state->currentSamplePacket = caerSampleEventPacketAllocate(
 			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentSamplePacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate Sample event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
 				return;
 			}
 		}
@@ -2460,7 +2500,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSamplePacket, state->currentSamplePacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow Sample event packet.");
+				davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to grow Sample event packet.");
 				return;
 			}
 
@@ -2491,7 +2531,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				case 0: // Special event
 					switch (data) {
 						case 0: // Ignore this, but log it.
-							caerLog(CAER_LOG_ERROR, handle->info.deviceString, "Caught special reserved event!");
+							davisCommonLog(CAER_LOG_ERROR, handle, "Caught special reserved event!");
 							break;
 
 						case 1: { // Timetamp reset
@@ -2502,7 +2542,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							state->currentPacketContainerCommitTimestamp = -1;
 							initContainerCommitTimestamp(state);
 
-							caerLog(CAER_LOG_INFO, handle->info.deviceString, "Timestamp reset event received.");
+							davisCommonLog(CAER_LOG_INFO, handle, "Timestamp reset event received.");
 
 							// Defer timestamp reset event to later, so we commit it
 							// alone, in its own packet.
@@ -2517,8 +2557,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 2: { // External input (falling edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input (falling edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2530,8 +2569,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 3: { // External input (rising edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input (rising edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2543,8 +2581,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 4: { // External input (pulse)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input (pulse) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2556,7 +2593,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 5: { // IMU Start (6 axes)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "IMU6 Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "IMU6 Start event received.");
 
 							state->imuIgnoreEvents = false;
 							state->imuCount = 0;
@@ -2567,7 +2604,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 7: { // IMU End
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "IMU End event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "IMU End event received.");
 							if (state->imuIgnoreEvents) {
 								break;
 							}
@@ -2594,7 +2631,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								state->currentIMU6PacketPosition++;
 							}
 							else {
-								caerLog(CAER_LOG_INFO, handle->info.deviceString,
+								davisCommonLog(CAER_LOG_INFO, handle,
 									"IMU End: failed to validate IMU sample count (%" PRIu8 "), discarding samples.",
 									state->imuCount);
 							}
@@ -2602,7 +2639,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 8: { // APS Global Shutter Frame Start
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS GS Frame Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS GS Frame Start event received.");
 							state->apsIgnoreEvents = false;
 							state->apsGlobalShutter = true;
 							state->apsResetRead = true;
@@ -2613,7 +2650,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 9: { // APS Rolling Shutter Frame Start
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS RS Frame Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS RS Frame Start event received.");
 							state->apsIgnoreEvents = false;
 							state->apsGlobalShutter = false;
 							state->apsResetRead = true;
@@ -2624,7 +2661,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 10: { // APS Frame End
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS Frame End event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Frame End event received.");
 							if (state->apsIgnoreEvents) {
 								break;
 							}
@@ -2639,11 +2676,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 									checkValue = 0;
 								}
 
-								caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS Frame End: CountX[%zu] is %d.",
-									j, state->apsCountX[j]);
+								davisCommonLog(CAER_LOG_DEBUG, handle, "APS Frame End: CountX[%zu] is %d.", j,
+									state->apsCountX[j]);
 
 								if (state->apsCountX[j] != checkValue) {
-									caerLog(CAER_LOG_ERROR, handle->info.deviceString,
+									davisCommonLog(CAER_LOG_ERROR, handle,
 										"APS Frame End - %zu: wrong column count %d detected, expected %d.", j,
 										state->apsCountX[j], checkValue);
 									validFrame = false;
@@ -2697,14 +2734,14 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
-										caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+										davisCommonLog(CAER_LOG_DEBUG, handle,
 											"Automatic exposure control set exposure to %" PRIu32 " µs.",
 											newExposureValue);
 
 										state->apsAutoExposureLastSetValue = U32T(newExposureValue);
 										spiConfigSendAsync(&state->usbState, DAVIS_CONFIG_APS,
 										DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureValue * U16T(handle->info.adcClock)),
-											NULL, NULL);
+										NULL, NULL);
 									}
 								}
 							}
@@ -2713,8 +2750,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 11: { // APS Reset Column Start
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"APS Reset Column Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Reset Column Start event received.");
 							if (state->apsIgnoreEvents) {
 								break;
 							}
@@ -2744,8 +2780,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 12: { // APS Signal Column Start
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"APS Signal Column Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Signal Column Start event received.");
 							if (state->apsIgnoreEvents) {
 								break;
 							}
@@ -2774,19 +2809,19 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 13: { // APS Column End
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS Column End event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Column End event received.");
 							if (state->apsIgnoreEvents) {
 								break;
 							}
 
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS Column End: CountX[%d] is %d.",
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Column End: CountX[%d] is %d.",
 								state->apsCurrentReadoutType, state->apsCountX[state->apsCurrentReadoutType]);
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "APS Column End: CountY[%d] is %d.",
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS Column End: CountY[%d] is %d.",
 								state->apsCurrentReadoutType, state->apsCountY[state->apsCurrentReadoutType]);
 
 							if (state->apsCountY[state->apsCurrentReadoutType]
 								!= caerFrameEventGetLengthY(state->currentFrameEvent[0])) {
-								caerLog(CAER_LOG_ERROR, handle->info.deviceString,
+								davisCommonLog(CAER_LOG_ERROR, handle,
 									"APS Column End - %d: wrong row count %d detected, expected %d.",
 									state->apsCurrentReadoutType, state->apsCountY[state->apsCurrentReadoutType],
 									caerFrameEventGetLengthY(state->currentFrameEvent[0]));
@@ -2815,8 +2850,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 14: { // APS Global Shutter Frame Start with no Reset Read
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"APS GS NORST Frame Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS GS NORST Frame Start event received.");
 							state->apsIgnoreEvents = false;
 							state->apsGlobalShutter = true;
 							state->apsResetRead = false;
@@ -2835,8 +2869,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 15: { // APS Rolling Shutter Frame Start with no Reset Read
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"APS RS NORST Frame Start event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "APS RS NORST Frame Start event received.");
 							state->apsIgnoreEvents = false;
 							state->apsGlobalShutter = false;
 							state->apsResetRead = false;
@@ -2870,8 +2903,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 29:
 						case 30:
 						case 31: {
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"IMU Scale Config event (%" PRIu16 ") received.", data);
+							davisCommonLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.",
+								data);
 							if (state->imuIgnoreEvents) {
 								break;
 							}
@@ -2883,7 +2916,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							// At this point the IMU event count should be zero (reset by start).
 							if (state->imuCount != 0) {
-								caerLog(CAER_LOG_INFO, handle->info.deviceString,
+								davisCommonLog(CAER_LOG_INFO, handle,
 									"IMU Scale Config: previous IMU start event missed, attempting recovery.");
 							}
 
@@ -2932,8 +2965,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 36: { // External input 1 (falling edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 1 (falling edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 1 (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2945,8 +2977,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 37: { // External input 1 (rising edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 1 (rising edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 1 (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2958,8 +2989,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 38: { // External input 1 (pulse)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 1 (pulse) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 1 (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2971,8 +3001,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 39: { // External input 2 (falling edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 2 (falling edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 2 (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2984,8 +3013,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 40: { // External input 2 (rising edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 2 (rising edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 2 (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -2997,8 +3025,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 41: { // External input 2 (pulse)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External input 2 (pulse) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External input 2 (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -3010,8 +3037,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 42: { // External generator (falling edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External generator (falling edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -3023,8 +3049,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						case 43: { // External generator (rising edge)
-							caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
-								"External generator (rising edge) event received.");
+							davisCommonLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -3036,8 +3061,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						default:
-							caerLog(CAER_LOG_ERROR, handle->info.deviceString,
-								"Caught special event that can't be handled: %d.", data);
+							davisCommonLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.",
+								data);
 							break;
 					}
 					break;
@@ -3045,8 +3070,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				case 1: // Y address
 					// Check range conformity.
 					if (data >= state->dvsSizeY) {
-						caerLog(CAER_LOG_ALERT, handle->info.deviceString,
-							"DVS: Y address out of range (0-%d): %" PRIu16 ".", state->dvsSizeY - 1, data);
+						davisCommonLog(CAER_LOG_ALERT, handle, "DVS: Y address out of range (0-%d): %" PRIu16 ".",
+							state->dvsSizeY - 1, data);
 						break; // Skip invalid Y address (don't update lastY).
 					}
 
@@ -3061,7 +3086,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 						state->currentSpecialPacketPosition++;
 
-						caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+						davisCommonLog(CAER_LOG_DEBUG, handle,
 							"DVS: row-only event received for address Y=%" PRIu16 ".", state->dvsLastY);
 					}
 
@@ -3074,8 +3099,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				case 3: { // X address, Polarity ON
 					// Check range conformity.
 					if (data >= state->dvsSizeX) {
-						caerLog(CAER_LOG_ALERT, handle->info.deviceString,
-							"DVS: X address out of range (0-%d): %" PRIu16 ".", state->dvsSizeX - 1, data);
+						davisCommonLog(CAER_LOG_ALERT, handle, "DVS: X address out of range (0-%d): %" PRIu16 ".",
+							state->dvsSizeX - 1, data);
 						break; // Skip invalid event.
 					}
 
@@ -3117,7 +3142,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					// reading out a frame with a bigger, old size.
 					if (state->apsCountX[state->apsCurrentReadoutType]
 						>= caerFrameEventGetLengthX(state->currentFrameEvent[0])) {
-						caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+						davisCommonLog(CAER_LOG_DEBUG, handle,
 							"APS ADC sample: column count is at maximum, discarding further samples.");
 						break;
 					}
@@ -3126,7 +3151,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					// if start/end of column events are discarded (no wait on transfer stall).
 					if (state->apsCountY[state->apsCurrentReadoutType]
 						>= caerFrameEventGetLengthY(state->currentFrameEvent[0])) {
-						caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+						davisCommonLog(CAER_LOG_DEBUG, handle,
 							"APS ADC sample: row count is at maximum, discarding further samples.");
 						break;
 					}
@@ -3245,7 +3270,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							U16T(pixelValue));
 					}
 
-					caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+					davisCommonLog(CAER_LOG_DEBUG, handle,
 						"APS ADC Sample: column=%" PRIu16 ", row=%" PRIu16 ", xPos=%" PRIu16 ", yPos=%" PRIu16 ", data=%" PRIu16 ".",
 						state->apsCountX[state->apsCurrentReadoutType], state->apsCountY[state->apsCurrentReadoutType],
 						xPos, yPos, data);
@@ -3285,7 +3310,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							// Detect missing IMU end events.
 							if (state->imuCount >= IMU6_COUNT) {
-								caerLog(CAER_LOG_INFO, handle->info.deviceString,
+								davisCommonLog(CAER_LOG_INFO, handle,
 									"IMU data: IMU samples count is at maximum, discarding further samples.");
 								break;
 							}
@@ -3293,7 +3318,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// IMU data event.
 							switch (state->imuCount) {
 								case 0:
-									caerLog(CAER_LOG_ERROR, handle->info.deviceString,
+									davisCommonLog(CAER_LOG_ERROR, handle,
 										"IMU data: missing IMU Scale Config event. Parsing of IMU events will still be attempted, but be aware that Accel/Gyro scale conversions may be inaccurate.");
 									state->imuCount = 1;
 									// Fall through to next case, as if imuCount was equal to 1.
@@ -3478,8 +3503,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						default:
-							caerLog(CAER_LOG_ERROR, handle->info.deviceString,
-								"Caught Misc8 event that can't be handled.");
+							davisCommonLog(CAER_LOG_ERROR, handle, "Caught Misc8 event that can't be handled.");
 							break;
 					}
 
@@ -3529,7 +3553,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						// Check monotonicity of timestamps.
 						checkStrictMonotonicTimestamp(handle);
 
-						caerLog(CAER_LOG_DEBUG, handle->info.deviceString,
+						davisCommonLog(CAER_LOG_DEBUG, handle,
 							"Timestamp wrap event received with multiplier of %" PRIu16 ".", data);
 					}
 
@@ -3537,7 +3561,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				}
 
 				default:
-					caerLog(CAER_LOG_ERROR, handle->info.deviceString, "Caught event that can't be handled.");
+					davisCommonLog(CAER_LOG_ERROR, handle, "Caught event that can't be handled.");
 					break;
 			}
 		}
@@ -3642,8 +3666,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
-					caerLog(CAER_LOG_INFO, handle->info.deviceString,
-						"Dropped EventPacket Container because ring-buffer full!");
+					davisCommonLog(CAER_LOG_INFO, handle, "Dropped EventPacket Container because ring-buffer full!");
 
 					caerEventPacketContainerFree(state->currentPacketContainer);
 					state->currentPacketContainer = NULL;
@@ -3667,8 +3690,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				// Allocate packet container just for this event.
 				caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(DAVIS_EVENT_TYPES);
 				if (tsResetContainer == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset event packet container.");
+					davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
 					return;
 				}
 
@@ -3676,8 +3698,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
 					state->wrapOverflow);
 				if (tsResetPacket == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset special event packet.");
+					davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;
 				}
 

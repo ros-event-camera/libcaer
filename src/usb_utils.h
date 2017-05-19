@@ -20,6 +20,8 @@
 #define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
 
 struct usb_state {
+	// Per-device log-level (USB functions)
+	atomic_uint_fast8_t usbLogLevel;
 	// USB Device State
 	libusb_context *deviceContext;
 	libusb_device_handle *deviceHandle;

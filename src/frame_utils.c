@@ -645,7 +645,7 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
 			}
 		}
 		else {
-			caerLog(CAER_LOG_WARNING, "caerFrameUtilsContrast()",
+			caerLog(CAER_LOG_WARNING, __func__,
 				"Standard contrast enhancement only works with grayscale images. For color image support, please use caerFrameUtilsOpenCVContrast().");
 		}
 	CAER_FRAME_ITERATOR_VALID_END

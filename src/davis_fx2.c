@@ -16,7 +16,7 @@ caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	bool openRetVal = davisCommonOpen((davisHandle) handle, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID,
 	DAVIS_FX2_DEVICE_NAME, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict,
-		DAVIS_FX2_REQUIRED_LOGIC_REVISION, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
+	DAVIS_FX2_REQUIRED_LOGIC_REVISION, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
 	if (!openRetVal) {
 		free(handle);
 
@@ -28,7 +28,7 @@ caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint
 }
 
 bool davisFX2Close(caerDeviceHandle cdh) {
-	caerLog(CAER_LOG_DEBUG, ((davisHandle) cdh)->info.deviceString, "Shutting down ...");
+	davisCommonLog(CAER_LOG_DEBUG, (davisHandle) cdh, "Shutting down ...");
 
 	return (davisCommonClose((davisHandle) cdh));
 }

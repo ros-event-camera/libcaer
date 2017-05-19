@@ -134,7 +134,7 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 				}
 			}
 			else {
-				caerLog(CAER_LOG_WARNING, "caerFrameUtilsOpenCVDemosaic()",
+				caerLog(CAER_LOG_WARNING, __func__,
 					"OpenCV demosaicing doesn't support the RGBW color filter, only RGBG. Please use caerFrameUtilsDemosaic() instead.");
 			}
 		}

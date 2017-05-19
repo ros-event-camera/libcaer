@@ -39,6 +39,8 @@
 #define DAVIS_SAMPLE_DEFAULT_SIZE 512
 
 struct davis_state {
+	// Per-device log-level
+	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
 	RingBuffer dataExchangeBuffer;
 	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
@@ -134,6 +136,8 @@ struct davis_handle {
 };
 
 typedef struct davis_handle *davisHandle;
+
+void davisCommonLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 
 bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char *deviceName, uint16_t deviceID,
 	uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict,

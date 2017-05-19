@@ -1,11 +1,21 @@
 #include "dvs128.h"
 
+static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
 
+static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
+		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
+		format, argumentList);
+	va_end(argumentList);
+}
+
 static inline void checkMonotonicTimestamp(dvs128Handle handle) {
 	if (handle->state.currentTimestamp < handle->state.lastTimestamp) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
+		dvs128Log(CAER_LOG_ALERT, handle,
 			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
 			handle->state.lastTimestamp, handle->state.currentTimestamp,
 			(handle->state.lastTimestamp - handle->state.currentTimestamp));
@@ -71,6 +81,11 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	atomic_store(&state->maxPacketContainerPacketSize, 4096);
 	atomic_store(&state->maxPacketContainerInterval, 10000);
 
+	// Logging settings (initialize to global log-level).
+	enum caer_log_level globalLogLevel = caerLogLevelGet();
+	atomic_store(&state->deviceLogLevel, globalLogLevel);
+	atomic_store(&state->usbState.usbLogLevel, globalLogLevel);
+
 	// Always master by default.
 	atomic_store(&state->dvsIsMaster, true);
 
@@ -124,9 +139,8 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	handle->info.dvsSizeX = DVS_ARRAY_SIZE_X;
 	handle->info.dvsSizeY = DVS_ARRAY_SIZE_Y;
 
-	caerLog(CAER_LOG_DEBUG, usbInfo.deviceString,
-		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
-		usbInfo.devAddress);
+	dvs128Log(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+		usbInfo.busNumber, usbInfo.devAddress);
 
 	return ((caerDeviceHandle) handle);
 }
@@ -135,7 +149,7 @@ bool dvs128Close(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
 	dvs128State state = &handle->state;
 
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutting down ...");
+	dvs128Log(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Shut down USB handling thread.
 	usbThreadStop(&state->usbState);
@@ -147,7 +161,7 @@ bool dvs128Close(caerDeviceHandle cdh) {
 	free(handle->info.deviceString);
 	free(handle);
 
-	caerLog(CAER_LOG_DEBUG, handle->info.deviceString, "Shutdown successful.");
+	dvs128Log(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	return (true);
 }
@@ -246,6 +260,21 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
 					atomic_store(&state->maxPacketContainerInterval, param);
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					atomic_store(&state->deviceLogLevel, U8T(param));
+
+					// Set USB log-level to this value too.
+					atomic_store(&state->usbState.usbLogLevel, U8T(param));
 					break;
 
 				default:
@@ -401,6 +430,18 @@ bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 			}
 			break;
 
+		case CAER_HOST_CONFIG_LOG:
+			switch (paramAddr) {
+				case CAER_HOST_CONFIG_LOG_LEVEL:
+					*param = atomic_load(&state->deviceLogLevel);
+					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		case DVS128_CONFIG_DVS:
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
@@ -473,7 +514,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	// Initialize RingBuffer.
 	state->dataExchangeBuffer = ringBufferInit(atomic_load(&state->dataExchangeBufferSize));
 	if (state->dataExchangeBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to initialize data exchange buffer.");
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
 
@@ -482,7 +523,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	if (state->currentPacketContainer == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 		return (false);
 	}
 
@@ -491,7 +532,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	if (state->currentPolarityPacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate polarity event packet.");
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
@@ -500,14 +541,14 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 	if (state->currentSpecialPacket == NULL) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to start data transfers.");
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
 		return (false);
 	}
 
@@ -621,8 +662,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x03) != 0) {
-		caerLog(CAER_LOG_ALERT, handle->info.deviceString,
-			"%zu bytes received via USB, which is not a multiple of four.", bytesSent);
+		dvs128Log(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bytesSent);
 		bytesSent &= (size_t) ~0x03;
 	}
 
@@ -631,7 +671,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 		if (state->currentPacketContainer == NULL) {
 			state->currentPacketContainer = caerEventPacketContainerAllocate(DVS_EVENT_TYPES);
 			if (state->currentPacketContainer == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate event packet container.");
+				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 				return;
 			}
 		}
@@ -640,7 +680,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			state->currentPolarityPacket = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentPolarityPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate polarity event packet.");
+				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
@@ -651,7 +691,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow polarity event packet.");
+				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
 				return;
 			}
 
@@ -662,7 +702,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to allocate special event packet.");
+				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
@@ -673,7 +713,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
 				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
 			if (grownPacket == NULL) {
-				caerLog(CAER_LOG_CRITICAL, handle->info.deviceString, "Failed to grow special event packet.");
+				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
@@ -769,12 +809,12 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 				// Check range conformity.
 				if (x >= DVS_ARRAY_SIZE_X) {
-					caerLog(CAER_LOG_ALERT, handle->info.deviceString, "X address out of range (0-%d): %" PRIu16 ".",
+					dvs128Log(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
 					DVS_ARRAY_SIZE_X - 1, x);
 					continue; // Skip invalid event.
 				}
 				if (y >= DVS_ARRAY_SIZE_Y) {
-					caerLog(CAER_LOG_ALERT, handle->info.deviceString, "Y address out of range (0-%d): %" PRIu16 ".",
+					dvs128Log(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
 					DVS_ARRAY_SIZE_Y - 1, y);
 					continue; // Skip invalid event.
 				}
@@ -851,8 +891,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
-					caerLog(CAER_LOG_INFO, handle->info.deviceString,
-						"Dropped EventPacket Container because ring-buffer full!");
+					dvs128Log(CAER_LOG_INFO, handle, "Dropped EventPacket Container because ring-buffer full!");
 
 					caerEventPacketContainerFree(state->currentPacketContainer);
 					state->currentPacketContainer = NULL;
@@ -876,8 +915,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				// Allocate packet container just for this event.
 				caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(DVS_EVENT_TYPES);
 				if (tsResetContainer == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset event packet container.");
+					dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
 					return;
 				}
 
@@ -885,8 +923,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
 					state->wrapOverflow);
 				if (tsResetPacket == NULL) {
-					caerLog(CAER_LOG_CRITICAL, handle->info.deviceString,
-						"Failed to allocate tsReset special event packet.");
+					dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;
 				}
 

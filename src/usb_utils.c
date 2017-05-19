@@ -25,6 +25,7 @@ struct usb_config_receive_struct {
 
 typedef struct usb_config_receive_struct *usbConfigReceive;
 
+static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static int usbThreadRun(void *usbStatePtr);
 static bool usbAllocateTransfers(usbState state);
 static void usbCancelAndDeallocateTransfers(usbState state);
@@ -38,6 +39,15 @@ static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
 static void syncControlInCallback(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
 static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
+
+static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
+		atomic_load_explicit(&state->usbLogLevel, memory_order_relaxed), logLevel, state->usbThreadName, format,
+		argumentList);
+	va_end(argumentList);
+}
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
@@ -57,7 +67,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	thrd_set_name(originalThreadName);
 
 	if (res != LIBUSB_SUCCESS) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Failed to initialize libusb context. Error: %d.", res);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize libusb context. Error: %d.", res);
 		return (false);
 	}
 
@@ -79,7 +89,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID) {
 				// If a USB port restriction is given, honor it first.
 				if (busNumber > 0 && libusb_get_bus_number(devicesList[i]) != busNumber) {
-					caerLog(CAER_LOG_ERROR, state->usbThreadName,
+					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						busNumber, libusb_get_bus_number(devicesList[i]));
 
@@ -87,7 +97,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				if (devAddress > 0 && libusb_get_device_address(devicesList[i]) != devAddress) {
-					caerLog(CAER_LOG_ERROR, state->usbThreadName,
+					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						devAddress, libusb_get_device_address(devicesList[i]));
 
@@ -96,7 +106,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				// Verify device firmware version (after port restriction).
 				if (requiredFirmwareVersion >= 0 && U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion)) {
-					caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
+					caerUSBLog(CAER_LOG_CRITICAL, state,
 						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
 
@@ -128,7 +138,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						libusb_close(devHandle);
 						devHandle = NULL;
 
-						caerLog(CAER_LOG_ERROR, state->usbThreadName,
+						caerUSBLog(CAER_LOG_ERROR, state,
 							"USB serial number restriction is present (%s), this device didn't match it (%s).",
 							serialNumber, deviceSerialNumber);
 
@@ -190,7 +200,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						libusb_close(devHandle);
 						devHandle = NULL;
 
-						caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
+						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 							param32, U32T(requiredLogicRevision));
 
@@ -222,7 +232,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 	// Didn't find anything.
 	libusb_exit(state->deviceContext);
-	caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Failed to open device.");
+	caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to open device.");
 	return (false);
 }
 
@@ -314,7 +324,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 
 	// Check serial number success and length.
 	if (getStringDescResult < 0 || getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to get serial number for %s device.", deviceName);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to get serial number for %s device.", deviceName);
 
 		struct usb_info emptyInfo = { 0, .deviceString = NULL };
 		return (emptyInfo);
@@ -325,8 +335,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 
 	char *fullLogString = malloc(fullLogStringLength + 1);
 	if (fullLogString == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to allocate memory for %s device info string.",
-			deviceName);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate memory for %s device info string.", deviceName);
 
 		struct usb_info emptyInfo = { 0, .deviceString = NULL };
 		return (emptyInfo);
@@ -366,7 +375,7 @@ void usbThreadStop(usbState state) {
 	// Wait for USB thread to terminate.
 	if ((errno = thrd_join(state->usbThread, NULL)) != thrd_success) {
 		// This should never happen!
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Failed to join USB thread. Error: %d.", errno);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to join USB thread. Error: %d.", errno);
 	}
 }
 
@@ -375,7 +384,7 @@ void usbThreadStop(usbState state) {
 static int usbThreadRun(void *usbStatePtr) {
 	usbState state = usbStatePtr;
 
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "Starting USB thread ...");
+	caerUSBLog(CAER_LOG_DEBUG, state, "Starting USB thread ...");
 
 	// Set thread name.
 	thrd_set_name(state->usbThreadName);
@@ -383,7 +392,7 @@ static int usbThreadRun(void *usbStatePtr) {
 	// Signal data thread ready back to start function.
 	atomic_store(&state->usbThreadRun, true);
 
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread running.");
+	caerUSBLog(CAER_LOG_DEBUG, state, "USB thread running.");
 
 	// Handle USB events (1 second timeout).
 	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
@@ -392,7 +401,7 @@ static int usbThreadRun(void *usbStatePtr) {
 		libusb_handle_events_timeout(state->deviceContext, &te);
 	}
 
-	caerLog(CAER_LOG_DEBUG, state->usbThreadName, "USB thread shut down.");
+	caerUSBLog(CAER_LOG_DEBUG, state, "USB thread shut down.");
 
 	return (EXIT_SUCCESS);
 }
@@ -423,8 +432,8 @@ static bool usbAllocateTransfers(usbState state) {
 	// Set number of transfers and allocate memory for the main transfer array.
 	state->dataTransfers = calloc(bufferNum, sizeof(struct libusb_transfer *));
 	if (state->dataTransfers == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-			"Failed to allocate memory for %" PRIu32 " libusb transfers. Error: %d.", bufferNum, errno);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to allocate memory for %" PRIu32 " libusb transfers. Error: %d.",
+			bufferNum, errno);
 		return (false);
 	}
 	state->dataTransfersLength = bufferNum;
@@ -433,8 +442,8 @@ static bool usbAllocateTransfers(usbState state) {
 	for (size_t i = 0; i < bufferNum; i++) {
 		state->dataTransfers[i] = libusb_alloc_transfer(0);
 		if (state->dataTransfers[i] == NULL) {
-			caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-				"Unable to allocate further libusb transfers (%zu of %" PRIu32 ").", i, bufferNum);
+			caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate further libusb transfers (%zu of %" PRIu32 ").", i,
+				bufferNum);
 			continue;
 		}
 
@@ -442,9 +451,8 @@ static bool usbAllocateTransfers(usbState state) {
 		state->dataTransfers[i]->length = (int) bufferSize;
 		state->dataTransfers[i]->buffer = malloc(bufferSize);
 		if (state->dataTransfers[i]->buffer == NULL) {
-			caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-				"Unable to allocate buffer for libusb transfer %zu. Error: %d.", i,
-				errno);
+			caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb transfer %zu. Error: %d.", i,
+			errno);
 
 			libusb_free_transfer(state->dataTransfers[i]);
 			state->dataTransfers[i] = NULL;
@@ -465,7 +473,7 @@ static bool usbAllocateTransfers(usbState state) {
 			atomic_fetch_add(&state->activeDataTransfers, 1);
 		}
 		else {
-			caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to submit libusb transfer %zu. Error: %s (%d).", i,
+			caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to submit libusb transfer %zu. Error: %s (%d).", i,
 				libusb_strerror(errno), errno);
 
 			// The transfer buffer is freed automatically here thanks to
@@ -483,7 +491,7 @@ static bool usbAllocateTransfers(usbState state) {
 		state->dataTransfers = NULL;
 		state->dataTransfersLength = 0;
 
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName, "Unable to allocate any libusb transfers.");
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate any libusb transfers.");
 		return (false);
 	}
 
@@ -502,8 +510,8 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 			if (state->dataTransfers[i] != NULL) {
 				errno = libusb_cancel_transfer(state->dataTransfers[i]);
 				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
-					caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-						"Unable to cancel libusb transfer %zu. Error: %s (%d).", i, libusb_strerror(errno), errno);
+					caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to cancel libusb transfer %zu. Error: %s (%d).", i,
+						libusb_strerror(errno), errno);
 					// Proceed with trying to cancel all transfers regardless of errors.
 				}
 			}
@@ -594,9 +602,8 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 	uint8_t *controlTransferBuffer = calloc(1,
 		(LIBUSB_CONTROL_SETUP_SIZE + dataSize + sizeof(struct usb_control_struct)));
 	if (controlTransferBuffer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, state->usbThreadName,
-			"Unable to allocate buffer for libusb control transfer. Error: %d.",
-			errno);
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb control transfer. Error: %d.",
+		errno);
 
 		libusb_free_transfer(controlTransfer);
 

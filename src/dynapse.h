@@ -22,6 +22,8 @@
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
 
 struct dynapse_state {
+	// Per-device log-level
+	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
 	RingBuffer dataExchangeBuffer;
 	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
