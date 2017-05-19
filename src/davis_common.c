@@ -1059,7 +1059,7 @@ bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
 					if (!atomic_load(&state->apsAutoExposureEnabled)) {
-						state->apsAutoExposureLastSetValue = param;
+						state->apsExposureLastSetValue = param;
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr,
 							param * U16T(handle->info.adcClock)));
 					}
@@ -1715,7 +1715,7 @@ bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr,
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
 					// Use stored value, no need to call out to USB for this one.
-					*param = state->apsAutoExposureLastSetValue;
+					*param = state->apsExposureLastSetValue;
 					break;
 
 				case DAVIS_CONFIG_APS_FRAME_DELAY: {
@@ -2730,7 +2730,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								// Automatic exposure control support.
 								if (atomic_load_explicit(&state->apsAutoExposureEnabled, memory_order_relaxed)) {
 									int32_t newExposureValue = autoExposureCalculate(&state->apsAutoExposureState,
-										currentFrameEvent, state->apsAutoExposureLastSetValue);
+										currentFrameEvent, state->apsExposureFrameValue / U16T(handle->info.adcClock),
+										state->apsExposureLastSetValue);
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
@@ -2738,7 +2739,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 											"Automatic exposure control set exposure to %" PRIu32 " µs.",
 											newExposureValue);
 
-										state->apsAutoExposureLastSetValue = U32T(newExposureValue);
+										state->apsExposureLastSetValue = U32T(newExposureValue);
 										spiConfigSendAsync(&state->usbState, DAVIS_CONFIG_APS,
 										DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureValue * U16T(handle->info.adcClock)),
 										NULL, NULL);
@@ -3060,6 +3061,24 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							break;
 						}
 
+						case 48: { // Exposure info 0
+							state->apsExposureFrameUpdate = 0;
+
+							// Reset value.
+							state->apsExposureFrameValue = 0;
+							break;
+						}
+
+						case 49: { // Exposure info 1
+							state->apsExposureFrameUpdate = 1;
+							break;
+						}
+
+						case 50: { // Exposure info 2
+							state->apsExposureFrameUpdate = 2;
+							break;
+						}
+
 						default:
 							davisCommonLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.",
 								data);
@@ -3297,8 +3316,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				}
 
 				case 5: {
-					// Misc 8bit data, used currently only
-					// for IMU events in DAVIS FX3 boards.
+					// Misc 8bit data.
 					uint8_t misc8Code = U8T((data & 0x0F00) >> 8);
 					uint8_t misc8Data = U8T(data & 0x00FF);
 
@@ -3504,6 +3522,24 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 						default:
 							davisCommonLog(CAER_LOG_ERROR, handle, "Caught Misc8 event that can't be handled.");
+							break;
+					}
+
+					break;
+				}
+
+				case 6: {
+					// Misc 10bit data.
+					uint8_t misc10Code = U8T((data & 0x0C00) >> 10);
+					uint16_t misc10Data = U16T(data & 0x03FF);
+
+					switch (misc10Code) {
+						case 0:
+							state->apsExposureFrameValue |= (U32T(misc10Data) << (10 * state->apsExposureFrameUpdate));
+							break;
+
+						default:
+							davisCommonLog(CAER_LOG_ERROR, handle, "Caught Misc10 event that can't be handled.");
 							break;
 					}
 

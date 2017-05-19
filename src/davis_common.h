@@ -84,8 +84,10 @@ struct davis_state {
 	uint16_t apsROISizeY[APS_ROI_REGIONS_MAX];
 	uint16_t apsROIPositionX[APS_ROI_REGIONS_MAX];
 	uint16_t apsROIPositionY[APS_ROI_REGIONS_MAX];
+	uint8_t apsExposureFrameUpdate;
+	uint32_t apsExposureFrameValue;
+	uint32_t apsExposureLastSetValue;
 	atomic_bool apsAutoExposureEnabled;
-	uint32_t apsAutoExposureLastSetValue;
 	struct auto_exposure_state apsAutoExposureState;
 	// IMU specific fields
 	bool imuIgnoreEvents;
