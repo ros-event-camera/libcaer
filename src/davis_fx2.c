@@ -59,11 +59,25 @@ bool davisFX2SendDefaultConfig(caerDeviceHandle cdh) {
 bool davisFX2ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
 	davisHandle handle = (davisHandle) cdh;
 
+	if (modAddr == DAVIS_CONFIG_USB && paramAddr == DAVIS_CONFIG_USB_EARLY_PACKET_DELAY) {
+		// Early packet delay is 125µs slices on host, but in cycles
+		// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
+		param = param * (125 * DAVIS_FX2_USB_CLOCK_FREQ);
+	}
+
 	return (davisCommonConfigSet(handle, modAddr, paramAddr, param));
 }
 
 bool davisFX2ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
 	davisHandle handle = (davisHandle) cdh;
 
-	return (davisCommonConfigGet(handle, modAddr, paramAddr, param));
+	bool retVal = davisCommonConfigGet(handle, modAddr, paramAddr, param);
+
+	if (retVal && modAddr == DAVIS_CONFIG_USB && paramAddr == DAVIS_CONFIG_USB_EARLY_PACKET_DELAY) {
+		// Early packet delay is 125µs slices on host, but in cycles
+		// @ USB_CLOCK_FREQ on FPGA, so we must divide here.
+		*param = *param / (125 * DAVIS_FX2_USB_CLOCK_FREQ);
+	}
+
+	return (retVal);
 }

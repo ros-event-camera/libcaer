@@ -3061,21 +3061,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							break;
 						}
 
-						case 48: { // Exposure info 0
+						case 48: { // Exposure information.
+							// Reset counter and value.
 							state->apsExposureFrameUpdate = 0;
-
-							// Reset value.
 							state->apsExposureFrameValue = 0;
-							break;
-						}
-
-						case 49: { // Exposure info 1
-							state->apsExposureFrameUpdate = 1;
-							break;
-						}
-
-						case 50: { // Exposure info 2
-							state->apsExposureFrameUpdate = 2;
 							break;
 						}
 
@@ -3465,13 +3454,6 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							break;
 						}
 
-						case 3: {
-							// APS ADC depth info, use directly as ADC depth.
-							// 16 bits is the maximum supported depth for APS.
-							// Currently not being used by anything!
-							break;
-						}
-
 						case 4: {
 							// Microphone FIRST RIGHT.
 							state->micRight = true;
@@ -3535,7 +3517,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 					switch (misc10Code) {
 						case 0:
-							state->apsExposureFrameValue |= (U32T(misc10Data) << (10 * state->apsExposureFrameUpdate));
+							state->apsExposureFrameValue |= (U32T(misc10Data) << (10 * state->apsExposureFrameUpdate++));
 							break;
 
 						default:

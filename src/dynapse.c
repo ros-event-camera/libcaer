@@ -225,6 +225,8 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL, false);
 
+	// TODO: on next logic update, this will switch to be in cycles, not 125µs blocks.
+	// So will need to multiply by: 125 * 30 (FX2_USB_CLOCK_FREQ).
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
 
 	return (true);
