@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.0.2-r6ec01651e3ccb6cff2c8dce5fa5983ad9c072900</span>
+   &#160;<span id="projectnumber">2.1.0-r5411646e53c736fd46ad67855ead8bcc5a5f2057</span>
    </div>
   </td>
  </tr>
@@ -84,6 +84,8 @@ Macros</h2></td></tr>
 <tr class="separator:a1a6f4350e648a7d0e8179a6857a8cbc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b2538639278f1c4857ff7928d9b4e5b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#a6b2538639278f1c4857ff7928d9b4e5b">CAER_HOST_CONFIG_PACKETS</a>&#160;&#160;&#160;-3</td></tr>
 <tr class="separator:a6b2538639278f1c4857ff7928d9b4e5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b0d3f820334979dc240c37d7751f5e5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#a0b0d3f820334979dc240c37d7751f5e5">CAER_HOST_CONFIG_LOG</a>&#160;&#160;&#160;-4</td></tr>
+<tr class="separator:a0b0d3f820334979dc240c37d7751f5e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef29ec70ae0ff30bf3ea19b6b11899db"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#aef29ec70ae0ff30bf3ea19b6b11899db">CAER_HOST_CONFIG_USB_BUFFER_NUMBER</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:aef29ec70ae0ff30bf3ea19b6b11899db"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a169ec9420012362b607ffcc870006399"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#a169ec9420012362b607ffcc870006399">CAER_HOST_CONFIG_USB_BUFFER_SIZE</a>&#160;&#160;&#160;1</td></tr>
@@ -100,6 +102,8 @@ Macros</h2></td></tr>
 <tr class="separator:af6cca6e03350c494d10f2b59ee2fdae7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add13e8c8848d7fbc850ff9b17e8998f6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#add13e8c8848d7fbc850ff9b17e8998f6">CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL</a>&#160;&#160;&#160;1</td></tr>
 <tr class="separator:add13e8c8848d7fbc850ff9b17e8998f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49a6211dbddfb30a6f72a79d0c1694e9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="usb_8h.html#a49a6211dbddfb30a6f72a79d0c1694e9">CAER_HOST_CONFIG_LOG_LEVEL</a>&#160;&#160;&#160;0</td></tr>
+<tr class="separator:a49a6211dbddfb30a6f72a79d0c1694e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -200,6 +204,36 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Parameter address for module CAER_HOST_CONFIG_DATAEXCHANGE: whether to stop all the data producer modules on the device (DVS, APS, Mux, ...) automatically when stopping the USB data transfer thread with <a class="el" href="usb_8h.html#ab43e79e5b066b30ef4a2b5cdaed66095">caerDeviceDataStop()</a> or not. If disabled, be aware you will have to stop the right modules manually, to halt the data flow, which can be useful if you need precise control over which ones are running at any time. </p>
+
+</div>
+</div>
+<a id="a0b0d3f820334979dc240c37d7751f5e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b0d3f820334979dc240c37d7751f5e5">&#9670;&nbsp;</a></span>CAER_HOST_CONFIG_LOG</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_HOST_CONFIG_LOG&#160;&#160;&#160;-4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Module address: host-side logging configuration. </p>
+
+</div>
+</div>
+<a id="a49a6211dbddfb30a6f72a79d0c1694e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a49a6211dbddfb30a6f72a79d0c1694e9">&#9670;&nbsp;</a></span>CAER_HOST_CONFIG_LOG_LEVEL</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CAER_HOST_CONFIG_LOG_LEVEL&#160;&#160;&#160;0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Parameter address for module CAER_HOST_CONFIG_LOG: set the log-level for this device, to be used when logging messages. Defaults to the value of the global log-level when the device was first opened. </p>
 
 </div>
 </div>

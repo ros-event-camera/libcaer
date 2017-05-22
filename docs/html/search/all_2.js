@@ -62,6 +62,8 @@ var searchData=
   ['caer_5fhost_5fconfig_5fdataexchange_5fbuffer_5fsize',['CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE',['../usb_8h.html#a95454842b646e5c9eb30f16fa0b45bbf',1,'usb.h']]],
   ['caer_5fhost_5fconfig_5fdataexchange_5fstart_5fproducers',['CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS',['../usb_8h.html#aa602906918fefe5af7e4d8d7d8d40bc4',1,'usb.h']]],
   ['caer_5fhost_5fconfig_5fdataexchange_5fstop_5fproducers',['CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS',['../usb_8h.html#a69f27a206ddd073985d414cb6e8cb908',1,'usb.h']]],
+  ['caer_5fhost_5fconfig_5flog',['CAER_HOST_CONFIG_LOG',['../usb_8h.html#a0b0d3f820334979dc240c37d7751f5e5',1,'usb.h']]],
+  ['caer_5fhost_5fconfig_5flog_5flevel',['CAER_HOST_CONFIG_LOG_LEVEL',['../usb_8h.html#a49a6211dbddfb30a6f72a79d0c1694e9',1,'usb.h']]],
   ['caer_5fhost_5fconfig_5fpackets',['CAER_HOST_CONFIG_PACKETS',['../usb_8h.html#a6b2538639278f1c4857ff7928d9b4e5b',1,'usb.h']]],
   ['caer_5fhost_5fconfig_5fpackets_5fmax_5fcontainer_5finterval',['CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL',['../usb_8h.html#add13e8c8848d7fbc850ff9b17e8998f6',1,'usb.h']]],
   ['caer_5fhost_5fconfig_5fpackets_5fmax_5fcontainer_5fpacket_5fsize',['CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE',['../usb_8h.html#af6cca6e03350c494d10f2b59ee2fdae7',1,'usb.h']]],
