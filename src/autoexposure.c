@@ -21,9 +21,9 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 		newExposure--;
 	}
 
-	// Clip exposure at minimum (0µs).
-	if (newExposure < 0) {
-		newExposure = 0;
+	// Clip exposure at minimum (1µs).
+	if (newExposure < 1) {
+		newExposure = 1;
 	}
 
 	return (newExposure);
@@ -143,15 +143,17 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		// If we're not too underexposed or overexposed, use MSV to optimize.
 		if (meanSampleValueError > 0.1f) {
 			// Underexposed.
-			newExposure = I32T(exposureLastSetValue) + (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
-			+ I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
+			newExposure = I32T(exposureLastSetValue)
+				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
+					+ I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
 
 			newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 		}
 		else if (meanSampleValueError < -0.1f) {
 			// Overexposed.
-			newExposure = I32T(exposureLastSetValue) + (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
-			- I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
+			newExposure = I32T(exposureLastSetValue)
+				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
+					- I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
 
 			newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 		}
