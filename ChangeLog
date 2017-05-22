@@ -1,11 +1,11 @@
-Release 2.1.0 - 2X.05.2017 - IN_DEVELOPMENT
+Release 2.1.0 - 22.05.2017
 INCOMPATIBLE CHANGES
 - usb.h: the 'dataShutdownNotify' callback of caerDeviceDataStart() will only
   be called on exceptional shutdowns now. Normal shutdowns, such as those from
   calling caerDeviceDataStop(), will not execute the callback anymore.
   The documentation for caerDeviceDataStart() and caerDeviceDataStop() has been
   updated accordingly.
-- DAVIS: require logic revision 9880.
+- DAVIS: requires new logic revision 9880.
 
 NEW FEATURES
 - davis.h: added automatic exposure control, can be turned on/off with
