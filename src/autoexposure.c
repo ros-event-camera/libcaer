@@ -91,37 +91,23 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow, (double) pixelsFracHigh);
 #endif
 
+	float fracLowError = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
+	float fracHighError = pixelsFracHigh - AUTOEXPOSURE_UNDEROVER_FRAC;
+
 	// Exposure okay by default.
 	int32_t newExposure = -1;
 
 	if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Underexposed but not overexposed.
-		newExposure = I32T(exposureLastSetValue) + I32T(pixelsFracLow * AUTOEXPOSURE_UNDEROVER_CORRECTION);
+		newExposure = I32T(exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * fracLowError);
 
 		newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 	}
 	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Overexposed but not underexposed.
-		newExposure = I32T(exposureLastSetValue) - I32T(pixelsFracHigh * AUTOEXPOSURE_UNDEROVER_CORRECTION);
+		newExposure = I32T( exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * fracHighError);
 
 		newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
-	}
-	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC)) {
-		// Both underexposed and overexposed, try to balance them out.
-		if (fabsf(pixelsFracHigh - pixelsFracLow) > 0.01f) {
-			if (pixelsFracHigh < pixelsFracLow) {
-				// More underexposed than overexposed , go up with exposure.
-				newExposure = I32T(exposureLastSetValue) + I32T(pixelsFracLow * AUTOEXPOSURE_UNDEROVER_CORRECTION);
-
-				newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
-			}
-			else {
-				// More overexposed than underexposed, go down with exposure.
-				newExposure = I32T(exposureLastSetValue) - I32T(pixelsFracHigh * AUTOEXPOSURE_UNDEROVER_CORRECTION);
-
-				newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
-			}
-		}
 	}
 	else {
 		// Calculate mean sample value from histogram.
@@ -132,6 +118,11 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 			meanSampleValueDenom += (float) state->msvHistogram[i];
 		}
 
+		// Prevent division by zero.
+		if (meanSampleValueDenom == 0) {
+			meanSampleValueDenom = 1.0f;
+		}
+
 		float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
 		float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0f) - meanSampleValue;
 
@@ -139,18 +130,28 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		caerLog(CAER_LOG_ERROR, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
 #endif
 
+		// If we're close to the under/over limits, we make the magnitude of changes smaller
+		// to avoid back&forth oscillations.
+		int32_t divisor = 1;
+		if (fracLowError < -0.1f || fracHighError < -0.1f) {
+			divisor = 5;
+		}
+		if (fracLowError < -0.05f || fracHighError < -0.05f) {
+			divisor = 10;
+		}
+
 		// If we're not too underexposed or overexposed, use MSV to optimize.
 		if (meanSampleValueError > 0.1f) {
 			// Underexposed.
-			newExposure = I32T(
-				exposureLastSetValue) + I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError);
+			newExposure = I32T(exposureLastSetValue) + (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
+			+ I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
 
 			newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 		}
 		else if (meanSampleValueError < -0.1f) {
 			// Overexposed.
-			newExposure = I32T(
-				exposureLastSetValue) - I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError);
+			newExposure = I32T(exposureLastSetValue) + (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
+			- I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
 
 			newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 		}
