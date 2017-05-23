@@ -189,7 +189,7 @@ bool caerDeviceConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
  *              parameter's current value. The integer will always be either set
  *              to zero (on failure), or to the current value (on success).
  *
- * @return true if sending the configuration was successful, false on errors.
+ * @return true if getting the configuration was successful, false on errors.
  */
 bool caerDeviceConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
