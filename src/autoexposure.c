@@ -99,13 +99,15 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 	if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Underexposed but not overexposed.
-		newExposure = I32T(exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * fracLowError);
+		newExposure = I32T(
+			exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracLowError, 1.65f));
 
 		newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 	}
 	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Overexposed but not underexposed.
-		newExposure = I32T( exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * fracHighError);
+		newExposure = I32T(
+			exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracHighError, 1.65f));
 
 		newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 	}
@@ -133,10 +135,10 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		// If we're close to the under/over limits, we make the magnitude of changes smaller
 		// to avoid back&forth oscillations.
 		int32_t divisor = 1;
-		if (fracLowError < -0.1f || fracHighError < -0.1f) {
+		if (fabsf(fracLowError) < 0.1f || fabsf(fracHighError) < 0.1f) {
 			divisor = 5;
 		}
-		if (fracLowError < -0.05f || fracHighError < -0.05f) {
+		if (fabsf(fracLowError) < 0.05f || fabsf(fracHighError) < 0.05f) {
 			divisor = 10;
 		}
 
@@ -144,16 +146,14 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		if (meanSampleValueError > 0.1f) {
 			// Underexposed.
 			newExposure = I32T(exposureLastSetValue)
-				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
-					+ I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
+				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0f)) / divisor);
 
 			newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 		}
 		else if (meanSampleValueError < -0.1f) {
 			// Overexposed.
 			newExposure = I32T(exposureLastSetValue)
-				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError)
-					- I32T(AUTOEXPOSURE_MSV_CORRECTION * meanSampleValueError * meanSampleValueError)) / divisor;
+				- (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0f)) / divisor);
 
 			newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 		}
