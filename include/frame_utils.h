@@ -19,7 +19,7 @@ extern "C" {
 caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket);
 void caerFrameUtilsContrast(caerFrameEventPacket framePacket);
 
-#if defined(LIBCAER_HAVE_OPENCV)
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 
 // DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
 enum caer_frame_utils_opencv_demosaic {

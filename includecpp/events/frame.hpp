@@ -5,7 +5,7 @@
 #include <libcaer/frame_utils.h>
 #include "common.hpp"
 
-#if defined(LIBCAER_HAVE_OPENCV)
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
@@ -309,7 +309,7 @@ struct FrameEvent: public caer_frame_event {
 		return (this->pixels);
 	}
 
-#if defined(LIBCAER_HAVE_OPENCV)
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 
 	cv::Mat getOpenCVMat() noexcept {
 		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
@@ -418,7 +418,7 @@ public:
 		caerFrameUtilsContrast(reinterpret_cast<caerFrameEventPacket>(header));
 	}
 
-#if defined(LIBCAER_HAVE_OPENCV)
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 
 	// DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
 	enum class opencvDemosaic {
