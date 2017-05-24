@@ -2,6 +2,7 @@
 #define LIBCAER_DEVICES_USB_HPP_
 
 #include <libcaer/devices/usb.h>
+#include <string>
 #include "../libcaer.hpp"
 #include "../events/packetContainer.hpp"
 #include "../events/utils.hpp"
