@@ -46,7 +46,7 @@ int main(void) {
 #endif
 
 	// Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	caerDeviceHandle davis_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
+	caerDeviceHandle davis_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
 	if (davis_handle == NULL) {
 		return (EXIT_FAILURE);
 	}
