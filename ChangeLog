@@ -1,4 +1,8 @@
 Release 2.1.3 - XX.06.2017 - IN_DEVELOPMENT
+NEW FEATURES
+- DAVIS: new device type CAER_DEVICE_DAVIS is now available, handles both
+  FX2 and FX3 board-based devices transparently.
+
 BUG FIXES
 - C++ devices/usb.hpp: fix missing std::string include.
 - Devices: log failure to put new event packet containers on ring-buffer for
