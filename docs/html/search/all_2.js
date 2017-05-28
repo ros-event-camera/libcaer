@@ -21,6 +21,7 @@ var searchData=
   ['caer_5fdavis_5finfo',['caer_davis_info',['../structcaer__davis__info.html',1,'']]],
   ['caer_5fdefault_5fevent_5ftypes',['caer_default_event_types',['../common_8h.html#aa8596958e7f44bd5b2ef3627f1d1c019',1,'common.h']]],
   ['caer_5fdefault_5fevent_5ftypes_5fcount',['CAER_DEFAULT_EVENT_TYPES_COUNT',['../common_8h.html#a4037088c4820e37bd9335e1c6fef23b0',1,'common.h']]],
+  ['caer_5fdevice_5fdavis',['CAER_DEVICE_DAVIS',['../davis_8h.html#a39fc72c5f7928f22a6e50a4b959790fd',1,'davis.h']]],
   ['caer_5fdevice_5fdavis_5ffx2',['CAER_DEVICE_DAVIS_FX2',['../davis_8h.html#a7d200a8a50f598ab8776fff1d39aaf25',1,'davis.h']]],
   ['caer_5fdevice_5fdavis_5ffx3',['CAER_DEVICE_DAVIS_FX3',['../davis_8h.html#a976ea82c6fcaacd3b742f530a1ae0d63',1,'davis.h']]],
   ['caer_5fdevice_5fdvs128',['CAER_DEVICE_DVS128',['../dvs128_8h.html#ad126e5babc34db6471b7c7e6e664983d',1,'dvs128.h']]],
