@@ -1,3 +1,10 @@
+Release 2.1.4 - 30.05.2017
+BUG FIXES
+- C++: functions defined in C++ header files, such as happens in log or
+  utils, need the inline keyword to allow the linker to resolve symbols
+  properly. Fixes #14.
+
+
 Release 2.1.3 - 28.05.2017
 NEW FEATURES
 - DAVIS: new device type CAER_DEVICE_DAVIS is now available, handles both
