@@ -1,3 +1,11 @@
+Release 2.1.5 - 02.06.2017
+BUG FIXES
+- DAVIS FX3: require new logic revision 9910 for FX3 devices.
+  This fixes a bug in timestamp synchronization between multiple
+  cameras, and improves precision of some time related parameters,
+  namely APS_EXPOSURE, APS_FRAME_DELAY and USB_EARLY_PACKET_DELAY.
+
+
 Release 2.1.4 - 30.05.2017
 BUG FIXES
 - C++: functions defined in C++ header files, such as happens in log or
