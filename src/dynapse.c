@@ -320,6 +320,10 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
 			break;
 
+		case DYNAPSE_CONFIG_POISSONSPIKEGEN:
+			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
+			break;
+
 		case DYNAPSE_CONFIG_MUX:
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_MUX_RUN:
@@ -994,6 +998,10 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 		case DYNAPSE_CONFIG_SPIKEGEN:
 			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SPIKEGEN, paramAddr, param));
+			break;
+
+		case DYNAPSE_CONFIG_POISSONSPIKEGEN:
+			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
 			break;
 
 		case DYNAPSE_CONFIG_AER:
@@ -1770,4 +1778,37 @@ bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuron
 	}
 
 	return (true);
+}
+
+bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr, double rateHz) {
+	dynapseHandle handle = (dynapseHandle) cdh;
+
+	// Check if the pointer is valid.
+	if (handle == NULL) {
+		return (false);
+	}
+
+	// Check if device type is supported.
+	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
+		return (false);
+	}
+
+	// convert from Hz to device units with magic conversion constant for current dynapse hardware
+	// (clock_rate/(wait_cycles*num_sources))/(UINT16_MAX-1) = size of frequency resolution steps
+	uint16_t deviceRate = (uint16_t)(rateHz/0.06706);
+
+	// Ready the data for programming
+	if ( caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
+				 deviceRate) == false) {
+		return (false);
+	}
+
+	// Trigger the write by writing the address
+	if ( caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS,
+				 neuronAddr) == false) {
+		return (false);
+	}
+
+	// if we made it everything is good
+	return true;
 }
