@@ -33,7 +33,7 @@ struct usb_state {
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
 	uint8_t dataEndPoint;
-	atomic_bool dataTrasfersRun;
+	atomic_bool dataTransfersRun;
 	mtx_t dataTransfersLock;
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
@@ -79,7 +79,7 @@ bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);
 
 static inline bool usbDataTransfersAreRunning(usbState state) {
-	return (atomic_load(&state->dataTrasfersRun));
+	return (atomic_load(&state->dataTransfersRun));
 }
 bool usbDataTransfersStart(usbState state);
 void usbDataTransfersStop(usbState state);

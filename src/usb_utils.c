@@ -411,7 +411,7 @@ bool usbDataTransfersStart(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
 	bool retVal = usbAllocateTransfers(state);
 	if (retVal) {
-		atomic_store(&state->dataTrasfersRun, true);
+		atomic_store(&state->dataTransfersRun, true);
 	}
 	mtx_unlock(&state->dataTransfersLock);
 
@@ -420,7 +420,7 @@ bool usbDataTransfersStart(usbState state) {
 
 void usbDataTransfersStop(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
-	atomic_store(&state->dataTrasfersRun, false);
+	atomic_store(&state->dataTransfersRun, false);
 	usbCancelAndDeallocateTransfers(state);
 	mtx_unlock(&state->dataTransfersLock);
 }
@@ -566,7 +566,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// callback and notifies that we're exiting, and not via normal cancellation.
 	if (atomic_load(&state->activeDataTransfers) == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
 		// Ensure run is set to false on exceptional shut-down.
-		atomic_store(&state->dataTrasfersRun, false);
+		atomic_store(&state->dataTransfersRun, false);
 	}
 
 	// We make sure to first set 'dataTransfersRun' to false on exceptional
