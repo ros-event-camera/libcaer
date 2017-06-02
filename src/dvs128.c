@@ -99,6 +99,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	// Try to open a DVS128 device on a specific USB port.
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
 		serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION)) {
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle);
 
 		return (NULL);

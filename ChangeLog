@@ -4,6 +4,7 @@ BUG FIXES
   This fixes a bug in timestamp synchronization between multiple
   cameras, and improves precision of some time related parameters,
   namely APS_EXPOSURE, APS_FRAME_DELAY and USB_EARLY_PACKET_DELAY.
+- DAVIS: fix incorrect extra log message when opening FX3 devices.
 
 
 Release 2.1.4 - 30.05.2017

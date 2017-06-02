@@ -128,6 +128,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	// Try to open a Dynap-se device on a specific USB port.
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
 		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION)) {
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle);
 
 		return (NULL);

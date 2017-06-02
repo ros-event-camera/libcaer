@@ -288,6 +288,7 @@ caerDeviceHandle davisCommonOpenInternal(uint16_t deviceType, uint16_t deviceID,
 	}
 
 	if (!deviceFound) {
+		davisCommonLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle);
 
 		return (NULL);

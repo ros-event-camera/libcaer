@@ -234,7 +234,6 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	libusb_exit(state->deviceContext);
 	state->deviceContext = NULL;
 
-	caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to open device.");
 	return (false);
 }
 
