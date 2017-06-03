@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.1.4-r554bd8349a37d7841d986dd33bd3267bcd5eb4c3</span>
+   &#160;<span id="projectnumber">2.1.5-r6e777f4d972c75738ca18006510931e7c339cb31</span>
    </div>
   </td>
  </tr>
@@ -114,6 +114,14 @@ Macros</h2></td></tr>
 <tr class="separator:ad10ce5e33e3b4eb45df95acc8e1c4668"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abefad5ca9e365e3f4253a65fe196e800"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#abefad5ca9e365e3f4253a65fe196e800">DYNAPSE_CONFIG_SPIKEGEN</a>&#160;&#160;&#160;16</td></tr>
 <tr class="separator:abefad5ca9e365e3f4253a65fe196e800"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf2274b24e6a7644263850192b6a1eca"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#aaf2274b24e6a7644263850192b6a1eca">DYNAPSE_CONFIG_POISSONSPIKEGEN</a>&#160;&#160;&#160;18</td></tr>
+<tr class="separator:aaf2274b24e6a7644263850192b6a1eca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86062c7fc72cf24db603dafb21721512"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a86062c7fc72cf24db603dafb21721512">DYNAPSE_CONFIG_POISSONSPIKEGEN_RUN</a>&#160;&#160;&#160;0</td></tr>
+<tr class="separator:a86062c7fc72cf24db603dafb21721512"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59f12e65e127c434914de5715ae85318"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a59f12e65e127c434914de5715ae85318">DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS</a>&#160;&#160;&#160;1</td></tr>
+<tr class="separator:a59f12e65e127c434914de5715ae85318"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7857ed8591aae53c269d38e4e16a259"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#aa7857ed8591aae53c269d38e4e16a259">DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA</a>&#160;&#160;&#160;2</td></tr>
+<tr class="separator:aa7857ed8591aae53c269d38e4e16a259"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bf27fbd7610cbc96f290929aed817f3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a5bf27fbd7610cbc96f290929aed817f3">DYNAPSE_CONFIG_SPIKEGEN_RUN</a>&#160;&#160;&#160;0</td></tr>
 <tr class="separator:a5bf27fbd7610cbc96f290929aed817f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3ee76b833beb57826f0eb083091a7929"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a3ee76b833beb57826f0eb083091a7929">DYNAPSE_CONFIG_SPIKEGEN_VARMODE</a>&#160;&#160;&#160;1</td></tr>
@@ -608,6 +616,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a8d9463b055931ab2db4ad0e4fa4117ca"><td class="memItemLeft" align="right" valign="top"><a id="a8d9463b055931ab2db4ad0e4fa4117ca"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSramWords</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords)</td></tr>
 <tr class="separator:a8d9463b055931ab2db4ad0e4fa4117ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4494dd33b900a532be77dfbaaf7b7dde"><td class="memItemLeft" align="right" valign="top"><a id="a4494dd33b900a532be77dfbaaf7b7dde"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWritePoissonSpikeRate</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint32_t neuronAddr, double rateHz)</td></tr>
+<tr class="separator:a4494dd33b900a532be77dfbaaf7b7dde"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a949997a7197e221ec48b1499ff837fb4"><td class="memItemLeft" align="right" valign="top"><a id="a949997a7197e221ec48b1499ff837fb4"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSram</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore)</td></tr>
 <tr class="separator:a949997a7197e221ec48b1499ff837fb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -998,6 +1009,66 @@ uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseGenera
       </table>
 </div><div class="memdoc">
 <p>Parameter address for module DYNAPSE_CONFIG_MUX: run the Timestamp Generator inside the Multiplexer state machine, which will provide microsecond accurate timestamps to the events passing through. </p>
+
+</div>
+</div>
+<a id="aaf2274b24e6a7644263850192b6a1eca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf2274b24e6a7644263850192b6a1eca">&#9670;&nbsp;</a></span>DYNAPSE_CONFIG_POISSONSPIKEGEN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DYNAPSE_CONFIG_POISSONSPIKEGEN&#160;&#160;&#160;18</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Module address: Device side poisson generator configuration Provides run/stop control of poisson spike generation and rate setting for 1024 sources. </p>
+
+</div>
+</div>
+<a id="a86062c7fc72cf24db603dafb21721512"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a86062c7fc72cf24db603dafb21721512">&#9670;&nbsp;</a></span>DYNAPSE_CONFIG_POISSONSPIKEGEN_RUN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DYNAPSE_CONFIG_POISSONSPIKEGEN_RUN&#160;&#160;&#160;0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN. Enables or disables generation of poisson spike trains. </p>
+
+</div>
+</div>
+<a id="a59f12e65e127c434914de5715ae85318"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59f12e65e127c434914de5715ae85318">&#9670;&nbsp;</a></span>DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS&#160;&#160;&#160;1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN. Selects the address of a poisson spike train source. Writing to this parameter will apply the rate previously written to the WRITEDATA field. </p>
+
+</div>
+</div>
+<a id="aa7857ed8591aae53c269d38e4e16a259"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7857ed8591aae53c269d38e4e16a259">&#9670;&nbsp;</a></span>DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA&#160;&#160;&#160;2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN. Holds data that will be written to the address specified by WRITEADDRESS </p>
 
 </div>
 </div>
