@@ -27,14 +27,14 @@ public:
 	void sendDataToUSB(const uint32_t *data, size_t numConfig) const {
 		bool success = caerDynapseSendDataToUSB(handle.get(), data, numConfig);
 		if (!success) {
-			throw std::runtime_error("Failed to send config data to device.");
+			throw std::runtime_error("Failed to send USB config data to device.");
 		}
 	}
 
 	void writeSramWords(const uint16_t *data, uint32_t baseAddr, uint32_t numWords) const {
 		bool success = caerDynapseWriteSramWords(handle.get(), data, baseAddr, numWords);
 		if (!success) {
-			throw std::runtime_error("Failed to write SRAM word.");
+			throw std::runtime_error("Failed to write SRAM words.");
 		}
 	}
 
@@ -44,6 +44,13 @@ public:
 			destinationCore);
 		if (!success) {
 			throw std::runtime_error("Failed to write SRAM.");
+		}
+	}
+
+	void writePoissonSpikeRate(uint32_t neuronAddr, double rateHz) const {
+		bool success = caerDynapseWritePoissonSpikeRate(handle.get(), neuronAddr, rateHz);
+		if (!success) {
+			throw std::runtime_error("Failed to write Poisson Spike Rate.");
 		}
 	}
 
