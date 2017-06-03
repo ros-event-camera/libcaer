@@ -267,6 +267,7 @@ caerDeviceHandle davisCommonOpenInternal(uint16_t deviceType, uint16_t deviceID,
 	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
 	usbSetThreadName(&state->usbState, usbThreadName);
+	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DAVIS device on a specific USB port.
 	bool deviceFound = false;

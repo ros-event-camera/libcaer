@@ -124,6 +124,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
 	usbSetThreadName(&state->usbState, usbThreadName);
+	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a Dynap-se device on a specific USB port.
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
