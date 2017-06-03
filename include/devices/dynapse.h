@@ -113,6 +113,35 @@ extern "C" {
 #define DYNAPSE_CONFIG_SPIKEGEN 16
 
 /**
+* Module address: Device side poisson generator configuration
+* Provides run/stop control of poisson spike generation and
+* rate setting for 1024 sources.
+*/
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN 18
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN.
+* Enables or disables generation of poisson spike trains.
+*/
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_RUN 0
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN.
+* Selects the address of a poisson spike train source. Writing
+* to this parameter will apply the rate previously written to the
+* WRITEDATA field.
+*/
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS 1
+
+/**
+* Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN.
+* Holds data that will be written to the address specified by
+* WRITEADDRESS
+*/
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA 2
+	
+
+/**
  * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
  * Instructs the spike generator to start applying the configurated
  * spike train when the parameter changes from false to true.
@@ -661,6 +690,16 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
  * @return true on success, false otherwise
  */
 bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+
+/*
+* @param handle a valid device handle
+*
+* neuronAddr[0,1023] The target neuron of the poisson spike train
+* rateHz[0,4300] The rate in Hz of the spike train, this will be quantized to the nearest supported level
+*
+* @return true on success, false otherwise
+*/
+bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint32_t neuronAddr, double rateHz);
 
 /*
  *
