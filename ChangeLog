@@ -1,4 +1,8 @@
-Release 2.1.5 - 02.06.2017
+Release 2.1.5 - 03.06.2017
+NEW FEATURES
+- Dynap-se: added support for experimental DYNAPSE_CONFIG_POISSONSPIKEGEN
+  control (thanks to Carsten Nielsen).
+
 BUG FIXES
 - DAVIS FX3: require new logic revision 9910 for FX3 devices.
   This fixes a bug in timestamp synchronization between multiple
