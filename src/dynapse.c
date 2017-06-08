@@ -1800,17 +1800,17 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr,
 	uint16_t deviceRate = (uint16_t)(rateHz/0.06706);
 
 	// Ready the data for programming
-	if ( caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
-				 deviceRate) == false) {
+	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
+			deviceRate) == false) {
 		return (false);
 	}
 
 	// Trigger the write by writing the address
-	if ( caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS,
-				 neuronAddr) == false) {
+	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS,
+			neuronAddr) == false) {
 		return (false);
 	}
 
 	// if we made it everything is good
-	return true;
+	return (true);
 }
