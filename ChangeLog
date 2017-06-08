@@ -1,3 +1,9 @@
+Release 2.2.0 - XX.06.2017
+BUG FIXES
+- DVS128/DAVIS/Dynap-se: fix log messages on failure to open device and
+  on successful shutdown.
+
+
 Release 2.1.5 - 03.06.2017
 NEW FEATURES
 - Dynap-se: added support for experimental DYNAPSE_CONFIG_POISSONSPIKEGEN

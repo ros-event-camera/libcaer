@@ -194,11 +194,11 @@ bool dynapseClose(caerDeviceHandle cdh) {
 	// Finally, close the device fully.
 	usbDeviceClose(&state->usbState);
 
+	dynapseLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
+
 	// Free memory.
 	free(handle->info.deviceString);
 	free(handle);
-
-	dynapseLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	return (true);
 }

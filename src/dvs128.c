@@ -159,11 +159,11 @@ bool dvs128Close(caerDeviceHandle cdh) {
 	// Finally, close the device fully.
 	usbDeviceClose(&state->usbState);
 
+	dvs128Log(CAER_LOG_DEBUG, handle, "Shutdown successful.");
+
 	// Free memory.
 	free(handle->info.deviceString);
 	free(handle);
-
-	dvs128Log(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	return (true);
 }
