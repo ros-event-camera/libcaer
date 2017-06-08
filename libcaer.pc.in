@@ -6,7 +6,7 @@ includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 Name: @CMAKE_PROJECT_NAME@
 Description: Minimal C API for low-level access to DVS128, DAVIS devices. 
 Version: @PROJECT_VERSION_NOREV@
-Requires.private: libusb-1.0 >= 1.0.17
+Requires.private: @PKGCONFIG_REQUIRES_PRIVATE@
 Libs: -L${libdir} -lcaer
-Libs.private: @PRIVATE_LIBS@
+Libs.private: @PKGCONFIG_LIBS_PRIVATE@
 Cflags: -I${includedir}
