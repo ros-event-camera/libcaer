@@ -144,6 +144,7 @@ struct caer_edvs_info {
 struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
 #else
 static inline struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle) {
+	(void)(handle);
 	struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
 	return (emptyInfo);
 }

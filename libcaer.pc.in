@@ -4,7 +4,7 @@ libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 
 Name: @CMAKE_PROJECT_NAME@
-Description: Minimal C API for low-level access to DVS128, DAVIS devices. 
+Description: Minimal C API for low-level access to iniLabs devices.
 Version: @PROJECT_VERSION_NOREV@
 Requires.private: @PKGCONFIG_REQUIRES_PRIVATE@
 Libs: -L${libdir} -lcaer
