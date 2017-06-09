@@ -68,6 +68,11 @@ extern "C" {
 #define LIBCAER_VERSION_STRING "@PROJECT_VERSION_NOREV@"
 
 /**
+ * libcaer serial devices support.
+ */
+#define LIBCAER_HAVE_SERIALDEV @ENABLE_SERIALDEV@
+
+/**
  * libcaer OpenCV support.
  */
 #define LIBCAER_HAVE_OPENCV @ENABLE_OPENCV@
