@@ -710,8 +710,11 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 			// Timestamp reset.
 			if (atomic_load(&state->dvsTSReset)) {
+				atomic_store(&state->dvsTSReset, false);
+
 				state->wrapOverflow = 0;
 				state->wrapAdd = 0;
+				state->lastShortTimestamp = 0;
 				state->lastTimestamp = 0;
 				state->currentTimestamp = 0;
 				state->currentPacketContainerCommitTimestamp = -1;
@@ -743,7 +746,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
 
 					// Commit packets to separate before wrap from after cleanly.
-					tsBigWrap = true;
+					tsBigWrap = true; // TODO: is this possible here?
 				}
 				else {
 					// timestamp bit 15 is one -> wrap: now we need to increment
