@@ -1,38 +1,32 @@
-#ifndef LIBCAER_SRC_DVS128_H_
-#define LIBCAER_SRC_DVS128_H_
+#ifndef LIBCAER_SRC_EDVS_H_
+#define LIBCAER_SRC_EDVS_H_
 
-#include "devices/dvs128.h"
+#include "devices/edvs.h"
 #include "ringbuffer/ringbuffer.h"
-#include "usb_utils.h"
 
-#define DVS_DEVICE_NAME "DVS128"
+#include <stdatomic.h>
 
-#define DVS_DEVICE_PID 0x8400
+#if defined(HAVE_PTHREADS)
+#include "c11threads_posix.h"
+#endif
 
-// #define DVS_REQUIRED_LOGIC_REVISION 1
-#define DVS_REQUIRED_FIRMWARE_VERSION 14
+#define MAX_THREAD_NAME_LENGTH 15
+#define MAX_SERIAL_NUMBER_LENGTH 8
 
-#define DVS_ARRAY_SIZE_X 128
-#define DVS_ARRAY_SIZE_Y 128
+#define EDVS_DEVICE_NAME "eDVS4337"
 
-#define DVS_EVENT_TYPES 2
+#define EDVS_ARRAY_SIZE_X 128
+#define EDVS_ARRAY_SIZE_Y 128
 
-#define DVS_POLARITY_DEFAULT_SIZE 4096
-#define DVS_SPECIAL_DEFAULT_SIZE 128
+#define EDVS_EVENT_TYPES 2
 
-#define DVS_DATA_ENDPOINT 0x86
-
-#define VENDOR_REQUEST_START_TRANSFER 0xB3
-#define VENDOR_REQUEST_STOP_TRANSFER 0xB4
-#define VENDOR_REQUEST_SEND_BIASES 0xB8
-#define VENDOR_REQUEST_RESET_TS 0xBB
-#define VENDOR_REQUEST_RESET_ARRAY 0xBD
-#define VENDOR_REQUEST_TS_MASTER 0xBE
+#define EDVS_POLARITY_DEFAULT_SIZE 4096
+#define EDVS_SPECIAL_DEFAULT_SIZE 128
 
 #define BIAS_NUMBER 12
 #define BIAS_LENGTH 3
 
-struct dvs128_state {
+struct edvs_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
@@ -44,8 +38,6 @@ struct dvs128_state {
 	void (*dataNotifyIncrease)(void *ptr);
 	void (*dataNotifyDecrease)(void *ptr);
 	void *dataNotifyUserPtr;
-	// USB Device State
-	struct usb_state usbState;
 	// Timestamp fields
 	int32_t wrapOverflow;
 	int32_t wrapAdd;
@@ -65,35 +57,34 @@ struct dvs128_state {
 	// Camera bias and settings memory (for getter operations)
 	uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
 	atomic_bool dvsRunning;
-	atomic_bool dvsIsMaster;
 };
 
-typedef struct dvs128_state *dvs128State;
+typedef struct edvs_state *edvsState;
 
-struct dvs128_handle {
+struct edvs_handle {
 	uint16_t deviceType;
 	// Information fields
-	struct caer_dvs128_info info;
+	struct caer_edvs_info info;
 	// State for data management.
-	struct dvs128_state state;
+	struct edvs_state state;
 };
 
-typedef struct dvs128_handle *dvs128Handle;
+typedef struct edvs_handle *edvsHandle;
 
-caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle edvsOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
-bool dvs128Close(caerDeviceHandle handle);
+bool edvsClose(caerDeviceHandle handle);
 
-bool dvs128SendDefaultConfig(caerDeviceHandle handle);
+bool edvsSendDefaultConfig(caerDeviceHandle handle);
 // Negative addresses are used for host-side configuration.
 // Positive addresses (including zero) are used for device-side configuration.
-bool dvs128ConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t param);
-bool dvs128ConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
+bool edvsConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t param);
+bool edvsConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
-bool dvs128DataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
+bool edvsDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr);
-bool dvs128DataStop(caerDeviceHandle handle);
-caerEventPacketContainer dvs128DataGet(caerDeviceHandle handle);
+bool edvsDataStop(caerDeviceHandle handle);
+caerEventPacketContainer edvsDataGet(caerDeviceHandle handle);
 
-#endif /* LIBCAER_SRC_DVS128_H_ */
+#endif /* LIBCAER_SRC_EDVS_H_ */

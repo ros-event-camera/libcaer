@@ -10,8 +10,13 @@ SET(LIBCAER_SRC_FILES
 	davis_common.c
 	dynapse.c)
 
+IF (ENABLE_SERIALDEV)
+	# Add serial devices.
+	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} edvs.c)
+ENDIF()
+
 IF (ENABLE_OPENCV)
-	# Add C++ OpenCV file and its C wrapper.
+	# Add C++ OpenCV support..
 	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} frame_utils_opencv.cpp)
 ENDIF()
 

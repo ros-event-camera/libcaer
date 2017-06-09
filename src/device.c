@@ -1,8 +1,9 @@
-#include "devices/usb.h"
+#include "devices/device.h"
 
 #include "dvs128.h"
 #include "davis_common.h"
 #include "dynapse.h"
+#include "edvs.h"
 
 /**
  * Number of devices supported by this library.
@@ -11,8 +12,9 @@
  * 2 - CAER_DEVICE_DAVIS_FX3
  * 3 - CAER_DEVICE_DYNAPSE
  * 4 - CAER_DEVICE_DAVIS
+ * 5 - CAER_DEVICE_EDVS
  */
-#define SUPPORTED_DEVICES_NUMBER 5
+#define SUPPORTED_DEVICES_NUMBER 6
 
 // Supported devices and their functions.
 static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
@@ -22,6 +24,11 @@ static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t devic
 		[CAER_DEVICE_DAVIS_FX3] = &davisFX3Open,
 		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
 		[CAER_DEVICE_DAVIS] = &davisCommonOpen,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsOpen,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -30,6 +37,11 @@ static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = 
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonClose,
 	[CAER_DEVICE_DYNAPSE] = &dynapseClose,
 	[CAER_DEVICE_DAVIS] = &davisCommonClose,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsClose,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -38,6 +50,11 @@ static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle h
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonSendDefaultConfig,
 	[CAER_DEVICE_DYNAPSE] = &dynapseSendDefaultConfig,
 	[CAER_DEVICE_DAVIS] = &davisCommonSendDefaultConfig,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsSendDefaultConfig,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -47,6 +64,11 @@ static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DAVIS_FX3] = &davisCommonConfigSet,
 		[CAER_DEVICE_DYNAPSE] = &dynapseConfigSet,
 		[CAER_DEVICE_DAVIS] = &davisCommonConfigSet,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsConfigSet,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -56,6 +78,11 @@ static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DAVIS_FX3] = &davisCommonConfigGet,
 		[CAER_DEVICE_DYNAPSE] = &dynapseConfigGet,
 		[CAER_DEVICE_DAVIS] = &davisCommonConfigGet,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsConfigGet,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
@@ -66,6 +93,11 @@ static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, v
 		[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataStart,
 		[CAER_DEVICE_DYNAPSE] = &dynapseDataStart,
 		[CAER_DEVICE_DAVIS] = &davisCommonDataStart,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsDataStart,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -74,6 +106,11 @@ static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) =
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataStop,
 	[CAER_DEVICE_DYNAPSE] = &dynapseDataStop,
 	[CAER_DEVICE_DAVIS] = &davisCommonDataStop,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsDataStop,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -82,6 +119,11 @@ static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDev
 	[CAER_DEVICE_DAVIS_FX3] = &davisCommonDataGet,
 	[CAER_DEVICE_DYNAPSE] = &dynapseDataGet,
 	[CAER_DEVICE_DAVIS] = &davisCommonDataGet,
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	[CAER_DEVICE_EDVS] = &edvsDataGet,
+#else
+	[CAER_DEVICE_EDVS] = NULL,
+#endif
 };
 
 struct caer_device_handle {
@@ -98,6 +140,10 @@ caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t 
 	}
 
 	// Execute main constructor function.
+	if (constructors[deviceType] == NULL) {
+		return (NULL);
+	}
+
 	return (constructors[deviceType](deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
 }
 
@@ -119,6 +165,10 @@ bool caerDeviceClose(caerDeviceHandle *handlePtr) {
 	}
 
 	// Call appropriate destructor function.
+	if (destructors[(*handlePtr)->deviceType] == NULL) {
+		return (false);
+	}
+
 	bool retVal = destructors[(*handlePtr)->deviceType](*handlePtr);
 
 	// Done. Set reference to NULL if successful.
@@ -141,6 +191,10 @@ bool caerDeviceSendDefaultConfig(caerDeviceHandle handle) {
 	}
 
 	// Call appropriate function.
+	if (defaultConfigSenders[handle->deviceType] == NULL) {
+		return (false);
+	}
+
 	return (defaultConfigSenders[handle->deviceType](handle));
 }
 
@@ -156,6 +210,10 @@ bool caerDeviceConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
 	}
 
 	// Call appropriate function.
+	if (configSetters[handle->deviceType] == NULL) {
+		return (false);
+	}
+
 	return (configSetters[handle->deviceType](handle, modAddr, paramAddr, param));
 }
 
@@ -174,6 +232,10 @@ bool caerDeviceConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
 	*param = 0;
 
 	// Call appropriate function.
+	if (configGetters[handle->deviceType] == NULL) {
+		return (false);
+	}
+
 	return (configGetters[handle->deviceType](handle, modAddr, paramAddr, param));
 }
 
@@ -191,6 +253,10 @@ bool caerDeviceDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(voi
 	}
 
 	// Call appropriate function.
+	if (dataStarters[handle->deviceType] == NULL) {
+		return (false);
+	}
+
 	return (dataStarters[handle->deviceType](handle, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
 		dataShutdownNotify, dataShutdownUserPtr));
 }
@@ -207,20 +273,28 @@ bool caerDeviceDataStop(caerDeviceHandle handle) {
 	}
 
 	// Call appropriate function.
+	if (dataStoppers[handle->deviceType] == NULL) {
+		return (false);
+	}
+
 	return (dataStoppers[handle->deviceType](handle));
 }
 
 caerEventPacketContainer caerDeviceDataGet(caerDeviceHandle handle) {
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		return (false);
+		return (NULL);
 	}
 
 	// Check if device type is supported.
 	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
-		return (false);
+		return (NULL);
 	}
 
 	// Call appropriate function.
+	if (dataGetters[handle->deviceType] == NULL) {
+		return (NULL);
+	}
+
 	return (dataGetters[handle->deviceType](handle));
 }
