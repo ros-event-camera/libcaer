@@ -17,17 +17,27 @@
 #define SUPPORTED_DEVICES_NUMBER 6
 
 // Supported devices and their functions.
-static caerDeviceHandle (*constructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
+static caerDeviceHandle (*usbConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) = {
 		[CAER_DEVICE_DVS128] = &dvs128Open,
 		[CAER_DEVICE_DAVIS_FX2] = &davisFX2Open,
 		[CAER_DEVICE_DAVIS_FX3] = &davisFX3Open,
 		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
 		[CAER_DEVICE_DAVIS] = &davisCommonOpen,
+		[CAER_DEVICE_EDVS] = NULL,
+};
+
+static caerDeviceHandle (*serialConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, const char *serialPortName,
+	uint32_t serialBaudRate) = {
+		[CAER_DEVICE_DVS128] = NULL,
+		[CAER_DEVICE_DAVIS_FX2] = NULL,
+		[CAER_DEVICE_DAVIS_FX3] = NULL,
+		[CAER_DEVICE_DYNAPSE] = NULL,
+		[CAER_DEVICE_DAVIS] = NULL,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
-	[CAER_DEVICE_EDVS] = &edvsOpen,
+		[CAER_DEVICE_EDVS] = &edvsOpen,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS] = NULL,
 #endif
 };
 
@@ -65,9 +75,9 @@ static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DYNAPSE] = &dynapseConfigSet,
 		[CAER_DEVICE_DAVIS] = &davisCommonConfigSet,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
-	[CAER_DEVICE_EDVS] = &edvsConfigSet,
+		[CAER_DEVICE_EDVS] = &edvsConfigSet,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS] = NULL,
 #endif
 };
 
@@ -79,9 +89,9 @@ static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 		[CAER_DEVICE_DYNAPSE] = &dynapseConfigGet,
 		[CAER_DEVICE_DAVIS] = &davisCommonConfigGet,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
-	[CAER_DEVICE_EDVS] = &edvsConfigGet,
+		[CAER_DEVICE_EDVS] = &edvsConfigGet,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS] = NULL,
 #endif
 };
 
@@ -94,9 +104,9 @@ static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, v
 		[CAER_DEVICE_DYNAPSE] = &dynapseDataStart,
 		[CAER_DEVICE_DAVIS] = &davisCommonDataStart,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
-	[CAER_DEVICE_EDVS] = &edvsDataStart,
+		[CAER_DEVICE_EDVS] = &edvsDataStart,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS] = NULL,
 #endif
 };
 
@@ -139,12 +149,27 @@ caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t 
 		return (NULL);
 	}
 
-	// Execute main constructor function.
-	if (constructors[deviceType] == NULL) {
+	// Execute main USB constructor function.
+	if (usbConstructors[deviceType] == NULL) {
 		return (NULL);
 	}
 
-	return (constructors[deviceType](deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
+	return (usbConstructors[deviceType](deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
+}
+
+caerDeviceHandle caerDeviceOpenSerial(uint16_t deviceID, uint16_t deviceType, const char *serialPortName,
+	uint32_t serialBaudRate) {
+	// Check if device type is supported.
+	if (deviceType >= SUPPORTED_DEVICES_NUMBER) {
+		return (NULL);
+	}
+
+	// Execute main serial constructor function.
+	if (serialConstructors[deviceType] == NULL) {
+		return (NULL);
+	}
+
+	return (serialConstructors[deviceType](deviceID, serialPortName, serialBaudRate));
 }
 
 bool caerDeviceClose(caerDeviceHandle *handlePtr) {

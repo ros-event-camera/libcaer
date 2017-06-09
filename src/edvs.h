@@ -3,7 +3,7 @@
 
 #include "devices/edvs.h"
 #include "ringbuffer/ringbuffer.h"
-
+#include <libserialport.h>
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
@@ -26,6 +26,20 @@
 #define BIAS_NUMBER 12
 #define BIAS_LENGTH 3
 
+struct serial_state {
+	// Serial Device State
+	struct sp_port *serialPort;
+	// Serial thread state
+	char serialThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	thrd_t serialThread;
+	atomic_bool serialThreadRun;
+	// Serial Data Transfers
+	atomic_uint_fast32_t serialReadSize;
+	// Serial Data Transfers shutdown callback
+	void (*serialShutdownCallback)(void *serialShutdownCallbackPtr);
+	void *serialShutdownCallbackPtr;
+};
+
 struct edvs_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
@@ -38,11 +52,14 @@ struct edvs_state {
 	void (*dataNotifyIncrease)(void *ptr);
 	void (*dataNotifyDecrease)(void *ptr);
 	void *dataNotifyUserPtr;
+	// Serial Device State
+	struct serial_state serialState;
 	// Timestamp fields
 	int32_t wrapOverflow;
 	int32_t wrapAdd;
 	int32_t lastTimestamp;
 	int32_t currentTimestamp;
+	uint16_t lastShortTimestamp;
 	// Packet Container state
 	caerEventPacketContainer currentPacketContainer;
 	atomic_uint_fast32_t maxPacketContainerPacketSize;
@@ -57,6 +74,7 @@ struct edvs_state {
 	// Camera bias and settings memory (for getter operations)
 	uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
 	atomic_bool dvsRunning;
+	atomic_bool dvsTSReset;
 };
 
 typedef struct edvs_state *edvsState;
@@ -71,8 +89,7 @@ struct edvs_handle {
 
 typedef struct edvs_handle *edvsHandle;
 
-caerDeviceHandle edvsOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
+caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_t serialBaudRate);
 bool edvsClose(caerDeviceHandle handle);
 
 bool edvsSendDefaultConfig(caerDeviceHandle handle);

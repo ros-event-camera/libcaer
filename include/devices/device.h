@@ -99,29 +99,6 @@ typedef struct caer_device_handle *caerDeviceHandle;
 #define CAER_HOST_CONFIG_LOG_LEVEL 0
 
 /**
- * Open a specified device, assign an ID to it and return a handle for further usage.
- * Various means can be employed to limit the selection of the device.
- * For USB devices, all fields are used.
- * For serial port devices, busNumberRestrict and devAddressRestrict are not used, only
- * serialNumberRestrict is used to specify the serial port name to connect to.
- *
- * @param deviceID a unique ID to identify the device from others. Will be used as the
- *                 source for EventPackets being generate from its data.
- * @param deviceType type of the device to open. Currently supported are:
- *                   CAER_DEVICE_DVS128, CAER_DEVICE_DAVIS, CAER_DEVICE_DYNAPSE, CAER_DEVICE_EDVS
- * @param busNumberRestrict restrict the search for viable devices to only this USB bus number.
- * @param devAddressRestrict restrict the search for viable devices to only this USB device address.
- * @param serialNumberRestrict restrict the search for viable devices to only devices which do
- *                             possess the given Serial Number in their USB SerialNumber descriptor,
- *                             or, for serial devices, to this serial port name.
- *
- * @return a valid device handle that can be used with the other libcaer functions,
- *         or NULL on error. Always check for this!
- */
-caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict);
-
-/**
  * Close a previously opened device and invalidate its handle.
  *
  * @param handle pointer to a valid device handle. Will set handle to NULL if closing is

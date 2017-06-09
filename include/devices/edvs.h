@@ -130,17 +130,24 @@ struct caer_edvs_info {
 	int16_t dvsSizeY;
 };
 
-/**
- * Return basic information on the device, such as its ID, its
- * resolution, the logic version, and so on. See the 'struct
- * caer_edvs_info' documentation for more details.
- *
- * @param handle a valid device handle.
- *
- * @return a copy of the device information structure if successful,
- *         an empty structure (all zeros) on failure.
- */
+ /**
+  * Return basic information on the device, such as its ID, its
+  * resolution, the logic version, and so on. See the 'struct
+  * caer_edvs_info' documentation for more details.
+  *
+  * @param handle a valid device handle.
+  *
+  * @return a copy of the device information structure if successful,
+  *         an empty structure (all zeros) on failure.
+  */
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
+#else
+static inline struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle) {
+	struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
+	return (emptyInfo);
+}
+#endif
 
 #ifdef __cplusplus
 }
