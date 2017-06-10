@@ -3,7 +3,10 @@
 #include "dvs128.h"
 #include "davis_common.h"
 #include "dynapse.h"
-#include "edvs.h"
+
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
+	#include "edvs.h"
+#endif
 
 /**
  * Number of devices supported by this library.
