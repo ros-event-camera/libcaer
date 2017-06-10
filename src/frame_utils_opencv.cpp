@@ -6,9 +6,11 @@
 
 using namespace cv;
 
+extern "C" {
 caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
 	enum caer_frame_utils_demosaic_types demosaicType);
 void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
+}
 
 static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
 	enum caer_frame_utils_demosaic_types demosaicType);
