@@ -1,4 +1,4 @@
-#include "davis_common.h"
+#include "davis.h"
 
 static void davisCommonLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisCommonSendDefaultFPGAConfig(caerDeviceHandle cdh);

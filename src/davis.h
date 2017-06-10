@@ -1,5 +1,5 @@
-#ifndef LIBCAER_SRC_DAVIS_COMMON_H_
-#define LIBCAER_SRC_DAVIS_COMMON_H_
+#ifndef LIBCAER_SRC_DAVIS_H_
+#define LIBCAER_SRC_DAVIS_H_
 
 #include "devices/davis.h"
 #include "ringbuffer/ringbuffer.h"
@@ -183,4 +183,4 @@ bool davisCommonDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(vo
 bool davisCommonDataStop(caerDeviceHandle handle);
 caerEventPacketContainer davisCommonDataGet(caerDeviceHandle handle);
 
-#endif /* LIBCAER_SRC_DAVIS_COMMON_H_ */
+#endif /* LIBCAER_SRC_DAVIS_H_ */

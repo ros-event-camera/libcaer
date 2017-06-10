@@ -7,7 +7,7 @@ SET(LIBCAER_SRC_FILES
 	autoexposure.c
 	device.c
 	dvs128.c
-	davis_common.c
+	davis.c
 	dynapse.c)
 
 IF (ENABLE_SERIALDEV)

@@ -1,7 +1,7 @@
 #include "devices/device.h"
 
 #include "dvs128.h"
-#include "davis_common.h"
+#include "davis.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
