@@ -45,7 +45,7 @@ int main(void) {
 	}
 #endif
 
-	// Open an eDVS4337, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+	// Open an eDVS4337, give it a device ID of 1, on the default Linux USB serial port.
 	caerDeviceHandle edvs_handle = caerDeviceOpenSerial(1, CAER_DEVICE_EDVS, "/dev/ttyUSB0",
 		CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
 	if (edvs_handle == NULL) {
