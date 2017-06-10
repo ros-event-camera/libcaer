@@ -28,6 +28,7 @@
 struct serial_state {
 	// Serial Device State
 	struct sp_port *serialPort;
+	mtx_t serialWriteLock;
 	// Serial thread state
 	thrd_t serialThread;
 	atomic_bool serialThreadRun;

@@ -16,6 +16,18 @@ static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char 
 	va_end(argumentList);
 }
 
+static inline bool serialPortWrite(edvsState state, const char *cmd) {
+	size_t cmdLength = strlen(cmd);
+
+	mtx_lock(&state->serialState.serialWriteLock);
+
+	bool retVal = (sp_blocking_write(state->serialState.serialPort, cmd, cmdLength, 0) != (int) cmdLength);
+
+	mtx_unlock(&state->serialState.serialWriteLock);
+
+	return (retVal);
+}
+
 static inline void checkMonotonicTimestamp(edvsHandle handle) {
 	if (handle->state.currentTimestamp < handle->state.lastTimestamp) {
 		edvsLog(CAER_LOG_ALERT, handle,
@@ -123,6 +135,18 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 		return (NULL);
 	}
 
+	// Initialize mutex lock for writes (reads never happen concurrently,
+	// and only on one thread).
+	if (mtx_init(&state->serialState.serialWriteLock, mtx_plain) != thrd_success) {
+		edvsLog(CAER_LOG_ERROR, handle, "Failed to initialize serial write lock.");
+		sp_close(state->serialState.serialPort);
+		sp_free_port(state->serialState.serialPort);
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
+
 	// Setup serial port communication.
 	atomic_store(&state->serialState.serialReadSize, 1024);
 
@@ -138,8 +162,9 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	sp_set_flowcontrol(state->serialState.serialPort, SP_FLOWCONTROL_RTSCTS);
 
 	const char *cmdNoEcho = "!U0\n";
-	if (sp_blocking_write(state->serialState.serialPort, cmdNoEcho, 4, 0) != 4) {
+	if (!serialPortWrite(state, cmdNoEcho)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send echo disable command.");
+		mtx_destroy(&state->serialState.serialWriteLock);
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		free(handle->info.deviceString);
@@ -149,8 +174,9 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	}
 
 	const char *cmdEventFormat = "!E2\n";
-	if (sp_blocking_write(state->serialState.serialPort, cmdEventFormat, 4, 0) != 4) {
+	if (!serialPortWrite(state, cmdEventFormat)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send event format command.");
+		mtx_destroy(&state->serialState.serialWriteLock);
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		free(handle->info.deviceString);
@@ -180,6 +206,7 @@ bool edvsClose(caerDeviceHandle cdh) {
 	edvsLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Close and free serial port.
+	mtx_destroy(&state->serialState.serialWriteLock);
 	sp_close(state->serialState.serialPort);
 	sp_free_port(state->serialState.serialPort);
 
@@ -307,7 +334,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 				case EDVS_CONFIG_DVS_RUN:
 					if (param && !atomic_load(&state->dvsRunning)) {
 						const char *cmdStartDVS = "E+\n";
-						if (sp_blocking_write(state->serialState.serialPort, cmdStartDVS, 3, 0) != 3) {
+						if (!serialPortWrite(state, cmdStartDVS)) {
 							return (false);
 						}
 
@@ -315,7 +342,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 					}
 					else if (!param && atomic_load(&state->dvsRunning)) {
 						const char *cmdStopDVS = "E-\n";
-						if (sp_blocking_write(state->serialState.serialPort, cmdStopDVS, 3, 0) != 3) {
+						if (!serialPortWrite(state, cmdStopDVS)) {
 							return (false);
 						}
 
@@ -797,7 +824,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 			// Send TS reset command to device. Ignore errors.
 			const char *cmdTSReset = "!ET0\n";
-			sp_blocking_write(state->serialState.serialPort, cmdTSReset, 5, 0);
+			serialPortWrite(state, cmdTSReset);
 
 			state->wrapOverflow = 0;
 			state->wrapAdd = 0;
@@ -1029,17 +1056,15 @@ static bool edvsSendBiases(edvsState state, int biasID) {
 
 	for (size_t i = startBias; i < stopBias; i++) {
 		snprintf(cmdSetBias, 128, "!B%zu=%" PRIu32 "\n", i, caerByteArrayToInteger(state->biases[i], BIAS_LENGTH));
-		size_t cmdSetBiasLength = strlen(cmdSetBias);
 
-		if (sp_blocking_write(state->serialState.serialPort, cmdSetBias, cmdSetBiasLength, 0)
-			!= (int) cmdSetBiasLength) {
+		if (!serialPortWrite(state, cmdSetBias)) {
 			return (false);
 		}
 	}
 
 	// Flush biases to chip.
 	const char *cmdFlushBiases = "!BF\n";
-	if (sp_blocking_write(state->serialState.serialPort, cmdFlushBiases, 4, 0) != 4) {
+	if (!serialPortWrite(state, cmdFlushBiases)) {
 		return (false);
 	}
 
