@@ -11,7 +11,6 @@
 #endif
 
 #define MAX_THREAD_NAME_LENGTH 15
-#define MAX_SERIAL_NUMBER_LENGTH 8
 
 #define EDVS_DEVICE_NAME "eDVS4337"
 
@@ -30,7 +29,6 @@ struct serial_state {
 	// Serial Device State
 	struct sp_port *serialPort;
 	// Serial thread state
-	char serialThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
 	thrd_t serialThread;
 	atomic_bool serialThreadRun;
 	// Serial Data Transfers
@@ -59,7 +57,7 @@ struct edvs_state {
 	int32_t wrapAdd;
 	int32_t lastTimestamp;
 	int32_t currentTimestamp;
-	uint16_t lastShortTimestamp;
+	uint16_t lastShortTimestamp; // For wrap detection.
 	// Packet Container state
 	caerEventPacketContainer currentPacketContainer;
 	atomic_uint_fast32_t maxPacketContainerPacketSize;

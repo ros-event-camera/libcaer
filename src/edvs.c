@@ -1,6 +1,9 @@
 #include "edvs.h"
 
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
+static bool serialThreadStart(edvsHandle handle);
+static void serialThreadStop(edvsHandle handle);
+static int serialThreadRun(void *handlePtr);
 static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
 static bool edvsSendBiases(edvsState state, int biasID);
 
@@ -84,7 +87,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
 
-	// Set device string/thread name. Maximum length of 15 chars due to Linux limitations.
+	// Set device string.
 	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16, EDVS_DEVICE_NAME, deviceID);
 
 	char *fullLogString = malloc(fullLogStringLength + 1);
@@ -112,7 +115,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	// Open the serial port.
 	retVal = sp_open(state->serialState.serialPort, SP_MODE_READ_WRITE);
 	if (retVal != SP_OK) {
-		edvsLog(CAER_LOG_ERROR, handle, "Failed to open serial port, error = %d.", retVal);
+		edvsLog(CAER_LOG_ERROR, handle, "Failed to open serial port, error: %d.", retVal);
 		sp_free_port(state->serialState.serialPort);
 		free(handle->info.deviceString);
 		free(handle);
@@ -121,7 +124,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	}
 
 	// Setup serial port communication.
-	atomic_store(&state->serialState.serialReadSize, 2048);
+	atomic_store(&state->serialState.serialReadSize, 1024);
 
 	sp_set_baudrate(state->serialState.serialPort, (int) serialBaudRate);
 	sp_set_bits(state->serialState.serialPort, 8);
@@ -155,6 +158,8 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 		return (NULL);
 	}
+
+	// TODO: do we need to read startup data, to flush the pipe?
 
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
@@ -479,6 +484,77 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 	return (true);
 }
 
+static bool serialThreadStart(edvsHandle handle) {
+	// Start serial communication thread.
+	if ((errno = thrd_create(&handle->state.serialState.serialThread, &serialThreadRun, handle)) != thrd_success) {
+		return (false);
+	}
+
+	// Wait for serial communication thread to be ready.
+	while (!atomic_load_explicit(&handle->state.serialState.serialThreadRun, memory_order_relaxed)) {
+		;
+	}
+
+	return (true);
+}
+
+static void serialThreadStop(edvsHandle handle) {
+	// Shut down serial communication thread.
+	atomic_store(&handle->state.serialState.serialThreadRun, false);
+
+	// Wait for serial communication thread to terminate.
+	if ((errno = thrd_join(handle->state.serialState.serialThread, NULL)) != thrd_success) {
+		// This should never happen!
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to join serial thread. Error: %d.", errno);
+	}
+}
+
+static int serialThreadRun(void *handlePtr) {
+	edvsHandle handle = handlePtr;
+	edvsState state = &handle->state;
+
+	edvsLog(CAER_LOG_DEBUG, handle, "Starting serial communication thread ...");
+
+	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
+	char threadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	strncpy(threadName, handle->info.deviceString, MAX_THREAD_NAME_LENGTH);
+	threadName[MAX_THREAD_NAME_LENGTH] = '\0';
+
+	thrd_set_name(threadName);
+
+	// Signal data thread ready back to start function.
+	atomic_store(&state->serialState.serialThreadRun, true);
+
+	edvsLog(CAER_LOG_DEBUG, handle, "Serial communication thread running.");
+
+	// Handle serial port reading (10 ms timeout).
+	while (atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
+		size_t readSize = atomic_load_explicit(&state->serialState.serialReadSize, memory_order_relaxed);
+
+		uint8_t dataBuffer[readSize];
+		int bytesRead = sp_blocking_read(state->serialState.serialPort, dataBuffer, readSize, 10);
+		if (bytesRead < 0) {
+			// ERROR: call exceptional shut-down callback and exit.
+			if (state->serialState.serialShutdownCallback != NULL) {
+				state->serialState.serialShutdownCallback(state->serialState.serialShutdownCallbackPtr);
+			}
+			break;
+		}
+
+		if (bytesRead > 0) {
+			// Read something, process it and try again.
+			edvsEventTranslator(handle, dataBuffer, (size_t) bytesRead);
+		}
+	}
+
+	// Ensure threadRun is false on termination.
+	atomic_store(&state->serialState.serialThreadRun, false);
+
+	edvsLog(CAER_LOG_DEBUG, handle, "Serial communication thread shut down.");
+
+	return (EXIT_SUCCESS);
+}
+
 bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
 	edvsHandle handle = (edvsHandle) cdh;
@@ -530,10 +606,10 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 		return (false);
 	}
 
-	if (!usbDataTransfersStart(&state->usbState)) {
+	if (!serialThreadStart(handle)) {
 		freeAllDataMemory(state);
 
-		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to start serial data transfers.");
 		return (false);
 	}
 
@@ -554,7 +630,7 @@ bool edvsDataStop(caerDeviceHandle cdh) {
 		edvsConfigSet((caerDeviceHandle) handle, EDVS_CONFIG_DVS, EDVS_CONFIG_DVS_RUN, false);
 	}
 
-	usbDataTransfersStop(&state->usbState);
+	serialThreadStop(handle);
 
 	// Empty ringbuffer.
 	caerEventPacketContainer container;

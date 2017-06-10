@@ -24,7 +24,7 @@ extern "C" {
  * Parameter address for module CAER_HOST_CONFIG_SERIAL:
  * read size for serial port communication.
  */
-#define CAER_HOST_CONFIG_SERIAL_READ_SIZE 1
+#define CAER_HOST_CONFIG_SERIAL_READ_SIZE 0
 
 /**
  * Parameter values for module CAER_HOST_CONFIG_SERIAL:
