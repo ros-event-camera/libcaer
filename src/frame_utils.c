@@ -1,7 +1,20 @@
 #include "frame_utils.h"
 
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+// Use C++ OpenCV demosaic and contrast functions, defined
+// separately in 'frame_utils_opencv.cpp'.
+extern caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType);
+extern void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
+	enum caer_frame_utils_contrast_types contrastType);
+#endif
+
 enum pixelColorEnum {
-	PXR, PXB, PXG1, PXG2, PXW
+	PXR,
+	PXB,
+	PXG1,
+	PXG2,
+	PXW
 };
 
 static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
@@ -528,9 +541,19 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 	}
 }
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket) {
+caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType) {
 	if (framePacket == NULL) {
 		return (NULL);
+	}
+
+	if (demosaicType != DEMOSAIC_STANDARD) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+		return (caerFrameUtilsOpenCVDemosaic(framePacket, demosaicType));
+#else
+		caerLog(CAER_LOG_WARNING, __func__,
+			"Selected OpenCV demosaic type, but OpenCV support is disabled. Either enable it or change to use 'DEMOSAIC_STANDARD'.");
+#endif
 	}
 
 	int32_t countValid = 0;
@@ -600,9 +623,19 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	return (colorFramePacket);
 }
 
-void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
+void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType) {
 	if (framePacket == NULL) {
 		return;
+	}
+
+	if (contrastType != CONTRAST_STANDARD) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+		caerFrameUtilsOpenCVContrast(framePacket, contrastType);
+		return;
+#else
+		caerLog(CAER_LOG_WARNING, __func__,
+			"Selected OpenCV contrast enhancement type, but OpenCV support is disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
+#endif
 	}
 
 	// O(x, y) = alpha * I(x, y) + beta, where alpha maximizes the range
@@ -646,7 +679,7 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
 		}
 		else {
 			caerLog(CAER_LOG_WARNING, __func__,
-				"Standard contrast enhancement only works with grayscale images. For color image support, please use caerFrameUtilsOpenCVContrast().");
+				"Standard contrast enhancement only works with grayscale images. For color images support, please use one of the OpenCV contrast enhancement types.");
 		}
 	CAER_FRAME_ITERATOR_VALID_END
 }

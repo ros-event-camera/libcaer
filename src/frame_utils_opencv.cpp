@@ -6,14 +6,18 @@
 
 using namespace cv;
 
+caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType);
+void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
+
 static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
-	enum caer_frame_utils_opencv_demosaic demosaicType);
+	enum caer_frame_utils_demosaic_types demosaicType);
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent);
 static void frameUtilsOpenCVContrastEqualize(Mat &intensity);
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize);
 
 static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
-	enum caer_frame_utils_opencv_demosaic demosaicType) {
+	enum caer_frame_utils_demosaic_types demosaicType) {
 	// Initialize OpenCV Mat based on caerFrameEvent data directly (no image copy).
 	const Size frameSize(caerFrameEventGetLengthX(monoFrame), caerFrameEventGetLengthY(monoFrame));
 	const Mat monoMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(monoFrame)),
@@ -27,7 +31,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 	int code = 0;
 
 	switch (demosaicType) {
-		case DEMOSAIC_NORMAL:
+		case DEMOSAIC_OPENCV_NORMAL:
 			switch (caerFrameEventGetColorFilter(monoFrame)) {
 				case RGBG:
 					code = COLOR_BayerBG2RGB;
@@ -51,7 +55,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 			}
 			break;
 
-			/*case DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS:
+			/*case DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS:
 			 switch (caerFrameEventGetColorFilter(monoFrame)) {
 			 case RGBG:
 			 code = COLOR_BayerBG2RGB_VNG;
@@ -75,7 +79,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 			 }
 			 break;*/
 
-		case DEMOSAIC_EDGE_AWARE:
+		case DEMOSAIC_OPENCV_EDGE_AWARE:
 			switch (caerFrameEventGetColorFilter(monoFrame)) {
 				case RGBG:
 					code = COLOR_BayerBG2RGB_EA;
@@ -98,6 +102,9 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 					break;
 			}
 			break;
+
+		default:
+			break;
 	}
 
 	// Convert Bayer pattern to RGB image.
@@ -105,7 +112,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 }
 
 caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_opencv_demosaic demosaicType) {
+	enum caer_frame_utils_demosaic_types demosaicType) {
 	if (framePacket == NULL) {
 		return (NULL);
 	}
@@ -135,7 +142,7 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 			}
 			else {
 				caerLog(CAER_LOG_WARNING, __func__,
-					"OpenCV demosaicing doesn't support the RGBW color filter, only RGBG. Please use caerFrameUtilsDemosaic() instead.");
+					"OpenCV demosaic types don't support the RGBW color filter, only RGBG. Please use the 'DEMOSAIC_STANDARD' type instead.");
 			}
 		}
 	CAER_FRAME_ITERATOR_VALID_END
@@ -304,8 +311,7 @@ static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int t
 	clahe->apply(intensity, intensity);
 }
 
-void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_opencv_contrast contrastType) {
+void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType) {
 	if (framePacket == NULL) {
 		return;
 	}
@@ -370,16 +376,19 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
 
 		// Apply contrast enhancement algorithm.
 		switch (contrastType) {
-			case CONTRAST_NORMALIZATION:
+			case CONTRAST_OPENCV_NORMALIZATION:
 				frameUtilsOpenCVContrastNormalize(intensity, 1.0);
 				break;
 
-			case CONTRAST_HISTOGRAM_EQUALIZATION:
+			case CONTRAST_OPENCV_HISTOGRAM_EQUALIZATION:
 				frameUtilsOpenCVContrastEqualize(intensity);
 				break;
 
-			case CONTRAST_CLAHE:
+			case CONTRAST_OPENCV_CLAHE:
 				frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
+				break;
+
+			default:
 				break;
 		}
 

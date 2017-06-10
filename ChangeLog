@@ -1,6 +1,11 @@
 Release 2.2.0 - XX.06.2017
+INCOMPATIBLE CHANGES
+- frame_utils.h: the frame utilities API was simplified. Now only one
+  function for demosaic support respective contrast enhancement support
+  exists, with the type (standard or OpenCV) as an enum argument.
+
 NEW FEATURES
-- Add support for the eDVS4337 serial port device. Serial port devices
+- Added support for the eDVS4337 serial port device. Serial port devices
   require the libserialport library (version 0.1.1 or newer), and as such
   are optional; enable them by passing -DENABLE_SERIALDEV=1 to cmake.
   The presence of this support can be verified with the libcaer.h define
