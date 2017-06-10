@@ -1797,7 +1797,7 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr,
 
 	// convert from Hz to device units with magic conversion constant for current dynapse hardware
 	// (clock_rate/(wait_cycles*num_sources))/(UINT16_MAX-1) = size of frequency resolution steps
-	uint16_t deviceRate = (uint16_t)(rateHz/0.06706);
+	uint16_t deviceRate = U16T((float) rateHz / 0.06706f);
 
 	// Ready the data for programming
 	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
