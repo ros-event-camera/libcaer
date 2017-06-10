@@ -812,15 +812,16 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			// Commit packets when doing a reset to clearly separate them.
 			tsReset = true;
 		}
-		// Timestamp wrapped.
-		else if (shortTS < state->lastShortTimestamp) {
-			state->lastShortTimestamp = 0;
+		else {
+			bool tsWrap = (shortTS < state->lastShortTimestamp);
 
-			// Detect big timestamp wrap-around.
-			if (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1))) {
+			// Timestamp big wrap.
+			if (tsWrap && (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1)))) {
 				// Reset wrapAdd to zero at this point, so we can again
 				// start detecting overruns of the 32bit value.
 				state->wrapAdd = 0;
+
+				state->lastShortTimestamp = 0;
 
 				state->lastTimestamp = 0;
 				state->currentTimestamp = 0;
@@ -838,54 +839,48 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				tsBigWrap = true;
 			}
 			else {
-				state->wrapAdd += TS_WRAP_ADD;
+				if (tsWrap) {
+					// Timestamp normal wrap (every ~65 ms).
+					state->wrapAdd += TS_WRAP_ADD;
 
+					state->lastShortTimestamp = 0;
+				}
+				else {
+					// Not a wrap, set this to track wrapping.
+					state->lastShortTimestamp = shortTS;
+				}
+
+				// Expand to 32 bits. (Tick is 1µs already.)
 				state->lastTimestamp = state->currentTimestamp;
-				state->currentTimestamp = state->wrapAdd;
+				state->currentTimestamp = state->wrapAdd + shortTS;
 				initContainerCommitTimestamp(state);
 
 				// Check monotonicity of timestamps.
 				checkMonotonicTimestamp(handle);
-			}
-		}
-		else {
-			// Given how timestamp wraps and resets are detected, we
-			// simplify everything by doing either timestamp operations
-			// or event parsing. This means that on timestamp operations,
-			// we may loose one event (every 65ms, ~15 / second). This
-			// is not an issue, given the demo purpose of eDVS support.
 
-			// Expand to 32 bits. (Tick is 1µs already.)
-			state->lastShortTimestamp = shortTS;
-			state->lastTimestamp = state->currentTimestamp;
-			state->currentTimestamp = state->wrapAdd + shortTS;
-			initContainerCommitTimestamp(state);
+				uint8_t x = (xByte & LOW_BITS_MASK);
+				uint8_t y = (yByte & LOW_BITS_MASK);
+				bool polarity = (xByte & HIGH_BIT_MASK);
 
-			// Check monotonicity of timestamps.
-			checkMonotonicTimestamp(handle);
-
-			uint8_t x = (xByte & LOW_BITS_MASK);
-			uint8_t y = (yByte & LOW_BITS_MASK);
-			bool polarity = (xByte & HIGH_BIT_MASK);
-
-			// Check range conformity.
-			if (x < EDVS_ARRAY_SIZE_X && y < EDVS_ARRAY_SIZE_Y) {
-				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
-					state->currentPolarityPacketPosition++);
-				caerPolarityEventSetTimestamp(currentEvent, state->currentTimestamp);
-				caerPolarityEventSetPolarity(currentEvent, polarity);
-				caerPolarityEventSetY(currentEvent, y);
-				caerPolarityEventSetX(currentEvent, x);
-				caerPolarityEventValidate(currentEvent, state->currentPolarityPacket);
-			}
-			else {
-				if (x >= EDVS_ARRAY_SIZE_X) {
-					edvsLog(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
-					EDVS_ARRAY_SIZE_X - 1, x);
+				// Check range conformity.
+				if (x < EDVS_ARRAY_SIZE_X && y < EDVS_ARRAY_SIZE_Y) {
+					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
+						state->currentPolarityPacketPosition++);
+					caerPolarityEventSetTimestamp(currentEvent, state->currentTimestamp);
+					caerPolarityEventSetPolarity(currentEvent, polarity);
+					caerPolarityEventSetY(currentEvent, y);
+					caerPolarityEventSetX(currentEvent, x);
+					caerPolarityEventValidate(currentEvent, state->currentPolarityPacket);
 				}
-				if (y >= EDVS_ARRAY_SIZE_Y) {
-					edvsLog(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
-					EDVS_ARRAY_SIZE_Y - 1, y);
+				else {
+					if (x >= EDVS_ARRAY_SIZE_X) {
+						edvsLog(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
+						EDVS_ARRAY_SIZE_X - 1, x);
+					}
+					if (y >= EDVS_ARRAY_SIZE_Y) {
+						edvsLog(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
+						EDVS_ARRAY_SIZE_Y - 1, y);
+					}
 				}
 			}
 		}
