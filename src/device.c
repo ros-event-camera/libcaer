@@ -136,6 +136,15 @@ static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDev
 #endif
 };
 
+// Add empty InfoGet for optional devices, such as serial ones.
+#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 0
+struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle) {
+	(void)(handle);
+	struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
+	return (emptyInfo);
+}
+#endif
+
 struct caer_device_handle {
 	uint16_t deviceType;
 	// This is compatible with all device handle structures.

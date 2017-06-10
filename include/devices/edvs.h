@@ -140,15 +140,7 @@ struct caer_edvs_info {
   * @return a copy of the device information structure if successful,
   *         an empty structure (all zeros) on failure.
   */
-#if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
-#else
-static inline struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle) {
-	(void)(handle);
-	struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
-	return (emptyInfo);
-}
-#endif
 
 #ifdef __cplusplus
 }
