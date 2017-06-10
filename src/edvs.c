@@ -716,6 +716,19 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 	size_t i = 0;
 	while (i < bytesSent) {
+		uint8_t yByte = buffer[i];
+
+		if (yByte & HIGH_BIT_MASK) {
+			edvsLog(CAER_LOG_NOTICE, handle, "Data not aligned, skipping to next data byte.");
+			i++;
+			continue;
+		}
+
+		if ((i + 3) >= bytesSent) {
+			// Cannot fetch next event data, we're done with this buffer.
+			return;
+		}
+
 		// Allocate new packets for next iteration as needed.
 		if (state->currentPacketContainer == NULL) {
 			state->currentPacketContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
@@ -772,71 +785,75 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint8_t yByte = buffer[i];
+		uint8_t xByte = buffer[i + 1];
+		uint8_t ts1Byte = buffer[i + 2];
+		uint8_t ts2Byte = buffer[i + 3];
 
-		if (yByte & HIGH_BIT_MASK) {
-			edvsLog(CAER_LOG_WARNING, handle, "Data not aligned - flushing rest of buffer.");
+		uint16_t shortTS = U16T((ts1Byte << 8) | ts2Byte);
+
+		// Timestamp reset.
+		if (atomic_load(&state->dvsTSReset)) {
+			atomic_store(&state->dvsTSReset, false);
+
+			// Send TS reset command to device. Ignore errors.
+			const char *cmdTSReset = "!ET0\n";
+			sp_blocking_write(state->serialState.serialPort, cmdTSReset, 5, 0);
+
+			state->wrapOverflow = 0;
+			state->wrapAdd = 0;
+			state->lastShortTimestamp = 0;
+			state->lastTimestamp = 0;
+			state->currentTimestamp = 0;
+			state->currentPacketContainerCommitTimestamp = -1;
+			initContainerCommitTimestamp(state);
+
+			// Defer timestamp reset event to later, so we commit it
+			// alone, in its own packet.
+			// Commit packets when doing a reset to clearly separate them.
+			tsReset = true;
 		}
-		else if ((i + 3) < bytesSent) {
-			uint8_t xByte = buffer[i + 1];
-			uint8_t ts1Byte = buffer[i + 2];
-			uint8_t ts2Byte = buffer[i + 3];
+		// Timestamp wrapped.
+		else if (shortTS < state->lastShortTimestamp) {
+			state->lastShortTimestamp = 0;
 
-			uint16_t shortTS = U16T((ts1Byte << 8) | ts2Byte);
-
-			// Timestamp reset.
-			if (atomic_load(&state->dvsTSReset)) {
-				atomic_store(&state->dvsTSReset, false);
-
-				state->wrapOverflow = 0;
+			// Detect big timestamp wrap-around.
+			if (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1))) {
+				// Reset wrapAdd to zero at this point, so we can again
+				// start detecting overruns of the 32bit value.
 				state->wrapAdd = 0;
-				state->lastShortTimestamp = 0;
+
 				state->lastTimestamp = 0;
 				state->currentTimestamp = 0;
-				state->currentPacketContainerCommitTimestamp = -1;
+
+				// Increment TSOverflow counter.
+				state->wrapOverflow++;
+
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
+					state->currentSpecialPacketPosition++);
+				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
+				caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
+				caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
+
+				// Commit packets to separate before wrap from after cleanly.
+				tsBigWrap = true;
+			}
+			else {
+				state->wrapAdd += TS_WRAP_ADD;
+
+				state->lastTimestamp = state->currentTimestamp;
+				state->currentTimestamp = state->wrapAdd;
 				initContainerCommitTimestamp(state);
 
-				// Defer timestamp reset event to later, so we commit it
-				// alone, in its own packet.
-				// Commit packets when doing a reset to clearly separate them.
-				tsReset = true;
+				// Check monotonicity of timestamps.
+				checkMonotonicTimestamp(handle);
 			}
-			// Timestamp wrapped.
-			else if (shortTS < state->lastShortTimestamp) {
-				// Detect big timestamp wrap-around.
-				if (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1))) {
-					// Reset wrapAdd to zero at this point, so we can again
-					// start detecting overruns of the 32bit value.
-					state->wrapAdd = 0;
-
-					state->lastTimestamp = 0;
-					state->currentTimestamp = 0;
-
-					// Increment TSOverflow counter.
-					state->wrapOverflow++;
-
-					caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
-						state->currentSpecialPacketPosition++);
-					caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
-					caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
-					caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
-
-					// Commit packets to separate before wrap from after cleanly.
-					tsBigWrap = true; // TODO: is this possible here?
-				}
-				else {
-					// timestamp bit 15 is one -> wrap: now we need to increment
-					// the wrapAdd, uses only 14 bit timestamps. Each wrap is 2^14 µs (~16ms).
-					state->wrapAdd += TS_WRAP_ADD;
-
-					state->lastTimestamp = state->currentTimestamp;
-					state->currentTimestamp = state->wrapAdd;
-					initContainerCommitTimestamp(state);
-
-					// Check monotonicity of timestamps.
-					checkMonotonicTimestamp(handle);
-				}
-			}
+		}
+		else {
+			// Given how timestamp wraps and resets are detected, we
+			// simplify everything by doing either timestamp operations
+			// or event parsing. This means that on timestamp operations,
+			// we may loose one event (every 65ms, ~15 / second). This
+			// is not an issue, given the demo purpose of eDVS support.
 
 			// Expand to 32 bits. (Tick is 1µs already.)
 			state->lastShortTimestamp = shortTS;
@@ -871,138 +888,134 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					EDVS_ARRAY_SIZE_Y - 1, y);
 				}
 			}
+		}
 
-			// Thresholds on which to trigger packet container commit.
-			// forceCommit is already defined above.
-			// Trigger if any of the global container-wide thresholds are met.
-			int32_t currentPacketContainerCommitSize = I32T(
-				atomic_load_explicit(&state->maxPacketContainerPacketSize, memory_order_relaxed));
-			bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-				&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
-					|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
+		// Thresholds on which to trigger packet container commit.
+		// forceCommit is already defined above.
+		// Trigger if any of the global container-wide thresholds are met.
+		int32_t currentPacketContainerCommitSize = I32T(
+			atomic_load_explicit(&state->maxPacketContainerPacketSize, memory_order_relaxed));
+		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
+			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
+				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
 
-			bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
-				> state->currentPacketContainerCommitTimestamp;
+		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+			> state->currentPacketContainerCommitTimestamp;
 
-			// FIXME: with the current EDVS architecture, currentTimestamp always comes together
-			// with an event, so the very first event that matches this threshold will be
-			// also part of the committed packet container. This doesn't break any of the invariants.
+		// FIXME: with the current EDVS architecture, currentTimestamp always comes together
+		// with an event, so the very first event that matches this threshold will be
+		// also part of the committed packet container. This doesn't break any of the invariants.
 
-			// Commit packet containers to the ring-buffer, so they can be processed by the
-			// main-loop, when any of the required conditions are met.
-			if (tsReset || tsBigWrap || containerSizeCommit || containerTimeCommit) {
-				// One or more of the commit triggers are hit. Set the packet container up to contain
-				// any non-empty packets. Empty packets are not forwarded to save memory.
-				bool emptyContainerCommit = true;
+		// Commit packet containers to the ring-buffer, so they can be processed by the
+		// main-loop, when any of the required conditions are met.
+		if (tsReset || tsBigWrap || containerSizeCommit || containerTimeCommit) {
+			// One or more of the commit triggers are hit. Set the packet container up to contain
+			// any non-empty packets. Empty packets are not forwarded to save memory.
+			bool emptyContainerCommit = true;
 
-				if (state->currentPolarityPacketPosition > 0) {
-					caerEventPacketContainerSetEventPacket(state->currentPacketContainer, POLARITY_EVENT,
-						(caerEventPacketHeader) state->currentPolarityPacket);
+			if (state->currentPolarityPacketPosition > 0) {
+				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, POLARITY_EVENT,
+					(caerEventPacketHeader) state->currentPolarityPacket);
 
-					state->currentPolarityPacket = NULL;
-					state->currentPolarityPacketPosition = 0;
-					emptyContainerCommit = false;
+				state->currentPolarityPacket = NULL;
+				state->currentPolarityPacketPosition = 0;
+				emptyContainerCommit = false;
+			}
+
+			if (state->currentSpecialPacketPosition > 0) {
+				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, SPECIAL_EVENT,
+					(caerEventPacketHeader) state->currentSpecialPacket);
+
+				state->currentSpecialPacket = NULL;
+				state->currentSpecialPacketPosition = 0;
+				emptyContainerCommit = false;
+			}
+
+			// If the commit was triggered by a packet container limit being reached, we always
+			// update the time related limit. The size related one is updated implicitly by size
+			// being reset to zero after commit (new packets are empty).
+			if (containerTimeCommit) {
+				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+					> state->currentPacketContainerCommitTimestamp) {
+					state->currentPacketContainerCommitTimestamp += I32T(
+						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
 				}
+			}
 
-				if (state->currentSpecialPacketPosition > 0) {
-					caerEventPacketContainerSetEventPacket(state->currentPacketContainer, SPECIAL_EVENT,
-						(caerEventPacketHeader) state->currentSpecialPacket);
+			// Filter out completely empty commits. This can happen when data is turned off,
+			// but the timestamps are still going forward.
+			if (emptyContainerCommit) {
+				caerEventPacketContainerFree(state->currentPacketContainer);
+				state->currentPacketContainer = NULL;
+			}
+			else {
+				if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
+					// Failed to forward packet container, just drop it, it doesn't contain
+					// any critical information anyway.
+					edvsLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
 
-					state->currentSpecialPacket = NULL;
-					state->currentSpecialPacketPosition = 0;
-					emptyContainerCommit = false;
-				}
-
-				// If the commit was triggered by a packet container limit being reached, we always
-				// update the time related limit. The size related one is updated implicitly by size
-				// being reset to zero after commit (new packets are empty).
-				if (containerTimeCommit) {
-					while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
-						> state->currentPacketContainerCommitTimestamp) {
-						state->currentPacketContainerCommitTimestamp += I32T(
-							atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
-					}
-				}
-
-				// Filter out completely empty commits. This can happen when data is turned off,
-				// but the timestamps are still going forward.
-				if (emptyContainerCommit) {
 					caerEventPacketContainerFree(state->currentPacketContainer);
 					state->currentPacketContainer = NULL;
 				}
 				else {
-					if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
-						// Failed to forward packet container, just drop it, it doesn't contain
-						// any critical information anyway.
-						edvsLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
-
-						caerEventPacketContainerFree(state->currentPacketContainer);
-						state->currentPacketContainer = NULL;
-					}
-					else {
-						if (state->dataNotifyIncrease != NULL) {
-							state->dataNotifyIncrease(state->dataNotifyUserPtr);
-						}
-
-						state->currentPacketContainer = NULL;
-					}
-				}
-
-				// The only critical timestamp information to forward is the timestamp reset event.
-				// The timestamp big-wrap can also (and should!) be detected by observing a packet's
-				// tsOverflow value, not the special packet TIMESTAMP_WRAP event, which is only informative.
-				// For the timestamp reset event (TIMESTAMP_RESET), we thus ensure that it is always
-				// committed, and we send it alone, in its own packet container, to ensure it will always
-				// be ordered after any other event packets in any processing or output stream.
-				if (tsReset) {
-					// Allocate packet container just for this event.
-					caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
-					if (tsResetContainer == NULL) {
-						edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
-						return;
-					}
-
-					// Allocate special packet just for this event.
-					caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1,
-						I16T(handle->info.deviceID), state->wrapOverflow);
-					if (tsResetPacket == NULL) {
-						edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
-						return;
-					}
-
-					// Create timestamp reset event.
-					caerSpecialEvent tsResetEvent = caerSpecialEventPacketGetEvent(tsResetPacket, 0);
-					caerSpecialEventSetTimestamp(tsResetEvent, INT32_MAX);
-					caerSpecialEventSetType(tsResetEvent, TIMESTAMP_RESET);
-					caerSpecialEventValidate(tsResetEvent, tsResetPacket);
-
-					// Assign special packet to packet container.
-					caerEventPacketContainerSetEventPacket(tsResetContainer, SPECIAL_EVENT,
-						(caerEventPacketHeader) tsResetPacket);
-
-					// Reset MUST be committed, always, else downstream data processing and
-					// outputs get confused if they have no notification of timestamps
-					// jumping back go zero.
-					while (!ringBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
-						// Prevent dead-lock if shutdown is requested and nothing is consuming
-						// data anymore, but the ring-buffer is full (and would thus never empty),
-						// thus blocking the USB handling thread in this loop.
-						if (!atomic_load(&state->serialState.serialThreadRun)) {
-							return;
-						}
-					}
-
-					// Signal new container as usual.
 					if (state->dataNotifyIncrease != NULL) {
 						state->dataNotifyIncrease(state->dataNotifyUserPtr);
 					}
+
+					state->currentPacketContainer = NULL;
 				}
 			}
 
-			i += 3;
-		}
+			// The only critical timestamp information to forward is the timestamp reset event.
+			// The timestamp big-wrap can also (and should!) be detected by observing a packet's
+			// tsOverflow value, not the special packet TIMESTAMP_WRAP event, which is only informative.
+			// For the timestamp reset event (TIMESTAMP_RESET), we thus ensure that it is always
+			// committed, and we send it alone, in its own packet container, to ensure it will always
+			// be ordered after any other event packets in any processing or output stream.
+			if (tsReset) {
+				// Allocate packet container just for this event.
+				caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
+				if (tsResetContainer == NULL) {
+					edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
+					return;
+				}
 
-		i++;
+				// Allocate special packet just for this event.
+				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
+					state->wrapOverflow);
+				if (tsResetPacket == NULL) {
+					edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
+					return;
+				}
+
+				// Create timestamp reset event.
+				caerSpecialEvent tsResetEvent = caerSpecialEventPacketGetEvent(tsResetPacket, 0);
+				caerSpecialEventSetTimestamp(tsResetEvent, INT32_MAX);
+				caerSpecialEventSetType(tsResetEvent, TIMESTAMP_RESET);
+				caerSpecialEventValidate(tsResetEvent, tsResetPacket);
+
+				// Assign special packet to packet container.
+				caerEventPacketContainerSetEventPacket(tsResetContainer, SPECIAL_EVENT,
+					(caerEventPacketHeader) tsResetPacket);
+
+				// Reset MUST be committed, always, else downstream data processing and
+				// outputs get confused if they have no notification of timestamps
+				// jumping back go zero.
+				while (!ringBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
+					// Prevent dead-lock if shutdown is requested and nothing is consuming
+					// data anymore, but the ring-buffer is full (and would thus never empty),
+					// thus blocking the USB handling thread in this loop.
+					if (!atomic_load(&state->serialState.serialThreadRun)) {
+						return;
+					}
+				}
+
+				// Signal new container as usual.
+				if (state->dataNotifyIncrease != NULL) {
+					state->dataNotifyIncrease(state->dataNotifyUserPtr);
+				}
+			}
+		}
 	}
 }
 
