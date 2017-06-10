@@ -160,27 +160,27 @@ struct davis_handle {
 
 typedef struct davis_handle *davisHandle;
 
-caerDeviceHandle davisCommonOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
 caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
 caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
 
-caerDeviceHandle davisCommonOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
+caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict);
-bool davisCommonClose(caerDeviceHandle cdh);
+bool davisClose(caerDeviceHandle cdh);
 
-bool davisCommonSendDefaultConfig(caerDeviceHandle cdh);
+bool davisSendDefaultConfig(caerDeviceHandle cdh);
 // Negative addresses are used for host-side configuration.
 // Positive addresses (including zero) are used for device-side configuration.
-bool davisCommonConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
-bool davisCommonConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
+bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
+bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
-bool davisCommonDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
+bool davisDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr);
-bool davisCommonDataStop(caerDeviceHandle handle);
-caerEventPacketContainer davisCommonDataGet(caerDeviceHandle handle);
+bool davisDataStop(caerDeviceHandle handle);
+caerEventPacketContainer davisDataGet(caerDeviceHandle handle);
 
 #endif /* LIBCAER_SRC_DAVIS_H_ */
