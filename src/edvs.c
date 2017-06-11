@@ -161,6 +161,9 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	sp_set_xon_xoff(state->serialState.serialPort, SP_XONXOFF_DISABLED);
 	sp_set_flowcontrol(state->serialState.serialPort, SP_FLOWCONTROL_RTSCTS);
 
+	// TODO: is a reset needed? "R\n"
+	// TODO: do we need to read startup data, to flush the pipe?
+
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send echo disable command.");
@@ -184,8 +187,6 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 		return (NULL);
 	}
-
-	// TODO: do we need to read startup data, to flush the pipe?
 
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
