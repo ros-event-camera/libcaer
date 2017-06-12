@@ -21,7 +21,7 @@ static inline bool serialPortWrite(edvsState state, const char *cmd) {
 
 	mtx_lock(&state->serialState.serialWriteLock);
 
-	bool retVal = (sp_blocking_write(state->serialState.serialPort, cmd, cmdLength, 0) != (int) cmdLength);
+	bool retVal = (sp_blocking_write(state->serialState.serialPort, cmd, cmdLength, 0) == (int) cmdLength);
 
 	mtx_unlock(&state->serialState.serialWriteLock);
 
@@ -161,8 +161,17 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	sp_set_xon_xoff(state->serialState.serialPort, SP_XONXOFF_DISABLED);
 	sp_set_flowcontrol(state->serialState.serialPort, SP_FLOWCONTROL_RTSCTS);
 
-	// TODO: is a reset needed? "R\n"
-	// TODO: do we need to read startup data, to flush the pipe?
+	const char *cmdReset = "R\n";
+	if (!serialPortWrite(state, cmdReset)) {
+		edvsLog(CAER_LOG_ERROR, handle, "Failed to send reset command.");
+		mtx_destroy(&state->serialState.serialWriteLock);
+		sp_close(state->serialState.serialPort);
+		sp_free_port(state->serialState.serialPort);
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
 
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
@@ -1039,6 +1048,8 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				}
 			}
 		}
+
+		i += 4;
 	}
 }
 
