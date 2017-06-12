@@ -22,6 +22,7 @@ static inline bool serialPortWrite(edvsState state, const char *cmd) {
 	mtx_lock(&state->serialState.serialWriteLock);
 
 	bool retVal = (sp_blocking_write(state->serialState.serialPort, cmd, cmdLength, 0) == (int) cmdLength);
+	sp_drain(state->serialState.serialPort);
 
 	mtx_unlock(&state->serialState.serialWriteLock);
 
@@ -114,10 +115,21 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 	handle->info.deviceString = fullLogString;
 
+	// Initialize mutex lock for writes (reads never happen concurrently,
+	// and only on one thread).
+	if (mtx_init(&state->serialState.serialWriteLock, mtx_plain) != thrd_success) {
+		edvsLog(CAER_LOG_ERROR, handle, "Failed to initialize serial write lock.");
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
+
 	// Try to open an eDVS device on a specific serial port.
 	enum sp_return retVal = sp_get_port_by_name(serialPortName, &state->serialState.serialPort);
 	if (retVal != SP_OK) {
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
@@ -129,44 +141,42 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	if (retVal != SP_OK) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to open serial port, error: %d.", retVal);
 		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
 		return (NULL);
 	}
-
-	// Initialize mutex lock for writes (reads never happen concurrently,
-	// and only on one thread).
-	if (mtx_init(&state->serialState.serialWriteLock, mtx_plain) != thrd_success) {
-		edvsLog(CAER_LOG_ERROR, handle, "Failed to initialize serial write lock.");
-		sp_close(state->serialState.serialPort);
-		sp_free_port(state->serialState.serialPort);
-		free(handle->info.deviceString);
-		free(handle);
-
-		return (NULL);
-	}
-
-	// Setup serial port communication.
-	atomic_store(&state->serialState.serialReadSize, 1024);
 
 	sp_set_baudrate(state->serialState.serialPort, (int) serialBaudRate);
 	sp_set_bits(state->serialState.serialPort, 8);
-	sp_set_parity(state->serialState.serialPort, SP_PARITY_NONE);
 	sp_set_stopbits(state->serialState.serialPort, 1);
-	sp_set_rts(state->serialState.serialPort, SP_RTS_FLOW_CONTROL);
-	sp_set_cts(state->serialState.serialPort, SP_CTS_FLOW_CONTROL);
-	sp_set_dtr(state->serialState.serialPort, SP_DTR_OFF);
-	sp_set_dsr(state->serialState.serialPort, SP_DSR_IGNORE);
-	sp_set_xon_xoff(state->serialState.serialPort, SP_XONXOFF_DISABLED);
+	sp_set_parity(state->serialState.serialPort, SP_PARITY_NONE);
 	sp_set_flowcontrol(state->serialState.serialPort, SP_FLOWCONTROL_RTSCTS);
 
 	const char *cmdReset = "R\n";
 	if (!serialPortWrite(state, cmdReset)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send reset command.");
-		mtx_destroy(&state->serialState.serialWriteLock);
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
+
+	struct timespec noDataSleep = { .tv_sec = 1, .tv_nsec = 0 };
+	thrd_sleep(&noDataSleep, NULL);
+
+	// Wait for reset to happen.
+	char resetMessage[1024];
+	int bytesRead = sp_blocking_read(state->serialState.serialPort, resetMessage, 1024, 500);
+	if (bytesRead < 0) {
+		edvsLog(CAER_LOG_ERROR, handle, "Failed to read startup message.");
+		sp_close(state->serialState.serialPort);
+		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
@@ -176,9 +186,9 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send echo disable command.");
-		mtx_destroy(&state->serialState.serialWriteLock);
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
@@ -188,14 +198,17 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	const char *cmdEventFormat = "!E2\n";
 	if (!serialPortWrite(state, cmdEventFormat)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send event format command.");
-		mtx_destroy(&state->serialState.serialWriteLock);
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
 		return (NULL);
 	}
+
+	// Setup serial port communication.
+	atomic_store(&state->serialState.serialReadSize, 1024);
 
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
@@ -216,9 +229,9 @@ bool edvsClose(caerDeviceHandle cdh) {
 	edvsLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Close and free serial port.
-	mtx_destroy(&state->serialState.serialWriteLock);
 	sp_close(state->serialState.serialPort);
 	sp_free_port(state->serialState.serialPort);
+	mtx_destroy(&state->serialState.serialWriteLock);
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
