@@ -186,7 +186,15 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 	// Print startup message.
 	startMessage[bytesRead] = '\0';
-	edvsLog(CAER_LOG_WARNING, handle, "eDVS started, message: '%s'.", startMessage);
+
+	for (size_t i = 0; i < (size_t) bytesRead; i++) {
+		// Remove newlines for log printing.
+		if (startMessage[i] == '\r' || startMessage[i] == '\n') {
+			startMessage[i] = ' ';
+		}
+	}
+
+	edvsLog(CAER_LOG_WARNING, handle, "eDVS started, message: '%s' (%d bytes).", startMessage, bytesRead);
 
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
@@ -582,9 +590,24 @@ static int serialThreadRun(void *handlePtr) {
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Serial communication thread running.");
 
-	// Handle serial port reading (10 ms timeout).
+	// Handle serial port reading (wait on data, 10 ms timeout).
 	while (atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
 		size_t readSize = atomic_load_explicit(&state->serialState.serialReadSize, memory_order_relaxed);
+
+		// Wait for at least 16 full events to be present in the buffer.
+		int bytesAvailable = 0;
+
+		while (bytesAvailable < (16 * EDVS_EVENT_SIZE)
+			&& atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
+			bytesAvailable = sp_input_waiting(state->serialState.serialPort);
+		}
+
+		if ((size_t) bytesAvailable < readSize) {
+			readSize = (size_t) bytesAvailable;
+		}
+
+		// Ensure read size is a multiple of event size.
+		readSize &= (size_t) ~0x03;
 
 		uint8_t dataBuffer[readSize];
 		int bytesRead = sp_blocking_read(state->serialState.serialPort, dataBuffer, readSize, 10);
@@ -596,8 +619,8 @@ static int serialThreadRun(void *handlePtr) {
 			break;
 		}
 
-		if (bytesRead >= 4) {
-			// Read something, process it and try again.
+		if (bytesRead >= EDVS_EVENT_SIZE) {
+			// Read something (at least 1 possible event), process it and try again.
 			edvsEventTranslator(handle, dataBuffer, (size_t) bytesRead);
 		}
 	}
