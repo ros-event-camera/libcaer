@@ -115,6 +115,24 @@ int main(void) {
 			printf("Packet of type %d -> %d events, %d capacity.\n", packet->getEventType(), packet->getEventNumber(),
 				packet->getEventCapacity());
 
+			if (packet->getEventType() == FRAME_EVENT) {
+				std::shared_ptr<const libcaer::events::FrameEventPacket> frame = std::static_pointer_cast<
+					libcaer::events::FrameEventPacket>(packet);
+
+				// Get full timestamp, and sum all pixels of first frame event
+				const libcaer::events::FrameEvent &firstEvent = (*frame)[0];
+
+				int32_t ts = firstEvent.getTimestamp();
+				int64_t sum = 0;
+				for(int32_t x = 0; x < firstEvent.lengthX; x++) {
+					for(int32_t y = 0; y < firstEvent.lengthY; y++) {
+						sum += firstEvent.getPixel(x, y);
+					}
+				}
+
+				printf("First frame event - ts: %d, sum: %lld.\n", ts, sum);
+			}
+
 			if (packet->getEventType() == POLARITY_EVENT) {
 				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
 					libcaer::events::PolarityEventPacket>(packet);
