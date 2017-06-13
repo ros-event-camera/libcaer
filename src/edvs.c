@@ -194,7 +194,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 		}
 	}
 
-	edvsLog(CAER_LOG_WARNING, handle, "eDVS started, message: '%s' (%d bytes).", startMessage, bytesRead);
+	edvsLog(CAER_LOG_INFO, handle, "eDVS started, message: '%s' (%d bytes).", startMessage, bytesRead);
 
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
