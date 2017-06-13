@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.1.5-r6e777f4d972c75738ca18006510931e7c339cb31</span>
+   &#160;<span id="projectnumber">2.2.0-r9755b7fdd197989c136067f94944486d3453a55f</span>
    </div>
   </td>
  </tr>
@@ -1007,7 +1007,7 @@ Enumerations</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a0852039ba5b015264775be8214493498"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="structcaer__davis__info.html">caer_davis_info</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#a0852039ba5b015264775be8214493498">caerDavisInfoGet</a> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle)</td></tr>
+<tr class="memitem:a0852039ba5b015264775be8214493498"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="structcaer__davis__info.html">caer_davis_info</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#a0852039ba5b015264775be8214493498">caerDavisInfoGet</a> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle)</td></tr>
 <tr class="separator:a0852039ba5b015264775be8214493498"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a829fe8375020fda48c0cdefbada7107f"><td class="memItemLeft" align="right" valign="top">uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="davis_8h.html#a829fe8375020fda48c0cdefbada7107f">caerBiasVDACGenerate</a> (const struct <a class="el" href="structcaer__bias__vdac.html">caer_bias_vdac</a> vdacBias)</td></tr>
 <tr class="separator:a829fe8375020fda48c0cdefbada7107f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -8424,7 +8424,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform coarse-fine bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="usb_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
+<p>Transform coarse-fine bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="device_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">coarseFineBias</td><td>coarse-fine bias structure.</td></tr>
@@ -8450,7 +8450,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform internal integer representation, as received by calls to <a class="el" href="usb_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a coarse-fine bias structure, for easier handling and understanding of the various parameters.</p>
+<p>Transform internal integer representation, as received by calls to <a class="el" href="device_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a coarse-fine bias structure, for easier handling and understanding of the various parameters.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">coarseFineBias</td><td>internal integer representation from device.</td></tr>
@@ -8476,7 +8476,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform shifted-source bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="usb_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
+<p>Transform shifted-source bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="device_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">shiftedSourceBias</td><td>shifted-source bias structure.</td></tr>
@@ -8502,7 +8502,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform internal integer representation, as received by calls to <a class="el" href="usb_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a shifted-source bias structure, for easier handling and understanding of the various parameters.</p>
+<p>Transform internal integer representation, as received by calls to <a class="el" href="device_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a shifted-source bias structure, for easier handling and understanding of the various parameters.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">shiftedSourceBias</td><td>internal integer representation from device.</td></tr>
@@ -8528,7 +8528,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform VDAC bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="usb_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
+<p>Transform VDAC bias structure into internal integer representation, suited for sending directly to the device via <a class="el" href="device_8h.html#a5e5e7f9bc177206d70e4466bd94eddb1">caerDeviceConfigSet()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">vdacBias</td><td>VDAC bias structure.</td></tr>
@@ -8554,7 +8554,7 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Transform internal integer representation, as received by calls to <a class="el" href="usb_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a VDAC bias structure, for easier handling and understanding of the various parameters.</p>
+<p>Transform internal integer representation, as received by calls to <a class="el" href="device_8h.html#ab00cc1d6fdddef4536fec8a68143c229">caerDeviceConfigGet()</a>, into a VDAC bias structure, for easier handling and understanding of the various parameters.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">vdacBias</td><td>internal integer representation from device.</td></tr>
@@ -8574,7 +8574,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname">struct <a class="el" href="structcaer__davis__info.html">caer_davis_info</a> caerDavisInfoGet </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a>&#160;</td>
           <td class="paramname"><em>handle</em></td><td>)</td>
           <td></td>
         </tr>

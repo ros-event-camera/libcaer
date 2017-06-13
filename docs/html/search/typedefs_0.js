@@ -2,7 +2,7 @@ var searchData=
 [
   ['caerconfigurationevent',['caerConfigurationEvent',['../config_8h.html#adb70db3937df15fc66043ad80d3854ee',1,'config.h']]],
   ['caerconfigurationeventpacket',['caerConfigurationEventPacket',['../config_8h.html#a385e12ed6cbe91d30e5e6c113e71e980',1,'config.h']]],
-  ['caerdevicehandle',['caerDeviceHandle',['../usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0',1,'usb.h']]],
+  ['caerdevicehandle',['caerDeviceHandle',['../device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0',1,'device.h']]],
   ['caerearevent',['caerEarEvent',['../ear_8h.html#a1d7f6549485602041c04286ec493f461',1,'ear.h']]],
   ['caereareventpacket',['caerEarEventPacket',['../ear_8h.html#adc99b00d6bd22b4b39cb979abd5f672e',1,'ear.h']]],
   ['caereventpacketcontainer',['caerEventPacketContainer',['../packetContainer_8h.html#a609a59297d1e0590f493bbbfeb42a70a',1,'packetContainer.h']]],

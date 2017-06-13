@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.1.5-r6e777f4d972c75738ca18006510931e7c339cb31</span>
+   &#160;<span id="projectnumber">2.2.0-r9755b7fdd197989c136067f94944486d3453a55f</span>
    </div>
   </td>
  </tr>
@@ -611,22 +611,22 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a8095a4c00fc1004ac1f2c79c37c01d6d"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="structcaer__dynapse__info.html">caer_dynapse_info</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a8095a4c00fc1004ac1f2c79c37c01d6d">caerDynapseInfoGet</a> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle)</td></tr>
+<tr class="memitem:a8095a4c00fc1004ac1f2c79c37c01d6d"><td class="memItemLeft" align="right" valign="top">struct <a class="el" href="structcaer__dynapse__info.html">caer_dynapse_info</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="dynapse_8h.html#a8095a4c00fc1004ac1f2c79c37c01d6d">caerDynapseInfoGet</a> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle)</td></tr>
 <tr class="separator:a8095a4c00fc1004ac1f2c79c37c01d6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d9463b055931ab2db4ad0e4fa4117ca"><td class="memItemLeft" align="right" valign="top"><a id="a8d9463b055931ab2db4ad0e4fa4117ca"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSramWords</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords)</td></tr>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSramWords</b> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords)</td></tr>
 <tr class="separator:a8d9463b055931ab2db4ad0e4fa4117ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4494dd33b900a532be77dfbaaf7b7dde"><td class="memItemLeft" align="right" valign="top"><a id="a4494dd33b900a532be77dfbaaf7b7dde"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWritePoissonSpikeRate</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint32_t neuronAddr, double rateHz)</td></tr>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWritePoissonSpikeRate</b> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint32_t neuronAddr, double rateHz)</td></tr>
 <tr class="separator:a4494dd33b900a532be77dfbaaf7b7dde"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a949997a7197e221ec48b1499ff837fb4"><td class="memItemLeft" align="right" valign="top"><a id="a949997a7197e221ec48b1499ff837fb4"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSram</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore)</td></tr>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteSram</b> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore)</td></tr>
 <tr class="separator:a949997a7197e221ec48b1499ff837fb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b65d3840202d02c70c2b817e91cdcfc"><td class="memItemLeft" align="right" valign="top"><a id="a6b65d3840202d02c70c2b817e91cdcfc"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseSendDataToUSB</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, const uint32_t *data, size_t numConfig)</td></tr>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseSendDataToUSB</b> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, const uint32_t *data, size_t numConfig)</td></tr>
 <tr class="separator:a6b65d3840202d02c70c2b817e91cdcfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe50aa1e7713371cfb42fb57e0d987d9"><td class="memItemLeft" align="right" valign="top"><a id="abe50aa1e7713371cfb42fb57e0d987d9"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteCam</b> (<a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType)</td></tr>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseWriteCam</b> (<a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a> handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType)</td></tr>
 <tr class="separator:abe50aa1e7713371cfb42fb57e0d987d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e6529308c1ab249e289649509f5f4ec"><td class="memItemLeft" align="right" valign="top"><a id="a5e6529308c1ab249e289649509f5f4ec"></a>
 uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseGenerateCamBits</b> (uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId, int16_t synapseType)</td></tr>
@@ -1592,7 +1592,7 @@ uint32_t&#160;</td><td class="memItemRight" valign="bottom"><b>caerDynapseGenera
         <tr>
           <td class="memname">struct <a class="el" href="structcaer__dynapse__info.html">caer_dynapse_info</a> caerDynapseInfoGet </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="usb_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="device_8h.html#ad2fb240d01e16a6b53db3531283bdfa0">caerDeviceHandle</a>&#160;</td>
           <td class="paramname"><em>handle</em></td><td>)</td>
           <td></td>
         </tr>

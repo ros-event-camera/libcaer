@@ -22,7 +22,7 @@
  <tr style="height: 56px;">
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">libcaer
-   &#160;<span id="projectnumber">2.1.5-r6e777f4d972c75738ca18006510931e7c339cb31</span>
+   &#160;<span id="projectnumber">2.2.0-r9755b7fdd197989c136067f94944486d3453a55f</span>
    </div>
   </td>
  </tr>
@@ -72,30 +72,26 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a0250e334656af90d8ce9597b7d3c1690"><td class="memItemLeft" align="right" valign="top"><a id="a0250e334656af90d8ce9597b7d3c1690"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>caer_frame_utils_opencv_demosaic</b> { <b>DEMOSAIC_NORMAL</b> = 0, 
-<b>DEMOSAIC_EDGE_AWARE</b> = 1
+<tr class="memitem:abe33062be020557739cfb9b20d30b5ed"><td class="memItemLeft" align="right" valign="top"><a id="abe33062be020557739cfb9b20d30b5ed"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>caer_frame_utils_demosaic_types</b> { <b>DEMOSAIC_STANDARD</b> = 0, 
+<b>DEMOSAIC_OPENCV_NORMAL</b> = 1, 
+<b>DEMOSAIC_OPENCV_EDGE_AWARE</b> = 2
  }</td></tr>
-<tr class="separator:a0250e334656af90d8ce9597b7d3c1690"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3082e3a5f243a86951282e7292de9651"><td class="memItemLeft" align="right" valign="top"><a id="a3082e3a5f243a86951282e7292de9651"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>caer_frame_utils_opencv_contrast</b> { <b>CONTRAST_NORMALIZATION</b> = 0, 
-<b>CONTRAST_HISTOGRAM_EQUALIZATION</b> = 1, 
-<b>CONTRAST_CLAHE</b> = 2
+<tr class="separator:abe33062be020557739cfb9b20d30b5ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac34b1162c439994a8407998a126d21c4"><td class="memItemLeft" align="right" valign="top"><a id="ac34b1162c439994a8407998a126d21c4"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>caer_frame_utils_contrast_types</b> { <b>CONTRAST_STANDARD</b> = 0, 
+<b>CONTRAST_OPENCV_NORMALIZATION</b> = 1, 
+<b>CONTRAST_OPENCV_HISTOGRAM_EQUALIZATION</b> = 2, 
+<b>CONTRAST_OPENCV_CLAHE</b> = 3
  }</td></tr>
-<tr class="separator:a3082e3a5f243a86951282e7292de9651"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:ac34b1162c439994a8407998a126d21c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a71aa8c1e638ee6eb13e0208fe7a6fe42"><td class="memItemLeft" align="right" valign="top"><a id="a71aa8c1e638ee6eb13e0208fe7a6fe42"></a>
-<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a>&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsDemosaic</b> (caerFrameEventPacketConst framePacket)</td></tr>
-<tr class="separator:a71aa8c1e638ee6eb13e0208fe7a6fe42"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adced0a915518ce49540cb0df480f24bf"><td class="memItemLeft" align="right" valign="top"><a id="adced0a915518ce49540cb0df480f24bf"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsContrast</b> (<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a> framePacket)</td></tr>
-<tr class="separator:adced0a915518ce49540cb0df480f24bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f1f27c8183f84d9fc21efedb14d9e93"><td class="memItemLeft" align="right" valign="top"><a id="a5f1f27c8183f84d9fc21efedb14d9e93"></a>
-<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a>&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsOpenCVDemosaic</b> (caerFrameEventPacketConst framePacket, enum caer_frame_utils_opencv_demosaic demosaicType)</td></tr>
-<tr class="separator:a5f1f27c8183f84d9fc21efedb14d9e93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4d9afd908793749219a53ae6f0a049f8"><td class="memItemLeft" align="right" valign="top"><a id="a4d9afd908793749219a53ae6f0a049f8"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsOpenCVContrast</b> (<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a> framePacket, enum caer_frame_utils_opencv_contrast contrastType)</td></tr>
-<tr class="separator:a4d9afd908793749219a53ae6f0a049f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4fcceee20c839b67792635cc7b4d0a1"><td class="memItemLeft" align="right" valign="top"><a id="ae4fcceee20c839b67792635cc7b4d0a1"></a>
+<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a>&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsDemosaic</b> (caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType)</td></tr>
+<tr class="separator:ae4fcceee20c839b67792635cc7b4d0a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a757806bec427fda8a5907d3be96a3666"><td class="memItemLeft" align="right" valign="top"><a id="a757806bec427fda8a5907d3be96a3666"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>caerFrameUtilsContrast</b> (<a class="el" href="frame_8h.html#a832f69a7d16a061f542621ba6314997e">caerFrameEventPacket</a> framePacket, enum caer_frame_utils_contrast_types contrastType)</td></tr>
+<tr class="separator:a757806bec427fda8a5907d3be96a3666"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Functions for frame enhancement and demosaicing. Basic variants that don't require any external dependencies, such as OpenCV. Use of the OpenCV variants is recommended for quality and performance, and can optionally be enabled at build-time. </p>
