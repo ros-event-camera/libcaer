@@ -596,7 +596,7 @@ static int serialThreadRun(void *handlePtr) {
 			break;
 		}
 
-		if (bytesRead > 0) {
+		if (bytesRead >= 4) {
 			// Read something, process it and try again.
 			edvsEventTranslator(handle, dataBuffer, (size_t) bytesRead);
 		}
@@ -773,8 +773,9 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 	while (i < bytesSent) {
 		uint8_t yByte = buffer[i];
 
-		if (yByte & HIGH_BIT_MASK) {
-			edvsLog(CAER_LOG_NOTICE, handle, "Data not aligned, skipping to next data byte.");
+		if ((yByte & HIGH_BIT_MASK) != HIGH_BIT_MASK) {
+			edvsLog(CAER_LOG_NOTICE, handle, "Data not aligned, skipping to next data byte (%zu of %zu).", i,
+				bytesSent);
 			i++;
 			continue;
 		}
