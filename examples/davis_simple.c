@@ -123,7 +123,7 @@ int main(void) {
 				caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
 
 				// Get full timestamp and addresses of first event.
-				caerPolarityEvent firstEvent = caerPolarityEventPacketGetEvent(polarity, 0);
+				caerPolarityEventConst firstEvent = caerPolarityEventPacketGetEventConst(polarity, 0);
 
 				int32_t ts = caerPolarityEventGetTimestamp(firstEvent);
 				uint16_t x = caerPolarityEventGetX(firstEvent);
@@ -131,6 +131,24 @@ int main(void) {
 				bool pol = caerPolarityEventGetPolarity(firstEvent);
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
+			}
+
+			if (i == FRAME_EVENT) {
+				caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
+
+				// Get full timestamp, and sum all pixels of first frame event.
+				caerFrameEventConst firstEvent = caerFrameEventPacketGetEventConst(frame, 0);
+
+				int32_t ts = caerFrameEventGetTimestamp(firstEvent);
+				uint64_t sum = 0;
+
+				for (int32_t y = 0; y < caerFrameEventGetLengthY(firstEvent); y++) {
+					for (int32_t x = 0; x < caerFrameEventGetLengthX(firstEvent); x++) {
+						sum += caerFrameEventGetPixel(firstEvent, x, y);
+					}
+				}
+
+				printf("First frame event - ts: %d, sum: %" PRIu64 ".\n", ts, sum);
 			}
 		}
 
