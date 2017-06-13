@@ -306,7 +306,7 @@ static inline void caerPoint3DEventSetScale(caerPoint3DEvent event, int8_t scale
  * @return X axis measurement.
  */
 static inline float caerPoint3DEventGetX(caerPoint3DEventConst event) {
-	return (le32toh(event->x));
+	return (leflttoh(event->x));
 }
 
 /**
@@ -316,7 +316,7 @@ static inline float caerPoint3DEventGetX(caerPoint3DEventConst event) {
  * @param x X axis measurement.
  */
 static inline void caerPoint3DEventSetX(caerPoint3DEvent event, float x) {
-	event->x = htole32(x);
+	event->x = htoleflt(x);
 }
 
 /**
@@ -327,7 +327,7 @@ static inline void caerPoint3DEventSetX(caerPoint3DEvent event, float x) {
  * @return Y axis measurement.
  */
 static inline float caerPoint3DEventGetY(caerPoint3DEventConst event) {
-	return (le32toh(event->y));
+	return (leflttoh(event->y));
 }
 
 /**
@@ -337,7 +337,7 @@ static inline float caerPoint3DEventGetY(caerPoint3DEventConst event) {
  * @param y Y axis measurement.
  */
 static inline void caerPoint3DEventSetY(caerPoint3DEvent event, float y) {
-	event->y = htole32(y);
+	event->y = htoleflt(y);
 }
 
 /**
@@ -348,7 +348,7 @@ static inline void caerPoint3DEventSetY(caerPoint3DEvent event, float y) {
  * @return Z axis measurement.
  */
 static inline float caerPoint3DEventGetZ(caerPoint3DEventConst event) {
-	return (le32toh(event->z));
+	return (leflttoh(event->z));
 }
 
 /**
@@ -358,7 +358,7 @@ static inline float caerPoint3DEventGetZ(caerPoint3DEventConst event) {
  * @param z Z axis measurement.
  */
 static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
-	event->z = htole32(z);
+	event->z = htoleflt(z);
 }
 
 /**

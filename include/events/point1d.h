@@ -302,7 +302,7 @@ static inline void caerPoint1DEventSetScale(caerPoint1DEvent event, int8_t scale
  * @return X axis measurement.
  */
 static inline float caerPoint1DEventGetX(caerPoint1DEventConst event) {
-	return (le32toh(event->x));
+	return (leflttoh(event->x));
 }
 
 /**
@@ -312,7 +312,7 @@ static inline float caerPoint1DEventGetX(caerPoint1DEventConst event) {
  * @param x X axis measurement.
  */
 static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
-	event->x = htole32(x);
+	event->x = htoleflt(x);
 }
 
 /**
