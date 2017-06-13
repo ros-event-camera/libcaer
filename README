@@ -22,7 +22,7 @@ INSTALLATION:
 
 $ cmake -DCMAKE_INSTALL_PREFIX=/usr .
 Optional: add -DENABLE_SERIALDEV=1 to enable support for serial port devices,
-such as the eDVS, via libserialport.
+such as the eDVS4337, via libserialport.
 Optional: add -DENABLE_OPENCV=1 to enable better support for frame enhancement
 (demoisaicing for color, contrast, white-balance) via OpenCV.
 

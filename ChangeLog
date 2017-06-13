@@ -1,8 +1,8 @@
-Release 2.2.0 - XX.06.2017
+Release 2.2.0 - 13.06.2017
 INCOMPATIBLE CHANGES
 - frame_utils.h: the frame utilities API was simplified. Now only one
   function for demosaic support respective contrast enhancement support
-  exists, with the type (standard or OpenCV) as an enum argument.
+  exists, with the type (standard or OpenCV) as an enumeration argument.
 
 NEW FEATURES
 - Added support for the eDVS4337 serial port device. Serial port devices
@@ -16,10 +16,16 @@ NEW FEATURES
   'deviceType' set to 'CAER_DEVICE_EDVS'. The usual caerDeviceOpen()
   will only work for supported USB devices. All other functions, such
   as caerDeviceDataGet(), remain the same and work for all device types.
+- DAVIS Examples: added example for frame parsing. Thanks to Jonathan Müller.
 
 BUG FIXES
 - DVS128/DAVIS/Dynap-se: fix log messages on failure to open device and
   on successful shutdown.
+- Dynap-se: calculate rate in caerDynapseWritePoissonSpikeRate() as float.
+- IMU and PointXD Events: fix conversion of floating-point data to/from
+  little-endian in-memory format. On MacOS X, this resulted in a function
+  call with integer arguments and thus conversion to an integer value,
+  destroying the original floating-point value.
 
 
 Release 2.1.5 - 03.06.2017
