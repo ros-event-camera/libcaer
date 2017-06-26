@@ -21,6 +21,29 @@ script:
 matrix:
   include:
     - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+            - libusb-1.0-0-dev
+      env:
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+            - libusb-1.0-0-dev
+      env:
+         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
+    - os: linux
       compiler: clang
       addons:
         apt:
@@ -30,10 +53,34 @@ matrix:
           packages:
             - clang-3.6
             - libusb-1.0-0-dev
-            - doxygen
       env:
         - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
     - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
+          packages:
+            - clang-3.8
+            - libusb-1.0-0-dev
+      env:
+        - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - clang-4.0
+            - libusb-1.0-0-dev
+      env:
+        - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
+
+    - os: linux
+      env: NAME="Build and deploy docs"
       compiler: gcc
       addons:
         apt:
@@ -43,20 +90,8 @@ matrix:
             - g++-4.9
             - libusb-1.0-0-dev
             - doxygen
-      env:
-         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
-    - os: osx
-      osx_image: xcode8
-      compiler: clang
-    - os: osx
-      osx_image: xcode8
-      compiler: gcc
-    - os: osx
-      env: NAME="Build and deploy docs"
-      osx_image: xcode8
-      compiler: clang
       script:
-      - make doc
+        - make doc
       cache: false
       deploy:
         provider: pages
@@ -65,3 +100,11 @@ matrix:
         local_dir: docs/html
         on:
           tags: true
+
+    - os: osx
+      osx_image: xcode8
+      compiler: gcc
+    - os: osx
+      osx_image: xcode8
+      compiler: clang
+
