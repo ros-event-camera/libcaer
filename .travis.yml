@@ -52,6 +52,7 @@ matrix:
       osx_image: xcode8
       compiler: gcc
     - os: osx
+      env: NAME="Build and deploy docs"
       osx_image: xcode8
       compiler: clang
       script:
