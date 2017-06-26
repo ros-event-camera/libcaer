@@ -57,6 +57,8 @@ matrix:
       compiler: clang
       script:
       - make doc
+      - ls -l
+      - pwd
       cache: false
       deploy:
         provider: pages
