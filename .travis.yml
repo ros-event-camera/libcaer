@@ -57,13 +57,11 @@ matrix:
       compiler: clang
       script:
       - make doc
-      - ls -l
-      - pwd
       cache: false
       deploy:
         provider: pages
         skip_cleanup: true
         github_token: $GITHUB_TOKEN
-        local_dir: build/docs/html
+        local_dir: docs/html
         on:
           branch: master
