@@ -1,25 +1,24 @@
 language: cpp
 
 sudo: false
-
 dist: trusty
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update         ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libusb ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install doxygen ; fi
+  - echo "${BUILD_NAME}"
   - eval "${MATRIX_EVAL}"
 
 before_script:
   - mkdir build
   - cd build
   - cmake ..
+  - make clean
 
 script:
-  - make
+  - make -j2
 
 matrix:
   include:
+    # Linux-GCC builds
     - os: linux
       compiler: gcc
       addons:
@@ -30,6 +29,7 @@ matrix:
             - g++-4.9
             - libusb-1.0-0-dev
       env:
+         - BUILD_NAME="linux-gcc-4.9"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
     - os: linux
       compiler: gcc
@@ -41,8 +41,10 @@ matrix:
             - g++-6
             - libusb-1.0-0-dev
       env:
+         - BUILD_NAME="linux-gcc-6"
          - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
+    # Linux-Clang builds
     - os: linux
       compiler: clang
       addons:
@@ -54,6 +56,7 @@ matrix:
             - clang-3.6
             - libusb-1.0-0-dev
       env:
+        - BUILD_NAME="linux-clang-3.6"
         - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
     - os: linux
       compiler: clang
@@ -65,10 +68,35 @@ matrix:
             - clang-4.0
             - libusb-1.0-0-dev
       env:
+        - BUILD_NAME="linux-clang-4.0"
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
+    # Linux Sonarqube build
     - os: linux
-      env: NAME="Build and deploy docs"
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+            - libusb-1.0-0-dev
+      env:
+         - BUILD_NAME="linux-sonarqube"
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+      script:
+        - build-wrapper-linux-x86-64 --out-dir bw-output make -j2
+        - sonar-scanner
+      cache:
+        directories:
+          - '$HOME/.sonar/cache'
+      addons:
+        sonarqube:
+          organization: "inilabs-github"
+          token: $SONAR_TOKEN
+
+    # Linux docs build (for GitHub Pages)
+    - os: linux
       compiler: gcc
       addons:
         apt:
@@ -79,6 +107,7 @@ matrix:
             - libusb-1.0-0-dev
             - doxygen
       env:
+         - BUILD_NAME="linux-docs"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       script:
         - make doc
@@ -89,11 +118,22 @@ matrix:
         github_token: $GITHUB_TOKEN
         local_dir: docs/html
         on:
-          tags: true
+          branch: master
 
+    # MacOS X builds
     - os: osx
       osx_image: xcode8
       compiler: gcc
+      env:
+        - BUILD_NAME="osx-gcc-xcode8"
+      before_install:
+        - brew update
+        - brew install libusb
     - os: osx
       osx_image: xcode8
       compiler: clang
+      env:
+        - BUILD_NAME="osx-clang-xcode8"
+     before_install:
+        - brew update
+        - brew install libusb
