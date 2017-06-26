@@ -81,6 +81,9 @@ matrix:
           packages:
             - g++-4.9
             - libusb-1.0-0-dev
+        sonarcloud:
+          organization: "inilabs-github"
+          token: $SONAR_TOKEN
       env:
          - BUILD_NAME="linux-sonar-analysis"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
@@ -90,10 +93,6 @@ matrix:
       cache:
         directories:
           - '$HOME/.sonar/cache'
-      addons:
-        sonarcloud:
-          organization: "inilabs-github"
-          token: $SONAR_TOKEN
 
     # Linux docs build (for GitHub Pages)
     - os: linux
