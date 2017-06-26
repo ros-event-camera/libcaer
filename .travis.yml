@@ -2,6 +2,8 @@ language: cpp
 
 sudo: required
 
+dist: trusty
+
 os:
   - linux
   - osx
@@ -14,7 +16,6 @@ addons:
   apt:
     packages:
       - libusb-1.0-0-dev
-      - pkg-config
       - doxygen
 
 before_install:
