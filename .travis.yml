@@ -1,6 +1,6 @@
 language: cpp
 
-sudo: required
+sudo: false
 
 dist: trusty
 
@@ -97,4 +97,3 @@ matrix:
     - os: osx
       osx_image: xcode8
       compiler: clang
-
