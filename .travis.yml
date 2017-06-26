@@ -60,18 +60,6 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
-          packages:
-            - clang-3.8
-            - libusb-1.0-0-dev
-      env:
-        - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
-    - os: linux
-      compiler: clang
-      addons:
-        apt:
-          sources:
             - llvm-toolchain-trusty-4.0
           packages:
             - clang-4.0
@@ -90,6 +78,8 @@ matrix:
             - g++-4.9
             - libusb-1.0-0-dev
             - doxygen
+      env:
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       script:
         - make doc
       cache: false
