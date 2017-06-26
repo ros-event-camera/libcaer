@@ -71,7 +71,7 @@ matrix:
         - BUILD_NAME="linux-clang-4.0"
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
-    # Linux Sonarqube build
+    # Linux Sonarcloud build (for code analysis)
     - os: linux
       compiler: gcc
       addons:
@@ -82,7 +82,7 @@ matrix:
             - g++-4.9
             - libusb-1.0-0-dev
       env:
-         - BUILD_NAME="linux-sonarqube"
+         - BUILD_NAME="linux-sonar-analysis"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       script:
         - build-wrapper-linux-x86-64 --out-dir bw-output make -j2
@@ -91,7 +91,7 @@ matrix:
         directories:
           - '$HOME/.sonar/cache'
       addons:
-        sonarqube:
+        sonarcloud:
           organization: "inilabs-github"
           token: $SONAR_TOKEN
 
@@ -107,7 +107,7 @@ matrix:
             - libusb-1.0-0-dev
             - doxygen
       env:
-         - BUILD_NAME="linux-docs"
+         - BUILD_NAME="linux-docs-deploy"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       script:
         - make doc
