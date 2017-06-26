@@ -1,0 +1,67 @@
+language: cpp
+
+sudo: required
+
+dist: trusty
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update         ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libusb ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install doxygen ; fi
+  - eval "${MATRIX_EVAL}"
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
+
+script:
+  - make
+
+matrix:
+  include:
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+          packages:
+            - clang-3.6
+            - libusb-1.0-0-dev
+            - doxygen
+      env:
+        - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+            - libusb-1.0-0-dev
+            - doxygen
+      env:
+         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+    - os: osx
+      osx_image: xcode8
+      compiler: clang
+    - os: osx
+      osx_image: xcode8
+      compiler: gcc
+    - os: osx
+      env: NAME="Build and deploy docs"
+      osx_image: xcode8
+      compiler: clang
+      script:
+      - make doc
+      cache: false
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN
+        local_dir: docs/html
+        on:
+          tags: true
