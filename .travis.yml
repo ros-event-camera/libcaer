@@ -134,6 +134,6 @@ matrix:
       compiler: clang
       env:
         - BUILD_NAME="osx-clang-xcode8"
-     before_install:
+      before_install:
         - brew update
         - brew install libusb
