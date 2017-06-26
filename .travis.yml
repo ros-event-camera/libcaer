@@ -89,7 +89,8 @@ matrix:
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       script:
         - build-wrapper-linux-x86-64 --out-dir bw-output make -j2
-        - sonar-scanner -Dproject.settings=../sonar-project.properties
+        - cd ..
+        - sonar-scanner
       cache:
         directories:
           - '$HOME/.sonar/cache'
