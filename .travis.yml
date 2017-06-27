@@ -118,7 +118,7 @@ matrix:
         github_token: $GITHUB_TOKEN
         local_dir: docs/html
         on:
-          branch: master
+          tags: true
 
     # MacOS X builds
     - os: osx

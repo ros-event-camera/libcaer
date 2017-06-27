@@ -4,8 +4,6 @@ libcaer
 Minimal C library to access, configure and get data out of AER sensors,
 such as the Dynamic Vision Sensor (DVS) or DAVIS cameras.
 
-BUILD STATUS: https://travis-ci.org/inilabs/libcaer/
-
 REQUIREMENTS:
 
 Linux, MacOS X or Windows (for Windows build instructions see README.Windows)
@@ -64,3 +62,6 @@ caerDeviceClose(&h);
 
 All configuration parameters and event types are specified in the
 public headers and documented there.
+
+BUILD STATUS: https://travis-ci.org/inilabs/libcaer/
+CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inilabs.libcaer

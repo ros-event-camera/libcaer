@@ -3088,7 +3088,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 32: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 0.
 							// 0/1 used to distinguish between X and Y sizes.
-							state->apsROIUpdate = (0 << 2);
+							state->apsROIUpdate = (0x00 << 2);
 							state->apsROISizeX[0] = state->apsROIPositionX[0] = U16T(state->apsSizeX);
 							state->apsROISizeY[0] = state->apsROIPositionY[0] = U16T(state->apsSizeY);
 							break;
@@ -3097,7 +3097,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 33: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
-							state->apsROIUpdate = (1 << 2);
+							state->apsROIUpdate = (0x01 << 2);
 							state->apsROISizeX[1] = state->apsROIPositionX[1] = U16T(state->apsSizeX);
 							state->apsROISizeY[1] = state->apsROIPositionY[1] = U16T(state->apsSizeY);
 							break;
@@ -3106,7 +3106,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 34: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
-							state->apsROIUpdate = (2 << 2);
+							state->apsROIUpdate = (0x02 << 2);
 							state->apsROISizeX[2] = state->apsROIPositionX[2] = U16T(state->apsSizeX);
 							state->apsROISizeY[2] = state->apsROIPositionY[2] = U16T(state->apsSizeY);
 							break;
@@ -3115,7 +3115,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 35: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
-							state->apsROIUpdate = (3 << 2);
+							state->apsROIUpdate = (0x03 << 2);
 							state->apsROISizeX[3] = state->apsROIPositionX[3] = U16T(state->apsSizeX);
 							state->apsROISizeY[3] = state->apsROIPositionY[3] = U16T(state->apsSizeY);
 							break;
