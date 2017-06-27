@@ -188,6 +188,12 @@ extern "C" {
 #define DYNAPSE_CONFIG_SPIKEGEN_ISIBASE 5
 
 /**
+* Parameter address for module DYNAPSE_CONFIG_SPIKEGEN
+* Sets repeat mode true/false
+*/
+#define DYNAPSE_CONFIG_SPIKEGEN_REPEAT 6
+
+/**
  * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
  * Run control. Starts and stops handshaking with DVS.
  */
