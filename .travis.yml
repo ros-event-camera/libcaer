@@ -90,7 +90,7 @@ matrix:
       script:
         - build-wrapper-linux-x86-64 --out-dir bw-output make -j2
         - cd ..
-        - sonar-scanner
+        - sonar-scanner -X
       cache:
         directories:
           - '$HOME/.sonar/cache'
