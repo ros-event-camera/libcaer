@@ -15,6 +15,8 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void usbShutdownHandler(void *ptr) {
+	(void)(ptr); // UNUSED.
+
 	globalShutdown.store(true);
 }
 

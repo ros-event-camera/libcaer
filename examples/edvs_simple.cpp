@@ -14,6 +14,8 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void serialShutdownHandler(void *ptr) {
+	(void)(ptr); // UNUSED.
+
 	globalShutdown.store(true);
 }
 

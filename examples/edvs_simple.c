@@ -13,6 +13,12 @@ static void globalShutdownSignalHandler(int signal) {
 	}
 }
 
+static void serialShutdownHandler(void *ptr) {
+	(void)(ptr); // UNUSED.
+
+	atomic_store(&globalShutdown, true);
+}
+
 int main(void) {
 	// Install signal handler for global shutdown.
 #if defined(_WIN32)
@@ -73,8 +79,10 @@ int main(void) {
 
 	printf("New bias values --- PR: %d, FOLL: %d.\n", prBias, follBias);
 
-	// Now let's get start getting some data from the device. We just loop, no notification needed.
-	caerDeviceDataStart(edvs_handle, NULL, NULL, NULL, NULL, NULL);
+	// Now let's get start getting some data from the device. We just loop in blocking mode,
+	// no notification needed regarding new events. The shutdown notification, for example if
+	// the device is disconnected, should be listened to.
+	caerDeviceDataStart(edvs_handle, NULL, NULL, NULL, &serialShutdownHandler, NULL);
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
 	caerDeviceConfigSet(edvs_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
