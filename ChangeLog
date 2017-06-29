@@ -1,3 +1,27 @@
+Release 2.3.0 - 30.06.2017
+INCOMPATIBLE CHANGES
+- device.hpp: removed C++ dataStart() method with no arguments. As with
+  the C interface, only the variant with all notification arguments
+  remains. This is to ensure users think about the possible arguments,
+  especially with regards to the shutdown notification, which usually
+  should be defined and used.
+- Dynap-SE: requires new logic version 4. Adds new features related
+  to DAVIS integration and spike generation/playback.
+
+NEW FEATURES
+- CI: test builds are now done by Travis-CI and results sent off to
+  Sonarcloud for code quality analysis.
+- Examples: added example to show how to bias a DAVIS camera and
+  configure it for external AER control (davis_enable_aer.cpp).
+- Examples: added shutdown notification handler to all examples.
+
+BUG FIXES
+- CMake: fix CMake 3.X support on MacOS X.
+- caerDeviceDataGet(): now properly returns NULL in blocking mode when
+  the device goes away or stops sending any data, thus preventing a
+  dead-lock when using blocking mode with this function.
+
+
 Release 2.2.0 - 13.06.2017
 INCOMPATIBLE CHANGES
 - frame_utils.h: the frame utilities API was simplified. Now only one
