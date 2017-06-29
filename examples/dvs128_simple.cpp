@@ -13,6 +13,10 @@ static void globalShutdownSignalHandler(int signal) {
 	}
 }
 
+static void usbShutdownHandler(void *ptr) {
+	globalShutdown.store(true);
+}
+
 int main(void) {
 	// Install signal handler for global shutdown.
 #if defined(_WIN32)
@@ -73,8 +77,10 @@ int main(void) {
 
 	printf("New bias values --- PR: %d, FOLL: %d.\n", prBias, follBias);
 
-	// Now let's get start getting some data from the device. We just loop, no notification needed.
-	dvs128Handle.dataStart();
+	// Now let's get start getting some data from the device. We just loop in blocking mode,
+	// no notification needed regarding new events. The shutdown notification, for example if
+	// the device is disconnected, should be listened to.
+	dvs128Handle.dataStart(nullptr, nullptr, nullptr, &usbShutdownHandler, nullptr);
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
 	dvs128Handle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
