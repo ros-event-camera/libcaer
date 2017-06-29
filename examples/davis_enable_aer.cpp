@@ -1,3 +1,11 @@
+/*
+* This c++ code shows how to open a DAVIS sensor,
+* load the default biases, and enable the AER external control.
+*
+* After operating this routine, the program exit, leaving the davis sensor in AER mode.
+*
+*  Author: Federico Corradi, 2017
+*/
 #include <libcaercpp/devices/davis.hpp>
 #include <csignal>
 #include <atomic>
