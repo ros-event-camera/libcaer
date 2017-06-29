@@ -42,10 +42,6 @@ public:
 		return (param);
 	}
 
-	void dataStart() const {
-		dataStart(nullptr, nullptr, nullptr, nullptr, nullptr);
-	}
-
 	void dataStart(void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 		void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) const {
 		bool success = caerDeviceDataStart(handle.get(), dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
