@@ -205,8 +205,9 @@ bool caerDeviceDataStop(caerDeviceHandle handle);
  *
  * @param handle a valid device handle.
  *
- * @return a valid event packet container. NULL will be returned on errors, or when
- *         there is no container available in non-blocking mode. Always check for this!
+ * @return a valid event packet container. NULL will be returned on errors, such as
+ *         exceptional device shutdown, or when there is no container available in
+ *         non-blocking mode. Always check this return value!
  */
 caerEventPacketContainer caerDeviceDataGet(caerDeviceHandle handle);
 
