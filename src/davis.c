@@ -2495,7 +2495,8 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 
 	// Didn't find any event container, either report this or retry, depending
 	// on blocking setting.
-	if (atomic_load_explicit(&state->dataExchangeBlocking, memory_order_relaxed)) {
+	if (atomic_load_explicit(&state->dataExchangeBlocking, memory_order_relaxed)
+		&& usbDataTransfersAreRunning(&state->usbState)) {
 		// Don't retry right away in a tight loop, back off and wait a little.
 		// If no data is available, sleep for a millisecond to avoid wasting resources.
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
