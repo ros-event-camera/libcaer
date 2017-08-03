@@ -1,7 +1,9 @@
 /build/
 CMakeCache.txt
 CMakeFiles/
-CMakeDoxy*
+/CMakeDoxy*
+/CPack*
+/_CPack_Packages/
 Makefile
 cmake_install.cmake
 /install_manifest.txt
@@ -11,3 +13,4 @@ cmake_install.cmake
 *.swo
 *.sh
 *.gch
+*.rpm
