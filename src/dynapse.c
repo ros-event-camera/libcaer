@@ -1798,20 +1798,102 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr,
 
 	// convert from Hz to device units with magic conversion constant for current dynapse hardware
 	// (clock_rate/(wait_cycles*num_sources))/(UINT16_MAX-1) = size of frequency resolution steps
-	uint16_t deviceRate = U16T((float) rateHz / 0.06706f);
+	uint16_t deviceRate = U16T((float ) rateHz / 0.06706f);
 
 	// Ready the data for programming
 	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
-			deviceRate) == false) {
+		deviceRate) == false) {
 		return (false);
 	}
 
 	// Trigger the write by writing the address
 	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS,
-			neuronAddr) == false) {
+		neuronAddr) == false) {
 		return (false);
 	}
 
 	// if we made it everything is good
 	return (true);
+}
+
+// TODO: sure we only must reverse? not also invert like DAVIS? why is this?
+static inline uint8_t coarseValueReverse(uint8_t coarseValue) {
+	uint8_t coarseRev = 0;
+
+	/*same as: sum(1 << (2 - i) for i in range(3) if 2 >> i & 1)*/
+	if (coarseValue == 0) {
+		coarseRev = 0;
+	}
+	else if (coarseValue == 1) {
+		coarseRev = 4;
+	}
+	else if (coarseValue == 2) {
+		coarseRev = 2;
+	}
+	else if (coarseValue == 3) {
+		coarseRev = 6;
+	}
+	else if (coarseValue == 4) {
+		coarseRev = 1;
+	}
+	else if (coarseValue == 5) {
+		coarseRev = 5;
+	}
+	else if (coarseValue == 6) {
+		coarseRev = 3;
+	}
+	else if (coarseValue == 7) {
+		coarseRev = 7;
+	}
+
+	return (coarseRev);
+}
+
+uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
+	// Build up bias value from all its components.
+	uint32_t biasValue = U32T((dynapseBias.biasAddress & 0x7F) << 18) | U32T(0x01 << 16);
+
+	// SSN and SSP are different.
+	if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+		biasValue = U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
+		// TODO: sure about this, why 6 bits all 1? In DAVIS that's regValue maximum.
+		// Also fineValue is usually called refValue, and is only 6 bits, not 8 like for coarse-fine.
+	}
+	// So are the Buffer biases.
+	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
+		biasValue = U32T(dynapseBias.special << 15) | U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+	}
+	// Standard coarse-fine biases.
+	else {
+		if (dynapseBias.enabled) {
+			biasValue |= 0x01;
+		}
+		if (dynapseBias.sexN) {
+			biasValue |= 0x02;
+		}
+		if (dynapseBias.typeNormal) {
+			biasValue |= 0x04;
+		}
+		if (dynapseBias.biasHigh) {
+			biasValue |= 0x08;
+		}
+
+		biasValue |=  U32T(dynapseBias.special << 15) | U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+	}
+
+	return (biasValue);
+}
+
+struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
+	struct caer_bias_dynapse biasValue;
+
+	// Decompose bias integer into its parts.
+	biasValue.enabled = (coarseFineBias & 0x01);
+	biasValue.sexN = (coarseFineBias & 0x02);
+	biasValue.typeNormal = (coarseFineBias & 0x04);
+	biasValue.currentLevelNormal = (coarseFineBias & 0x08);
+	biasValue.fineValue = U8T(coarseFineBias >> 4) & 0xFF;
+	biasValue.coarseValue = U8T(coarseFineBias >> 12) & 0x07;
+
+	return (biasValue);
 }

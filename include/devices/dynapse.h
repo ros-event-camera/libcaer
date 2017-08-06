@@ -690,6 +690,8 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
  * See 'http://inilabs.com/support/biasing/' for more details.
  */
 struct caer_bias_dynapse {
+	/// Address of bias to configure, see DYNAPSE_CONFIG_BIAS_* defines.
+	uint8_t biasAddress;
 	/// Coarse current, from 0 to 7, creates big variations in output current.
 	uint8_t coarseValue;
 	/// Fine current, from 0 to 255, creates small variations in output current.
@@ -698,16 +700,14 @@ struct caer_bias_dynapse {
 	bool enabled;
 	/// Bias sex: true for 'N' type, false for 'P' type.
 	bool sexN;
-	/// Bias current level: true for 'Normal, false for 'Low'.
-	bool currentLevelNormal;
-	/// Bias current level: true for 'HighBias', false for 'LowBias'.
-	bool BiasLowHi;
-	/// whether this is a special bias.
+	/// Bias type: true for 'Normal', false for 'Cascode'.
+	bool typeNormal;
+	/// Bias ???: true for 'HighBias', false for 'LowBias'.
+	bool biasHigh;
+	/// Whether this is a special bias or not ???.
 	bool special;
 };
-// TODO: what is range of coarse and fine?
-// TODO: what do currentLevel, BiasLowHi and special actually mean?
-// FED: ask NING , however this is a low level bias generator settings (it is important to keep it here, but users can forget about it)
+// TODO: what do biasHigh and special actually mean?
 
 /**
  * Transform coarse-fine bias structure into internal integer representation,
