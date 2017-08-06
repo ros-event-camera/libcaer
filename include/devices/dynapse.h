@@ -62,24 +62,34 @@ extern "C" {
 #define DYNAPSE_CONFIG_USB      9
 /**
  * Clear CAM content
- * TODO: clears all cams? Chip ID used in any way?
  */
 #define DYNAPSE_CONFIG_CLEAR_CAM 10
 /**
  * Clear SRAM content, use one SRAM cell to monitor neurons
  * TODO: modAddr takes chipID, so clear SRAM only on that chip?
  * Option to clear all chips? What has monitoring to do here?
+ * FED:  1) yes, modAddr takes chipID, because it is used to clear that chipID
+ * FED:  2) Monitoring is here because one SRAM out of 4 is used to monitor the neurons
+ * activity, i.e. it is used to send spikes to the USB see manual
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
 /**
  * Used to monitor neurons.
  * modAddr takes the core ID to be monitored, paramAddr the neuron ID.
  * TODO: what about chip ID? what does monitoring even mean here?
+ * FED: Monitoring is here because one SRAM out of 4 is used to monitor the neurons
+ * FED:  activity, i.e. it is used to send spikes to the USB see manual
  */
 #define DYNAPSE_CONFIG_MONITOR_NEU 12
 /**
  * Clear SRAM content, route nothing outside
  * TODO: again, chip ID? core ID? clarify what happens.
+ * FED: this is used here:
+ * FED: caerDeviceConfigSet(state->deviceState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 5);
+ * FED: monitoring core 1 neuron 5, chip id needs to be selected with another call
+ * FED: as the firmare can only handle small amount of bits
+ * FED: caerDeviceConfigSet(state->deviceState, DYNAPSE_CONFIG_CHIP,
+	DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U0);
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
@@ -90,7 +100,8 @@ extern "C" {
  * Reads/writes are triggered when the address field is changed.
  * Example: caerDynapseWriteSramWords(dev, SRAMData, baseAddr, numWords);
  * Writes numWords words from array SRAMData to the SRAM, starting at baseAddr.
- * TODO: WriteSramWords is not caerDeviceConfigSet where this is used... clarify
+ * TODO: WriteSramWords is not caerDeviceConfigSet where this is used... 
+ * FED: used in user's code see updateSramKernelData, in synapsereconfig.c
  * relationship.
  */
 #define DYNAPSE_CONFIG_SRAM 14
@@ -218,6 +229,8 @@ extern "C" {
  * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
  * Output chip select using chip identifiers from this document.
  * TODO: what?
+ * FED: see manual -> https://inilabs.com/support/hardware/user-guide-dynap-se/#h.hv10eclyi53i
+ * FED: global kernel and SRAM kernels
  */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT 3
 
@@ -234,6 +247,7 @@ extern "C" {
  * Writing or reading this field will trigger the command contained
  * in the command register to be executed.
  * TODO: reading really? reading just does a receive, which sends no commands...
+ * FED: no clue from Carsten
  */
 #define DYNAPSE_CONFIG_SRAM_ADDRESS 1
 
@@ -450,6 +464,8 @@ extern "C" {
 /**
  * Parameter address for module DYNAPSE_CONFIG_SRAM:
  * TODO: documentation missing. Really SRAM module?
+ * FED: see routing example https://inilabs.com/support/hardware/user-guide-dynap-se/#h.yzsrxxwvcwdp
+ * FED: need improvement
  */
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
@@ -478,6 +494,18 @@ extern "C" {
 
 /**
  * TODO: documentation missing.
+ * FED: see https://inilabs.com/support/hardware/user-guide-dynap-se/#h.jb3am9z32btj
+ * FED: U0 chip 0, U1 chip 1, U2 chip 2, U3 chip 3
+ * FED: DYNAPSE_CONFIG_NUMNEURONS number of neurons in single chip
+ * FED: DYNAPSE_CONFIG_CAMTYPE_F_EXC		fast excitatory synapse
+ * FED: DYNAPSE_CONFIG_CAMTYPE_S_EXC		slow excitatory synapse
+ * FED: DYNAPSE_CONFIG_CAMTYPE_F_INH		fast inhibitory synapse
+ * FED: DYNAPSE_CONFIG_CAMTYPE_S_INH		slow inhibitory synapse
+ * FED: the rest are self examplatory as num cores = 4 (cores per chip)
+ * FED: CAMCOL number of columns per chip
+ * FED: NUMSRAM_NEU number of sram per neuron
+ * FED: NUMCAM = 64 number of cam memory i.e. synapses per neuron etc...
+ * FED: these are constants
  */
 #define DYNAPSE_CONFIG_DYNAPSE_U0	0
 #define DYNAPSE_CONFIG_DYNAPSE_U1	8
@@ -679,6 +707,7 @@ struct caer_bias_dynapse {
 };
 // TODO: what is range of coarse and fine?
 // TODO: what do currentLevel, BiasLowHi and special actually mean?
+// FED: ask NING , however this is a low level bias generator settings (it is important to keep it here, but users can forget about it)
 
 /**
  * Transform coarse-fine bias structure into internal integer representation,
@@ -725,20 +754,25 @@ bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, ui
  */
 bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint32_t neuronAddr, double rateHz);
 // TODO: why are all the integers so big if the ranges are so limited?
+// FED: ask Carsten
 
 /**
- * TODO: what does it do?
+ * TODO: what does it do? 
+ * FED: It writes one of the 4 SRAM of a single neurons. Writing the SRAM means writing the destination 
+ * address of where the spikes will be routed to.. 
+ * see manual -> https://inilabs.com/support/hardware/user-guide-dynap-se/#h.tabrnfqg4f55
+ *
  * Remember to select the chip you want to configure before calling this function!
  *
  * @param handle a valid device handle.
  * @param coreId the chip's core ID, range [0,3].
  * @param neuronId the neuron address, range [0,255].
- * @param virtualCoreId TODO: what? range [0,3].
+ * @param virtualCoreId TODO: what? range [0,3]. FED: is the range of possibles virtual cores .. 0,1,2,3 as if spikes was produced by virtual core id
  * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
- * @param dx X delta (TODO: range?)
+ * @param dx X delta (TODO: range?) FED: range is [0,1,2,3] number of chips jumps before reaching destination
  * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
- * @param dy Y delta (TODO: range?)
- * @param sramId TODO: what?, range [0,3].
+ * @param dy Y delta (TODO: range?) FED: range is [0,1,2,3] number of chips jumps before reaching destination
+ * @param sramId TODO: what?, FED: range [0,3]. one of the four possible SRAM cells
  * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
  *                        [U3,U2,U1,U0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
  *
@@ -764,10 +798,10 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, siz
  * Remember to select the chip you want to configure before calling this function!
  *
  * @param handle a valid device handle.
- * @param preNeuronAddr TODO: what?, range [0,1023].
- * @param postNeuronAddr TODO: what?, range [0,1023].
- * @param camId TODO: what?, range [0,63].
- * @param synapseType TODO: what?, one of: [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,
+ * @param preNeuronAddr TODO: what?, FED: range [0,1023], neuron id range (0,1023) in one chip there are 1024 neurons
+ * @param postNeuronAddr TODO: what?, FED: range [0,1023]. neuron id range (0,1023) in one chip there are 1024 neurons
+ * @param camId TODO: what?, FED: range [0,63]. synapse id (CAM) range (0,63) one neurons has 64 CAM/synapses
+ * @param synapseType TODO: what?, FED: one of the four possible synaptic weights [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,
  *											DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
  *
  * @return true on success, false otherwise.
@@ -779,10 +813,10 @@ bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32
  * Return address for writing to CAM.
  * TODO: this has the same parameters as above, why is it separate? why not use WriteCam directly?
  *
- * @param preNeuronAddr TODO: what?, range [0,1023].
- * @param postNeuronAddr TODO: what?, range [0,1023].
- * @param camId TODO: what?, range [0,63].
- * @param synapseType TODO: what?, one of: [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,
+ * @param preNeuronAddr TODO: what?, range [0,1023]. FED: range [0,1023], neuron id range (0,1023) in one chip there are 1024 neurons
+ * @param postNeuronAddr TODO: what?, range [0,1023]. FED: range [0,1023], neuron id range (0,1023) in one chip there are 1024 neurons
+ * @param camId TODO: what?, range [0,63]. FED: range [0,63]. synapse id (CAM) range (0,63) one neurons has 64 CAM/synapses
+ * @param synapseType TODO: what?, FED: one of the four possible synaptic weights [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,
  *											DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
  *
  * @return integer with the right bits set for CAM writing.
