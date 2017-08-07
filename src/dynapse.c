@@ -1817,6 +1817,9 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr,
 }
 
 // TODO: sure we only must reverse? not also invert like DAVIS? why is this?
+// FED: yes this how the lines are routed in the biasgen chip..
+// FED: this is an hw implementation, bad line routing however the fix is simple
+// FED: please follow this implementation
 static inline uint8_t coarseValueReverse(uint8_t coarseValue) {
 	uint8_t coarseRev = 0;
 
@@ -1858,6 +1861,8 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 		biasValue = U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
 		// TODO: sure about this, why 6 bits all 1? In DAVIS that's regValue maximum.
 		// Also fineValue is usually called refValue, and is only 6 bits, not 8 like for coarse-fine.
+		// FED: Yes I have been testing it, I am sure.
+		// FED: historically in neuromorphic chips (from the NCS group) this is called fineValue, and yes it is 8 bits
 	}
 	// So are the Buffer biases.
 	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {

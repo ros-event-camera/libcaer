@@ -536,6 +536,8 @@ extern "C" {
  * functions, which are:
  * - caerBiasDynapseGenerate() for Dynap-se coarse-fine (current) biases.
  * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inilabs.com/support/hardware/user-guide-dynap-se/
+ * section Neuron's behaviour and parameters tuning
  */
 #define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P             	0
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_S_N            2
@@ -708,6 +710,9 @@ struct caer_bias_dynapse {
 	bool special;
 };
 // TODO: what do biasHigh and special actually mean?
+// FED: see line 1166 https://github.com/inilabs/caer/blob/master/modules/ini/dynapse_common.c
+// FED: see function generateCoarseFineBias line 1178
+// FED: https://github.com/inilabs/caer/blob/master/modules/ini/dynapse_common.c
 
 /**
  * Transform coarse-fine bias structure into internal integer representation,
