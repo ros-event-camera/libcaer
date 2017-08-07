@@ -3,6 +3,54 @@
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
 
+uint32_t caerDynapseGenerateCamBits(uint16_t neuronAddr, uint8_t camId, uint16_t inputNeuronAddr, uint8_t synapseType) {
+	uint32_t camBits = 0;
+
+	camBits |= U32T(synapseType & 0x03) << 28;
+	camBits |= U32T(inputNeuronAddr & 0xFF) << 20;
+	camBits |= U32T((inputNeuronAddr >> 8) & 0x03) << 18;
+	camBits |= U32T(0x01 << 17);
+	camBits |= U32T((neuronAddr >> 8) & 0x03) << 15;
+	camBits |= U32T((neuronAddr >> 4) & 0x0F) << 11;
+	camBits |= U32T(camId & 0x3F) << 5;
+	camBits |= U32T(neuronAddr & 0x0F) << 0;
+
+	return (camBits);
+}
+
+uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
+	bool sy, uint8_t dy, uint8_t destinationCore) {
+	uint32_t sramBits = 0;
+
+	sramBits |= U32T(virtualCoreId & 0x03) << 28;
+	sramBits |= U32T(sy & 0x01) << 27;
+	sramBits |= U32T(dy & 0x03) << 25;
+	sramBits |= U32T(sx & 0x01) << 24;
+	sramBits |= U32T(dx & 0x03) << 22;
+	sramBits |= U32T(destinationCore & 0x0F) << 18;
+	sramBits |= U32T(0x01 << 17);
+	sramBits |= U32T((neuronAddr >> 8) & 0x03) << 15;
+	sramBits |= U32T(neuronAddr & 0xFF) << 7;
+	sramBits |= U32T(sramId & 0x03) << 5;
+	sramBits |= U32T(0x01 << 4);
+
+	return (sramBits);
+}
+
+uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY) {
+	uint16_t neuronId = 0;
+
+	neuronId |= U16T(coreId & 0x03) << 8;
+	neuronId |= U16T(rowY & 0x0F) << 4;
+	neuronId |= U16T(columnX & 0x0F) << 0;
+
+	return (neuronId);
+}
+
+uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) {
+	return (caerDynapseCoreXYToNeuronId(coreId, ((neuronAddrCore >> 0) & 0x0F), ((neuronAddrCore >> 4) & 0x0F)));
+}
+
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
@@ -549,12 +597,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		}
 
 		case DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY: {
-			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_SRAMROW * DYNAPSE_CONFIG_NUMSRAM_NEU * 6] =
+			uint8_t spiMultiConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS * DYNAPSE_CONFIG_NUMSRAM_NEU * 6] =
 				{ 0 }; // 6 pieces made of 8 bytes each
 
 			size_t numConfig = 0;
 
 			// route output neurons differently depending on the position on the board
+			// TODO: for empty version there is no different routing, so paramAddr is not needed.
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_DYNAPSE_U0:
 				case DYNAPSE_CONFIG_DYNAPSE_U1:
@@ -565,7 +614,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					// all cores
 					for (uint32_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
 						// all rows
-						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_SRAMROW; row_neuronid++) {
+						for (uint32_t row_neuronid = 0; row_neuronid < DYNAPSE_CONFIG_NUMNEURONS; row_neuronid++) {
 							for (uint32_t row_sram = 0; row_sram < DYNAPSE_CONFIG_NUMSRAM_NEU; row_sram++) {
 
 								uint32_t bits = row_neuronid << 5 | core << 15 | 1 << 17 | row_sram | 1 << 4; // init content to zero
@@ -1577,16 +1626,12 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 		return (false);
 	}
 
-	dynapseState state = &handle->state;
-
-	// if array exceeds max size don't send anything
-	if (numConfig > DYNAPSE_MAX_USER_USB_PACKET_SIZE) {
+	// Allocate memory for configuration parameters.
+	uint8_t *spiMultiConfig = calloc(numConfig, 6);
+	if (spiMultiConfig == NULL) {
 		return (false);
 	}
 
-	uint8_t spiMultiConfig[DYNAPSE_MAX_USER_USB_PACKET_SIZE * 6] = { 0 };
-
-	// all cores
 	for (size_t i = 0; i < numConfig; i++) {
 		spiMultiConfig[(i * 6) + 0] = DYNAPSE_CONFIG_CHIP;
 		spiMultiConfig[(i * 6) + 1] = DYNAPSE_CONFIG_CHIP_CONTENT;
@@ -1596,6 +1641,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 		spiMultiConfig[(i * 6) + 5] = U8T((pointer[i] >> 0) & 0x0FF);
 	}
 
+	dynapseState state = &handle->state;
 	size_t idxConfig = 0;
 
 	while (numConfig > 0) {
@@ -1604,7 +1650,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 
 		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0,
 			spiMultiConfig + idxConfig, U16T(configSize))) {
-			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "USB transfer failed on sending.");
+			free(spiMultiConfig);
 			return (false);
 		}
 
@@ -1613,7 +1660,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 			sizeof(check));
 
 		if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
-			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to clear CAM, USB transfer failed on verification.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "USB transfer failed on verification.");
+			free(spiMultiConfig);
 			return (false);
 		}
 
@@ -1621,7 +1669,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 		idxConfig += configSize;
 	}
 
-	// return true
+	free(spiMultiConfig);
 	return (true);
 }
 
@@ -1717,8 +1765,8 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	return (true);
 }
 
-bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
-	int16_t synapseType) {
+bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t preNeuronAddr, uint16_t postNeuronAddr, uint8_t camId,
+	uint8_t synapseType) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -1731,7 +1779,7 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 		return (false);
 	}
 
-	uint32_t bits = caerDynapseGenerateCamBits(preNeuronAddr, postNeuronAddr, camId, synapseType);
+	uint32_t bits = caerDynapseGenerateCamBits(postNeuronAddr, camId, preNeuronAddr, synapseType);
 
 	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, bits) == false) {
 		return (false);
@@ -1740,26 +1788,8 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint32_t preNeuronAddr, uint32_t 
 	return (true);
 }
 
-uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
-	int16_t synapseType) {
-	uint32_t ei = (U32T(synapseType) & 0x2) >> 1;
-	uint32_t fs = synapseType & 0x1;
-	uint32_t address = preNeuronAddr & 0xff;
-	uint32_t source_core = (preNeuronAddr & 0x300) >> 8;
-	uint32_t coreId = (postNeuronAddr & 0x300) >> 8;
-	uint32_t neuron_row = (postNeuronAddr & 0xf0) >> 4;
-	uint32_t synapse_row = camId;
-	uint32_t row = neuron_row << 6 | synapse_row;
-	uint32_t column = postNeuronAddr & 0xf;
-
-	uint32_t bits = ei << 29 | fs << 28 | address << 20 | source_core << 18 | 1 << 17 | coreId << 15 | row << 5
-		| column;
-
-	return (bits);
-}
-
-bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore) {
+bool caerDynapseWriteSram(caerDeviceHandle cdh, uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx,
+	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -1772,7 +1802,7 @@ bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuron
 		return (false);
 	}
 
-	uint32_t bits = neuronId
+	uint32_t bits = U32T(neuronId)
 		<< 7| U32T(sramId << 5) | U32T(coreId << 15) | 1 << 17 | 1 << 4 | U32T(destinationCore << 18)
 		| U32T(sy << 27) | U32T(dy << 25) | U32T(dx << 22) | U32T(sx << 24) | U32T(virtualCoreId << 28);
 
@@ -1783,7 +1813,7 @@ bool caerDynapseWriteSram(caerDeviceHandle cdh, uint16_t coreId, uint32_t neuron
 	return (true);
 }
 
-bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr, double rateHz) {
+bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint16_t neuronAddr, double rateHz) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -1816,10 +1846,6 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint32_t neuronAddr,
 	return (true);
 }
 
-// TODO: sure we only must reverse? not also invert like DAVIS? why is this?
-// FED: yes this how the lines are routed in the biasgen chip..
-// FED: this is an hw implementation, bad line routing however the fix is simple
-// FED: please follow this implementation
 static inline uint8_t coarseValueReverse(uint8_t coarseValue) {
 	uint8_t coarseRev = 0;
 
@@ -1857,16 +1883,17 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 	uint32_t biasValue = U32T((dynapseBias.biasAddress & 0x7F) << 18) | U32T(0x01 << 16);
 
 	// SSN and SSP are different.
-	if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+	if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN
+		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+		// Special (bit 15) is always enabled for Shifted-Source biases.
+		// For all other bias types we keep it disabled, as it is not useful for users.
 		biasValue = U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
-		// TODO: sure about this, why 6 bits all 1? In DAVIS that's regValue maximum.
-		// Also fineValue is usually called refValue, and is only 6 bits, not 8 like for coarse-fine.
-		// FED: Yes I have been testing it, I am sure.
-		// FED: historically in neuromorphic chips (from the NCS group) this is called fineValue, and yes it is 8 bits
 	}
 	// So are the Buffer biases.
-	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
-		biasValue = U32T(dynapseBias.special << 15) | U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER
+		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
+		biasValue = U32T(
+			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 	// Standard coarse-fine biases.
 	else {
@@ -1883,22 +1910,42 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 			biasValue |= 0x08;
 		}
 
-		biasValue |=  U32T(dynapseBias.special << 15) | U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+		biasValue |= U32T(
+			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 
 	return (biasValue);
 }
 
 struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
-	struct caer_bias_dynapse biasValue;
+	struct caer_bias_dynapse biasValue = { 0, 0, 0, false, false, false, false };
 
 	// Decompose bias integer into its parts.
-	biasValue.enabled = (coarseFineBias & 0x01);
-	biasValue.sexN = (coarseFineBias & 0x02);
-	biasValue.typeNormal = (coarseFineBias & 0x04);
-	biasValue.currentLevelNormal = (coarseFineBias & 0x08);
-	biasValue.fineValue = U8T(coarseFineBias >> 4) & 0xFF;
-	biasValue.coarseValue = U8T(coarseFineBias >> 12) & 0x07;
+	biasValue.biasAddress = (dynapseBias >> 18) & 0x7F;
+
+	// SSN and SSP are different.
+	if (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN
+		|| biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+		// Special (bit 15) is always enabled for Shifted-Source biases.
+		// For all other bias types we keep it disabled, as it is not useful for users.
+		biasValue.fineValue = (dynapseBias >> 4) & 0x3F;
+	}
+	// So are the Buffer biases.
+	else if (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER
+		|| biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
+		biasValue.coarseValue = coarseValueReverse((dynapseBias >> 12) & 0x07);
+		biasValue.fineValue = (dynapseBias >> 4) & 0xFF;
+	}
+	// Standard coarse-fine biases.
+	else {
+		biasValue.enabled = (dynapseBias & 0x01);
+		biasValue.sexN = (dynapseBias & 0x02);
+		biasValue.typeNormal = (dynapseBias & 0x04);
+		biasValue.biasHigh = (dynapseBias & 0x08);
+
+		biasValue.coarseValue = coarseValueReverse((dynapseBias >> 12) & 0x07);
+		biasValue.fineValue = (dynapseBias >> 4) & 0xFF;
+	}
 
 	return (biasValue);
 }
