@@ -63,22 +63,26 @@ extern "C" {
 /**
  * Clear CAM content, on all cores of a chip.
  * No arguments are used.
+ * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_CLEAR_CAM 10
 /**
  * Clear SRAM content, use one SRAM cell (cell 0, out of the four available)
  * to monitor neurons via USB.
  * 'modAddr' is the chip ID on which to operate, other arguments are unused.
+ * Remember to also select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
 /**
  * Setup analog neuron monitoring via SMA connectors.
  * 'modAddr' takes the core ID to be monitored, 'paramAddr' the neuron ID.
+ * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_MONITOR_NEU 12
 /**
  * Clear SRAM content, route nothing outside (all four SRAM cells zero).
  * No arguments are used.
+ * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
@@ -732,7 +736,7 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
 
 /**
  * Specifies the poisson spike generator's spike rate.
@@ -744,7 +748,7 @@ bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, ui
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, double rateHz);
+bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
 
 /**
  * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
