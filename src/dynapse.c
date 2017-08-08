@@ -518,57 +518,50 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			uint8_t dy = 0;
 			uint8_t destinationCore = 0;
 
-			// route output neurons differently depending on the position on the board
+			// Route output neurons differently depending on the position of the chip in the board.
+			// We want to route all spikes to the output south interface, and be able to tell from
+			// which chip they came from. To do that, we set the destination core-id not to the
+			// hot-coded format, but simply directly to the chip-id (0,4,8,12), with chip 0 actually
+			// having an ID of 1 because the SRAM cannot have all zeros (or it disables routing).
+			// This works because we got outside the chip system, to the FPGA, which simply gets
+			// the four destination core-id bits and forwards them to the computer.
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_DYNAPSE_U0: {
-					// route all neurons to the output south interface with
-					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					sx = 0;
 					dx = 0;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 2;
-					// TODO: destinationCore is hot-coded, so I believe this should not
-					// be the chip ID, but 1 for U0, 2 for U1, 4 for U2 and 8 for U3,
-					// so that chip 0 hits core 0, chip 1 hits core 1 and so on.
-					// Using DYNAPSE_CONFIG_DYNAPSE_U3 is I think wrong in any case as
-					// it has two bits 1 (dec 12 so 0b1100, which means it hits two cores).
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U0 + 1; // same as chip id
+					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U0_OUT; // Chip-id for output.
 
 					break;
 				}
 
 				case DYNAPSE_CONFIG_DYNAPSE_U1: {
-					// route all neurons to the output south interface with
-					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					sx = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dx = 1;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 2;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U1; // same as chip id
+					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U1_OUT; // Chip-id for output.
 
 					break;
 				}
 
 				case DYNAPSE_CONFIG_DYNAPSE_U2: {
-					// route all neurons to the output south interface with
-					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					sx = 0;
 					dx = 0;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 1;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U2; // same as chip id
+					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U2_OUT; // Chip-id for output.
 
 					break;
 				}
 
 				case DYNAPSE_CONFIG_DYNAPSE_U3: {
-					// route all neurons to the output south interface with
-					// source chip id equal to DYNAPSE_CONFIG_DYNAPSE_U2
 					sx = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dx = 1;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 1;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U3; // same as chip id
+					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U3_OUT; // Chip-id for output.
 
 					break;
 				}
