@@ -70,9 +70,9 @@ public:
 		return (caerBiasDynapseParse(dynapseBias));
 	}
 
-	static uint32_t generateCamBits(uint16_t neuronAddr, uint8_t camId, uint16_t inputNeuronAddr, uint8_t synapseType)
+	static uint32_t generateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType)
 		noexcept {
-		return (caerDynapseGenerateCamBits(neuronAddr, camId, inputNeuronAddr, synapseType));
+		return (caerDynapseGenerateCamBits(inputNeuronAddr, neuronAddr, camId, synapseType));
 	}
 
 	static uint32_t generateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,

@@ -807,17 +807,16 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, siz
 /**
  * Generate bits to write a single CAM, to specify which spikes are allowed as input into a neuron.
  *
+ * @param inputNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023]
+ *     (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
  * @param neuronAddr the neuron to program, range [0,1023] (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
  * @param camId CAM address (synapse), each neuron has 64, range [0,63].
- * @param inputNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023]
- *     (use caerDynapseCoreXYToNeuronId() for a 2D mapping)..
  * @param synapseType one of the four possible synaptic weights:
  *     [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateCamBits(uint16_t neuronAddr, uint8_t camId, uint16_t inputNeuronAddr,
-	uint8_t synapseType);
+uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
 /**
  * Generate bits to write one of the 4 SRAMs of a single neuron.
@@ -836,8 +835,8 @@ uint32_t caerDynapseGenerateCamBits(uint16_t neuronAddr, uint8_t camId, uint16_t
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
+uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
+	bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Map core ID and column/row address to the correct chip global neuron address.

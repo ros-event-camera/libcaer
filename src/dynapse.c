@@ -7,7 +7,7 @@ static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const
 static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, size_t configNum);
 static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
 
-uint32_t caerDynapseGenerateCamBits(uint16_t neuronAddr, uint8_t camId, uint16_t inputNeuronAddr, uint8_t synapseType) {
+uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType) {
 	uint32_t camBits = 0;
 
 	camBits |= U32T(synapseType & 0x03) << 28;
@@ -1427,7 +1427,7 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t preNeuronAddr, uint16_t 
 		return (false);
 	}
 
-	uint32_t camBits = caerDynapseGenerateCamBits(postNeuronAddr, camId, preNeuronAddr, synapseType);
+	uint32_t camBits = caerDynapseGenerateCamBits(preNeuronAddr, postNeuronAddr, camId, synapseType);
 
 	return (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, camBits));
 }
