@@ -459,21 +459,17 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_CLEAR_CAM: {
-			uint32_t clearCamConfig[DYNAPSE_CONFIG_NUMCORES * DYNAPSE_CONFIG_NUMNEURONS] = { 0 };
+			uint32_t clearCamConfig[DYNAPSE_CONFIG_NUMNEURONS * DYNAPSE_CONFIG_NUMCAM];
 
-			// All four cores.
+			// Clear all CAMs on this chip.
 			size_t idx = 0;
-			for (size_t core = 0; core < DYNAPSE_CONFIG_NUMCORES; core++) {
-				// All rows and cams (4 + 6 bits -> 10 bits, 1024).
-				// TODO: verify why we don't clear all the CAM columns too.
-				// In theory this means there's neurons we don't clear at all.
-				for (size_t row = 0; row < DYNAPSE_CONFIG_NUMNEURONS; row++) {
-					clearCamConfig[idx++] = U32T(0x01 << 17 | core << 15 | row << 5);
+			for (uint16_t neuronId = 0; neuronId < DYNAPSE_CONFIG_NUMNEURONS; neuronId++) {
+				for (uint8_t camId = 0; camId < DYNAPSE_CONFIG_NUMCAM; camId++) {
+					clearCamConfig[idx++] = caerDynapseGenerateCamBits(0, neuronId, camId, 0);
 				}
 			}
 
 			return (caerDynapseSendDataToUSB(cdh, clearCamConfig, idx));
-
 			break;
 		}
 
