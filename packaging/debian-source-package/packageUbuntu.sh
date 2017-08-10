@@ -3,6 +3,7 @@
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
 PKG_VERSION=2.3.0
+PKG_RELEASE=1
 DISTRO=xenial
 BRANCH=master
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
@@ -56,7 +57,7 @@ echo "3.0 (quilt)" > "$DEBIAN_DIR/source/format"
 
 # Create the changelog file for the distro
 CHANGELOG_FILE="$DEBIAN_DIR/changelog"
-echo "$PKG_NAME ($PKG_VERSION-0~$DISTRO) $DISTRO; urgency=low" > "$CHANGELOG_FILE"
+echo "$PKG_NAME ($PKG_VERSION-$PKG_RELEASE~$DISTRO) $DISTRO; urgency=low" > "$CHANGELOG_FILE"
 echo "" >> "$CHANGELOG_FILE"
 echo "  * Released $PKG_NAME version $PKG_VERSION for distro $DISTRO." >> "$CHANGELOG_FILE"
 echo "" >> "$CHANGELOG_FILE"
@@ -69,5 +70,5 @@ debuild $DEBUILD_ARGS
 # Send to Launchpad PPA
 if [ "$UPLOAD" = "true" ]; then
 	cd "$BUILD_DIR"
-	dput ppa:llongi/inilabs "${PKG_NAME}_${PKG_VERSION}-0~${DISTRO}"_source.changes
+	dput ppa:llongi/inilabs "${PKG_NAME}_${PKG_VERSION}-$PKG_RELEASE~${DISTRO}"_source.changes
 fi;
