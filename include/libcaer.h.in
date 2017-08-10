@@ -65,7 +65,7 @@ extern "C" {
 /**
  * libcaer version string.
  */
-#define LIBCAER_VERSION_STRING "@PROJECT_VERSION_NOREV@"
+#define LIBCAER_VERSION_STRING "@PROJECT_VERSION@"
 
 /**
  * libcaer serial devices support.
