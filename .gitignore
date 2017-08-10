@@ -11,7 +11,7 @@ cmake_install.cmake
 *~
 *.swp
 *.swo
-*.sh
 *.gch
-*.rpm
-*.deb
+/*.sh
+/*.rpm
+/*.deb
