@@ -1,0 +1,10 @@
+Source: libcaer
+Package: libcaer
+Section: devel
+Priority: optional
+Architecture: any
+Build-Depends: build-essential, cmake
+Depends: libusb-1.0-0 (>= 1.0.17)
+Maintainer: iniLabs <support@inilabs.com>
+Homepage: https://github.com/inilabs/libcaer/
+Description: Minimal C library to access, configure and get/send AER data from sensors or to/from neuromorphic processors.
