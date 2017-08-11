@@ -1,11 +1,14 @@
 #!/bin/sh
 
+# Requirements: Ubuntu, GPG key, git, devscripts
+
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
 PKG_VERSION=2.3.0
 PKG_RELEASE=1
 DISTRO=xenial
 BRANCH=master
+PPA_REPO=llongi/inilabs
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"
@@ -37,7 +40,7 @@ mkdir -p "$BUILD_DIR"
 
 # Create the tar.gz containing the source and extract it
 cd "$BASE_DIR"
-git archive --format tar.gz --output "$BUILD_DIR/${PKG_NAME}_${PKG_VERSION}.orig.tar.gz" --prefix="$PKG_NAME-$PKG_VERSION/" "$BRANCH"
+git archive --format tar.gz --output "$BUILD_DIR/${PKG_NAME}_${PKG_VERSION}.orig.tar.gz" --prefix="${PKG_NAME}-${PKG_VERSION}/" "$BRANCH"
 
 cd "$BUILD_DIR"
 tar -xzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
@@ -70,5 +73,5 @@ debuild $DEBUILD_ARGS
 # Send to Launchpad PPA
 if [ "$UPLOAD" = "true" ]; then
 	cd "$BUILD_DIR"
-	dput ppa:llongi/inilabs "${PKG_NAME}_${PKG_VERSION}-$PKG_RELEASE~${DISTRO}"_source.changes
+	dput ppa:$PPA_REPO "${PKG_NAME}_${PKG_VERSION}-${PKG_RELEASE}~${DISTRO}_source.changes"
 fi;
