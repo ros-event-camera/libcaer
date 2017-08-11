@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Requirements: Fedora, fedora-packager
+
+FEDORA_RELEASE=f26
+
+# Download source tarball.
+spectool -g libcaer.spec
+
+# Generate source RPM.
+fedpkg --release "$FEDORA_RELEASE" srpm
+
+# Run checks on generated RPM.
+fedpkg --release "$FEDORA_RELEASE" lint
