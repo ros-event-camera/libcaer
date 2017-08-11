@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Requirements: Ubuntu, GPG key, git, devscripts
+# Requirements: Ubuntu, GPG key (seahorse), git, devscripts, build-essential
 
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
