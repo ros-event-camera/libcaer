@@ -12,3 +12,5 @@ fedpkg --release "$FEDORA_RELEASE" srpm
 
 # Run checks on generated RPM.
 fedpkg --release "$FEDORA_RELEASE" lint
+
+# Now you can upload the source RPM to COPR for building.
