@@ -42,12 +42,16 @@ Also check the examples/ directory and the iniLabs Support website.
 
 For the development tree, you can generate the documentation using:
 
-$ make doc    - to generate docs/latex/ and docs/html/ documentation files.
-$ make pdf    - to generate a PDF from the LaTeX sources at docs/latex/refman.pdf.
+$ make doc - to generate docs/latex/ and docs/html/ documentation files.
+$ make pdf - to generate a PDF from the LaTeX sources at docs/latex/refman.pdf.
 
 USAGE:
 
-See examples/ directory. Usual usage is (simplified):
+See the examples/ directory. Each example shows minimal working code
+to connect to a device and print out data coming from it. To compile
+the examples, see 'examples/README' for the build commands.
+
+General usage follows this pattern (simplified):
 
 h = caerDeviceOpen(TYPE);
 caerDeviceSendDefaultConfig(h);
