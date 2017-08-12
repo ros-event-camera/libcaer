@@ -24,10 +24,10 @@ protected:
 		}
 
 		// Use stateless lambda for shared_ptr custom deleter.
-		auto deleteDeviceHandle = [](caerDeviceHandle h) {
+		auto deleteDeviceHandle = [](caerDeviceHandle cdh) {
 			// Run destructor, free all memory.
 			// Never fails in current implementation.
-			caerDeviceClose(&h);
+			caerDeviceClose(&cdh);
 		};
 
 		handle = std::shared_ptr<struct caer_device_handle>(h, deleteDeviceHandle);

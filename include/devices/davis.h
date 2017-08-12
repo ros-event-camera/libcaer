@@ -1188,9 +1188,7 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_SYSINFO:
  * read-only parameter, the version of the logic currently
- * running on the device's FPGA/CPLD. It usually represents
- * a specific SVN revision, at which the logic code was
- * synthesized.
+ * running on the device's FPGA/CPLD.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
