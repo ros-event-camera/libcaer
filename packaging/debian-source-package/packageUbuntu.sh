@@ -1,14 +1,14 @@
 #!/bin/sh
 
-# Requirements: Ubuntu, GPG key (seahorse), git, devscripts, build-essential
+# Requirements: Ubuntu, GPG key (seahorse), devscripts, build-essential
 
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
 PKG_VERSION=2.3.0
 PKG_RELEASE=1
 DISTRO=xenial
-BRANCH=master
-PPA_REPO=llongi/inilabs
+SRC_URI="https://github.com/inilabs/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
+PPA_REPO="llongi/inilabs"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"
@@ -38,12 +38,10 @@ echo "Started the debian source packaging process for distro $DISTRO"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-# Create the tar.gz containing the source and extract it
-cd "$BASE_DIR"
-git archive --format tar.gz --output "$BUILD_DIR/${PKG_NAME}_${PKG_VERSION}.orig.tar.gz" --prefix="${PKG_NAME}-${PKG_VERSION}/" "$BRANCH"
-
+# Get and extract the tar.gz containing the source
 cd "$BUILD_DIR"
-tar -xzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
+wget "$SRC_URI" -O "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
+tar -xvzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
 
 mkdir -p "$DEBIAN_DIR"
 
