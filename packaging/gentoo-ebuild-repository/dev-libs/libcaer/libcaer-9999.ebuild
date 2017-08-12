@@ -3,16 +3,16 @@
 
 EAPI=6
 
-inherit eutils cmake-utils
+inherit eutils cmake-utils git-r3
 
 DESCRIPTION="Fast, multi-threaded malloc() and nifty performance analysis tools"
 HOMEPAGE="https://github.com/inilabs/${PN}/"
 
-SRC_URI="https://github.com/inilabs/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
+EGIT_REPO_URI="https://github.com/inilabs/${PN}.git"
 
 LICENSE="BSD-2"
 SLOT="0"
-KEYWORDS="amd64 arm x86"
+KEYWORDS="~amd64 ~arm ~x86"
 IUSE="+serialdev opencv"
 
 RDEPEND=">=dev-libs/libusb-1.0.17
