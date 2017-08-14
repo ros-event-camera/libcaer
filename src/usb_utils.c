@@ -547,11 +547,18 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 		(*state->usbDataCallback)(state->usbDataCallbackPtr, transfer->buffer, (size_t) transfer->actual_length);
 	}
 
-	if (transfer->status != LIBUSB_TRANSFER_CANCELLED && transfer->status != LIBUSB_TRANSFER_NO_DEVICE) {
+	// Only status that indicates a new transfer can be really submitted is
+	// COMPLETED. TIMED_OUT is impossible, and ERROR/STALL/NO_DEVICE/CANCELLED
+	// are not recoverable, as all of them appear on different OSes when a
+	// device is physically unplugged for example.
+	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
 		// Submit transfer again.
 		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
 			return;
 		}
+
+		// Failed to re-submit, mark as generic error for counters below.
+		transfer->status = LIBUSB_TRANSFER_ERROR;
 	}
 
 	// Cannot recover (cancelled, no device, or other critical error).
