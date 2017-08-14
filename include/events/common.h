@@ -449,6 +449,18 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
 }
 
 /**
+ * Copy a given event's content to another location in memory.
+ *
+ * @param eventPtrTo a generic pointer to an event to copy to. Cannot be NULL.
+ * @param eventPtrFrom a generic pointer to an event to copy from. Cannot be NULL.
+ * @param headerPtr a valid EventPacket header pointer. Cannot be NULL.
+ */
+static inline void caerGenericEventCopy(void *eventPtrTo, const void *eventPtrFrom,
+	caerEventPacketHeaderConst headerPtr) {
+	memcpy(eventPtrTo, eventPtrFrom, (size_t) headerPtr->eventSize);
+}
+
+/**
  * Generic iterator over all events in a packet.
  * Returns the current index in the 'caerIteratorCounter' variable of type
  * 'int32_t' and the current event in the 'caerIteratorElement' variable
