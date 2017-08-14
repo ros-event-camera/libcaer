@@ -556,9 +556,6 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
 			return;
 		}
-
-		// Failed to re-submit, mark as generic error for counters below.
-		transfer->status = LIBUSB_TRANSFER_ERROR;
 	}
 
 	// Cannot recover (cancelled, no device, or other critical error).
@@ -578,6 +575,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// and use that information to determine if the shutdown was intentional by the
 	// user or not. If not, at least one transfer would fail with a non-cancel error.
 	if (transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		// This also captures COMPLETED but with re-submit failure.
 		atomic_fetch_add(&state->failedDataTransfers, 1);
 	}
 

@@ -4119,7 +4119,7 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 		debugTranslator(handle, transfer->buffer, (size_t) transfer->actual_length);
 	}
 
-	if (transfer->status != LIBUSB_TRANSFER_CANCELLED && transfer->status != LIBUSB_TRANSFER_NO_DEVICE) {
+	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
 		// Submit transfer again.
 		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
 			return;
