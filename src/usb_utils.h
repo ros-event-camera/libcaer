@@ -38,6 +38,7 @@ struct usb_state {
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
+	atomic_uint_fast32_t failedDataTransfers;
 	// USB Data Transfers handling callback
 	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
 	void *usbDataCallbackPtr;

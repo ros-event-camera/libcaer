@@ -555,7 +555,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	}
 
 	// Cannot recover (cancelled, no device, or other critical error).
-	// Signal this by adjusting the counter and exiting.
+	// Signal this by adjusting the counters and exiting.
 	// Freeing the transfers is taken care of by usbCancelAndDeallocateTransfers().
 	// 'activeDataTransfers' drops to zero in three cases:
 	// - the device went away
@@ -564,19 +564,38 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// The second and third case are intentional user actions, so we don't notify.
 	// In the first case, the last transfer to go away calls the shutdown
 	// callback and notifies that we're exiting, and not via normal cancellation.
-	if (atomic_load(&state->activeDataTransfers) == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
-		// Ensure run is set to false on exceptional shut-down.
-		atomic_store(&state->dataTransfersRun, false);
+	// On MacOS X, when an error occurs (like device being unplugged), not all
+	// transfers return with the expected error code, but only one, the rest returns
+	// LIBUSB_TRANSFER_CANCELLED, which we only expect on actual user cancel actions.
+	// To track this, we count the transfers that did fail with any other error code,
+	// and use that information to determine if the shutdown was intentional by the
+	// user or not. If not, at least one transfer would fail with a non-cancel error.
+	if (transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+		atomic_fetch_add(&state->failedDataTransfers, 1);
 	}
 
-	// We make sure to first set 'dataTransfersRun' to false on exceptional
-	// shut-down, before doing the subtraction, so that anyone waiting on
-	// 'activeDataTransfers' to become zero, will see RUN changed to false too.
-	if (atomic_fetch_sub(&state->activeDataTransfers, 1) == 1 && transfer->status != LIBUSB_TRANSFER_CANCELLED) {
+	if (atomic_load(&state->activeDataTransfers) == 1 && atomic_load(&state->failedDataTransfers) > 0) {
+		// Ensure run is set to false on exceptional shut-down.
+		atomic_store(&state->dataTransfersRun, false);
+
+		// We make sure to first set 'dataTransfersRun' to false on exceptional
+		// shut-down, before doing the subtraction, so that anyone waiting on
+		// 'activeDataTransfers' to become zero, will see RUN changed to false too.
+		atomic_store(&state->activeDataTransfers, 0);
+
 		// Call exceptional shut-down callback,
 		if (state->usbShutdownCallback != NULL) {
 			state->usbShutdownCallback(state->usbShutdownCallbackPtr);
 		}
+	}
+	else {
+		// Normal shutdown/count-down.
+		atomic_fetch_sub(&state->activeDataTransfers, 1);
+	}
+
+	// Clear error tracking counter on last exit.
+	if (atomic_load(&state->activeDataTransfers) == 0 && atomic_load(&state->failedDataTransfers) > 0) {
+		atomic_store(&state->failedDataTransfers, 0);
 	}
 }
 
