@@ -374,6 +374,10 @@ public:
 		bool isValid() const noexcept {
 			return (caerGenericEventIsValid(event));
 		}
+
+		void copy(void *destination) const noexcept {
+			caerGenericEventCopy(destination, event, header);
+		}
 	};
 
 	// Container traits.
