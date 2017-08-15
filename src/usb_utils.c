@@ -576,10 +576,12 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// user or not. If not, at least one transfer would fail with a non-cancel error.
 	if (transfer->status != LIBUSB_TRANSFER_CANCELLED) {
 		// This also captures COMPLETED but with re-submit failure.
-		atomic_fetch_add(&state->failedDataTransfers, 1);
+		state->failedDataTransfers++;
 	}
 
-	if (atomic_load(&state->activeDataTransfers) == 1 && atomic_load(&state->failedDataTransfers) > 0) {
+	// Transfers are handled sequentially always in the same thread, so these
+	// reads here are correct.
+	if ((atomic_load(&state->activeDataTransfers) == 1) && (state->failedDataTransfers > 0)) {
 		// Ensure run is set to false on exceptional shut-down.
 		atomic_store(&state->dataTransfersRun, false);
 
@@ -599,8 +601,8 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	}
 
 	// Clear error tracking counter on last exit.
-	if (atomic_load(&state->activeDataTransfers) == 0 && atomic_load(&state->failedDataTransfers) > 0) {
-		atomic_store(&state->failedDataTransfers, 0);
+	if ((atomic_load(&state->activeDataTransfers) == 0) && (state->failedDataTransfers > 0)) {
+		state->failedDataTransfers = 0;
 	}
 }
 
