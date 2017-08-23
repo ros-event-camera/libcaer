@@ -486,15 +486,6 @@ extern "C" {
 /// Chip 3 ID.
 #define DYNAPSE_CONFIG_DYNAPSE_U3	12
 
-/// Chip 0 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U0_OUT	1 // DYNAPSE_U0+1 -> 0+1 = 1.
-/// Chip 1 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U1_OUT	8
-/// Chip 2 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U2_OUT	4
-/// Chip 3 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U3_OUT	12
-
 /// Number of cores per chip.
 #define DYNAPSE_CONFIG_NUMCORES				4
 /// Number of neurons in single chip.

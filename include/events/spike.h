@@ -304,27 +304,6 @@ static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neur
 }
 
 /**
- * Get the Y (row) address for a spike event, in pixels.
- * The (0, 0) address is in the upper left corner.
- *
- * @param event a valid SpikeEvent pointer. Cannot be NULL.
- *
- * @return the event Y address in pixels.
- */
-static inline uint16_t caerSpikeEventGetY(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
-	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
-
-	uint16_t columnId = (neuronId & 0x0F);
-	bool addColumn = (coreId & 0x01);
-	bool addColumnChip = (chipId & (0x01 << 2));
-	columnId = U16T(columnId + (addColumn) * 16 + (addColumnChip) * 32);
-
-	return (columnId);
-}
-
-/**
  * Get the X (column) address for a spike event, in pixels.
  * The (0, 0) address is in the upper left corner.
  *
@@ -337,14 +316,34 @@ static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
 	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
+	uint16_t columnId = (neuronId & 0x0F);
+	bool addColumn = (coreId & 0x02);
+	bool addColumnChip = ((chipId >> 2) & 0x02);
+	columnId = U16T(columnId + (addColumn * 16) + (addColumnChip * 32));
+
+	return (columnId);
+}
+
+/**
+ * Get the Y (row) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event Y address in pixels.
+ */
+static inline uint16_t caerSpikeEventGetY(caerSpikeEventConst event) {
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
+
 	uint16_t rowId = ((neuronId >> 4) & 0x0F);
-	bool addRow = (coreId & (0x01 << 1));
-	bool addRowChip = (chipId & (0x01 << 3));
-	rowId = U16T(rowId + (addRow) * 16 + (addRowChip) * 32);
+	bool addRow = (coreId & 0x01);
+	bool addRowChip = ((chipId >> 2) & 0x01);
+	rowId = U16T(rowId + (addRow * 16) + (addRowChip * 32));
 
 	return (rowId);
 }
-
 
 /**
  * Iterator over all Spike events in a packet.
