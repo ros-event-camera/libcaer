@@ -141,7 +141,7 @@ static inline float calculateIMUGyroScale(uint8_t imuGyroScale) {
 
 static inline void freeAllDataMemory(davisState state) {
 	if (state->dataExchangeBuffer != NULL) {
-		ringBufferFree(state->dataExchangeBuffer);
+		caerRingBufferFree(state->dataExchangeBuffer);
 		state->dataExchangeBuffer = NULL;
 	}
 
@@ -2287,7 +2287,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	state->currentPacketContainerCommitTimestamp = -1;
 
 	// Initialize RingBuffer.
-	state->dataExchangeBuffer = ringBufferInit(atomic_load(&state->dataExchangeBufferSize));
+	state->dataExchangeBuffer = caerRingBufferInit(atomic_load(&state->dataExchangeBufferSize));
 	if (state->dataExchangeBuffer == NULL) {
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
@@ -2450,7 +2450,7 @@ bool davisDataStop(caerDeviceHandle cdh) {
 
 	// Empty ringbuffer.
 	caerEventPacketContainer container;
-	while ((container = ringBufferGet(state->dataExchangeBuffer)) != NULL) {
+	while ((container = caerRingBufferGet(state->dataExchangeBuffer)) != NULL) {
 		// Notify data-not-available call-back.
 		if (state->dataNotifyDecrease != NULL) {
 			state->dataNotifyDecrease(state->dataNotifyUserPtr);
@@ -2481,7 +2481,7 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 	davisState state = &handle->state;
 	caerEventPacketContainer container = NULL;
 
-	retry: container = ringBufferGet(state->dataExchangeBuffer);
+	retry: container = caerRingBufferGet(state->dataExchangeBuffer);
 
 	if (container != NULL) {
 		// Found an event container, return it and signal this piece of data
@@ -3839,7 +3839,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				state->currentPacketContainer = NULL;
 			}
 			else {
-				if (!ringBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
+				if (!caerRingBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
 					davisLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
@@ -3891,7 +3891,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				// Reset MUST be committed, always, else downstream data processing and
 				// outputs get confused if they have no notification of timestamps
 				// jumping back go zero.
-				while (!ringBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
+				while (!caerRingBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
 					// Prevent dead-lock if shutdown is requested and nothing is consuming
 					// data anymore, but the ring-buffer is full (and would thus never empty),
 					// thus blocking the USB handling thread in this loop.

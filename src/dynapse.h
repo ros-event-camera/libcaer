@@ -2,7 +2,7 @@
 #define LIBCAER_SRC_DYNAPSE_H_
 
 #include "devices/dynapse.h"
-#include "ringbuffer/ringbuffer.h"
+#include "ringbuffer.h"
 #include "usb_utils.h"
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"
@@ -34,7 +34,7 @@ struct dynapse_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
-	RingBuffer dataExchangeBuffer;
+	caerRingBuffer dataExchangeBuffer;
 	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
 	atomic_bool dataExchangeBlocking;
 	atomic_bool dataExchangeStartProducers;

@@ -38,6 +38,9 @@ NEW FEATURES
   neuron addresses (range [0,1023]).
 - events/common.h: added caerGenericEventCopy() function to copy
   events from one place in memory to another.
+- ringbuffer.h/hpp: the ring-buffer functions for producer-consumer
+  high-performance communication between two threads are now exposed
+  as part of the API, to allow re-use in other projects such as cAER.
 
 BUG FIXES
 - devices/dynapse.h: major API documentation cleanup.

@@ -1,5 +1,5 @@
 SET(LIBCAER_SRC_FILES
-	ringbuffer/ringbuffer.c
+	ringbuffer.c
 	log.c
 	events.c
 	frame_utils.c
