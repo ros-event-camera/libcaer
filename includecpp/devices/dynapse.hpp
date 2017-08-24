@@ -87,6 +87,22 @@ public:
 	static uint16_t coreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) noexcept {
 		return (caerDynapseCoreAddrToNeuronId(coreId, neuronAddrCore));
 	}
+
+	static uint16_t spikeEventGetX(const libcaer::events::SpikeEvent &event) noexcept {
+		return (caerDynapseSpikeEventGetX(static_cast<caerSpikeEventConst>(&event)));
+	}
+
+	static uint16_t spikeEventGetY(const libcaer::events::SpikeEvent &event) noexcept {
+		return (caerDynapseSpikeEventGetY(static_cast<caerSpikeEventConst>(&event)));
+	}
+
+	static uint16_t spikeEventGetX(const libcaer::events::SpikeEvent *event) noexcept {
+		return (caerDynapseSpikeEventGetX(static_cast<caerSpikeEventConst>(event)));
+	}
+
+	static uint16_t spikeEventGetY(const libcaer::events::SpikeEvent *event) noexcept {
+		return (caerDynapseSpikeEventGetY(static_cast<caerSpikeEventConst>(event)));
+	}
 };
 
 }

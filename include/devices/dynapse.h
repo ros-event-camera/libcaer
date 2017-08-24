@@ -850,6 +850,48 @@ uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t ro
  */
 uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
 
+/**
+ * Get the X (column) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event X address in pixels.
+ */
+static inline uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
+
+	uint16_t columnId = (neuronId & 0x0F);
+	bool addColumn = (coreId & 0x02);
+	bool addColumnChip = ((chipId >> 2) & 0x02);
+	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
+
+	return (columnId);
+}
+
+/**
+ * Get the Y (row) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event Y address in pixels.
+ */
+static inline uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
+
+	uint16_t rowId = ((neuronId >> 4) & 0x0F);
+	bool addRow = (coreId & 0x01);
+	bool addRowChip = ((chipId >> 2) & 0x01);
+	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
+
+	return (rowId);
+}
+
 #ifdef __cplusplus
 }
 #endif
