@@ -1,3 +1,59 @@
+Release 2.4.0 - XX.08.2017
+INCOMPATIBLE CHANGES
+- src/dynapse.c: spike events coming from a Dynap-SE's chip ID 0 (U0) do
+  now have a chip ID of 0, the same as the chip ID used to configure the
+  system, removing this small inconsistency. All usages of
+  'DYNAPSE_CONFIG_DYNAPSE_U0+1' must now remove the '+1', chip U0 is not
+  to be treated differently anymore in regards to its USB output chip ID.
+- events/spike.h: caerSpikeEventGetX() and caerSpikeEventGetY() were
+  inverting the meaning of column/row, resulting in inconsistencies
+  when using those two functions in comparison to system configuration.
+  This has now been corrected, and the functions moved to devices/dynapse.h
+  with the new names of caerDynapseSpikeEventGetX/Y(), due to them being
+  specific to the architecture of the Dynap-SE neuromorphic processor.
+- devices/dynapse.h: removed define DYNAPSE_CONFIG_SRAMROW.
+  Use DYNAPSE_CONFIG_NUMNEURONS and DYNAPSE_CONFIG_NUMSRAM_NEU.
+- devices/dynapse.h: removed defines DYNAPSE_MAX_USER_USB_PACKET_SIZE,
+  DYNAPSE_CONFIG_MAX_USB_TRANSFER and DYNAPSE_CONFIG_MAX_PARAM_SIZE.
+  Those are internal implementation details, and caerDynapseSendDataToUSB()
+  now accepts arbitrarily sized data to send, the user does not have to
+  divide it in chunks of a particular size anymore.
+- devices/dynapse.h: improved and changed 'struct caer_bias_dynapse' to
+  reflect actual biasing of device correctly.
+
+NEW FEATURES
+- Packaging: packages for Fedora, Debian and Gentoo are now
+  available for each new libcaer release. For more information visit:
+  https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
+- CMake: added support for generating RPM/DEB files via CPack, to
+  easily be able to package one's own build.
+- devices/dynapse.h: added define DYNAPSE_CONFIG_CAMROW.
+- devices/dynapse.h: added caerBiasDynapseGenerate() and caerBiasDynapseParse()
+  functions to handle the improved 'struct caer_bias_dynapse' and
+  transform it to/from the bit-wise bias configuration representation.
+- devices/dynapse.h: added caerDynapseGenerateSramBits() function to
+  generate SRAM configuration bits based on input arguments.
+- devices/dynapse.h: added caerDynapseCoreXYToNeuronId() and
+  caerDynapseCoreAddrToNeuronId() functions to calculate chip global
+  neuron addresses (range [0,1023]).
+- events/common.h: added caerGenericEventCopy() function to copy
+  events from one place in memory to another.
+
+BUG FIXES
+- devices/dynapse.h: major API documentation cleanup.
+- devices/dynapse.h: several function parameters of integer type were
+  sized more correctly to reflect the range of their arguments.
+- src/dynapse.c: DYNAPSE_CONFIG_CLEAR_CAM now clears all 64 CAMs for
+  each neuron in a chip, resulting in all CAMs being fully cleared.
+- events/frame.h: added documentation that using the assignment operator
+  to copy Frame events is not possible, caerGenericEventCopy() should
+  be used instead. The C++ variant delets the assignment operator to
+  enforce this. This fixes issue #26.
+- src/usb_utils.c: fixed shutdown callback not being called on MacOS X.
+  Also fixed possible dead-lock on USB transfer re-submit on Windows.
+  This fixes issue #32.
+
+
 Release 2.3.0 - 30.06.2017
 INCOMPATIBLE CHANGES
 - device.hpp: removed C++ dataStart() method with no arguments. As with
