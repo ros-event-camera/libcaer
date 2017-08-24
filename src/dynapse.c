@@ -1079,6 +1079,15 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 					}
 
 					uint8_t chipID = data & 0x0F;
+
+					// On output via SRAM routing->FPGA->USB, the chip ID for
+					// chip 0 is set to 1 so that it can work with the SRAM.
+					// But this is then inconsistent with the chip IDs as used
+					// everywhere else, so we reset this here for all users.
+					if (chipID == DYNAPSE_CONFIG_DYNAPSE_U0_OUT) {
+						chipID = DYNAPSE_CONFIG_DYNAPSE_U0;
+					}
+
 					uint32_t neuronID = (data >> 4) & 0x00FF;
 
 					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(state->currentSpikePacket,
