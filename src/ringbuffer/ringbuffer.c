@@ -84,6 +84,19 @@ bool ringBufferPut(RingBuffer rBuf, void *elem) {
 	return (false);
 }
 
+bool ringBufferFull(RingBuffer rBuf) {
+	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->putPos], memory_order_acquire);
+
+	// If the place where we want to put a new element is not NULL,
+	// there is no place to put new data, so the buffer is full.
+	if (curr != NULL) {
+		return (true);
+	}
+
+	// Else, buffer is not full.
+	return (false);
+}
+
 void *ringBufferGet(RingBuffer rBuf) {
 	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->getPos], memory_order_acquire);
 
