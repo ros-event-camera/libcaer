@@ -532,7 +532,7 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
 
 	// Turn on chip and AER communication for configuration.
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Initializing device ...");
+	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Initializing device ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_DELAY, 30);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_EXTENSION, 30);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, true);
@@ -545,16 +545,17 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	setSilentBiases(cdh, DYNAPSE_CONFIG_DYNAPSE_U3);
 
 	// Clear all SRAM.
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Clearing SRAM U0 ...");
+	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Clearing SRAM ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Clearing SRAM U0 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U0);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY, 0, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Clearing SRAM U1 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Clearing SRAM U1 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U1);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY, 0, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Clearing SRAM U2 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Clearing SRAM U2 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U2);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY, 0, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Clearing SRAM U3 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Clearing SRAM U3 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U3);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY, 0, 0);
 
@@ -565,16 +566,17 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	setLowPowerBiases(cdh, DYNAPSE_CONFIG_DYNAPSE_U3);
 
 	// Setup SRAM for USB monitoring of spike events.
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Programming default SRAM U0 ...");
+	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Programming default SRAM ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Programming default SRAM U0 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U0);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U0, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Programming default SRAM U1 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Programming default SRAM U1 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U1);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U1, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Programming default SRAM U2 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Programming default SRAM U2 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U2);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0);
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Programming default SRAM U3 ...");
+	dynapseLog(CAER_LOG_DEBUG, (dynapseHandle) cdh, "Programming default SRAM U3 ...");
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_ID, DYNAPSE_CONFIG_DYNAPSE_U3);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U3, 0);
 
@@ -585,7 +587,7 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	// Essential: wait for chip to be stable.
 	sleep(1);
 
-	dynapseLog(CAER_LOG_INFO, (dynapseHandle) cdh, "Device initialized.");
+	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Device initialized.");
 
 	return (true);
 }
