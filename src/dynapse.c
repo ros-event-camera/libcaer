@@ -422,7 +422,7 @@ static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId) {
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_S_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_S_N, 7, 0, true, true, true, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_F_N, 15, 0, true, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_S_P, 7, 40, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_F_P, 7, 0, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P, 7, 40, true, true, false, true);
@@ -449,7 +449,7 @@ static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId) {
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_S_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_S_N, 7, 0, true, true, true, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_F_N, 15, 0, true, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_S_P, 7, 40, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_F_P, 7, 0, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_S_P, 7, 40, true, true, false, true);
@@ -476,7 +476,7 @@ static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId) {
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_S_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_S_N, 7, 0, true, true, true, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_F_N, 15, 0, true, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_F_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_S_P, 7, 40, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_F_P, 7, 0, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_S_P, 7, 40, true, true, false, true);
