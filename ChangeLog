@@ -27,6 +27,10 @@ NEW FEATURES
   https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
 - CMake: added support for generating RPM/DEB files via CPack, to
   easily be able to package one's own build.
+- src/dynapse.c: the Dynap-SE caerDeviceSendDefaultConfig() function now
+  performs full initialization of the device and its chips. To reliably
+  work with the device, make sure to always call this before setting
+  your own custom configuration afterwards.
 - devices/dynapse.h: added define DYNAPSE_CONFIG_CAMROW.
 - devices/dynapse.h: added caerBiasDynapseGenerate() and caerBiasDynapseParse()
   functions to handle the improved 'struct caer_bias_dynapse' and
@@ -41,6 +45,7 @@ NEW FEATURES
 - ringbuffer.h/hpp: the ring-buffer functions for producer-consumer
   high-performance communication between two threads are now exposed
   as part of the API, to allow re-use in other projects such as cAER.
+- examples/dynapse_simple.c: added simple example for Dynap-SE access.
 
 BUG FIXES
 - devices/dynapse.h: major API documentation cleanup.
