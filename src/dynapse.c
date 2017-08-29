@@ -1849,12 +1849,12 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
 		// Special (bit 15) is always enabled for Shifted-Source biases.
 		// For all other bias types we keep it disabled, as it is not useful for users.
-		biasValue = U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
+		biasValue |= U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
 	}
 	// So are the Buffer biases.
 	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER
 		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
-		biasValue = U32T(
+		biasValue |= U32T(
 			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 	// Standard coarse-fine biases.
