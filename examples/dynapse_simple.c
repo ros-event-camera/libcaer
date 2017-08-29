@@ -72,14 +72,10 @@ int main(void) {
 	// No configuration is sent automatically!
 	caerDeviceSendDefaultConfig(dynapse_handle);
 
-	// Let's turn on blocking data-get mode to avoid wasting resources.
-	caerDeviceConfigSet(dynapse_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, false);
-
-	caerDeviceConfigSet(dynapse_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, true);
-	caerDeviceConfigSet(dynapse_handle, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, true);
-	caerDeviceConfigSet(dynapse_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_DELAY, 30);
-	caerDeviceConfigSet(dynapse_handle, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_EXTENSION, 30);
-
+	// Now let's get start getting some data from the device. We just loop in blocking mode,
+	// no notification needed regarding new events. The shutdown notification, for example if
+	// the device is disconnected, should be listened to.
+	// This automatically turns on the AER and CHIP state machines.
 	caerDeviceDataStart(dynapse_handle, NULL, NULL, NULL, &usbShutdownHandler, NULL);
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
