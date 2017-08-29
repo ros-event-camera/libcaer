@@ -56,7 +56,7 @@ int main(void) {
 	}
 #endif
 
-	// Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+	// Open a DYNAPSE, give it a device ID of 1, and don't care about USB bus or SN restrictions.
 	caerDeviceHandle dynapse_handle = caerDeviceOpen(1, CAER_DEVICE_DYNAPSE, 0, 0, NULL);
 	if (dynapse_handle == NULL) {
 		return (EXIT_FAILURE);
