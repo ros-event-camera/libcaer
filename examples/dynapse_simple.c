@@ -105,7 +105,7 @@ int main(void) {
 			printf("Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
 				caerEventPacketHeaderGetEventNumber(packetHeader));
 
-			// Packet 0 is always the special events packet for DVS128, while packet is the polarity events packet.
+			// Spike Events
 			if (i == SPIKE_EVENT) {
 				caerSpikeEventPacket spike = (caerSpikeEventPacket) packetHeader;
 
