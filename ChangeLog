@@ -11,6 +11,8 @@ INCOMPATIBLE CHANGES
   This has now been corrected, and the functions moved to devices/dynapse.h
   with the new names of caerDynapseSpikeEventGetX/Y(), due to them being
   specific to the architecture of the Dynap-SE neuromorphic processor.
+  Now both cores and neurons, as interpreted through these functions,
+  are set out in row-major order (similar to computer vision).
 - devices/dynapse.h: the caerDynapseWriteSram() function is being deprecated
   in favour of its new veriant caerDynapseWriteSramN().
 - devices/dynapse.h: removed define DYNAPSE_CONFIG_SRAMROW.

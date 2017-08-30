@@ -64,7 +64,7 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
 	uint16_t columnId = (neuronId & 0x0F);
-	bool addColumn = (coreId & 0x02);
+	bool addColumn = (coreId & 0x01);
 	bool addColumnChip = ((chipId >> 2) & 0x02);
 	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
 
@@ -77,7 +77,7 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
 	uint16_t rowId = ((neuronId >> 4) & 0x0F);
-	bool addRow = (coreId & 0x01);
+	bool addRow = (coreId & 0x02);
 	bool addRowChip = ((chipId >> 2) & 0x01);
 	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
 
