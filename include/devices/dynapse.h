@@ -897,6 +897,20 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
  */
 uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
 
+/**
+ * Get the chip ID, core ID and neuron ID from the X and Y
+ * coordinates. This is the reverse transform to:
+ * caerDynapseSpikeEventGetX() / caerDynapseSpikeEventGetY().
+ * The return value is a 'struct caer_spike_event' because it
+ * already has functions to get/set all the needed values.
+ *
+ * @param x a X coordinate as returned by caerDynapseSpikeEventGetX().
+ * @param y a Y coordinate as returned by caerDynapseSpikeEventGetY().
+ *
+ * @return a SpikeEvent struct holding chip ID, core ID and neuron ID.
+ */
+struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
+
 #ifdef __cplusplus
 }
 #endif

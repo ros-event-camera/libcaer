@@ -84,6 +84,10 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
 	return (rowId);
 }
 
+struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
+
+}
+
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);

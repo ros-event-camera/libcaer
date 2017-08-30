@@ -113,6 +113,13 @@ public:
 	static uint16_t spikeEventGetY(const libcaer::events::SpikeEvent *event) noexcept {
 		return (caerDynapseSpikeEventGetY(static_cast<caerSpikeEventConst>(event)));
 	}
+
+	static libcaer::events::SpikeEvent spikeEventFromXY(uint16_t x, uint16_t y) noexcept {
+		// This is safe because both structs are guaranteed POD.
+		struct caer_spike_event sp = caerDynapseSpikeEventFromXY(x, y);
+		libcaer::events::SpikeEvent *spCpp = reinterpret_cast<libcaer::events::SpikeEvent *>(&sp);
+		return (*spCpp);
+	}
 };
 
 }
