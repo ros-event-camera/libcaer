@@ -763,7 +763,7 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
  * @param sramId SRAM address (one of four cells), range [0,3].
  * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
- *                        [U3,U2,U1,U0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
  *
  * @return true on success, false otherwise.
  */
@@ -785,7 +785,7 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuro
  * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
  * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
  * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
- *                        [U3,U2,U1,U0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
  *
  * @return true on success, false otherwise.
  */
@@ -849,7 +849,7 @@ uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAdd
  * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
  * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
  * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
- *                        [U3,U2,U1,U0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
  *
  * @return bits to send to device.
  */
