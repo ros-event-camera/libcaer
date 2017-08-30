@@ -85,7 +85,7 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
 }
 
 struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
-
+	// TODO: implement this.
 }
 
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {

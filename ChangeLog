@@ -47,6 +47,8 @@ NEW FEATURES
 - devices/dynapse.h: added caerDynapseCoreXYToNeuronId() and
   caerDynapseCoreAddrToNeuronId() functions to calculate chip global
   neuron addresses (range [0,1023]).
+- devices/dynapse.h: added caerDynapseSpikeEventFromXY() function to
+  have a reverse transformation to caerDynapseSpikeEventGetX/Y().
 - events/common.h: added caerGenericEventCopy() function to copy
   events from one place in memory to another.
 - ringbuffer.h/hpp: the ring-buffer functions for producer-consumer
