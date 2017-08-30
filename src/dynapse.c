@@ -85,7 +85,52 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
 }
 
 struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
-	// TODO: implement this.
+	// Select chip. DYNAPSE_CONFIG_DYNAPSE_U0 default, doesn't need check.
+	uint8_t chipId = DYNAPSE_CONFIG_DYNAPSE_U0;
+
+	if (x >= DYNAPSE_CONFIG_XCHIPSIZE && y < DYNAPSE_CONFIG_YCHIPSIZE) {
+		chipId = DYNAPSE_CONFIG_DYNAPSE_U1;
+		x -= DYNAPSE_CONFIG_XCHIPSIZE;
+	}
+	else if (x < DYNAPSE_CONFIG_XCHIPSIZE && y >= DYNAPSE_CONFIG_YCHIPSIZE) {
+		chipId = DYNAPSE_CONFIG_DYNAPSE_U2;
+		y -= DYNAPSE_CONFIG_YCHIPSIZE;
+	}
+	else if (x >= DYNAPSE_CONFIG_XCHIPSIZE && y >= DYNAPSE_CONFIG_YCHIPSIZE) {
+		chipId = DYNAPSE_CONFIG_DYNAPSE_U3;
+		x -= DYNAPSE_CONFIG_XCHIPSIZE;
+		y -= DYNAPSE_CONFIG_YCHIPSIZE;
+	}
+
+	// Select core. Core ID 0 default, doesn't need check.
+	uint8_t coreId = 0;
+
+	if (x >= DYNAPSE_CONFIG_NEUCOL && y < DYNAPSE_CONFIG_NEUROW) {
+		coreId = 1;
+		x -= DYNAPSE_CONFIG_NEUCOL;
+	}
+	else if (x < DYNAPSE_CONFIG_NEUCOL && y >= DYNAPSE_CONFIG_NEUROW) {
+		coreId = 2;
+		y -= DYNAPSE_CONFIG_NEUROW;
+	}
+	else if (x >= DYNAPSE_CONFIG_NEUCOL && y >= DYNAPSE_CONFIG_NEUROW) {
+		coreId = 3;
+		x -= DYNAPSE_CONFIG_NEUCOL;
+		y -= DYNAPSE_CONFIG_NEUROW;
+	}
+
+	// Per-core neuron ID.
+	uint32_t neuronId = (U32T(y) * DYNAPSE_CONFIG_NEUCOL) + U32T(x);
+
+	// Output calculated values.
+	struct caer_spike_event out;
+
+	caerSpikeEventSetChipID(&out, chipId);
+	caerSpikeEventSetSourceCoreID(&out, coreId);
+	caerSpikeEventSetNeuronID(&out, neuronId);
+	caerSpikeEventSetTimestamp(&out, 0);
+
+	return (out);
 }
 
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
