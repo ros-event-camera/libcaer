@@ -58,6 +58,32 @@ uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) {
 	return (caerDynapseCoreXYToNeuronId(coreId, ((neuronAddrCore >> 0) & 0x0F), ((neuronAddrCore >> 4) & 0x0F)));
 }
 
+uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
+
+	uint16_t columnId = (neuronId & 0x0F);
+	bool addColumn = (coreId & 0x02);
+	bool addColumnChip = ((chipId >> 2) & 0x02);
+	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
+
+	return (columnId);
+}
+
+uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
+	uint8_t chipId = caerSpikeEventGetChipID(event);
+	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
+
+	uint16_t rowId = ((neuronId >> 4) & 0x0F);
+	bool addRow = (coreId & 0x01);
+	bool addRowChip = ((chipId >> 2) & 0x01);
+	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
+
+	return (rowId);
+}
+
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
@@ -1736,7 +1762,7 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	return (true);
 }
 
-bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t preNeuronAddr, uint16_t postNeuronAddr, uint8_t camId,
+bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId,
 	uint8_t synapseType) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
@@ -1750,13 +1776,20 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t preNeuronAddr, uint16_t 
 		return (false);
 	}
 
-	uint32_t camBits = caerDynapseGenerateCamBits(preNeuronAddr, postNeuronAddr, camId, synapseType);
+	uint32_t camBits = caerDynapseGenerateCamBits(inputNeuronAddr, neuronAddr, camId, synapseType);
 
 	return (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, camBits));
 }
 
 bool caerDynapseWriteSram(caerDeviceHandle cdh, uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx,
 	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) {
+	uint16_t neuronAddr = caerDynapseCoreAddrToNeuronId(coreId, neuronId);
+
+	return (caerDynapseWriteSramN(cdh, neuronAddr, sramId, virtualCoreId, sx, dx, sy, dy, destinationCore));
+}
+
+bool caerDynapseWriteSramN(caerDeviceHandle cdh, uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
+	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -1769,7 +1802,6 @@ bool caerDynapseWriteSram(caerDeviceHandle cdh, uint8_t coreId, uint8_t neuronId
 		return (false);
 	}
 
-	uint16_t neuronAddr = caerDynapseCoreAddrToNeuronId(coreId, neuronId);
 	uint32_t sramBits = caerDynapseGenerateSramBits(neuronAddr, sramId, virtualCoreId, sx, dx, sy, dy, destinationCore);
 
 	return (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, sramBits));

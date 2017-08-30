@@ -743,6 +743,11 @@ bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, ui
 bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
 
 /**
+ * THIS FUNCTION IS DEPRECATED. USE caerDynapseWriteSramN() INSTEAD!
+ * The new function uses the global neuron ID (range [0,1023]) like all others, instead of
+ * the separate core ID/neuron ID syntax. Also the arguments are in the same order as
+ * caerDynapseGenerateSramBits(), in particular the 'sramId' comes right after 'neuronId'.
+ *
  * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
  * address of where the spikes will be routed to. This works on the on-chip SRAM!
  *
@@ -763,7 +768,29 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  * @return true on success, false otherwise.
  */
 bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
+	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) __attribute__ ((__deprecated__));
+
+/**
+ * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
+ * address of where the spikes will be routed to. This works on the on-chip SRAM!
+ *
+ * Remember to select the chip you want to configure before calling this function!
+ *
+ * @param handle a valid device handle.
+ * @param neuronAddr the neuron to program, range [0,1023] (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
+ * @param sramId SRAM address (one of four cells), range [0,3].
+ * @param virtualCoreId fake source core ID, set it to this value instead of the actual source core ID, range [0,3].
+ * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
+ * @param dx X delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
+ * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
+ *                        [U3,U2,U1,U0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
+	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Write a single CAM, to specify which spikes are allowed as input into a neuron.
@@ -771,15 +798,15 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuro
  * Remember to select the chip you want to configure before calling this function!
  *
  * @param handle a valid device handle.
- * @param preNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023].
- * @param postNeuronAddr the neuron address whose CAM should be programmed, range [0,1023].
+ * @param inputNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023].
+ * @param neuronAddr the neuron address whose CAM should be programmed, range [0,1023].
  * @param camId CAM address (synapse), each neuron has 64, range [0,63].
  * @param synapseType one of the four possible synaptic weights:
  *     [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteCam(caerDeviceHandle handle, uint16_t preNeuronAddr, uint16_t postNeuronAddr, uint8_t camId,
+bool caerDynapseWriteCam(caerDeviceHandle handle, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId,
 	uint8_t synapseType);
 
 /**
@@ -858,18 +885,7 @@ uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
  *
  * @return the event X address in pixels.
  */
-static inline uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
-	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
-
-	uint16_t columnId = (neuronId & 0x0F);
-	bool addColumn = (coreId & 0x02);
-	bool addColumnChip = ((chipId >> 2) & 0x02);
-	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
-
-	return (columnId);
-}
+uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
 
 /**
  * Get the Y (row) address for a spike event, in pixels.
@@ -879,18 +895,7 @@ static inline uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
  *
  * @return the event Y address in pixels.
  */
-static inline uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
-	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
-
-	uint16_t rowId = ((neuronId >> 4) & 0x0F);
-	bool addRow = (coreId & 0x01);
-	bool addRowChip = ((chipId >> 2) & 0x01);
-	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
-
-	return (rowId);
-}
+uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
 
 #ifdef __cplusplus
 }

@@ -11,6 +11,8 @@ INCOMPATIBLE CHANGES
   This has now been corrected, and the functions moved to devices/dynapse.h
   with the new names of caerDynapseSpikeEventGetX/Y(), due to them being
   specific to the architecture of the Dynap-SE neuromorphic processor.
+- devices/dynapse.h: the caerDynapseWriteSram() function is being deprecated
+  in favour of its new veriant caerDynapseWriteSramN().
 - devices/dynapse.h: removed define DYNAPSE_CONFIG_SRAMROW.
   Use DYNAPSE_CONFIG_NUMNEURONS and DYNAPSE_CONFIG_NUMSRAM_NEU.
 - devices/dynapse.h: removed defines DYNAPSE_MAX_USER_USB_PACKET_SIZE,
@@ -31,6 +33,9 @@ NEW FEATURES
   performs full initialization of the device and its chips. To reliably
   work with the device, make sure to always call this before setting
   your own custom configuration afterwards.
+- devices/dynapse.h: added caerDynapseWriteSramN() function, uses global
+  neuron ID [0,1023] instead of core ID/neuron ID syntax. Arguments are
+  also directly compatible with caerDynapseGenerateSramBits().
 - devices/dynapse.h: added define DYNAPSE_CONFIG_CAMROW.
 - devices/dynapse.h: added caerBiasDynapseGenerate() and caerBiasDynapseParse()
   functions to handle the improved 'struct caer_bias_dynapse' and
