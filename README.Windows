@@ -16,7 +16,7 @@ warning tells you to do (close the shell). The base system upgrade seems to brea
 the Start Menu shortcuts, so from now on start MSYS2 by going to its directory
 'C:\msys64\' and double-clicking on 'msys2_shell.cmd'.
 
-2) Install MinGW: pacman -S mingw-w64-x86_64-gcc
+2) Install MinGW GCC: pacman -S mingw-w64-x86_64-gcc
 
 3) Install Make/CMake: pacman -S make mingw-w64-x86_64-cmake
 
