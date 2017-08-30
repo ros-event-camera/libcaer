@@ -45,6 +45,7 @@ public:
 		}
 	}
 
+	[[deprecated("Replaced by writeSramN(), which has an improved interface.")]]
 	void writeSram(uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy,
 		uint8_t sramId, uint8_t destinationCore) const {
 		bool success = caerDynapseWriteSram(handle.get(), coreId, neuronId, virtualCoreId, sx, dx, sy, dy, sramId,
@@ -54,8 +55,17 @@ public:
 		}
 	}
 
-	void writeCam(uint16_t preNeuronAddr, uint16_t postNeuronAddr, uint8_t camId, uint8_t synapseType) const {
-		bool success = caerDynapseWriteCam(handle.get(), preNeuronAddr, postNeuronAddr, camId, synapseType);
+	void writeSramN(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy,
+		uint8_t dy, uint8_t destinationCore) const {
+		bool success = caerDynapseWriteSramN(handle.get(), neuronAddr, sramId, virtualCoreId, sx, dx, sy, dy,
+			destinationCore);
+		if (!success) {
+			throw std::runtime_error("Failed to write on-chip SRAM.");
+		}
+	}
+
+	void writeCam(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType) const {
+		bool success = caerDynapseWriteCam(handle.get(), inputNeuronAddr, neuronAddr, camId, synapseType);
 		if (!success) {
 			throw std::runtime_error("Failed to write on-chip CAM.");
 		}
