@@ -46,9 +46,9 @@ public:
 	}
 
 	[[deprecated("Replaced by writeSramN(), which has an improved interface.")]]
-	void writeSram(uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy,
-		uint8_t sramId, uint8_t destinationCore) const {
-		bool success = caerDynapseWriteSram(handle.get(), coreId, neuronId, virtualCoreId, sx, dx, sy, dy, sramId,
+	void writeSram(uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy,
+		uint8_t dy, uint8_t sramId, uint8_t destinationCore) const {
+		bool success = caerDynapseWriteSram(handle.get(), coreId, neuronAddrCore, virtualCoreId, sx, dx, sy, dy, sramId,
 			destinationCore);
 		if (!success) {
 			throw std::runtime_error("Failed to write on-chip SRAM.");

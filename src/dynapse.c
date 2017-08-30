@@ -1781,9 +1781,9 @@ bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t inputNeuronAddr, uint16_
 	return (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_CONTENT, camBits));
 }
 
-bool caerDynapseWriteSram(caerDeviceHandle cdh, uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx,
+bool caerDynapseWriteSram(caerDeviceHandle cdh, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId, bool sx,
 	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) {
-	uint16_t neuronAddr = caerDynapseCoreAddrToNeuronId(coreId, neuronId);
+	uint16_t neuronAddr = caerDynapseCoreAddrToNeuronId(coreId, neuronAddrCore);
 
 	return (caerDynapseWriteSramN(cdh, neuronAddr, sramId, virtualCoreId, sx, dx, sy, dy, destinationCore));
 }

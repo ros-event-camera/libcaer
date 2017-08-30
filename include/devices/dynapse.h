@@ -755,7 +755,7 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  *
  * @param handle a valid device handle.
  * @param coreId the chip's core ID, range [0,3].
- * @param neuronId the neuron address, range [0,255].
+ * @param neuronAddrCore the neuron's address within this core, range [0,255].
  * @param virtualCoreId fake source core ID, set it to this value instead of the actual source core ID, range [0,3].
  * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
  * @param dx X delta, number of chips to jumps before reaching destination, range is [0,3].
@@ -767,7 +767,7 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronId, uint8_t virtualCoreId, bool sx,
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId, bool sx,
 	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) __attribute__ ((__deprecated__));
 
 /**
