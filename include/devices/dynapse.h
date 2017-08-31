@@ -461,6 +461,10 @@ extern "C" {
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST 1
 
 /**
+ * Number of chips on the board.
+ */
+#define DYNAPSE_X4BOARD_NUMCHIPS 4
+/**
  * Number of neurons in the x direction of the board.
  */
 #define DYNAPSE_X4BOARD_NEUX 64
@@ -502,10 +506,8 @@ extern "C" {
 #define DYNAPSE_CONFIG_NEUROW				16
 /// Number of columns of CAMs in a core.
 #define DYNAPSE_CONFIG_CAMCOL				16
-/// Number of rows of CAMs in a core.
-#define DYNAPSE_CONFIG_CAMROW				16
 /// Number of CAMs per neuron.
-#define DYNAPSE_CONFIG_NUMCAM				64
+#define DYNAPSE_CONFIG_NUMCAM_NEU			64
 /// Number of SRAM cells per neuron.
 #define DYNAPSE_CONFIG_NUMSRAM_NEU	    	4
 

@@ -38,7 +38,8 @@ NEW FEATURES
 - devices/dynapse.h: added caerDynapseWriteSramN() function, uses global
   neuron ID [0,1023] instead of core ID/neuron ID syntax. Arguments are
   also directly compatible with caerDynapseGenerateSramBits().
-- devices/dynapse.h: added define DYNAPSE_CONFIG_CAMROW.
+- devices/dynapse.h: renamed define DYNAPSE_CONFIG_NUMCAM to
+  DYNAPSE_CONFIG_NUMCAM_NEU to better explain what it is.
 - devices/dynapse.h: added caerBiasDynapseGenerate() and caerBiasDynapseParse()
   functions to handle the improved 'struct caer_bias_dynapse' and
   transform it to/from the bit-wise bias configuration representation.

@@ -850,12 +850,12 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_CLEAR_CAM: {
-			uint32_t clearCamConfig[DYNAPSE_CONFIG_NUMNEURONS * DYNAPSE_CONFIG_NUMCAM];
+			uint32_t clearCamConfig[DYNAPSE_CONFIG_NUMNEURONS * DYNAPSE_CONFIG_NUMCAM_NEU];
 
 			// Clear all CAMs on this chip.
 			size_t idx = 0;
 			for (uint16_t neuronId = 0; neuronId < DYNAPSE_CONFIG_NUMNEURONS; neuronId++) {
-				for (uint8_t camId = 0; camId < DYNAPSE_CONFIG_NUMCAM; camId++) {
+				for (uint8_t camId = 0; camId < DYNAPSE_CONFIG_NUMCAM_NEU; camId++) {
 					clearCamConfig[idx++] = caerDynapseGenerateCamBits(0, neuronId, camId, 0);
 				}
 			}
