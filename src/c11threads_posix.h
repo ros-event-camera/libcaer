@@ -9,8 +9,8 @@
 #include <errno.h>
 
 #if defined(__linux__)
-	#include <sys/prctl.h>
-	#include <sys/resource.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
 #endif
 
 typedef pthread_t thrd_t;

@@ -4,27 +4,23 @@
 #include <stdalign.h> // To get alignas() macro.
 
 // Alignment specification support (with defines for cache line alignment).
-#undef CACHELINE_ALIGNED
-#undef CACHELINE_ALONE
-
 #if !defined(CACHELINE_SIZE)
-	#define CACHELINE_SIZE 64 // Default (big enough for almost all processors).
-	// Must be power of two!
+#define CACHELINE_SIZE 64 // Default (big enough for most processors), must be power of two!
 #endif
 
-#define CACHELINE_ALIGNED alignas(CACHELINE_SIZE)
-#define CACHELINE_ALONE(t, v) CACHELINE_ALIGNED t v; uint8_t PAD_##v[CACHELINE_SIZE - (sizeof(t) & (CACHELINE_SIZE - 1))]
-
 struct caer_ring_buffer {
-	CACHELINE_ALONE(size_t, putPos);
-	CACHELINE_ALONE(size_t, getPos);
-	CACHELINE_ALONE(size_t, size);
+	alignas(CACHELINE_SIZE) size_t putPos;
+	uint8_t PAD_putPos[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
+	alignas(CACHELINE_SIZE) size_t getPos;
+	uint8_t PAD_getPos[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
+	alignas(CACHELINE_SIZE) size_t size;
+	uint8_t PAD_size[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
 	atomic_uintptr_t elements[];
 };
 
 caerRingBuffer caerRingBufferInit(size_t size) {
 	// Force multiple of two size for performance.
-	if (size == 0 || (size & (size - 1)) != 0) {
+	if ((size == 0) || ((size & (size - 1)) != 0)) {
 		return (NULL);
 	}
 
