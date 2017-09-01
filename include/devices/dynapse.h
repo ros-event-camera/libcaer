@@ -484,11 +484,11 @@ extern "C" {
 /// Chip 0 ID.
 #define DYNAPSE_CONFIG_DYNAPSE_U0	0
 /// Chip 1 ID.
-#define DYNAPSE_CONFIG_DYNAPSE_U1	8
+#define DYNAPSE_CONFIG_DYNAPSE_U1	1
 /// Chip 2 ID.
-#define DYNAPSE_CONFIG_DYNAPSE_U2	4
+#define DYNAPSE_CONFIG_DYNAPSE_U2	2
 /// Chip 3 ID.
-#define DYNAPSE_CONFIG_DYNAPSE_U3	12
+#define DYNAPSE_CONFIG_DYNAPSE_U3	3
 
 /// Number of cores per chip.
 #define DYNAPSE_CONFIG_NUMCORES				4

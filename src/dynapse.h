@@ -21,14 +21,9 @@
 #define DYNAPSE_SPIKE_DEFAULT_SIZE 4096
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
 
-// Chip 0 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U0_OUT	1 // DYNAPSE_U0+1 -> 0+1 = 1.
-// Chip 1 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U1_OUT	8
-// Chip 2 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U2_OUT	4
-// Chip 3 ID as output via USB.
-#define DYNAPSE_CONFIG_DYNAPSE_U3_OUT	12
+// Chip ID 0 cannot be used for USB output, so we have to shift it by
+// adding 1, and also adding that to all others.
+#define DYNAPSE_CHIPID_SHIFT 1
 
 struct dynapse_state {
 	// Per-device log-level

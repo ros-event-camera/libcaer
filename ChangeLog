@@ -1,5 +1,9 @@
 Release 2.4.0 - XX.08.2017
 INCOMPATIBLE CHANGES
+- devices/dynapse.h: the chip IDs are now mapped to be 0,1,2,3 for
+  U0,U1,U2,U3 respectively, making them as easy to use and loop over
+  as the core IDs. The defines have been updated, so if you've been
+  properly using them, no change is needed other than a recompile.
 - src/dynapse.c: spike events coming from a Dynap-SE's chip ID 0 (U0) do
   now have a chip ID of 0, the same as the chip ID used to configure the
   system, removing this small inconsistency. All usages of

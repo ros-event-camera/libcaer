@@ -10,6 +10,44 @@ static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent)
 static void setSilentBiases(caerDeviceHandle cdh, uint8_t chipId);
 static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId);
 
+// On device IDs are different, U0 is 0, U1 is 8, U2 is 4 and U3 is 12.
+static inline uint8_t translateChipIdHostToDevice(uint8_t hostChipId) {
+	switch (hostChipId) {
+		case DYNAPSE_CONFIG_DYNAPSE_U0:
+			return (0);
+
+		case DYNAPSE_CONFIG_DYNAPSE_U1:
+			return (8);
+
+		case DYNAPSE_CONFIG_DYNAPSE_U2:
+			return (4);
+
+		case DYNAPSE_CONFIG_DYNAPSE_U3:
+			return (12);
+	}
+
+	return (0);
+}
+
+// On device IDs are different, U0 is 0, U1 is 8, U2 is 4 and U3 is 12.
+static inline uint8_t translateChipIdDeviceToHost(uint8_t deviceChipId) {
+	switch (deviceChipId) {
+		case 0:
+			return (DYNAPSE_CONFIG_DYNAPSE_U0);
+
+		case 8:
+			return (DYNAPSE_CONFIG_DYNAPSE_U1);
+
+		case 4:
+			return (DYNAPSE_CONFIG_DYNAPSE_U2);
+
+		case 12:
+			return (DYNAPSE_CONFIG_DYNAPSE_U3);
+	}
+
+	return (0);
+}
+
 uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType) {
 	uint32_t camBits = 0;
 
@@ -65,7 +103,7 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
 
 	uint16_t columnId = (neuronId & 0x0F);
 	bool addColumn = (coreId & 0x01);
-	bool addColumnChip = ((chipId >> 2) & 0x02);
+	bool addColumnChip = (chipId & 0x01);
 	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
 
 	return (columnId);
@@ -78,7 +116,7 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
 
 	uint16_t rowId = ((neuronId >> 4) & 0x0F);
 	bool addRow = (coreId & 0x02);
-	bool addRowChip = ((chipId >> 2) & 0x01);
+	bool addRowChip = (chipId & 0x02);
 	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
 
 	return (rowId);
@@ -803,10 +841,14 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case DYNAPSE_CONFIG_CHIP:
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_CHIP_RUN:
-				case DYNAPSE_CONFIG_CHIP_ID:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
 					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, param));
+					break;
+
+				case DYNAPSE_CONFIG_CHIP_ID:
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr,
+						translateChipIdHostToDevice(U8T(param))));
 					break;
 
 				case DYNAPSE_CONFIG_CHIP_CONTENT: {
@@ -903,22 +945,22 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			uint8_t dx = 0;
 			bool sy = 0;
 			uint8_t dy = 0;
-			uint8_t destinationCore = 0;
 
 			// Route output neurons differently depending on the position of the chip in the board.
 			// We want to route all spikes to the output south interface, and be able to tell from
 			// which chip they came from. To do that, we set the destination core-id not to the
-			// hot-coded format, but simply directly to the chip-id (0,4,8,12), with chip 0 actually
-			// having an ID of 1 because the SRAM cannot have all zeros (or it disables routing).
+			// hot-coded format, but simply directly to a carefully selected ID.
 			// This works because we got outside the chip system, to the FPGA, which simply gets
-			// the four destination core-id bits and forwards them to the computer.
+			// the four destination core-id bits and forwards them to the computer. So we only need
+			// to agree inside libcaer on how to set this here and interpret it from the event
+			// translator later. Since ideally we want chip IDs of 0,1,2,3, but an SRAM value of 0
+			// disables routing, we add one to get 1,2,3,4, and subtract one in the event translator.
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_DYNAPSE_U0: {
 					sx = 0;
 					dx = 0;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 2;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U0_OUT; // Chip-id for output.
 
 					break;
 				}
@@ -928,7 +970,6 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					dx = 1;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 2;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U1_OUT; // Chip-id for output.
 
 					break;
 				}
@@ -938,7 +979,6 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					dx = 0;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 1;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U2_OUT; // Chip-id for output.
 
 					break;
 				}
@@ -948,7 +988,6 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					dx = 1;
 					sy = DYNAPSE_CONFIG_SRAM_DIRECTION_NEG;
 					dy = 1;
-					destinationCore = DYNAPSE_CONFIG_DYNAPSE_U3_OUT; // Chip-id for output.
 
 					break;
 				}
@@ -962,6 +1001,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					// use first sram for monitoring
 					if (sramId == 0) {
 						uint8_t virtualCoreId = (neuronId >> 8) & 0x03;
+						uint8_t destinationCore = U8T(paramAddr + DYNAPSE_CHIPID_SHIFT); // (Ab)use chip ID for output.
 
 						sramMonitorConfig[idx++] = caerDynapseGenerateSramBits(neuronId, sramId, virtualCoreId, sx, dx,
 							sy, dy, destinationCore);
@@ -1112,12 +1152,23 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case DYNAPSE_CONFIG_CHIP:
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_CHIP_RUN:
-				case DYNAPSE_CONFIG_CHIP_ID:
 				case DYNAPSE_CONFIG_CHIP_CONTENT:
 				case DYNAPSE_CONFIG_CHIP_REQ_DELAY:
 				case DYNAPSE_CONFIG_CHIP_REQ_EXTENSION:
 					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, param));
 					break;
+
+				case DYNAPSE_CONFIG_CHIP_ID: {
+					uint32_t chipIdValue;
+					if (!spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, &chipIdValue)) {
+						return (false);
+					}
+
+					*param = translateChipIdDeviceToHost(U8T(chipIdValue));
+
+					return (true);
+					break;
+				}
 
 				default:
 					return (false);
@@ -1474,12 +1525,10 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 					uint8_t chipID = data & 0x0F;
 
 					// On output via SRAM routing->FPGA->USB, the chip ID for
-					// chip 0 is set to 1 so that it can work with the SRAM.
-					// But this is then inconsistent with the chip IDs as used
-					// everywhere else, so we reset this here for all users.
-					if (chipID == DYNAPSE_CONFIG_DYNAPSE_U0_OUT) {
-						chipID = DYNAPSE_CONFIG_DYNAPSE_U0;
-					}
+					// chip 0 is set to 1, and thus the others are shifted by
+					// one up too. So we reverse that here.
+					// See DYNAPSE_CONFIG_DEFAULT_SRAM for more details.
+					chipID = U8T(chipID - DYNAPSE_CHIPID_SHIFT);
 
 					uint32_t neuronID = (data >> 4) & 0x00FF;
 
