@@ -5,9 +5,9 @@
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
-	#include "edvs.h"
+#include "edvs.h"
 #else
-	#include "devices/edvs.h"
+#include "devices/edvs.h"
 #endif
 
 /**
