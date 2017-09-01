@@ -26,8 +26,9 @@ INCOMPATIBLE CHANGES
   reflect actual biasing of device correctly.
 
 NEW FEATURES
-- Packaging: packages for Fedora, Debian and Gentoo are now
-  available for each new libcaer release. For more information visit:
+- Packaging: packages for Fedora, Debian and Gentoo Linux, as well as
+  MacOS X via Homebrew are now available for each new libcaer release.
+  For more information please visit:
   https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
 - CMake: added support for generating RPM/DEB files via CPack, to
   easily be able to package one's own build.
