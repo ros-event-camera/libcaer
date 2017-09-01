@@ -1021,7 +1021,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
-			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			if (paramAddr == DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT) {
+				return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr,
+					translateChipIdHostToDevice(U8T(param))));
+			}
+			else {
+				return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			}
 			break;
 
 		case DYNAPSE_CONFIG_SPIKEGEN:
@@ -1029,7 +1035,13 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_POISSONSPIKEGEN:
-			return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
+			if (paramAddr == DYNAPSE_CONFIG_POISSONSPIKEGEN_CHIPID) {
+				return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr,
+					translateChipIdHostToDevice(U8T(param))));
+			}
+			else {
+				return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
+			}
 			break;
 
 		default:
@@ -1209,7 +1221,19 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_SYNAPSERECONFIG:
-			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			if (paramAddr == DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT) {
+				uint32_t chipIdValue;
+				if (!spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, &chipIdValue)) {
+					return (false);
+				}
+
+				*param = translateChipIdDeviceToHost(U8T(chipIdValue));
+
+				return (true);
+			}
+			else {
+				return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYNAPSERECONFIG, paramAddr, param));
+			}
 			break;
 
 		case DYNAPSE_CONFIG_SPIKEGEN:
@@ -1217,7 +1241,19 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case DYNAPSE_CONFIG_POISSONSPIKEGEN:
-			return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
+			if (paramAddr == DYNAPSE_CONFIG_POISSONSPIKEGEN_CHIPID) {
+				uint32_t chipIdValue;
+				if (!spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, &chipIdValue)) {
+					return (false);
+				}
+
+				*param = translateChipIdDeviceToHost(U8T(chipIdValue));
+
+				return (true);
+			}
+			else {
+				return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_POISSONSPIKEGEN, paramAddr, param));
+			}
 			break;
 
 		default:
