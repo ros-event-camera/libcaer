@@ -510,7 +510,7 @@ static int serialThreadRun(void *handlePtr) {
 		// Wait for at least 16 full events to be present in the buffer.
 		int bytesAvailable = 0;
 
-		while (bytesAvailable < (16 * EDVS_EVENT_SIZE)
+		while ((bytesAvailable < (16 * EDVS_EVENT_SIZE))
 			&& atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
 			bytesAvailable = sp_input_waiting(state->serialState.serialPort);
 		}
@@ -800,7 +800,7 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				bool polarity = (xByte & HIGH_BIT_MASK);
 
 				// Check range conformity.
-				if (x < EDVS_ARRAY_SIZE_X && y < EDVS_ARRAY_SIZE_Y) {
+				if ((x < EDVS_ARRAY_SIZE_X) && (y < EDVS_ARRAY_SIZE_Y)) {
 					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
 						state->currentPackets.polarityPosition++);
 					caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);

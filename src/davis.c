@@ -41,8 +41,8 @@ static inline void updateROISizes(davisState state) {
 
 		// Position is already set to startCol/Row, so we don't have to reset
 		// it here. We only have to calculate size from start and end Col/Row.
-		if (startColumn < state->aps.sizeX && endColumn < state->aps.sizeX && startRow < state->aps.sizeY
-			&& endRow < state->aps.sizeY) {
+		if ((startColumn < state->aps.sizeX) && (endColumn < state->aps.sizeX) && (startRow < state->aps.sizeY)
+			&& (endRow < state->aps.sizeY)) {
 			state->aps.roi.sizeX[i] = U16T(endColumn + 1 - startColumn);
 			state->aps.roi.sizeY[i] = U16T(endRow + 1 - startRow);
 
@@ -75,16 +75,16 @@ static inline void initFrame(davisHandle handle) {
 		state->aps.countY[i] = 0;
 	}
 
-	// for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
-	memset(state->aps.currentEvent[0], 0, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
-	// }
+	for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
+		memset(state->aps.currentEvent[i], 0, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+	}
 
 	if (state->aps.roi.update != 0) {
 		updateROISizes(state);
 	}
 
-	// Skip frame if ROI region is disabled.
-	if (state->aps.roi.positionX[0] >= state->aps.sizeX || state->aps.roi.positionY[0] >= state->aps.sizeY) {
+	// Skip frame if ROI region is disabled. Only ROI region 0 is supported currently.
+	if ((state->aps.roi.positionX[0] >= state->aps.sizeX) || (state->aps.roi.positionY[0] >= state->aps.sizeY)) {
 		return;
 	}
 
@@ -114,7 +114,7 @@ static inline float calculateIMUAccelScale(uint8_t imuAccelScale) {
 	// 1 - +-4 g - 8192 LSB/g
 	// 2 - +-8 g - 4096 LSB/g
 	// 3 - +-16 g - 2048 LSB/g
-	float accelScale = 65536.0f / (float) U32T(4 * (1 << imuAccelScale));
+	float accelScale = 65536.0F / (float) U32T(4 * (1 << imuAccelScale));
 
 	return (accelScale);
 }
@@ -125,7 +125,7 @@ static inline float calculateIMUGyroScale(uint8_t imuGyroScale) {
 	// 1 - +-500 °/s - 65.5 LSB/°/s
 	// 2 - +-1000 °/s - 32.8 LSB/°/s
 	// 3 - +-2000 °/s - 16.4 LSB/°/s
-	float gyroScale = 65536.0f / (float) U32T(500 * (1 << imuGyroScale));
+	float gyroScale = 65536.0F / (float) U32T(500 * (1 << imuGyroScale));
 
 	return (gyroScale);
 }
@@ -242,13 +242,13 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	// Try to open a DAVIS device on a specific USB port.
 	bool deviceFound = false;
 
-	if (deviceType == CAER_DEVICE_DAVIS || deviceType == CAER_DEVICE_DAVIS_FX2) {
+	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
 			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
 	}
 
-	if (!deviceFound && (deviceType == CAER_DEVICE_DAVIS || deviceType == CAER_DEVICE_DAVIS_FX3)) {
+	if (!deviceFound && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
 			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
@@ -418,8 +418,8 @@ struct caer_davis_info caerDavisInfoGet(caerDeviceHandle cdh) {
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DAVIS && handle->deviceType != CAER_DEVICE_DAVIS_FX2
-		&& handle->deviceType != CAER_DEVICE_DAVIS_FX3) {
+	if ((handle->deviceType != CAER_DEVICE_DAVIS) && (handle->deviceType != CAER_DEVICE_DAVIS_FX2)
+		&& (handle->deviceType != CAER_DEVICE_DAVIS_FX3)) {
 		struct caer_davis_info emptyInfo = { 0, .deviceString = NULL };
 		return (emptyInfo);
 	}
@@ -2240,7 +2240,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, &param32);
 	state->imu.gyroScale = calculateIMUGyroScale(U8T(param32));
 
-	// Disable all ROI regions by setting them to -1.
+	// Disable all ROI regions by setting them to sizeX/Y (disabled).
 	for (size_t i = 0; i < APS_ROI_REGIONS_MAX; i++) {
 		state->aps.roi.sizeX[i] = state->aps.roi.positionX[i] = U16T(state->aps.sizeX);
 		state->aps.roi.sizeY[i] = state->aps.roi.positionY[i] = U16T(state->aps.sizeY);
@@ -2910,8 +2910,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x01 << 2);
-							state->aps.roi.sizeX[1] = state->aps.roi.positionX[1] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[1] = state->aps.roi.positionY[1] = U16T(state->aps.sizeY);
+							// TODO: state->aps.roi.sizeX[1] = state->aps.roi.positionX[1] = U16T(state->aps.sizeX);
+							// TODO: state->aps.roi.sizeY[1] = state->aps.roi.positionY[1] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -2919,8 +2919,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x02 << 2);
-							state->aps.roi.sizeX[2] = state->aps.roi.positionX[2] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[2] = state->aps.roi.positionY[2] = U16T(state->aps.sizeY);
+							// TODO: state->aps.roi.sizeX[2] = state->aps.roi.positionX[2] = U16T(state->aps.sizeX);
+							// TODO: state->aps.roi.sizeY[2] = state->aps.roi.positionY[2] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -2928,8 +2928,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x03 << 2);
-							state->aps.roi.sizeX[3] = state->aps.roi.positionX[3] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[3] = state->aps.roi.positionY[3] = U16T(state->aps.sizeY);
+							// TODO: state->aps.roi.sizeX[3] = state->aps.roi.positionX[3] = U16T(state->aps.sizeX);
+							// TODO: state->aps.roi.sizeY[3] = state->aps.roi.positionY[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
