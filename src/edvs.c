@@ -39,24 +39,17 @@ static inline void freeAllDataMemory(edvsState state) {
 		free(&state->currentPolarityPacket->packetHeader);
 		state->currentPolarityPacket = NULL;
 
-		if (state->currentPacketContainer != NULL) {
-			caerEventPacketContainerSetEventPacket(state->currentPacketContainer, POLARITY_EVENT, NULL);
-		}
+		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
 	if (state->currentSpecialPacket != NULL) {
 		free(&state->currentSpecialPacket->packetHeader);
 		state->currentSpecialPacket = NULL;
 
-		if (state->currentPacketContainer != NULL) {
-			caerEventPacketContainerSetEventPacket(state->currentPacketContainer, SPECIAL_EVENT, NULL);
-		}
+		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
 	}
 
-	if (state->currentPacketContainer != NULL) {
-		caerEventPacketContainerFree(state->currentPacketContainer);
-		state->currentPacketContainer = NULL;
-	}
+	containerGenerationDestroy(&state->container);
 }
 
 caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_t serialBaudRate) {
@@ -78,8 +71,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	dataExchangeSettingsInit(&state->dataExchange);
 
 	// Packet settings (size (in events) and time interval (in µs)).
-	atomic_store(&state->maxPacketContainerPacketSize, 4096);
-	atomic_store(&state->maxPacketContainerInterval, 10000);
+	containerGenerationSettingsInit(&state->container);
 
 	// Logging settings (initialize to global log-level).
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
@@ -303,19 +295,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE:
-					atomic_store(&state->maxPacketContainerPacketSize, param);
-					break;
-
-				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
-					atomic_store(&state->maxPacketContainerInterval, param);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (containerGenerationConfigSet(&state->container, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_LOG:
@@ -417,19 +397,7 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE:
-					*param = U32T(atomic_load(&state->maxPacketContainerPacketSize));
-					break;
-
-				case CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL:
-					*param = U32T(atomic_load(&state->maxPacketContainerInterval));
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (containerGenerationConfigGet(&state->container, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_LOG:
@@ -589,9 +557,7 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 	state->serialState.serialShutdownCallback = dataShutdownNotify;
 	state->serialState.serialShutdownCallbackPtr = dataShutdownUserPtr;
 
-	// Set wanted time interval to uninitialized. Getting the first TS or TS_RESET
-	// will then set this correctly.
-	state->currentPacketContainerCommitTimestamp = -1;
+	containerGenerationCommitTimestampReset(&state->container);
 
 	if (!dataExchangeBufferInit(&state->dataExchange)) {
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
@@ -599,8 +565,7 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 	}
 
 	// Allocate packets.
-	state->currentPacketContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
-	if (state->currentPacketContainer == NULL) {
+	if (!containerGenerationAllocate(&state->container, EDVS_EVENT_TYPES)) {
 		freeAllDataMemory(state);
 
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
@@ -704,12 +669,9 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		}
 
 		// Allocate new packets for next iteration as needed.
-		if (state->currentPacketContainer == NULL) {
-			state->currentPacketContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
-			if (state->currentPacketContainer == NULL) {
-				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
-				return;
-			}
+		if (!containerGenerationAllocate(&state->container, EDVS_EVENT_TYPES)) {
+			edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+			return;
 		}
 
 		if (state->currentPolarityPacket == NULL) {
@@ -778,8 +740,8 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			state->timestamps.lastShort = 0;
 			state->timestamps.last = 0;
 			state->timestamps.current = 0;
-			state->currentPacketContainerCommitTimestamp = -1;
-			initContainerCommitTimestamp(state);
+			containerGenerationCommitTimestampReset(&state->container);
+			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 			// Defer timestamp reset event to later, so we commit it
 			// alone, in its own packet.
@@ -827,7 +789,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				// Expand to 32 bits. (Tick is 1µs already.)
 				state->timestamps.last = state->timestamps.current;
 				state->timestamps.current = state->timestamps.wrapAdd + shortTS;
-				initContainerCommitTimestamp(state);
+				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 				// Check monotonicity of timestamps.
 				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
@@ -863,14 +825,13 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		// Thresholds on which to trigger packet container commit.
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
-		int32_t currentPacketContainerCommitSize = I32T(
-			atomic_load_explicit(&state->maxPacketContainerPacketSize, memory_order_relaxed));
+		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
 			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
-			> state->currentPacketContainerCommitTimestamp;
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
+			state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// NOTE: with the current EDVS architecture, currentTimestamp always comes together
 		// with an event, so the very first event that matches this threshold will be
@@ -884,7 +845,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			bool emptyContainerCommit = true;
 
 			if (state->currentPolarityPacketPosition > 0) {
-				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, POLARITY_EVENT,
+				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
 					(caerEventPacketHeader) state->currentPolarityPacket);
 
 				state->currentPolarityPacket = NULL;
@@ -893,7 +854,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			}
 
 			if (state->currentSpecialPacketPosition > 0) {
-				caerEventPacketContainerSetEventPacket(state->currentPacketContainer, SPECIAL_EVENT,
+				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
 					(caerEventPacketHeader) state->currentSpecialPacket);
 
 				state->currentSpecialPacket = NULL;
@@ -901,72 +862,9 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				emptyContainerCommit = false;
 			}
 
-			// If the commit was triggered by a packet container limit being reached, we always
-			// update the time related limit. The size related one is updated implicitly by size
-			// being reset to zero after commit (new packets are empty).
-			if (containerTimeCommit) {
-				while (generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
-					> state->currentPacketContainerCommitTimestamp) {
-					state->currentPacketContainerCommitTimestamp += I32T(
-						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
-				}
-			}
-
-			// Filter out completely empty commits. This can happen when data is turned off,
-			// but the timestamps are still going forward.
-			if (emptyContainerCommit) {
-				caerEventPacketContainerFree(state->currentPacketContainer);
-				state->currentPacketContainer = NULL;
-			}
-			else {
-				if (!dataExchangePut(&state->dataExchange, state->currentPacketContainer)) {
-					// Failed to forward packet container, just drop it, it doesn't contain
-					// any critical information anyway.
-					edvsLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
-
-					caerEventPacketContainerFree(state->currentPacketContainer);
-				}
-
-				state->currentPacketContainer = NULL;
-			}
-
-			// The only critical timestamp information to forward is the timestamp reset event.
-			// The timestamp big-wrap can also (and should!) be detected by observing a packet's
-			// tsOverflow value, not the special packet TIMESTAMP_WRAP event, which is only informative.
-			// For the timestamp reset event (TIMESTAMP_RESET), we thus ensure that it is always
-			// committed, and we send it alone, in its own packet container, to ensure it will always
-			// be ordered after any other event packets in any processing or output stream.
-			if (tsReset) {
-				// Allocate packet container just for this event.
-				caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(EDVS_EVENT_TYPES);
-				if (tsResetContainer == NULL) {
-					edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset event packet container.");
-					return;
-				}
-
-				// Allocate special packet just for this event.
-				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
-					state->timestamps.wrapOverflow);
-				if (tsResetPacket == NULL) {
-					edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
-					return;
-				}
-
-				// Create timestamp reset event.
-				caerSpecialEvent tsResetEvent = caerSpecialEventPacketGetEvent(tsResetPacket, 0);
-				caerSpecialEventSetTimestamp(tsResetEvent, INT32_MAX);
-				caerSpecialEventSetType(tsResetEvent, TIMESTAMP_RESET);
-				caerSpecialEventValidate(tsResetEvent, tsResetPacket);
-
-				// Assign special packet to packet container.
-				caerEventPacketContainerSetEventPacket(tsResetContainer, SPECIAL_EVENT,
-					(caerEventPacketHeader) tsResetPacket);
-
-				// Reset MUST be committed, always, else downstream data processing and
-				// outputs get confused if they have no notification of timestamps
-				// jumping back go zero.
-				dataExchangePutForce(&state->dataExchange, &state->serialState.serialThreadRun, tsResetContainer);
-			}
+			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
+				state->timestamps.current, &state->dataExchange, &state->serialState.serialThreadRun,
+				handle->info.deviceID, handle->info.deviceString, &handle->state.deviceLogLevel);
 		}
 
 		i += 4;

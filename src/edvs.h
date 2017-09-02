@@ -57,10 +57,7 @@ struct edvs_state {
 		uint16_t lastShort; // For wrap detection.
 	} timestamps;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
+	struct container_generation container;
 	// Polarity Packet State
 	caerPolarityEventPacket currentPolarityPacket;
 	int32_t currentPolarityPacketPosition;

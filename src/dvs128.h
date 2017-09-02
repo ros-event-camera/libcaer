@@ -48,10 +48,7 @@ struct dvs128_state {
 		int32_t current;
 	} timestamps;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
+	struct container_generation container;
 	// Polarity Packet State
 	caerPolarityEventPacket currentPolarityPacket;
 	int32_t currentPolarityPacketPosition;

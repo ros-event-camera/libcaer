@@ -41,10 +41,7 @@ struct dynapse_state {
 		int32_t current;
 	} timestamps;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
+	struct container_generation container;
 	// Spike Packet state
 	caerSpikeEventPacket currentSpikePacket;
 	int32_t currentSpikePacketPosition;
