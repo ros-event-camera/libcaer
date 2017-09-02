@@ -70,51 +70,69 @@ struct davis_state {
 		int32_t last;
 		int32_t current;
 	} timestamps;
-	// DVS specific fields
-	uint16_t dvsLastY;
-	bool dvsGotY;
-	int16_t dvsSizeX;
-	int16_t dvsSizeY;
-	bool dvsInvertXY;
-	// APS specific fields
-	int16_t apsSizeX;
-	int16_t apsSizeY;
-	bool apsInvertXY;
-	bool apsFlipX;
-	bool apsFlipY;
-	bool apsIgnoreEvents;
-	bool apsGlobalShutter;
-	bool apsResetRead;
-	bool apsRGBPixelOffsetDirection; // 0 is increasing, 1 is decreasing.
-	int16_t apsRGBPixelOffset;
-	uint16_t apsCurrentReadoutType;
-	uint16_t apsCountX[APS_READOUT_TYPES_NUM];
-	uint16_t apsCountY[APS_READOUT_TYPES_NUM];
-	uint16_t *apsCurrentResetFrame;
-	uint16_t apsROIUpdate;
-	uint16_t apsROITmpData;
-	uint16_t apsROISizeX[APS_ROI_REGIONS_MAX];
-	uint16_t apsROISizeY[APS_ROI_REGIONS_MAX];
-	uint16_t apsROIPositionX[APS_ROI_REGIONS_MAX];
-	uint16_t apsROIPositionY[APS_ROI_REGIONS_MAX];
-	uint8_t apsExposureFrameUpdate;
-	uint32_t apsExposureFrameValue;
-	uint32_t apsExposureLastSetValue;
-	atomic_bool apsAutoExposureEnabled;
-	struct auto_exposure_state apsAutoExposureState;
-	// IMU specific fields
-	bool imuIgnoreEvents;
-	bool imuFlipX;
-	bool imuFlipY;
-	bool imuFlipZ;
-	uint8_t imuCount;
-	uint8_t imuTmpData;
-	float imuAccelScale;
-	float imuGyroScale;
-	// Microphone specific fields
-	bool micRight;
-	uint8_t micCount;
-	uint16_t micTmpData;
+	struct {
+		// DVS specific fields
+		uint16_t lastY;
+		bool gotY;
+		int16_t sizeX;
+		int16_t sizeY;
+		bool invertXY;
+	} dvs;
+	struct {
+		// APS specific fields
+		int16_t sizeX;
+		int16_t sizeY;
+		bool invertXY;
+		bool flipX;
+		bool flipY;
+		bool ignoreEvents;
+		bool globalShutter;
+		bool resetRead;
+		uint16_t currentReadoutType;
+		uint16_t *currentResetFrame;
+		uint16_t countX[APS_READOUT_TYPES_NUM];
+		uint16_t countY[APS_READOUT_TYPES_NUM];
+		// Current composite events, for later copy, to not loose them on commits.
+		caerFrameEvent currentEvent[APS_ROI_REGIONS_MAX];
+		struct {
+			bool offsetDirection; // 0 is increasing, 1 is decreasing.
+			int16_t offset;
+		} cDavisSupport;
+		struct {
+			uint16_t update;
+			uint16_t tmpData;
+			uint16_t sizeX[APS_ROI_REGIONS_MAX];
+			uint16_t sizeY[APS_ROI_REGIONS_MAX];
+			uint16_t positionX[APS_ROI_REGIONS_MAX];
+			uint16_t positionY[APS_ROI_REGIONS_MAX];
+		} roi;
+		struct {
+			uint8_t tmpData;
+			uint32_t currentFrameExposure;
+			uint32_t lastSetExposure;
+			atomic_bool enabled;
+			struct auto_exposure_state state;
+		} autoExposure;
+	} aps;
+	struct {
+		// IMU specific fields
+		bool ignoreEvents;
+		bool flipX;
+		bool flipY;
+		bool flipZ;
+		uint8_t count;
+		uint8_t tmpData;
+		float accelScale;
+		float gyroScale;
+		// Current composite events, for later copy, to not loose them on commits.
+		struct caer_imu6_event currentEvent;
+	} imu;
+	struct {
+		// Microphone specific fields
+		bool isRight;
+		uint8_t count;
+		uint16_t tmpData;
+	} mic;
 	// Packet Container state
 	struct container_generation container;
 	struct {
@@ -134,9 +152,6 @@ struct davis_state {
 		caerSampleEventPacket sample;
 		int32_t samplePosition;
 	} currentPackets;
-	// Current composite events, for later copy, to not loose them on commits.
-	caerFrameEvent currentFrameEvent[APS_ROI_REGIONS_MAX];
-	struct caer_imu6_event currentIMU6Event;
 	struct {
 		// Debug transfer support (FX3 only).
 		bool enabled;
