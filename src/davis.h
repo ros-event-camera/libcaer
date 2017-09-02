@@ -3,6 +3,7 @@
 
 #include "devices/davis.h"
 #include "data_exchange.h"
+#include "container_generation.h"
 #include "usb_utils.h"
 #include "autoexposure.h"
 
@@ -115,10 +116,7 @@ struct davis_state {
 	uint8_t micCount;
 	uint16_t micTmpData;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
+	struct container_generation container;
 	// Polarity Packet state
 	caerPolarityEventPacket currentPolarityPacket;
 	int32_t currentPolarityPacketPosition;
