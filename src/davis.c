@@ -140,10 +140,7 @@ static inline float calculateIMUGyroScale(uint8_t imuGyroScale) {
 }
 
 static inline void freeAllDataMemory(davisState state) {
-	if (state->dataExchangeBuffer != NULL) {
-		caerRingBufferFree(state->dataExchangeBuffer);
-		state->dataExchangeBuffer = NULL;
-	}
+	dataExchangeDestroy(&state->dataExchange);
 
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
@@ -214,8 +211,7 @@ static inline void freeAllDataMemory(davisState state) {
 
 caerDeviceHandle davisOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
-	return (davisOpenInternal(CAER_DEVICE_DAVIS, deviceID, busNumberRestrict, devAddressRestrict,
-		serialNumberRestrict));
+	return (davisOpenInternal(CAER_DEVICE_DAVIS, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
 }
 
 caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
@@ -247,10 +243,7 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	davisState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
-	atomic_store(&state->dataExchangeBufferSize, 64);
-	atomic_store(&state->dataExchangeBlocking, false);
-	atomic_store(&state->dataExchangeStartProducers, true);
-	atomic_store(&state->dataExchangeStopProducers, true);
+	dataExchangeSettingsInit(&state->dataExchange);
 
 	// Packet settings (size (in events) and time interval (in µs)).
 	atomic_store(&state->maxPacketContainerPacketSize, 8192);
@@ -492,29 +485,21 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL, false);
 	if (handle->info.dvsHasPixelFilter) {
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_1_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_1_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_1_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_2_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_2_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_2_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_3_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_3_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_3_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_4_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_4_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_4_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_5_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_5_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_5_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_6_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN, U32T(handle->info.dvsSizeX));
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_7_ROW, U32T(handle->info.dvsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN,
-			U32T(handle->info.dvsSizeX));
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN, U32T(handle->info.dvsSizeX));
 	}
 	if (handle->info.dvsHasBackgroundActivityFilter) {
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY, true);
@@ -667,8 +652,7 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 39)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_ONBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_OFFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 0)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 0)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_APSCASEPC,
 			caerBiasCoarseFineGenerate(CF_N_TYPE_CAS(5, 185)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_DIFFCASBNC,
@@ -679,8 +663,7 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 164)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PIXINVBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP,
 			caerBiasCoarseFineGenerate(CF_P_TYPE(1, 16)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_REFRBP,
@@ -717,8 +700,7 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL,
 			caerBiasVDACGenerate(VDAC(27, 6)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 6)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFHIGH,
-			caerBiasVDACGenerate(VDAC(30, 7)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(30, 7)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(1, 7)));
 
 		if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
@@ -746,12 +728,10 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 39)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ONBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRSFBP,
 			caerBiasCoarseFineGenerate(CF_P_TYPE(1, 16)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_REFRBP,
@@ -802,10 +782,8 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_OVG2LO, caerBiasVDACGenerate(VDAC(0, 0)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_TX2OVG2HI, caerBiasVDACGenerate(VDAC(63, 0)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_GND07, caerBiasVDACGenerate(VDAC(13, 4)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCTESTVOLTAGE,
-			caerBiasVDACGenerate(VDAC(21, 0)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCREFHIGH,
-			caerBiasVDACGenerate(VDAC(63, 7)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCTESTVOLTAGE, caerBiasVDACGenerate(VDAC(21, 0)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(63, 7)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(0, 7)));
 
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_IFREFRBN,
@@ -820,8 +798,7 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 164)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_DIFFBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 54)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ONBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(6, 63)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ONBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 63)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_OFFBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(2, 138)));
 		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_PRBP,
@@ -933,27 +910,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE:
-					atomic_store(&state->dataExchangeBufferSize, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING:
-					atomic_store(&state->dataExchangeBlocking, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS:
-					atomic_store(&state->dataExchangeStartProducers, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS:
-					atomic_store(&state->dataExchangeStopProducers, param);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (dataExchangeConfigSet(&state->dataExchange, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
@@ -1595,13 +1552,14 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr, param));
 					break;
 
-				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY:
+				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
 					// Early packet delay is 125µs slices on host, but in cycles
 					// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
+					int16_t pureClock = (state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr,
-						U32T((float) param * (125.0f * clockFreqCorrect(state,
-						(state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ))))));
+						U32T((float) param * (125.0F * clockFreqCorrect(state, pureClock)))));
 					break;
+				}
 
 				default:
 					return (false);
@@ -1639,27 +1597,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE:
-					*param = U32T(atomic_load(&state->dataExchangeBufferSize));
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING:
-					*param = atomic_load(&state->dataExchangeBlocking);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS:
-					*param = atomic_load(&state->dataExchangeStartProducers);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS:
-					*param = atomic_load(&state->dataExchangeStopProducers);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (dataExchangeConfigGet(&state->dataExchange, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
@@ -2248,8 +2186,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						return (false);
 					}
 
-					*param = U32T((float) cyclesValue / (125.0f * clockFreqCorrect(state,
-						(state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ))));
+					int16_t pureClock = (state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
+					*param = U32T((float) cyclesValue / (125.0F * clockFreqCorrect(state, pureClock)));
 
 					return (true);
 					break;
@@ -2269,16 +2207,13 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 	return (true);
 }
 
-bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
-	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
-	void *dataShutdownUserPtr) {
+bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
+	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
 	davisHandle handle = (davisHandle) cdh;
 	davisState state = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
-	state->dataNotifyIncrease = dataNotifyIncrease;
-	state->dataNotifyDecrease = dataNotifyDecrease;
-	state->dataNotifyUserPtr = dataNotifyUserPtr;
+	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
 
 	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
@@ -2286,9 +2221,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	// will then set this correctly.
 	state->currentPacketContainerCommitTimestamp = -1;
 
-	// Initialize RingBuffer.
-	state->dataExchangeBuffer = caerRingBufferInit(atomic_load(&state->dataExchangeBufferSize));
-	if (state->dataExchangeBuffer == NULL) {
+	if (!dataExchangeBufferInit(&state->dataExchange)) {
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
@@ -2405,7 +2338,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		return (false);
 	}
 
-	if (atomic_load(&state->dataExchangeStartProducers)) {
+	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
@@ -2431,7 +2364,7 @@ bool davisDataStop(caerDeviceHandle cdh) {
 	davisHandle handle = (davisHandle) cdh;
 	davisState state = &handle->state;
 
-	if (atomic_load(&state->dataExchangeStopProducers)) {
+	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		davisConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
@@ -2448,17 +2381,7 @@ bool davisDataStop(caerDeviceHandle cdh) {
 
 	usbDataTransfersStop(&state->usbState);
 
-	// Empty ringbuffer.
-	caerEventPacketContainer container;
-	while ((container = caerRingBufferGet(state->dataExchangeBuffer)) != NULL) {
-		// Notify data-not-available call-back.
-		if (state->dataNotifyDecrease != NULL) {
-			state->dataNotifyDecrease(state->dataNotifyUserPtr);
-		}
-
-		// Free container, which will free its subordinate packets too.
-		caerEventPacketContainerFree(container);
-	}
+	dataExchangeBufferEmpty(&state->dataExchange);
 
 	// Free current, uncommitted packets and ringbuffer.
 	freeAllDataMemory(state);
@@ -2479,34 +2402,8 @@ bool davisDataStop(caerDeviceHandle cdh) {
 caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 	davisHandle handle = (davisHandle) cdh;
 	davisState state = &handle->state;
-	caerEventPacketContainer container = NULL;
 
-	retry: container = caerRingBufferGet(state->dataExchangeBuffer);
-
-	if (container != NULL) {
-		// Found an event container, return it and signal this piece of data
-		// is no longer available for later acquisition.
-		if (state->dataNotifyDecrease != NULL) {
-			state->dataNotifyDecrease(state->dataNotifyUserPtr);
-		}
-
-		return (container);
-	}
-
-	// Didn't find any event container, either report this or retry, depending
-	// on blocking setting.
-	if (atomic_load_explicit(&state->dataExchangeBlocking, memory_order_relaxed)
-		&& usbDataTransfersAreRunning(&state->usbState)) {
-		// Don't retry right away in a tight loop, back off and wait a little.
-		// If no data is available, sleep for a millisecond to avoid wasting resources.
-		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
-		if (thrd_sleep(&noDataSleep, NULL) == 0) {
-			goto retry;
-		}
-	}
-
-	// Nothing.
-	return (NULL);
+	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
 
 #define TS_WRAP_ADD 0x8000
@@ -2536,8 +2433,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x01) != 0) {
-		davisLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.",
-			bytesSent);
+		davisLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bytesSent);
 		bytesSent &= (size_t) ~0x01;
 	}
 
@@ -2884,10 +2780,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								// Automatic exposure control support.
 								if (atomic_load_explicit(&state->apsAutoExposureEnabled, memory_order_relaxed)) {
+									float clockCorrect = clockFreqCorrect(state, handle->info.adcClock);
+
+									uint32_t exposureFrame = U32T((float) state->apsExposureFrameValue / clockCorrect);
+
 									int32_t newExposureValue = autoExposureCalculate(&state->apsAutoExposureState,
-										currentFrameEvent,
-										U32T((float) state->apsExposureFrameValue / clockFreqCorrect(state, handle->info.adcClock)),
-										state->apsExposureLastSetValue);
+										currentFrameEvent, exposureFrame, state->apsExposureLastSetValue);
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
@@ -2897,9 +2795,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 										state->apsExposureLastSetValue = U32T(newExposureValue);
 
+										uint32_t newExposureValueConfig = U32T((float) newExposureValue * clockCorrect);
+
 										spiConfigSendAsync(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE,
-											U32T((float) newExposureValue * clockFreqCorrect(state, handle->info.adcClock)),
-											NULL, NULL);
+											newExposureValueConfig, NULL, NULL);
 									}
 								}
 							}
@@ -3061,8 +2960,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						case 29:
 						case 30:
 						case 31: {
-							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.",
-								data);
+							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
 							if (state->imuIgnoreEvents) {
 								break;
 							}
@@ -3226,8 +3124,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						}
 
 						default:
-							davisLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.",
-								data);
+							davisLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.", data);
 							break;
 					}
 					break;
@@ -3251,8 +3148,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 						state->currentSpecialPacketPosition++;
 
-						davisLog(CAER_LOG_DEBUG, handle,
-							"DVS: row-only event received for address Y=%" PRIu16 ".", state->dvsLastY);
+						davisLog(CAER_LOG_DEBUG, handle, "DVS: row-only event received for address Y=%" PRIu16 ".",
+							state->dvsLastY);
 					}
 
 					state->dvsLastY = data;
@@ -3839,21 +3736,15 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				state->currentPacketContainer = NULL;
 			}
 			else {
-				if (!caerRingBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
+				if (!dataExchangePut(&state->dataExchange, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
 					davisLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
 
 					caerEventPacketContainerFree(state->currentPacketContainer);
-					state->currentPacketContainer = NULL;
 				}
-				else {
-					if (state->dataNotifyIncrease != NULL) {
-						state->dataNotifyIncrease(state->dataNotifyUserPtr);
-					}
 
-					state->currentPacketContainer = NULL;
-				}
+				state->currentPacketContainer = NULL;
 			}
 
 			// The only critical timestamp information to forward is the timestamp reset event.
@@ -3891,19 +3782,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				// Reset MUST be committed, always, else downstream data processing and
 				// outputs get confused if they have no notification of timestamps
 				// jumping back go zero.
-				while (!caerRingBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
-					// Prevent dead-lock if shutdown is requested and nothing is consuming
-					// data anymore, but the ring-buffer is full (and would thus never empty),
-					// thus blocking the USB handling thread in this loop.
-					if (!usbDataTransfersAreRunning(&state->usbState)) {
-						return;
-					}
-				}
-
-				// Signal new container as usual.
-				if (state->dataNotifyIncrease != NULL) {
-					state->dataNotifyIncrease(state->dataNotifyUserPtr);
-				}
+				dataExchangePutForce(&state->dataExchange, &state->usbState.dataTransfersRun, tsResetContainer);
 			}
 		}
 	}
@@ -4057,8 +3936,8 @@ static void allocateDebugTransfers(davisHandle handle) {
 			atomic_fetch_add(&handle->state.activeDebugTransfers, 1);
 		}
 		else {
-			davisLog(CAER_LOG_CRITICAL, handle,
-				"Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).", i, libusb_strerror(errno),
+			davisLog(CAER_LOG_CRITICAL, handle, "Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).",
+				i, libusb_strerror(errno),
 				errno);
 
 			// The transfer buffer is freed automatically here thanks to

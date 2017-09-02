@@ -2,7 +2,7 @@
 #define LIBCAER_SRC_EDVS_H_
 
 #include "devices/edvs.h"
-#include "ringbuffer.h"
+#include "data_exchange.h"
 #include <libserialport.h>
 #include <stdatomic.h>
 
@@ -44,14 +44,7 @@ struct edvs_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
-	caerRingBuffer dataExchangeBuffer;
-	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
-	atomic_bool dataExchangeBlocking;
-	atomic_bool dataExchangeStartProducers;
-	atomic_bool dataExchangeStopProducers;
-	void (*dataNotifyIncrease)(void *ptr);
-	void (*dataNotifyDecrease)(void *ptr);
-	void *dataNotifyUserPtr;
+	struct data_exchange dataExchange;
 	// Serial Device State
 	struct serial_state serialState;
 	// Timestamp fields

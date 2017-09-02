@@ -210,10 +210,7 @@ static inline void checkStrictMonotonicTimestamp(dynapseHandle handle) {
 }
 
 static inline void freeAllDataMemory(dynapseState state) {
-	if (state->dataExchangeBuffer != NULL) {
-		caerRingBufferFree(state->dataExchangeBuffer);
-		state->dataExchangeBuffer = NULL;
-	}
+	dataExchangeDestroy(&state->dataExchange);
 
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
@@ -260,10 +257,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	dynapseState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
-	atomic_store(&state->dataExchangeBufferSize, 64);
-	atomic_store(&state->dataExchangeBlocking, false);
-	atomic_store(&state->dataExchangeStartProducers, true);
-	atomic_store(&state->dataExchangeStopProducers, true);
+	dataExchangeSettingsInit(&state->dataExchange);
 
 	// Packet settings (size (in events) and time interval (in µs)).
 	atomic_store(&state->maxPacketContainerPacketSize, 8192);
@@ -727,27 +721,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE:
-					atomic_store(&state->dataExchangeBufferSize, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING:
-					atomic_store(&state->dataExchangeBlocking, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS:
-					atomic_store(&state->dataExchangeStartProducers, param);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS:
-					atomic_store(&state->dataExchangeStopProducers, param);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (dataExchangeConfigSet(&state->dataExchange, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
@@ -1074,27 +1048,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE:
-					*param = U32T(atomic_load(&state->dataExchangeBufferSize));
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING:
-					*param = atomic_load(&state->dataExchangeBlocking);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS:
-					*param = atomic_load(&state->dataExchangeStartProducers);
-					break;
-
-				case CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS:
-					*param = atomic_load(&state->dataExchangeStopProducers);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (dataExchangeConfigGet(&state->dataExchange, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_PACKETS:
@@ -1271,9 +1225,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	dynapseState state = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
-	state->dataNotifyIncrease = dataNotifyIncrease;
-	state->dataNotifyDecrease = dataNotifyDecrease;
-	state->dataNotifyUserPtr = dataNotifyUserPtr;
+	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
 
 	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
@@ -1281,9 +1233,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	// will then set this correctly.
 	state->currentPacketContainerCommitTimestamp = -1;
 
-	// Initialize RingBuffer.
-	state->dataExchangeBuffer = caerRingBufferInit(atomic_load(&state->dataExchangeBufferSize));
-	if (state->dataExchangeBuffer == NULL) {
+	if (!dataExchangeBufferInit(&state->dataExchange)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
@@ -1322,7 +1272,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	if (atomic_load(&state->dataExchangeStartProducers)) {
+	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, true);
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, true);
@@ -1338,7 +1288,7 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
 
-	if (atomic_load(&state->dataExchangeStopProducers)) {
+	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, false);
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
@@ -1350,17 +1300,7 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 
 	usbDataTransfersStop(&state->usbState);
 
-	// Empty ringbuffer.
-	caerEventPacketContainer container;
-	while ((container = caerRingBufferGet(state->dataExchangeBuffer)) != NULL) {
-		// Notify data-not-available call-back.
-		if (state->dataNotifyDecrease != NULL) {
-			state->dataNotifyDecrease(state->dataNotifyUserPtr);
-		}
-
-		// Free container, which will free its subordinate packets too.
-		caerEventPacketContainerFree(container);
-	}
+	dataExchangeBufferEmpty(&state->dataExchange);
 
 	// Free current, uncommitted packets and ringbuffer.
 	freeAllDataMemory(state);
@@ -1375,34 +1315,8 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 caerEventPacketContainer dynapseDataGet(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 	dynapseState state = &handle->state;
-	caerEventPacketContainer container = NULL;
 
-	retry: container = caerRingBufferGet(state->dataExchangeBuffer);
-
-	if (container != NULL) {
-		// Found an event container, return it and signal this piece of data
-		// is no longer available for later acquisition.
-		if (state->dataNotifyDecrease != NULL) {
-			state->dataNotifyDecrease(state->dataNotifyUserPtr);
-		}
-
-		return (container);
-	}
-
-	// Didn't find any event container, either report this or retry, depending
-	// on blocking setting.
-	if (atomic_load_explicit(&state->dataExchangeBlocking, memory_order_relaxed)
-		&& usbDataTransfersAreRunning(&state->usbState)) {
-		// Don't retry right away in a tight loop, back off and wait a little.
-		// If no data is available, sleep for a millisecond to avoid wasting resources.
-		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
-		if (thrd_sleep(&noDataSleep, NULL) == 0) {
-			goto retry;
-		}
-	}
-
-	// Nothing.
-	return (NULL);
+	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
 
 #define TS_WRAP_ADD 0x8000
@@ -1693,21 +1607,15 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				state->currentPacketContainer = NULL;
 			}
 			else {
-				if (!caerRingBufferPut(state->dataExchangeBuffer, state->currentPacketContainer)) {
+				if (!dataExchangePut(&state->dataExchange, state->currentPacketContainer)) {
 					// Failed to forward packet container, just drop it, it doesn't contain
 					// any critical information anyway.
 					dynapseLog(CAER_LOG_NOTICE, handle, "Dropped EventPacket Container because ring-buffer full!");
 
 					caerEventPacketContainerFree(state->currentPacketContainer);
-					state->currentPacketContainer = NULL;
 				}
-				else {
-					if (state->dataNotifyIncrease != NULL) {
-						state->dataNotifyIncrease(state->dataNotifyUserPtr);
-					}
 
-					state->currentPacketContainer = NULL;
-				}
+				state->currentPacketContainer = NULL;
 			}
 
 			// The only critical timestamp information to forward is the timestamp reset event.
@@ -1745,19 +1653,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				// Reset MUST be committed, always, else downstream data processing and
 				// outputs get confused if they have no notification of timestamps
 				// jumping back go zero.
-				while (!caerRingBufferPut(state->dataExchangeBuffer, tsResetContainer)) {
-					// Prevent dead-lock if shutdown is requested and nothing is consuming
-					// data anymore, but the ring-buffer is full (and would thus never empty),
-					// thus blocking the USB handling thread in this loop.
-					if (!usbDataTransfersAreRunning(&state->usbState)) {
-						return;
-					}
-				}
-
-				// Signal new container as usual.
-				if (state->dataNotifyIncrease != NULL) {
-					state->dataNotifyIncrease(state->dataNotifyUserPtr);
-				}
+				dataExchangePutForce(&state->dataExchange, &state->usbState.dataTransfersRun, tsResetContainer);
 			}
 		}
 	}

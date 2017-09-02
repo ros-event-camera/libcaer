@@ -2,7 +2,7 @@
 #define LIBCAER_SRC_DVS128_H_
 
 #include "devices/dvs128.h"
-#include "ringbuffer.h"
+#include "data_exchange.h"
 #include "usb_utils.h"
 
 #define DVS_DEVICE_NAME "DVS128"
@@ -36,14 +36,7 @@ struct dvs128_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
-	caerRingBuffer dataExchangeBuffer;
-	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
-	atomic_bool dataExchangeBlocking;
-	atomic_bool dataExchangeStartProducers;
-	atomic_bool dataExchangeStopProducers;
-	void (*dataNotifyIncrease)(void *ptr);
-	void (*dataNotifyDecrease)(void *ptr);
-	void *dataNotifyUserPtr;
+	struct data_exchange dataExchange;
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
