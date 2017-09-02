@@ -86,9 +86,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 			}
 
 			// Check if this is the device we want (VID/PID).
-			if (devDesc.idVendor == devVID && devDesc.idProduct == devPID) {
+			if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
 				// If a USB port restriction is given, honor it first.
-				if (busNumber > 0 && libusb_get_bus_number(devicesList[i]) != busNumber) {
+				if ((busNumber > 0) && (libusb_get_bus_number(devicesList[i]) != busNumber)) {
 					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						busNumber, libusb_get_bus_number(devicesList[i]));
@@ -96,7 +96,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					continue;
 				}
 
-				if (devAddress > 0 && libusb_get_device_address(devicesList[i]) != devAddress) {
+				if ((devAddress > 0) && (libusb_get_device_address(devicesList[i]) != devAddress)) {
 					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						devAddress, libusb_get_device_address(devicesList[i]));
@@ -105,7 +105,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Verify device firmware version (after port restriction).
-				if (requiredFirmwareVersion >= 0 && U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion)) {
+				if ((requiredFirmwareVersion >= 0) && (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
 					caerUSBLog(CAER_LOG_CRITICAL, state,
 						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
@@ -120,13 +120,13 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Check the serial number restriction, if any is present.
-				if (serialNumber != NULL && !caerStrEquals(serialNumber, "")) {
+				if ((serialNumber != NULL) && (!caerStrEquals(serialNumber, ""))) {
 					char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
 					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
 						(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 					// Check serial number success and length.
-					if (getStringDescResult < 0 || getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
+					if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
 						libusb_close(devHandle);
 						devHandle = NULL;
 
@@ -324,7 +324,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 	MAX_SERIAL_NUMBER_LENGTH + 1);
 
 	// Check serial number success and length.
-	if (getStringDescResult < 0 || getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
+	if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to get serial number for %s device.", deviceName);
 
 		struct usb_info emptyInfo = { 0, .deviceString = NULL };
@@ -481,8 +481,6 @@ static bool usbAllocateTransfers(usbState state) {
 			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
 			libusb_free_transfer(state->dataTransfers[i]);
 			state->dataTransfers[i] = NULL;
-
-			continue;
 		}
 	}
 
@@ -510,7 +508,7 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 		for (size_t i = 0; i < state->dataTransfersLength; i++) {
 			if (state->dataTransfers[i] != NULL) {
 				errno = libusb_cancel_transfer(state->dataTransfers[i]);
-				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
+				if ((errno != LIBUSB_SUCCESS) && (errno != LIBUSB_ERROR_NOT_FOUND)) {
 					caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to cancel libusb transfer %zu. Error: %s (%d).", i,
 						libusb_strerror(errno), errno);
 					// Proceed with trying to cancel all transfers regardless of errors.
@@ -541,8 +539,8 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 
 	// Completed or cancelled transfers are what we expect to handle here, so
 	// if they do have data attached, try to parse them.
-	if ((transfer->status == LIBUSB_TRANSFER_COMPLETED || transfer->status == LIBUSB_TRANSFER_CANCELLED)
-		&& transfer->actual_length > 0) {
+	if (((transfer->status == LIBUSB_TRANSFER_COMPLETED) || (transfer->status == LIBUSB_TRANSFER_CANCELLED))
+		&& (transfer->actual_length > 0)) {
 		// Handle data.
 		(*state->usbDataCallback)(state->usbDataCallbackPtr, transfer->buffer, (size_t) transfer->actual_length);
 	}
@@ -611,12 +609,12 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlCallbackPtr, bool directionOut) {
 	// If doing IN, data must always be NULL, the callback will handle it.
-	if (!directionOut && data != NULL) {
+	if ((!directionOut) && (data != NULL)) {
 		return (false);
 	}
 
 	// If doing OUT and data is NULL (no data), dataSize must be zero!
-	if (directionOut && data == NULL && dataSize != 0) {
+	if (directionOut && (data == NULL) && (dataSize != 0)) {
 		return (false);
 	}
 
@@ -788,7 +786,7 @@ static void syncControlOutCallback(void *controlOutCallbackPtr, int status) {
 static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
 	usbDataCompletion dataCompletion = controlInCallbackPtr;
 
-	if (status == LIBUSB_TRANSFER_COMPLETED && bufferSize == dataCompletion->dataSize) {
+	if ((status == LIBUSB_TRANSFER_COMPLETED) && (bufferSize == dataCompletion->dataSize)) {
 		// Copy data to location given by user.
 		memcpy(dataCompletion->data, buffer, dataCompletion->dataSize);
 
@@ -867,7 +865,7 @@ static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status,
 
 	uint32_t param = 0;
 
-	if (status == LIBUSB_TRANSFER_COMPLETED && bufferSize == sizeof(uint32_t)) {
+	if ((status == LIBUSB_TRANSFER_COMPLETED) && (bufferSize == sizeof(uint32_t))) {
 		param |= U32T(buffer[0] << 24);
 		param |= U32T(buffer[1] << 16);
 		param |= U32T(buffer[2] << 8);

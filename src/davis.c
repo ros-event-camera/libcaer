@@ -248,7 +248,7 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
 	}
 
-	if (!deviceFound && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
+	if ((!deviceFound) && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
 			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
@@ -2349,7 +2349,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x01) != 0) {
 		davisLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bytesSent);
-		bytesSent &= (size_t) ~0x01;
+		bytesSent &= ~((size_t) 0x01);
 	}
 
 	for (size_t i = 0; i < bytesSent; i += 2) {
@@ -2636,7 +2636,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								int32_t checkValue = caerFrameEventGetLengthX(state->aps.currentEvent[0]);
 
 								// Check main reset read against zero if disabled.
-								if (j == APS_READOUT_RESET && !state->aps.resetRead) {
+								if ((j == APS_READOUT_RESET) && !state->aps.resetRead) {
 									checkValue = 0;
 								}
 
@@ -2733,7 +2733,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							// The first Reset Column Read Start is also the start
 							// of the exposure for the RS.
-							if (!state->aps.globalShutter && state->aps.countX[APS_READOUT_RESET] == 0) {
+							if ((!state->aps.globalShutter) && (state->aps.countX[APS_READOUT_RESET] == 0)) {
 								caerFrameEventSetTSStartOfExposure(state->aps.currentEvent[0],
 									state->timestamps.current);
 
@@ -2801,9 +2801,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							// The last Reset Column Read End is also the start
 							// of the exposure for the GS.
-							if (state->aps.globalShutter && state->aps.currentReadoutType == APS_READOUT_RESET
-								&& state->aps.countX[APS_READOUT_RESET]
-									== caerFrameEventGetLengthX(state->aps.currentEvent[0])) {
+							if ((state->aps.globalShutter) && (state->aps.currentReadoutType == APS_READOUT_RESET)
+								&& (state->aps.countX[APS_READOUT_RESET]
+									== caerFrameEventGetLengthX(state->aps.currentEvent[0]))) {
 								caerFrameEventSetTSStartOfExposure(state->aps.currentEvent[0],
 									state->timestamps.current);
 
@@ -2880,7 +2880,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							// Set correct IMU accel and gyro scales, used to interpret subsequent
 							// IMU samples from the device.
-							state->imu.accelScale = calculateIMUAccelScale((data >> 2) & 0x03);
+							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 2) & 0x03);
 							state->imu.gyroScale = calculateIMUGyroScale(data & 0x03);
 
 							// At this point the IMU event count should be zero (reset by start).
@@ -2900,7 +2900,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 32: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 0.
 							// 0/1 used to distinguish between X and Y sizes.
-							state->aps.roi.update = (0x00 << 2);
+							state->aps.roi.update = (0x00U << 2);
 							state->aps.roi.sizeX[0] = state->aps.roi.positionX[0] = U16T(state->aps.sizeX);
 							state->aps.roi.sizeY[0] = state->aps.roi.positionY[0] = U16T(state->aps.sizeY);
 							break;
@@ -2909,7 +2909,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 33: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
-							state->aps.roi.update = (0x01 << 2);
+							state->aps.roi.update = (0x01U << 2);
 							// TODO: state->aps.roi.sizeX[1] = state->aps.roi.positionX[1] = U16T(state->aps.sizeX);
 							// TODO: state->aps.roi.sizeY[1] = state->aps.roi.positionY[1] = U16T(state->aps.sizeY);
 							break;
@@ -2918,7 +2918,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 34: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
-							state->aps.roi.update = (0x02 << 2);
+							state->aps.roi.update = (0x02U << 2);
 							// TODO: state->aps.roi.sizeX[2] = state->aps.roi.positionX[2] = U16T(state->aps.sizeX);
 							// TODO: state->aps.roi.sizeY[2] = state->aps.roi.positionY[2] = U16T(state->aps.sizeY);
 							break;
@@ -2927,7 +2927,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 35: {
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
-							state->aps.roi.update = (0x03 << 2);
+							state->aps.roi.update = (0x03U << 2);
 							// TODO: state->aps.roi.sizeX[3] = state->aps.roi.positionX[3] = U16T(state->aps.sizeX);
 							// TODO: state->aps.roi.sizeY[3] = state->aps.roi.positionY[3] = U16T(state->aps.sizeY);
 							break;
@@ -3181,17 +3181,17 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						data = U16T(data << 1);
 					}
 
-					if ((state->aps.currentReadoutType == APS_READOUT_RESET
-						&& !(IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter))
-						|| (state->aps.currentReadoutType == APS_READOUT_SIGNAL
-							&& (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter))) {
+					bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
+
+					if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
+						|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
 						state->aps.currentResetFrame[pixelPosition] = data;
 					}
 					else {
 						uint16_t resetValue = 0;
 						uint16_t signalValue = 0;
 
-						if (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter) {
+						if (isCDavisGS) {
 							// DAVIS RGB GS has inverted samples, signal read comes first
 							// and was stored above inside state->aps.currentResetFrame.
 							resetValue = data;
@@ -3215,7 +3215,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						// Check for overflow.
 						pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
 #else
-						if (resetValue < 512 || signalValue == 0) {
+						if ((resetValue < 512) || (signalValue == 0)) {
 							// If the signal value is 0, that is only possible if the camera
 							// has seen tons of light. In that case, the photo-diode current
 							// may be greater than the reset current, and the reset value
@@ -3338,7 +3338,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									// (SIGNED_VAL / 340) + 36.53
 								case 8: {
 									int16_t temp = I16T((state->imu.tmpData << 8) | misc8Data);
-									caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 340.0f) + 36.53f);
+									caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 340.0F) + 36.53F);
 									break;
 								}
 
@@ -3368,6 +3368,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									caerIMU6EventSetGyroZ(&state->imu.currentEvent, gyroZ / state->imu.gyroScale);
 									break;
 								}
+
+								default:
+									davisLog(CAER_LOG_ERROR, handle, "Got invalid IMU update sequence.");
+									break;
 							}
 
 							state->imu.count++;
@@ -3412,6 +3416,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									break;
 
 								default:
+									davisLog(CAER_LOG_ERROR, handle, "Got invalid ROI update sequence.");
 									break;
 							}
 
@@ -3485,7 +3490,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					switch (misc10Code) {
 						case 0:
 							state->aps.autoExposure.currentFrameExposure |=
-								(U32T(misc10Data) << (10 * state->aps.autoExposure.tmpData++));
+								(U32T(misc10Data) << U32T(10 * state->aps.autoExposure.tmpData));
+							state->aps.autoExposure.tmpData++;
 							break;
 
 						default:
@@ -3666,7 +3672,7 @@ struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias) {
 
 	// Decompose bias integer into its parts.
 	biasValue.voltageValue = vdacBias & 0x3F;
-	biasValue.currentValue = (vdacBias >> 6) & 0x07;
+	biasValue.currentValue = U16T(vdacBias >> 6) & 0x07;
 
 	return (biasValue);
 }
@@ -3676,16 +3682,16 @@ uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFine
 
 	// Build up bias value from all its components.
 	if (coarseFineBias.enabled) {
-		biasValue |= 0x01;
+		biasValue |= 0x01U;
 	}
 	if (coarseFineBias.sexN) {
-		biasValue |= 0x02;
+		biasValue |= 0x02U;
 	}
 	if (coarseFineBias.typeNormal) {
-		biasValue |= 0x04;
+		biasValue |= 0x04U;
 	}
 	if (coarseFineBias.currentLevelNormal) {
-		biasValue |= 0x08;
+		biasValue |= 0x08U;
 	}
 
 	biasValue = U16T(biasValue | ((coarseFineBias.fineValue & 0xFF) << 4));
@@ -3712,17 +3718,17 @@ uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shif
 	uint16_t biasValue = 0;
 
 	if (shiftedSourceBias.operatingMode == HI_Z) {
-		biasValue |= 0x01;
+		biasValue |= 0x01U;
 	}
 	else if (shiftedSourceBias.operatingMode == TIED_TO_RAIL) {
-		biasValue |= 0x02;
+		biasValue |= 0x02U;
 	}
 
 	if (shiftedSourceBias.voltageLevel == SINGLE_DIODE) {
-		biasValue |= (0x01 << 2);
+		biasValue |= (0x01U << 2);
 	}
 	else if (shiftedSourceBias.voltageLevel == DOUBLE_DIODE) {
-		biasValue |= (0x02 << 2);
+		biasValue |= (0x02U << 2);
 	}
 
 	biasValue = U16T(biasValue | ((shiftedSourceBias.refValue & 0x3F) << 4));
@@ -3735,13 +3741,28 @@ struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shifted
 	struct caer_bias_shiftedsource biasValue;
 
 	// Decompose bias integer into its parts.
-	biasValue.operatingMode =
-		(shiftedSourceBias & 0x01) ? (HI_Z) : ((shiftedSourceBias & 0x02) ? (TIED_TO_RAIL) : (SHIFTED_SOURCE));
-	biasValue.voltageLevel =
-		((shiftedSourceBias >> 2) & 0x01) ?
-			(SINGLE_DIODE) : (((shiftedSourceBias >> 2) & 0x02) ? (DOUBLE_DIODE) : (SPLIT_GATE));
-	biasValue.refValue = (shiftedSourceBias >> 4) & 0x3F;
-	biasValue.regValue = (shiftedSourceBias >> 10) & 0x3F;
+	if (shiftedSourceBias & 0x01) {
+		biasValue.operatingMode = HI_Z;
+	}
+	else if (shiftedSourceBias & 0x02) {
+		biasValue.operatingMode = TIED_TO_RAIL;
+	}
+	else {
+		biasValue.operatingMode = SHIFTED_SOURCE;
+	}
+
+	if (U16T(shiftedSourceBias >> 2) & 0x01) {
+		biasValue.voltageLevel = SINGLE_DIODE;
+	}
+	else if (U16T(shiftedSourceBias >> 2) & 0x02) {
+		biasValue.voltageLevel = DOUBLE_DIODE;
+	}
+	else {
+		biasValue.voltageLevel = SPLIT_GATE;
+	}
+
+	biasValue.refValue = U16T(shiftedSourceBias >> 4) & 0x3F;
+	biasValue.regValue = U16T(shiftedSourceBias >> 10) & 0x3F;
 
 	return (biasValue);
 }
@@ -3794,8 +3815,6 @@ static void allocateDebugTransfers(davisHandle handle) {
 			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
 			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
 			handle->state.fx3Support.debugTransfers[i] = NULL;
-
-			continue;
 		}
 	}
 
@@ -3815,7 +3834,7 @@ static void cancelAndDeallocateDebugTransfers(davisHandle handle) {
 		for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
 			if (handle->state.fx3Support.debugTransfers[i] != NULL) {
 				errno = libusb_cancel_transfer(handle->state.fx3Support.debugTransfers[i]);
-				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
+				if ((errno != LIBUSB_SUCCESS) && (errno != LIBUSB_ERROR_NOT_FOUND)) {
 					davisLog(CAER_LOG_CRITICAL, handle,
 						"Unable to cancel libusb transfer %zu (debug channel). Error: %s (%d).", i,
 						libusb_strerror(errno), errno);
@@ -3842,8 +3861,8 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 
 	// Completed or cancelled transfers are what we expect to handle here, so
 	// if they do have data attached, try to parse them.
-	if ((transfer->status == LIBUSB_TRANSFER_COMPLETED || transfer->status == LIBUSB_TRANSFER_CANCELLED)
-		&& transfer->actual_length > 0) {
+	if (((transfer->status == LIBUSB_TRANSFER_COMPLETED) || (transfer->status == LIBUSB_TRANSFER_CANCELLED))
+		&& (transfer->actual_length > 0)) {
 		// Handle debug data.
 		debugTranslator(handle, transfer->buffer, (size_t) transfer->actual_length);
 	}
@@ -3863,7 +3882,7 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 
 static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t bytesSent) {
 	// Check if this is a debug message (length 7-64 bytes).
-	if (bytesSent >= 7 && buffer[0] == 0x00) {
+	if ((bytesSent >= 7) && (buffer[0] == 0x00)) {
 		// Debug message, log this.
 		davisLog(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
 			*((const uint32_t *) &buffer[2]));
