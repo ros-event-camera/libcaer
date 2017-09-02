@@ -3,7 +3,7 @@
 struct usb_control_struct {
 	union {
 		void (*controlOutCallback)(void *controlOutCallbackPtr, int status);
-		void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
+		void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
 	};
 	void *controlCallbackPtr;
 };
@@ -32,13 +32,13 @@ static void usbCancelAndDeallocateTransfers(usbState state);
 static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer);
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
-	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
+	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlCallbackPtr, bool directionOut);
 static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
-static void syncControlInCallback(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, uint8_t *buffer, size_t bufferSize);
+static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
 
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) {
 	va_list argumentList;
@@ -608,7 +608,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
-	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
+	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlCallbackPtr, bool directionOut) {
 	// If doing IN, data must always be NULL, the callback will handle it.
 	if (!directionOut && data != NULL) {
@@ -683,7 +683,7 @@ bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValu
 }
 
 bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, size_t dataSize,
-	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
+	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlInCallbackPtr) {
 	return (usbControlTransferAsync(state, bRequest, wValue, wIndex, NULL, dataSize, NULL, controlInCallback,
 		controlInCallbackPtr, false));
@@ -785,7 +785,7 @@ static void syncControlOutCallback(void *controlOutCallbackPtr, int status) {
 	}
 }
 
-static void syncControlInCallback(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize) {
+static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
 	usbDataCompletion dataCompletion = controlInCallbackPtr;
 
 	if (status == LIBUSB_TRANSFER_COMPLETED && bufferSize == dataCompletion->dataSize) {
@@ -862,7 +862,7 @@ bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr
 	return (true);
 }
 
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, uint8_t *buffer, size_t bufferSize) {
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
 	usbConfigReceive config = configReceiveCallbackPtr;
 
 	uint32_t param = 0;
