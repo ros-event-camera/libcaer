@@ -10,11 +10,11 @@
 
 struct caer_ring_buffer {
 	alignas(CACHELINE_SIZE) size_t putPos;
-	uint8_t PAD_putPos[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
+	uint8_t PAD_putPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	alignas(CACHELINE_SIZE) size_t getPos;
-	uint8_t PAD_getPos[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
+	uint8_t PAD_getPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	alignas(CACHELINE_SIZE) size_t size;
-	uint8_t PAD_size[CACHELINE_SIZE - (sizeof(size_t) & (CACHELINE_SIZE - 1))];
+	uint8_t PAD_size[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	atomic_uintptr_t elements[];
 };
 

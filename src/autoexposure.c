@@ -72,7 +72,8 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	size_t pixelsBinLow = (size_t) (AUTOEXPOSURE_LOW_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
 	size_t pixelsBinHigh = (size_t) (AUTOEXPOSURE_HIGH_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
 
-	size_t pixelsSumLow = 0, pixelsSumHigh = 0;
+	size_t pixelsSumLow = 0;
+	size_t pixelsSumHigh = 0;
 
 	for (size_t i = 0; i < pixelsBinLow; i++) {
 		pixelsSumLow += state->pixelHistogram[i];
@@ -100,33 +101,34 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Underexposed but not overexposed.
 		newExposure = I32T(
-			exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracLowError, 1.65f));
+			exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracLowError, 1.65F));
 
 		newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 	}
 	else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 		// Overexposed but not underexposed.
 		newExposure = I32T(
-			exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracHighError, 1.65f));
+			exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracHighError, 1.65F));
 
 		newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 	}
 	else {
 		// Calculate mean sample value from histogram.
-		float meanSampleValueNum = 0, meanSampleValueDenom = 0;
+		float meanSampleValueNum = 0;
+		float meanSampleValueDenom = 0;
 
 		for (size_t i = 0; i < AUTOEXPOSURE_HISTOGRAM_MSV; i++) {
-			meanSampleValueNum += ((float) i + 1.0f) * (float) state->msvHistogram[i];
+			meanSampleValueNum += ((float) i + 1.0F) * (float) state->msvHistogram[i];
 			meanSampleValueDenom += (float) state->msvHistogram[i];
 		}
 
 		// Prevent division by zero.
 		if (meanSampleValueDenom == 0) {
-			meanSampleValueDenom = 1.0f;
+			meanSampleValueDenom = 1.0F;
 		}
 
 		float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
-		float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0f) - meanSampleValue;
+		float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0F) - meanSampleValue;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
 		caerLog(CAER_LOG_ERROR, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
@@ -135,25 +137,25 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		// If we're close to the under/over limits, we make the magnitude of changes smaller
 		// to avoid back&forth oscillations.
 		int32_t divisor = 1;
-		if (fabsf(fracLowError) < 0.1f || fabsf(fracHighError) < 0.1f) {
+		if ((fabsf(fracLowError) < 0.1F) || (fabsf(fracHighError) < 0.1F)) {
 			divisor = 5;
 		}
-		if (fabsf(fracLowError) < 0.05f || fabsf(fracHighError) < 0.05f) {
+		if ((fabsf(fracLowError) < 0.05F) || (fabsf(fracHighError) < 0.05F)) {
 			divisor = 10;
 		}
 
 		// If we're not too underexposed or overexposed, use MSV to optimize.
-		if (meanSampleValueError > 0.1f) {
+		if (meanSampleValueError > 0.1F) {
 			// Underexposed.
 			newExposure = I32T(exposureLastSetValue)
-				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0f)) / divisor);
+				+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
 
 			newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 		}
-		else if (meanSampleValueError < -0.1f) {
+		else if (meanSampleValueError < -0.1F) {
 			// Overexposed.
 			newExposure = I32T(exposureLastSetValue)
-				- (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0f)) / divisor);
+				- (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
 
 			newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 		}
