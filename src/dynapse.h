@@ -3,6 +3,7 @@
 
 #include "devices/dynapse.h"
 #include "data_exchange.h"
+#include "container_generation.h"
 #include "usb_utils.h"
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"

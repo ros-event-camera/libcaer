@@ -3,6 +3,7 @@
 
 #include "devices/dvs128.h"
 #include "data_exchange.h"
+#include "container_generation.h"
 #include "usb_utils.h"
 
 #define DVS_DEVICE_NAME "DVS128"

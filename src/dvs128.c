@@ -13,15 +13,6 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 	va_end(argumentList);
 }
 
-static inline void checkMonotonicTimestamp(dvs128Handle handle) {
-	if (handle->state.timestamps.current < handle->state.timestamps.last) {
-		dvs128Log(CAER_LOG_ALERT, handle,
-			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.timestamps.last, handle->state.timestamps.current,
-			(handle->state.timestamps.last - handle->state.timestamps.current));
-	}
-}
-
 static inline void freeAllDataMemory(dvs128State state) {
 	dataExchangeDestroy(&state->dataExchange);
 
@@ -530,17 +521,6 @@ caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 #define DVS128_SYNC_EVENT_MASK 0x8000
 #define TS_WRAP_ADD 0x4000
 
-static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestamp) {
-	return (I64T((U64T(tsOverflow) << TS_OVERFLOW_SHIFT) | U64T(timestamp)));
-}
-
-static inline void initContainerCommitTimestamp(dvs128State state) {
-	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->timestamps.current
-			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
-	}
-}
-
 static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 	dvs128Handle handle = vhd;
 	dvs128State state = &handle->state;
@@ -648,7 +628,8 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				initContainerCommitTimestamp(state);
 
 				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(handle);
+				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+					handle->info.deviceString, &handle->state.deviceLogLevel);
 			}
 		}
 		else if ((buffer[i + 3] & DVS128_TIMESTAMP_RESET_MASK) == DVS128_TIMESTAMP_RESET_MASK) {
@@ -680,7 +661,8 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			initContainerCommitTimestamp(state);
 
 			// Check monotonicity of timestamps.
-			checkMonotonicTimestamp(handle);
+			checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+				handle->info.deviceString, &handle->state.deviceLogLevel);
 
 			if ((addressUSB & DVS128_SYNC_EVENT_MASK) != 0) {
 				// Special Trigger Event (MSB is set)
@@ -723,7 +705,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 		}
 
 		// Thresholds on which to trigger packet container commit.
-		// forceCommit is already defined above.
+		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = I32T(
 			atomic_load_explicit(&state->maxPacketContainerPacketSize, memory_order_relaxed));

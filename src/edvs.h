@@ -3,6 +3,7 @@
 
 #include "devices/edvs.h"
 #include "data_exchange.h"
+#include "container_generation.h"
 #include <libserialport.h>
 #include <stdatomic.h>
 

@@ -29,15 +29,6 @@ static inline bool serialPortWrite(edvsState state, const char *cmd) {
 	return (retVal);
 }
 
-static inline void checkMonotonicTimestamp(edvsHandle handle) {
-	if (handle->state.timestamps.current < handle->state.timestamps.last) {
-		edvsLog(CAER_LOG_ALERT, handle,
-			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.timestamps.last, handle->state.timestamps.current,
-			(handle->state.timestamps.last - handle->state.timestamps.current));
-	}
-}
-
 static inline void freeAllDataMemory(edvsState state) {
 	dataExchangeDestroy(&state->dataExchange);
 
@@ -684,17 +675,6 @@ caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 #define HIGH_BIT_MASK 0x80
 #define LOW_BITS_MASK 0x7F
 
-static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestamp) {
-	return (I64T((U64T(tsOverflow) << TS_OVERFLOW_SHIFT) | U64T(timestamp)));
-}
-
-static inline void initContainerCommitTimestamp(edvsState state) {
-	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->timestamps.current
-			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
-	}
-}
-
 static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 	edvsHandle handle = vhd;
 	edvsState state = &handle->state;
@@ -850,7 +830,8 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				initContainerCommitTimestamp(state);
 
 				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(handle);
+				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+					handle->info.deviceString, &handle->state.deviceLogLevel);
 
 				uint8_t x = (xByte & LOW_BITS_MASK);
 				uint8_t y = (yByte & LOW_BITS_MASK);
@@ -880,7 +861,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		}
 
 		// Thresholds on which to trigger packet container commit.
-		// forceCommit is already defined above.
+		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = I32T(
 			atomic_load_explicit(&state->maxPacketContainerPacketSize, memory_order_relaxed));
