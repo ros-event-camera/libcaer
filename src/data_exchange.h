@@ -1,8 +1,14 @@
 #ifndef LIBCAER_SRC_DATA_EXCHANGE_H_
 #define LIBCAER_SRC_DATA_EXCHANGE_H_
 
+#include "libcaer.h"
+#include "devices/device.h"
 #include "ringbuffer.h"
-#include "usb_utils.h"
+#include <stdatomic.h>
+
+#if defined(HAVE_PTHREADS)
+#include "c11threads_posix.h"
+#endif
 
 struct data_exchange {
 	caerRingBuffer buffer;
