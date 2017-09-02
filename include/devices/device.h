@@ -78,6 +78,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * Parameter address for module CAER_HOST_CONFIG_PACKETS:
  * set the maximum number of events any of a packet container's
  * packets may hold before it's made available to the user.
+ * Set to zero to disable.
  * This is checked for each number of events held in each typed
  * EventPacket that is a part of the EventPacketContainer.
  */
@@ -85,6 +86,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
 /**
  * Parameter address for module CAER_HOST_CONFIG_PACKETS:
  * set the time interval between subsequent packet containers.
+ * Must be at least 1 microsecond.
  * The value is in microseconds, and is checked across all
  * types of events contained in the EventPacketContainer.
  */

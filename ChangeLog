@@ -28,6 +28,10 @@ INCOMPATIBLE CHANGES
   divide it in chunks of a particular size anymore.
 - devices/dynapse.h: improved and changed 'struct caer_bias_dynapse' to
   reflect actual biasing of device correctly.
+- devices/device.h: CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE's
+  default value has been changed to zero, disabling the size division of
+  packets by default. Packet size is dicated by time interval only by
+  default now, with a value of 10 milliseconds.
 
 NEW FEATURES
 - Packaging: packages for Fedora, Debian and Gentoo Linux, as well as
