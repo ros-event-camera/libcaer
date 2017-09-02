@@ -117,28 +117,32 @@ struct davis_state {
 	uint16_t micTmpData;
 	// Packet Container state
 	struct container_generation container;
-	// Polarity Packet state
-	caerPolarityEventPacket currentPolarityPacket;
-	int32_t currentPolarityPacketPosition;
-	// Frame Packet state
-	caerFrameEventPacket currentFramePacket;
-	int32_t currentFramePacketPosition;
-	// IMU6 Packet state
-	caerIMU6EventPacket currentIMU6Packet;
-	int32_t currentIMU6PacketPosition;
-	// Special Packet state
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
-	// Microphone Sample Packet state
-	caerSampleEventPacket currentSamplePacket;
-	int32_t currentSamplePacketPosition;
+	struct {
+		// Polarity Packet state
+		caerPolarityEventPacket polarity;
+		int32_t polarityPosition;
+		// Frame Packet state
+		caerFrameEventPacket frame;
+		int32_t framePosition;
+		// IMU6 Packet state
+		caerIMU6EventPacket imu6;
+		int32_t imu6Position;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+		// Microphone Sample Packet state
+		caerSampleEventPacket sample;
+		int32_t samplePosition;
+	} currentPackets;
 	// Current composite events, for later copy, to not loose them on commits.
 	caerFrameEvent currentFrameEvent[APS_ROI_REGIONS_MAX];
 	struct caer_imu6_event currentIMU6Event;
-	// Debug transfer support (FX3 only).
-	bool isFX3Device;
-	struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
-	atomic_uint_fast32_t activeDebugTransfers;
+	struct {
+		// Debug transfer support (FX3 only).
+		bool enabled;
+		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
+		atomic_uint_fast32_t activeDebugTransfers;
+	} fx3Support;
 };
 
 typedef struct davis_state *davisState;

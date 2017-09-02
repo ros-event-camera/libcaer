@@ -49,16 +49,20 @@ struct dvs128_state {
 	} timestamps;
 	// Packet Container state
 	struct container_generation container;
-	// Polarity Packet State
-	caerPolarityEventPacket currentPolarityPacket;
-	int32_t currentPolarityPacketPosition;
-	// Special Packet State
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
-	// Camera bias and settings memory (for getter operations)
-	uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
-	atomic_bool dvsRunning;
-	atomic_bool dvsIsMaster;
+	struct {
+		// Polarity Packet State
+		caerPolarityEventPacket polarity;
+		int32_t polarityPosition;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+	} currentPackets;
+	struct {
+		// Camera bias and settings memory (for getter operations)
+		uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
+		atomic_bool running;
+		atomic_bool isMaster;
+	} dvs;
 };
 
 typedef struct dvs128_state *dvs128State;

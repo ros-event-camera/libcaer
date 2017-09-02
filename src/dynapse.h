@@ -42,12 +42,14 @@ struct dynapse_state {
 	} timestamps;
 	// Packet Container state
 	struct container_generation container;
-	// Spike Packet state
-	caerSpikeEventPacket currentSpikePacket;
-	int32_t currentSpikePacketPosition;
-	// Special Packet state
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
+	struct {
+		// Spike Packet state
+		caerSpikeEventPacket spike;
+		int32_t spikePosition;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+	} currentPackets;
 };
 
 typedef struct dynapse_state *dynapseState;

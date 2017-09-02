@@ -24,7 +24,7 @@ static void davisLog(enum caer_log_level logLevel, davisHandle handle, const cha
 static inline float clockFreqCorrect(davisState state, int16_t pureClock) {
 	// FX3 devices need to have their clock-related values corrected
 	// by a factor when sending/getting them.
-	if (state->isFX3Device) {
+	if (state->fx3Support.enabled) {
 		return ((float) pureClock * DAVIS_FX3_CLOCK_FREQ_CORRECTION);
 	}
 
@@ -92,18 +92,18 @@ static inline void initFrame(davisHandle handle) {
 	caerFrameEventSetTSStartOfFrame(state->currentFrameEvent[0], state->timestamps.current);
 
 	// Send APS info event out (as special event).
-	caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
-		state->currentSpecialPacketPosition);
+	caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
+		state->currentPackets.specialPosition);
 	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
-	caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-	state->currentSpecialPacketPosition++;
+	caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+	state->currentPackets.specialPosition++;
 
 	// Setup frame. Only ROI region 0 is supported currently.
 	caerFrameEventSetColorFilter(state->currentFrameEvent[0], handle->info.apsColorFilter);
 	caerFrameEventSetROIIdentifier(state->currentFrameEvent[0], 0);
 	caerFrameEventSetLengthXLengthYChannelNumber(state->currentFrameEvent[0], state->apsROISizeX[0],
-		state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentFramePacket);
+		state->apsROISizeY[0], APS_ADC_CHANNELS, state->currentPackets.frame);
 	caerFrameEventSetPositionX(state->currentFrameEvent[0], state->apsROIPositionX[0]);
 	caerFrameEventSetPositionY(state->currentFrameEvent[0], state->apsROIPositionY[0]);
 }
@@ -136,37 +136,37 @@ static inline void freeAllDataMemory(davisState state) {
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
 	// free them separately from it.
-	if (state->currentPolarityPacket != NULL) {
-		free(&state->currentPolarityPacket->packetHeader);
-		state->currentPolarityPacket = NULL;
+	if (state->currentPackets.polarity != NULL) {
+		free(&state->currentPackets.polarity->packetHeader);
+		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
-	if (state->currentSpecialPacket != NULL) {
-		free(&state->currentSpecialPacket->packetHeader);
-		state->currentSpecialPacket = NULL;
+	if (state->currentPackets.special != NULL) {
+		free(&state->currentPackets.special->packetHeader);
+		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
 	}
 
-	if (state->currentFramePacket != NULL) {
-		free(&state->currentFramePacket->packetHeader);
-		state->currentFramePacket = NULL;
+	if (state->currentPackets.frame != NULL) {
+		free(&state->currentPackets.frame->packetHeader);
+		state->currentPackets.frame = NULL;
 
 		containerGenerationSetPacket(&state->container, FRAME_EVENT, NULL);
 	}
 
-	if (state->currentIMU6Packet != NULL) {
-		free(&state->currentIMU6Packet->packetHeader);
-		state->currentIMU6Packet = NULL;
+	if (state->currentPackets.imu6 != NULL) {
+		free(&state->currentPackets.imu6->packetHeader);
+		state->currentPackets.imu6 = NULL;
 
 		containerGenerationSetPacket(&state->container, IMU6_EVENT, NULL);
 	}
 
-	if (state->currentSamplePacket != NULL) {
-		free(&state->currentSamplePacket->packetHeader);
-		state->currentSamplePacket = NULL;
+	if (state->currentPackets.sample != NULL) {
+		free(&state->currentPackets.sample->packetHeader);
+		state->currentPackets.sample = NULL;
 
 		containerGenerationSetPacket(&state->container, DAVIS_SAMPLE_POSITION, NULL);
 	}
@@ -254,7 +254,7 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
 
 		if (deviceFound) {
-			state->isFX3Device = true;
+			state->fx3Support.enabled = true;
 		}
 	}
 
@@ -372,7 +372,7 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	state->imuFlipZ = param32 & 0x01;
 
 	// On FX3, start the debug transfers once everything else is ready.
-	if (state->isFX3Device) {
+	if (state->fx3Support.enabled) {
 		allocateDebugTransfers(handle);
 	}
 
@@ -389,7 +389,7 @@ bool davisClose(caerDeviceHandle cdh) {
 	davisLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Stop debug transfers on FX3 devices.
-	if (state->isFX3Device) {
+	if (state->fx3Support.enabled) {
 		cancelAndDeallocateDebugTransfers(handle);
 	}
 
@@ -1508,7 +1508,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
 					// Early packet delay is 125µs slices on host, but in cycles
 					// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
-					int16_t pureClock = (state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
+					int16_t pureClock = (state->fx3Support.enabled) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr,
 						U32T((float) param * (125.0F * clockFreqCorrect(state, pureClock)))));
 					break;
@@ -2115,7 +2115,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						return (false);
 					}
 
-					int16_t pureClock = (state->isFX3Device) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
+					int16_t pureClock = (state->fx3Support.enabled) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
 					*param = U32T((float) cyclesValue / (125.0F * clockFreqCorrect(state, pureClock)));
 
 					return (true);
@@ -2161,27 +2161,27 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		return (false);
 	}
 
-	state->currentPolarityPacket = caerPolarityEventPacketAllocate(DAVIS_POLARITY_DEFAULT_SIZE,
+	state->currentPackets.polarity = caerPolarityEventPacketAllocate(DAVIS_POLARITY_DEFAULT_SIZE,
 		I16T(handle->info.deviceID), 0);
-	if (state->currentPolarityPacket == NULL) {
+	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
-	state->currentSpecialPacket = caerSpecialEventPacketAllocate(DAVIS_SPECIAL_DEFAULT_SIZE,
+	state->currentPackets.special = caerSpecialEventPacketAllocate(DAVIS_SPECIAL_DEFAULT_SIZE,
 		I16T(handle->info.deviceID), 0);
-	if (state->currentSpecialPacket == NULL) {
+	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
-	state->currentFramePacket = caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), 0,
+	state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), 0,
 		state->apsSizeX, state->apsSizeY, 1);
-	if (state->currentFramePacket == NULL) {
+	if (state->currentPackets.frame == NULL) {
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
@@ -2206,17 +2206,17 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		state->currentFrameEvent[i] = (caerFrameEvent) (((uint8_t*) state->currentFrameEvent[0]) + (i * eventSize));
 	}
 
-	state->currentIMU6Packet = caerIMU6EventPacketAllocate(DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
-	if (state->currentIMU6Packet == NULL) {
+	state->currentPackets.imu6 = caerIMU6EventPacketAllocate(DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	if (state->currentPackets.imu6 == NULL) {
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 		return (false);
 	}
 
-	state->currentSamplePacket = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID),
+	state->currentPackets.sample = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID),
 		0);
-	if (state->currentSamplePacket == NULL) {
+	if (state->currentPackets.sample == NULL) {
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
@@ -2313,11 +2313,11 @@ bool davisDataStop(caerDeviceHandle cdh) {
 	freeAllDataMemory(state);
 
 	// Reset packet positions.
-	state->currentPolarityPacketPosition = 0;
-	state->currentSpecialPacketPosition = 0;
-	state->currentFramePacketPosition = 0;
-	state->currentIMU6PacketPosition = 0;
-	state->currentSamplePacketPosition = 0;
+	state->currentPackets.polarityPosition = 0;
+	state->currentPackets.specialPosition = 0;
+	state->currentPackets.framePosition = 0;
+	state->currentPackets.imu6Position = 0;
+	state->currentPackets.samplePosition = 0;
 
 	// Reset private composite events. 'currentFrameEvent' is taken care of in freeAllDataMemory().
 	memset(&state->currentIMU6Event, 0, sizeof(struct caer_imu6_event));
@@ -2359,115 +2359,115 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			return;
 		}
 
-		if (state->currentPolarityPacket == NULL) {
-			state->currentPolarityPacket = caerPolarityEventPacketAllocate(
+		if (state->currentPackets.polarity == NULL) {
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
 			DAVIS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentPolarityPacket == NULL) {
+			if (state->currentPackets.polarity == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
-		else if (state->currentPolarityPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPolarityPacket)) {
+		else if (state->currentPackets.polarityPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.polarity, state->currentPackets.polarityPosition * 2);
 			if (grownPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
 				return;
 			}
 
-			state->currentPolarityPacket = grownPacket;
+			state->currentPackets.polarity = grownPacket;
 		}
 
-		if (state->currentSpecialPacket == NULL) {
-			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
+		if (state->currentPackets.special == NULL) {
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
 			DAVIS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSpecialPacket == NULL) {
+			if (state->currentPackets.special == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
-		else if (state->currentSpecialPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
+		else if (state->currentPackets.specialPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.special, state->currentPackets.specialPosition * 2);
 			if (grownPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
-			state->currentSpecialPacket = grownPacket;
+			state->currentPackets.special = grownPacket;
 		}
 
-		if (state->currentFramePacket == NULL) {
-			state->currentFramePacket = caerFrameEventPacketAllocate(
+		if (state->currentPackets.frame == NULL) {
+			state->currentPackets.frame = caerFrameEventPacketAllocate(
 			DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow,
 				state->apsSizeX, state->apsSizeY, 1);
-			if (state->currentFramePacket == NULL) {
+			if (state->currentPackets.frame == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
 			}
 		}
-		else if (state->currentFramePacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentFramePacket)) {
+		else if (state->currentPackets.framePosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.frame)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerFrameEventPacket grownPacket = (caerFrameEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentFramePacket, state->currentFramePacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.frame, state->currentPackets.framePosition * 2);
 			if (grownPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow frame event packet.");
 				return;
 			}
 
-			state->currentFramePacket = grownPacket;
+			state->currentPackets.frame = grownPacket;
 		}
 
-		if (state->currentIMU6Packet == NULL) {
-			state->currentIMU6Packet = caerIMU6EventPacketAllocate(
+		if (state->currentPackets.imu6 == NULL) {
+			state->currentPackets.imu6 = caerIMU6EventPacketAllocate(
 			DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentIMU6Packet == NULL) {
+			if (state->currentPackets.imu6 == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 				return;
 			}
 		}
-		else if (state->currentIMU6PacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentIMU6Packet)) {
+		else if (state->currentPackets.imu6Position
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.imu6)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerIMU6EventPacket grownPacket = (caerIMU6EventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentIMU6Packet, state->currentIMU6PacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.imu6, state->currentPackets.imu6Position * 2);
 			if (grownPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow IMU6 event packet.");
 				return;
 			}
 
-			state->currentIMU6Packet = grownPacket;
+			state->currentPackets.imu6 = grownPacket;
 		}
 
-		if (state->currentSamplePacket == NULL) {
-			state->currentSamplePacket = caerSampleEventPacketAllocate(
+		if (state->currentPackets.sample == NULL) {
+			state->currentPackets.sample = caerSampleEventPacketAllocate(
 			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSamplePacket == NULL) {
+			if (state->currentPackets.sample == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
 				return;
 			}
 		}
-		else if (state->currentSamplePacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSamplePacket)) {
+		else if (state->currentPackets.samplePosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.sample)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSamplePacket, state->currentSamplePacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.sample, state->currentPackets.samplePosition * 2);
 			if (grownPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow Sample event packet.");
 				return;
 			}
 
-			state->currentSamplePacket = grownPacket;
+			state->currentPackets.sample = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -2524,11 +2524,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2536,11 +2536,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2548,11 +2548,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_PULSE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2577,7 +2577,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								// Timestamp at event-stream insertion point.
 								caerIMU6EventSetTimestamp(&state->currentIMU6Event, state->timestamps.current);
 
-								caerIMU6EventValidate(&state->currentIMU6Event, state->currentIMU6Packet);
+								caerIMU6EventValidate(&state->currentIMU6Event, state->currentPackets.imu6);
 
 								// IMU6 and APS operate on an internal event and copy that to the actual output
 								// packet here, in the END state, for a reason: if a packetContainer, with all its
@@ -2589,10 +2589,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								// possible data loss would be too significant. So instead we keep a private event,
 								// fill it, and then only copy it into the packet here in the END state, at which point
 								// the whole event is ready and cannot be broken/corrupted in any way anymore.
-								caerIMU6Event currentIMU6Event = caerIMU6EventPacketGetEvent(state->currentIMU6Packet,
-									state->currentIMU6PacketPosition);
+								caerIMU6Event currentIMU6Event = caerIMU6EventPacketGetEvent(state->currentPackets.imu6,
+									state->currentPackets.imu6Position);
 								memcpy(currentIMU6Event, &state->currentIMU6Event, sizeof(struct caer_imu6_event));
-								state->currentIMU6PacketPosition++;
+								state->currentPackets.imu6Position++;
 							}
 							else {
 								davisLog(CAER_LOG_INFO, handle,
@@ -2656,15 +2656,15 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							// Send APS info event out (as special event).
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_END);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 
 							// Validate event and advance frame packet position.
 							if (validFrame) {
-								caerFrameEventValidate(state->currentFrameEvent[0], state->currentFramePacket);
+								caerFrameEventValidate(state->currentFrameEvent[0], state->currentPackets.frame);
 
 								// Invert X and Y axes if image from chip is inverted.
 								if (state->apsInvertXY) {
@@ -2685,11 +2685,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								// fill it, and then only copy it into the packet here in the END state, at which point
 								// the whole event is ready and cannot be broken/corrupted in any way anymore.
 								caerFrameEvent currentFrameEvent = caerFrameEventPacketGetEvent(
-									state->currentFramePacket, state->currentFramePacketPosition);
+									state->currentPackets.frame, state->currentPackets.framePosition);
 								memcpy(currentFrameEvent, state->currentFrameEvent[0],
 									(sizeof(struct caer_frame_event) - sizeof(uint16_t))
 										+ caerFrameEventGetPixelsSize(state->currentFrameEvent[0]));
-								state->currentFramePacketPosition++;
+								state->currentPackets.framePosition++;
 
 								// Automatic exposure control support.
 								if (atomic_load_explicit(&state->apsAutoExposureEnabled, memory_order_relaxed)) {
@@ -2739,11 +2739,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentSpecialPacket, state->currentSpecialPacketPosition);
+									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-								state->currentSpecialPacketPosition++;
+								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+								state->currentPackets.specialPosition++;
 							}
 
 							break;
@@ -2768,11 +2768,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentSpecialPacket, state->currentSpecialPacketPosition);
+									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_END);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-								state->currentSpecialPacketPosition++;
+								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+								state->currentPackets.specialPosition++;
 							}
 
 							break;
@@ -2809,11 +2809,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentSpecialPacket, state->currentSpecialPacketPosition);
+									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-								state->currentSpecialPacketPosition++;
+								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+								state->currentPackets.specialPosition++;
 							}
 
 							break;
@@ -2937,11 +2937,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2949,11 +2949,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2961,11 +2961,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_PULSE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2973,11 +2973,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2985,11 +2985,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -2997,11 +2997,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (pulse) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_PULSE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -3009,11 +3009,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_GENERATOR_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -3021,11 +3021,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentSpecialPacket, state->currentSpecialPacketPosition);
+								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_GENERATOR_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-							state->currentSpecialPacketPosition++;
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 							break;
 						}
 
@@ -3052,14 +3052,14 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 					if (state->dvsGotY) {
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentSpecialPacket, state->currentSpecialPacketPosition);
+							state->currentPackets.special, state->currentPackets.specialPosition);
 
 						// Timestamp at event-stream insertion point.
 						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 						caerSpecialEventSetType(currentSpecialEvent, DVS_ROW_ONLY);
 						caerSpecialEventSetData(currentSpecialEvent, state->dvsLastY);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-						state->currentSpecialPacketPosition++;
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
 
 						davisLog(CAER_LOG_DEBUG, handle, "DVS: row-only event received for address Y=%" PRIu16 ".",
 							state->dvsLastY);
@@ -3084,7 +3084,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 					uint8_t polarity = ((IS_DAVIS208(handle->info.chipID)) && (data < 192)) ? U8T(~code) : (code);
 
 					caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
-						state->currentPolarityPacket, state->currentPolarityPacketPosition);
+						state->currentPackets.polarity, state->currentPackets.polarityPosition);
 
 					// Timestamp at event-stream insertion point.
 					caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
@@ -3099,8 +3099,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						caerPolarityEventSetY(currentPolarityEvent, U16T((state->dvsSizeY - 1) - state->dvsLastY));
 						caerPolarityEventSetX(currentPolarityEvent, data);
 					}
-					caerPolarityEventValidate(currentPolarityEvent, state->currentPolarityPacket);
-					state->currentPolarityPacketPosition++;
+					caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
+					state->currentPackets.polarityPosition++;
 
 					state->dvsGotY = false;
 
@@ -3459,13 +3459,13 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							state->micCount = 0;
 							uint32_t micData = U32T(U32T(state->micTmpData << 8) | misc8Data);
 
-							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentSamplePacket,
-								state->currentSamplePacketPosition);
+							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentPackets.sample,
+								state->currentPackets.samplePosition);
 							caerSampleEventSetType(micSample, state->micRight);
 							caerSampleEventSetSample(micSample, micData);
 							caerSampleEventSetTimestamp(micSample, state->timestamps.current);
-							caerSampleEventValidate(micSample, state->currentSamplePacket);
-							state->currentSamplePacketPosition++;
+							caerSampleEventValidate(micSample, state->currentPackets.sample);
+							state->currentPackets.samplePosition++;
 							break;
 						}
 
@@ -3516,11 +3516,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						state->timestamps.wrapOverflow++;
 
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentSpecialPacket, state->currentSpecialPacketPosition);
+							state->currentPackets.special, state->currentPackets.specialPosition);
 						caerSpecialEventSetTimestamp(currentSpecialEvent, INT32_MAX);
 						caerSpecialEventSetType(currentSpecialEvent, TIMESTAMP_WRAP);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-						state->currentSpecialPacketPosition++;
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
 
 						// Commit packets to separate before wrap from after cleanly.
 						tsBigWrap = true;
@@ -3558,11 +3558,11 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentFramePacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentSamplePacketPosition >= currentPacketContainerCommitSize));
+			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.framePosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.imu6Position >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.samplePosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
 			state->timestamps.wrapOverflow, state->timestamps.current);
@@ -3574,48 +3574,48 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			// any non-empty packets. Empty packets are not forwarded to save memory.
 			bool emptyContainerCommit = true;
 
-			if (state->currentPolarityPacketPosition > 0) {
+			if (state->currentPackets.polarityPosition > 0) {
 				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
-					(caerEventPacketHeader) state->currentPolarityPacket);
+					(caerEventPacketHeader) state->currentPackets.polarity);
 
-				state->currentPolarityPacket = NULL;
-				state->currentPolarityPacketPosition = 0;
+				state->currentPackets.polarity = NULL;
+				state->currentPackets.polarityPosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentSpecialPacketPosition > 0) {
+			if (state->currentPackets.specialPosition > 0) {
 				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentSpecialPacket);
+					(caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentSpecialPacket = NULL;
-				state->currentSpecialPacketPosition = 0;
+				state->currentPackets.special = NULL;
+				state->currentPackets.specialPosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentFramePacketPosition > 0) {
+			if (state->currentPackets.framePosition > 0) {
 				containerGenerationSetPacket(&state->container, FRAME_EVENT,
-					(caerEventPacketHeader) state->currentFramePacket);
+					(caerEventPacketHeader) state->currentPackets.frame);
 
-				state->currentFramePacket = NULL;
-				state->currentFramePacketPosition = 0;
+				state->currentPackets.frame = NULL;
+				state->currentPackets.framePosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentIMU6PacketPosition > 0) {
+			if (state->currentPackets.imu6Position > 0) {
 				containerGenerationSetPacket(&state->container, IMU6_EVENT,
-					(caerEventPacketHeader) state->currentIMU6Packet);
+					(caerEventPacketHeader) state->currentPackets.imu6);
 
-				state->currentIMU6Packet = NULL;
-				state->currentIMU6PacketPosition = 0;
+				state->currentPackets.imu6 = NULL;
+				state->currentPackets.imu6Position = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentSamplePacketPosition > 0) {
+			if (state->currentPackets.samplePosition > 0) {
 				containerGenerationSetPacket(&state->container, DAVIS_SAMPLE_POSITION,
-					(caerEventPacketHeader) state->currentSamplePacket);
+					(caerEventPacketHeader) state->currentPackets.sample);
 
-				state->currentSamplePacket = NULL;
-				state->currentSamplePacketPosition = 0;
+				state->currentPackets.sample = NULL;
+				state->currentPackets.samplePosition = 0;
 				emptyContainerCommit = false;
 			}
 
@@ -3752,8 +3752,8 @@ struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shifted
 static void allocateDebugTransfers(davisHandle handle) {
 	// Allocate transfers and set them up.
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
-		handle->state.debugTransfers[i] = libusb_alloc_transfer(0);
-		if (handle->state.debugTransfers[i] == NULL) {
+		handle->state.fx3Support.debugTransfers[i] = libusb_alloc_transfer(0);
+		if (handle->state.fx3Support.debugTransfers[i] == NULL) {
 			davisLog(CAER_LOG_CRITICAL, handle,
 				"Unable to allocate further libusb transfers (debug channel, %zu of %" PRIu32 ").", i,
 				DEBUG_TRANSFER_NUM);
@@ -3761,29 +3761,29 @@ static void allocateDebugTransfers(davisHandle handle) {
 		}
 
 		// Create data buffer.
-		handle->state.debugTransfers[i]->length = DEBUG_TRANSFER_SIZE;
-		handle->state.debugTransfers[i]->buffer = malloc(DEBUG_TRANSFER_SIZE);
-		if (handle->state.debugTransfers[i]->buffer == NULL) {
+		handle->state.fx3Support.debugTransfers[i]->length = DEBUG_TRANSFER_SIZE;
+		handle->state.fx3Support.debugTransfers[i]->buffer = malloc(DEBUG_TRANSFER_SIZE);
+		if (handle->state.fx3Support.debugTransfers[i]->buffer == NULL) {
 			davisLog(CAER_LOG_CRITICAL, handle,
 				"Unable to allocate buffer for libusb transfer %zu (debug channel). Error: %d.", i, errno);
 
-			libusb_free_transfer(handle->state.debugTransfers[i]);
-			handle->state.debugTransfers[i] = NULL;
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
 
 			continue;
 		}
 
 		// Initialize Transfer.
-		handle->state.debugTransfers[i]->dev_handle = handle->state.usbState.deviceHandle;
-		handle->state.debugTransfers[i]->endpoint = DEBUG_ENDPOINT;
-		handle->state.debugTransfers[i]->type = LIBUSB_TRANSFER_TYPE_INTERRUPT;
-		handle->state.debugTransfers[i]->callback = &libUsbDebugCallback;
-		handle->state.debugTransfers[i]->user_data = handle;
-		handle->state.debugTransfers[i]->timeout = 0;
-		handle->state.debugTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
+		handle->state.fx3Support.debugTransfers[i]->dev_handle = handle->state.usbState.deviceHandle;
+		handle->state.fx3Support.debugTransfers[i]->endpoint = DEBUG_ENDPOINT;
+		handle->state.fx3Support.debugTransfers[i]->type = LIBUSB_TRANSFER_TYPE_INTERRUPT;
+		handle->state.fx3Support.debugTransfers[i]->callback = &libUsbDebugCallback;
+		handle->state.fx3Support.debugTransfers[i]->user_data = handle;
+		handle->state.fx3Support.debugTransfers[i]->timeout = 0;
+		handle->state.fx3Support.debugTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
 
-		if ((errno = libusb_submit_transfer(handle->state.debugTransfers[i])) == LIBUSB_SUCCESS) {
-			atomic_fetch_add(&handle->state.activeDebugTransfers, 1);
+		if ((errno = libusb_submit_transfer(handle->state.fx3Support.debugTransfers[i])) == LIBUSB_SUCCESS) {
+			atomic_fetch_add(&handle->state.fx3Support.activeDebugTransfers, 1);
 		}
 		else {
 			davisLog(CAER_LOG_CRITICAL, handle, "Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).",
@@ -3792,14 +3792,14 @@ static void allocateDebugTransfers(davisHandle handle) {
 
 			// The transfer buffer is freed automatically here thanks to
 			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
-			libusb_free_transfer(handle->state.debugTransfers[i]);
-			handle->state.debugTransfers[i] = NULL;
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
 
 			continue;
 		}
 	}
 
-	if (atomic_load(&handle->state.activeDebugTransfers) == 0) {
+	if (atomic_load(&handle->state.fx3Support.activeDebugTransfers) == 0) {
 		// Didn't manage to allocate any USB transfers, log failure.
 		davisLog(CAER_LOG_CRITICAL, handle, "Unable to allocate any libusb transfers (debug channel).");
 	}
@@ -3809,12 +3809,12 @@ static void cancelAndDeallocateDebugTransfers(davisHandle handle) {
 	// Wait for all transfers to go away.
 	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
 
-	while (atomic_load(&handle->state.activeDebugTransfers) > 0) {
+	while (atomic_load(&handle->state.fx3Support.activeDebugTransfers) > 0) {
 		// Continue trying to cancel all transfers until there are none left.
 		// It seems like one cancel pass is not enough and some hang around.
 		for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
-			if (handle->state.debugTransfers[i] != NULL) {
-				errno = libusb_cancel_transfer(handle->state.debugTransfers[i]);
+			if (handle->state.fx3Support.debugTransfers[i] != NULL) {
+				errno = libusb_cancel_transfer(handle->state.fx3Support.debugTransfers[i]);
 				if (errno != LIBUSB_SUCCESS && errno != LIBUSB_ERROR_NOT_FOUND) {
 					davisLog(CAER_LOG_CRITICAL, handle,
 						"Unable to cancel libusb transfer %zu (debug channel). Error: %s (%d).", i,
@@ -3830,9 +3830,9 @@ static void cancelAndDeallocateDebugTransfers(davisHandle handle) {
 
 	// No more transfers in flight, deallocate them all here.
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
-		if (handle->state.debugTransfers[i] != NULL) {
-			libusb_free_transfer(handle->state.debugTransfers[i]);
-			handle->state.debugTransfers[i] = NULL;
+		if (handle->state.fx3Support.debugTransfers[i] != NULL) {
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
 		}
 	}
 }
@@ -3858,7 +3858,7 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 	// Cannot recover (cancelled, no device, or other critical error).
 	// Signal this by adjusting the counter and exiting.
 	// Freeing the transfers is taken care of by cancelAndDeallocateDebugTransfers().
-	atomic_fetch_sub(&handle->state.activeDebugTransfers, 1);
+	atomic_fetch_sub(&handle->state.fx3Support.activeDebugTransfers, 1);
 }
 
 static void debugTranslator(davisHandle handle, uint8_t *buffer, size_t bytesSent) {

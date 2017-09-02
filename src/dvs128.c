@@ -19,16 +19,16 @@ static inline void freeAllDataMemory(dvs128State state) {
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
 	// free them separately from it.
-	if (state->currentPolarityPacket != NULL) {
-		free(&state->currentPolarityPacket->packetHeader);
-		state->currentPolarityPacket = NULL;
+	if (state->currentPackets.polarity != NULL) {
+		free(&state->currentPackets.polarity->packetHeader);
+		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
-	if (state->currentSpecialPacket != NULL) {
-		free(&state->currentSpecialPacket->packetHeader);
-		state->currentSpecialPacket = NULL;
+	if (state->currentPackets.special != NULL) {
+		free(&state->currentPackets.special->packetHeader);
+		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
 	}
@@ -64,7 +64,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	atomic_store(&state->usbState.usbLogLevel, globalLogLevel);
 
 	// Always master by default.
-	atomic_store(&state->dvsIsMaster, true);
+	atomic_store(&state->dvs.isMaster, true);
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
@@ -169,18 +169,18 @@ bool dvs128SendDefaultConfig(caerDeviceHandle cdh) {
 	dvs128State state = &handle->state;
 
 	// Set all biases to default value. Based on DVS128 Fast biases.
-	caerIntegerToByteArray(1992, state->biases[DVS128_CONFIG_BIAS_CAS], BIAS_LENGTH);
-	caerIntegerToByteArray(1108364, state->biases[DVS128_CONFIG_BIAS_INJGND], BIAS_LENGTH);
-	caerIntegerToByteArray(16777215, state->biases[DVS128_CONFIG_BIAS_REQPD], BIAS_LENGTH);
-	caerIntegerToByteArray(8159221, state->biases[DVS128_CONFIG_BIAS_PUX], BIAS_LENGTH);
-	caerIntegerToByteArray(132, state->biases[DVS128_CONFIG_BIAS_DIFFOFF], BIAS_LENGTH);
-	caerIntegerToByteArray(309590, state->biases[DVS128_CONFIG_BIAS_REQ], BIAS_LENGTH);
-	caerIntegerToByteArray(969, state->biases[DVS128_CONFIG_BIAS_REFR], BIAS_LENGTH);
-	caerIntegerToByteArray(16777215, state->biases[DVS128_CONFIG_BIAS_PUY], BIAS_LENGTH);
-	caerIntegerToByteArray(209996, state->biases[DVS128_CONFIG_BIAS_DIFFON], BIAS_LENGTH);
-	caerIntegerToByteArray(13125, state->biases[DVS128_CONFIG_BIAS_DIFF], BIAS_LENGTH);
-	caerIntegerToByteArray(271, state->biases[DVS128_CONFIG_BIAS_FOLL], BIAS_LENGTH);
-	caerIntegerToByteArray(217, state->biases[DVS128_CONFIG_BIAS_PR], BIAS_LENGTH);
+	caerIntegerToByteArray(1992, state->dvs.biases[DVS128_CONFIG_BIAS_CAS], BIAS_LENGTH);
+	caerIntegerToByteArray(1108364, state->dvs.biases[DVS128_CONFIG_BIAS_INJGND], BIAS_LENGTH);
+	caerIntegerToByteArray(16777215, state->dvs.biases[DVS128_CONFIG_BIAS_REQPD], BIAS_LENGTH);
+	caerIntegerToByteArray(8159221, state->dvs.biases[DVS128_CONFIG_BIAS_PUX], BIAS_LENGTH);
+	caerIntegerToByteArray(132, state->dvs.biases[DVS128_CONFIG_BIAS_DIFFOFF], BIAS_LENGTH);
+	caerIntegerToByteArray(309590, state->dvs.biases[DVS128_CONFIG_BIAS_REQ], BIAS_LENGTH);
+	caerIntegerToByteArray(969, state->dvs.biases[DVS128_CONFIG_BIAS_REFR], BIAS_LENGTH);
+	caerIntegerToByteArray(16777215, state->dvs.biases[DVS128_CONFIG_BIAS_PUY], BIAS_LENGTH);
+	caerIntegerToByteArray(209996, state->dvs.biases[DVS128_CONFIG_BIAS_DIFFON], BIAS_LENGTH);
+	caerIntegerToByteArray(13125, state->dvs.biases[DVS128_CONFIG_BIAS_DIFF], BIAS_LENGTH);
+	caerIntegerToByteArray(271, state->dvs.biases[DVS128_CONFIG_BIAS_FOLL], BIAS_LENGTH);
+	caerIntegerToByteArray(217, state->dvs.biases[DVS128_CONFIG_BIAS_PR], BIAS_LENGTH);
 
 	// Send biases to device.
 	return (dvs128SendBiases(state));
@@ -221,19 +221,19 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 		case DVS128_CONFIG_DVS:
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
-					if (param && !atomic_load(&state->dvsRunning)) {
+					if (param && !atomic_load(&state->dvs.running)) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_START_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
 
-						atomic_store(&state->dvsRunning, true);
+						atomic_store(&state->dvs.running, true);
 					}
-					else if (!param && atomic_load(&state->dvsRunning)) {
+					else if (!param && atomic_load(&state->dvs.running)) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_STOP_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
 
-						atomic_store(&state->dvsRunning, false);
+						atomic_store(&state->dvs.running, false);
 					}
 					break;
 
@@ -258,11 +258,11 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 						0)) {
 						return (false);
 					}
-					atomic_store(&state->dvsIsMaster, (param & 0x01));
+					atomic_store(&state->dvs.isMaster, (param & 0x01));
 
 					// Ensure info struct also gets this update.
 					atomic_thread_fence(memory_order_seq_cst);
-					handle->info.deviceIsMaster = atomic_load(&state->dvsIsMaster);
+					handle->info.deviceIsMaster = atomic_load(&state->dvs.isMaster);
 					atomic_thread_fence(memory_order_seq_cst);
 					break;
 
@@ -286,7 +286,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 				case DVS128_CONFIG_BIAS_DIFF:
 				case DVS128_CONFIG_BIAS_DIFFON:
 				case DVS128_CONFIG_BIAS_DIFFOFF:
-					caerIntegerToByteArray(param, state->biases[paramAddr], BIAS_LENGTH);
+					caerIntegerToByteArray(param, state->dvs.biases[paramAddr], BIAS_LENGTH);
 					return (dvs128SendBiases(state));
 					break;
 
@@ -336,7 +336,7 @@ bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 		case DVS128_CONFIG_DVS:
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
-					*param = atomic_load(&state->dvsRunning);
+					*param = atomic_load(&state->dvs.running);
 					break;
 
 				case DVS128_CONFIG_DVS_TIMESTAMP_RESET:
@@ -346,7 +346,7 @@ bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					break;
 
 				case DVS128_CONFIG_DVS_TS_MASTER:
-					*param = atomic_load(&state->dvsIsMaster);
+					*param = atomic_load(&state->dvs.isMaster);
 					break;
 
 				default:
@@ -369,7 +369,7 @@ bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 				case DVS128_CONFIG_BIAS_DIFF:
 				case DVS128_CONFIG_BIAS_DIFFON:
 				case DVS128_CONFIG_BIAS_DIFFOFF:
-					*param = caerByteArrayToInteger(state->biases[paramAddr], BIAS_LENGTH);
+					*param = caerByteArrayToInteger(state->dvs.biases[paramAddr], BIAS_LENGTH);
 					break;
 
 				default:
@@ -411,18 +411,18 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 		return (false);
 	}
 
-	state->currentPolarityPacket = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
+	state->currentPackets.polarity = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
 		I16T(handle->info.deviceID), 0);
-	if (state->currentPolarityPacket == NULL) {
+	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
 		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
-	state->currentSpecialPacket = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
+	state->currentPackets.special = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
 		0);
-	if (state->currentSpecialPacket == NULL) {
+	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
 		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
@@ -461,8 +461,8 @@ bool dvs128DataStop(caerDeviceHandle cdh) {
 	freeAllDataMemory(state);
 
 	// Reset packet positions.
-	state->currentPolarityPacketPosition = 0;
-	state->currentSpecialPacketPosition = 0;
+	state->currentPackets.polarityPosition = 0;
+	state->currentPackets.specialPosition = 0;
 
 	return (true);
 }
@@ -511,48 +511,48 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			return;
 		}
 
-		if (state->currentPolarityPacket == NULL) {
-			state->currentPolarityPacket = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
+		if (state->currentPackets.polarity == NULL) {
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentPolarityPacket == NULL) {
+			if (state->currentPackets.polarity == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
-		else if (state->currentPolarityPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPolarityPacket)) {
+		else if (state->currentPackets.polarityPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.polarity, state->currentPackets.polarityPosition * 2);
 			if (grownPacket == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
 				return;
 			}
 
-			state->currentPolarityPacket = grownPacket;
+			state->currentPackets.polarity = grownPacket;
 		}
 
-		if (state->currentSpecialPacket == NULL) {
-			state->currentSpecialPacket = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE,
+		if (state->currentPackets.special == NULL) {
+			state->currentPackets.special = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSpecialPacket == NULL) {
+			if (state->currentPackets.special == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
-		else if (state->currentSpecialPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
+		else if (state->currentPackets.specialPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.special, state->currentPackets.specialPosition * 2);
 			if (grownPacket == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
-			state->currentSpecialPacket = grownPacket;
+			state->currentPackets.special = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -571,11 +571,11 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				// Increment TSOverflow counter.
 				state->timestamps.wrapOverflow++;
 
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
-					state->currentSpecialPacketPosition++);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
+					state->currentPackets.specialPosition++);
 				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
 				caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
-				caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
+				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
 
 				// Commit packets to separate before wrap from after cleanly.
 				tsBigWrap = true;
@@ -628,11 +628,11 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 			if ((addressUSB & DVS128_SYNC_EVENT_MASK) != 0) {
 				// Special Trigger Event (MSB is set)
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
-					state->currentSpecialPacketPosition++);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
+					state->currentPackets.specialPosition++);
 				caerSpecialEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerSpecialEventSetType(currentEvent, EXTERNAL_INPUT_RISING_EDGE);
-				caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
+				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
 			}
 			else {
 				// Invert X values (flip along X axis). To correct for flipped camera.
@@ -656,13 +656,13 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 					continue; // Skip invalid event.
 				}
 
-				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
-					state->currentPolarityPacketPosition++);
+				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
+					state->currentPackets.polarityPosition++);
 				caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerPolarityEventSetPolarity(currentEvent, polarity);
 				caerPolarityEventSetY(currentEvent, y);
 				caerPolarityEventSetX(currentEvent, x);
-				caerPolarityEventValidate(currentEvent, state->currentPolarityPacket);
+				caerPolarityEventValidate(currentEvent, state->currentPackets.polarity);
 			}
 		}
 
@@ -671,8 +671,8 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
+			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
 			state->timestamps.wrapOverflow, state->timestamps.current);
@@ -688,21 +688,21 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			// any non-empty packets. Empty packets are not forwarded to save memory.
 			bool emptyContainerCommit = true;
 
-			if (state->currentPolarityPacketPosition > 0) {
+			if (state->currentPackets.polarityPosition > 0) {
 				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
-					(caerEventPacketHeader) state->currentPolarityPacket);
+					(caerEventPacketHeader) state->currentPackets.polarity);
 
-				state->currentPolarityPacket = NULL;
-				state->currentPolarityPacketPosition = 0;
+				state->currentPackets.polarity = NULL;
+				state->currentPackets.polarityPosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentSpecialPacketPosition > 0) {
+			if (state->currentPackets.specialPosition > 0) {
 				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentSpecialPacket);
+					(caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentSpecialPacket = NULL;
-				state->currentSpecialPacketPosition = 0;
+				state->currentPackets.special = NULL;
+				state->currentPackets.specialPosition = 0;
 				emptyContainerCommit = false;
 			}
 
@@ -716,6 +716,6 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 static bool dvs128SendBiases(dvs128State state) {
 	// Biases are already stored in an array with the same format as expected by
 	// the device, we can thus send it directly.
-	return (usbControlTransferOut(&state->usbState, VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->biases,
+	return (usbControlTransferOut(&state->usbState, VENDOR_REQUEST_SEND_BIASES, 0, 0, (uint8_t *) state->dvs.biases,
 		(BIAS_NUMBER * BIAS_LENGTH)));
 }

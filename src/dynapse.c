@@ -206,16 +206,16 @@ static inline void freeAllDataMemory(dynapseState state) {
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
 	// free them separately from it.
-	if (state->currentSpikePacket != NULL) {
-		free(&state->currentSpikePacket->packetHeader);
-		state->currentSpikePacket = NULL;
+	if (state->currentPackets.spike != NULL) {
+		free(&state->currentPackets.spike->packetHeader);
+		state->currentPackets.spike = NULL;
 
 		containerGenerationSetPacket(&state->container, DYNAPSE_SPIKE_EVENT_POS, NULL);
 	}
 
-	if (state->currentSpecialPacket != NULL) {
-		free(&state->currentSpecialPacket->packetHeader);
-		state->currentSpecialPacket = NULL;
+	if (state->currentPackets.special != NULL) {
+		free(&state->currentPackets.special->packetHeader);
+		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
 	}
@@ -1178,18 +1178,18 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	state->currentSpikePacket = caerSpikeEventPacketAllocate(DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID),
+	state->currentPackets.spike = caerSpikeEventPacketAllocate(DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID),
 		0);
-	if (state->currentSpikePacket == NULL) {
+	if (state->currentPackets.spike == NULL) {
 		freeAllDataMemory(state);
 
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 		return (false);
 	}
 
-	state->currentSpecialPacket = caerSpecialEventPacketAllocate(DYNAPSE_SPECIAL_DEFAULT_SIZE,
+	state->currentPackets.special = caerSpecialEventPacketAllocate(DYNAPSE_SPECIAL_DEFAULT_SIZE,
 		I16T(handle->info.deviceID), 0);
-	if (state->currentSpecialPacket == NULL) {
+	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
@@ -1237,8 +1237,8 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 	freeAllDataMemory(state);
 
 	// Reset packet positions.
-	state->currentSpikePacketPosition = 0;
-	state->currentSpecialPacketPosition = 0;
+	state->currentPackets.spikePosition = 0;
+	state->currentPackets.specialPosition = 0;
 
 	return (true);
 }
@@ -1277,48 +1277,48 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			return;
 		}
 
-		if (state->currentSpikePacket == NULL) {
-			state->currentSpikePacket = caerSpikeEventPacketAllocate(
+		if (state->currentPackets.spike == NULL) {
+			state->currentPackets.spike = caerSpikeEventPacketAllocate(
 			DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSpikePacket == NULL) {
+			if (state->currentPackets.spike == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 				return;
 			}
 		}
-		else if (state->currentSpikePacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpikePacket)) {
+		else if (state->currentPackets.spikePosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.spike)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpikeEventPacket grownPacket = (caerSpikeEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSpikePacket, state->currentSpikePacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.spike, state->currentPackets.spikePosition * 2);
 			if (grownPacket == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to grow spike event packet.");
 				return;
 			}
 
-			state->currentSpikePacket = grownPacket;
+			state->currentPackets.spike = grownPacket;
 		}
 
-		if (state->currentSpecialPacket == NULL) {
-			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
+		if (state->currentPackets.special == NULL) {
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
 			DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSpecialPacket == NULL) {
+			if (state->currentPackets.special == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
-		else if (state->currentSpecialPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
+		else if (state->currentPackets.specialPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.special, state->currentPackets.specialPosition * 2);
 			if (grownPacket == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
-			state->currentSpecialPacket = grownPacket;
+			state->currentPackets.special = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -1399,16 +1399,16 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 					uint32_t neuronID = (data >> 4) & 0x00FF;
 
-					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(state->currentSpikePacket,
-						state->currentSpikePacketPosition);
+					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(state->currentPackets.spike,
+						state->currentPackets.spikePosition);
 
 					// Timestamp at event-stream insertion point.
 					caerSpikeEventSetTimestamp(currentSpikeEvent, state->timestamps.current);
 					caerSpikeEventSetSourceCoreID(currentSpikeEvent, sourceCoreID);
 					caerSpikeEventSetChipID(currentSpikeEvent, chipID);
 					caerSpikeEventSetNeuronID(currentSpikeEvent, neuronID);
-					caerSpikeEventValidate(currentSpikeEvent, state->currentSpikePacket);
-					state->currentSpikePacketPosition++;
+					caerSpikeEventValidate(currentSpikeEvent, state->currentPackets.spike);
+					state->currentPackets.spikePosition++;
 
 					break;
 				}
@@ -1433,11 +1433,11 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						state->timestamps.wrapOverflow++;
 
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentSpecialPacket, state->currentSpecialPacketPosition);
+							state->currentPackets.special, state->currentPackets.specialPosition);
 						caerSpecialEventSetTimestamp(currentSpecialEvent, INT32_MAX);
 						caerSpecialEventSetType(currentSpecialEvent, TIMESTAMP_WRAP);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
-						state->currentSpecialPacketPosition++;
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
 
 						// Commit packets to separate before wrap from after cleanly.
 						tsBigWrap = true;
@@ -1475,8 +1475,8 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentSpikePacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
+			&& ((state->currentPackets.spikePosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
 			state->timestamps.wrapOverflow, state->timestamps.current);
@@ -1488,21 +1488,21 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			// any non-empty packets. Empty packets are not forwarded to save memory.
 			bool emptyContainerCommit = true;
 
-			if (state->currentSpikePacketPosition > 0) {
+			if (state->currentPackets.spikePosition > 0) {
 				containerGenerationSetPacket(&state->container, DYNAPSE_SPIKE_EVENT_POS,
-					(caerEventPacketHeader) state->currentSpikePacket);
+					(caerEventPacketHeader) state->currentPackets.spike);
 
-				state->currentSpikePacket = NULL;
-				state->currentSpikePacketPosition = 0;
+				state->currentPackets.spike = NULL;
+				state->currentPackets.spikePosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentSpecialPacketPosition > 0) {
+			if (state->currentPackets.specialPosition > 0) {
 				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentSpecialPacket);
+					(caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentSpecialPacket = NULL;
-				state->currentSpecialPacketPosition = 0;
+				state->currentPackets.special = NULL;
+				state->currentPackets.specialPosition = 0;
 				emptyContainerCommit = false;
 			}
 

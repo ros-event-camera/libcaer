@@ -35,16 +35,16 @@ static inline void freeAllDataMemory(edvsState state) {
 	// Since the current event packets aren't necessarily
 	// already assigned to the current packet container, we
 	// free them separately from it.
-	if (state->currentPolarityPacket != NULL) {
-		free(&state->currentPolarityPacket->packetHeader);
-		state->currentPolarityPacket = NULL;
+	if (state->currentPackets.polarity != NULL) {
+		free(&state->currentPackets.polarity->packetHeader);
+		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
-	if (state->currentSpecialPacket != NULL) {
-		free(&state->currentSpecialPacket->packetHeader);
-		state->currentSpecialPacket = NULL;
+	if (state->currentPackets.special != NULL) {
+		free(&state->currentPackets.special->packetHeader);
+		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
 	}
@@ -256,18 +256,18 @@ bool edvsSendDefaultConfig(caerDeviceHandle cdh) {
 	edvsState state = &handle->state;
 
 	// Set all biases to default value. Based on DSV128 Fast biases.
-	caerIntegerToByteArray(1992, state->biases[EDVS_CONFIG_BIAS_CAS], BIAS_LENGTH);
-	caerIntegerToByteArray(1108364, state->biases[EDVS_CONFIG_BIAS_INJGND], BIAS_LENGTH);
-	caerIntegerToByteArray(16777215, state->biases[EDVS_CONFIG_BIAS_REQPD], BIAS_LENGTH);
-	caerIntegerToByteArray(8159221, state->biases[EDVS_CONFIG_BIAS_PUX], BIAS_LENGTH);
-	caerIntegerToByteArray(132, state->biases[EDVS_CONFIG_BIAS_DIFFOFF], BIAS_LENGTH);
-	caerIntegerToByteArray(309590, state->biases[EDVS_CONFIG_BIAS_REQ], BIAS_LENGTH);
-	caerIntegerToByteArray(969, state->biases[EDVS_CONFIG_BIAS_REFR], BIAS_LENGTH);
-	caerIntegerToByteArray(16777215, state->biases[EDVS_CONFIG_BIAS_PUY], BIAS_LENGTH);
-	caerIntegerToByteArray(209996, state->biases[EDVS_CONFIG_BIAS_DIFFON], BIAS_LENGTH);
-	caerIntegerToByteArray(13125, state->biases[EDVS_CONFIG_BIAS_DIFF], BIAS_LENGTH);
-	caerIntegerToByteArray(271, state->biases[EDVS_CONFIG_BIAS_FOLL], BIAS_LENGTH);
-	caerIntegerToByteArray(217, state->biases[EDVS_CONFIG_BIAS_PR], BIAS_LENGTH);
+	caerIntegerToByteArray(1992, state->dvs.biases[EDVS_CONFIG_BIAS_CAS], BIAS_LENGTH);
+	caerIntegerToByteArray(1108364, state->dvs.biases[EDVS_CONFIG_BIAS_INJGND], BIAS_LENGTH);
+	caerIntegerToByteArray(16777215, state->dvs.biases[EDVS_CONFIG_BIAS_REQPD], BIAS_LENGTH);
+	caerIntegerToByteArray(8159221, state->dvs.biases[EDVS_CONFIG_BIAS_PUX], BIAS_LENGTH);
+	caerIntegerToByteArray(132, state->dvs.biases[EDVS_CONFIG_BIAS_DIFFOFF], BIAS_LENGTH);
+	caerIntegerToByteArray(309590, state->dvs.biases[EDVS_CONFIG_BIAS_REQ], BIAS_LENGTH);
+	caerIntegerToByteArray(969, state->dvs.biases[EDVS_CONFIG_BIAS_REFR], BIAS_LENGTH);
+	caerIntegerToByteArray(16777215, state->dvs.biases[EDVS_CONFIG_BIAS_PUY], BIAS_LENGTH);
+	caerIntegerToByteArray(209996, state->dvs.biases[EDVS_CONFIG_BIAS_DIFFON], BIAS_LENGTH);
+	caerIntegerToByteArray(13125, state->dvs.biases[EDVS_CONFIG_BIAS_DIFF], BIAS_LENGTH);
+	caerIntegerToByteArray(271, state->dvs.biases[EDVS_CONFIG_BIAS_FOLL], BIAS_LENGTH);
+	caerIntegerToByteArray(217, state->dvs.biases[EDVS_CONFIG_BIAS_PR], BIAS_LENGTH);
 
 	// Send ALL biases to device.
 	return (edvsSendBiases(state, -1));
@@ -313,27 +313,27 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 		case EDVS_CONFIG_DVS:
 			switch (paramAddr) {
 				case EDVS_CONFIG_DVS_RUN:
-					if (param && !atomic_load(&state->dvsRunning)) {
+					if (param && !atomic_load(&state->dvs.running)) {
 						const char *cmdStartDVS = "E+\n";
 						if (!serialPortWrite(state, cmdStartDVS)) {
 							return (false);
 						}
 
-						atomic_store(&state->dvsRunning, true);
+						atomic_store(&state->dvs.running, true);
 					}
-					else if (!param && atomic_load(&state->dvsRunning)) {
+					else if (!param && atomic_load(&state->dvs.running)) {
 						const char *cmdStopDVS = "E-\n";
 						if (!serialPortWrite(state, cmdStopDVS)) {
 							return (false);
 						}
 
-						atomic_store(&state->dvsRunning, false);
+						atomic_store(&state->dvs.running, false);
 					}
 					break;
 
 				case EDVS_CONFIG_DVS_TIMESTAMP_RESET:
 					if (param) {
-						atomic_store(&state->dvsTSReset, true);
+						atomic_store(&state->dvs.tsReset, true);
 					}
 					break;
 
@@ -357,7 +357,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 				case EDVS_CONFIG_BIAS_DIFF:
 				case EDVS_CONFIG_BIAS_DIFFON:
 				case EDVS_CONFIG_BIAS_DIFFOFF:
-					caerIntegerToByteArray(param, state->biases[paramAddr], BIAS_LENGTH);
+					caerIntegerToByteArray(param, state->dvs.biases[paramAddr], BIAS_LENGTH);
 					return (edvsSendBiases(state, paramAddr));
 					break;
 
@@ -415,7 +415,7 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 		case EDVS_CONFIG_DVS:
 			switch (paramAddr) {
 				case EDVS_CONFIG_DVS_RUN:
-					*param = atomic_load(&state->dvsRunning);
+					*param = atomic_load(&state->dvs.running);
 					break;
 
 				case EDVS_CONFIG_DVS_TIMESTAMP_RESET:
@@ -443,7 +443,7 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 				case EDVS_CONFIG_BIAS_DIFF:
 				case EDVS_CONFIG_BIAS_DIFFON:
 				case EDVS_CONFIG_BIAS_DIFFOFF:
-					*param = caerByteArrayToInteger(state->biases[paramAddr], BIAS_LENGTH);
+					*param = caerByteArrayToInteger(state->dvs.biases[paramAddr], BIAS_LENGTH);
 					break;
 
 				default:
@@ -572,18 +572,18 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 		return (false);
 	}
 
-	state->currentPolarityPacket = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
+	state->currentPackets.polarity = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
 		I16T(handle->info.deviceID), 0);
-	if (state->currentPolarityPacket == NULL) {
+	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
-	state->currentSpecialPacket = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
+	state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
 		0);
-	if (state->currentSpecialPacket == NULL) {
+	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
@@ -622,8 +622,8 @@ bool edvsDataStop(caerDeviceHandle cdh) {
 	freeAllDataMemory(state);
 
 	// Reset packet positions.
-	state->currentPolarityPacketPosition = 0;
-	state->currentSpecialPacketPosition = 0;
+	state->currentPackets.polarityPosition = 0;
+	state->currentPackets.specialPosition = 0;
 
 	return (true);
 }
@@ -674,48 +674,48 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			return;
 		}
 
-		if (state->currentPolarityPacket == NULL) {
-			state->currentPolarityPacket = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
+		if (state->currentPackets.polarity == NULL) {
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentPolarityPacket == NULL) {
+			if (state->currentPackets.polarity == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
-		else if (state->currentPolarityPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPolarityPacket)) {
+		else if (state->currentPackets.polarityPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentPolarityPacket, state->currentPolarityPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.polarity, state->currentPackets.polarityPosition * 2);
 			if (grownPacket == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
 				return;
 			}
 
-			state->currentPolarityPacket = grownPacket;
+			state->currentPackets.polarity = grownPacket;
 		}
 
-		if (state->currentSpecialPacket == NULL) {
-			state->currentSpecialPacket = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
+		if (state->currentPackets.special == NULL) {
+			state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
 				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentSpecialPacket == NULL) {
+			if (state->currentPackets.special == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
-		else if (state->currentSpecialPacketPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentSpecialPacket)) {
+		else if (state->currentPackets.specialPosition
+			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentSpecialPacket, state->currentSpecialPacketPosition * 2);
+				(caerEventPacketHeader) state->currentPackets.special, state->currentPackets.specialPosition * 2);
 			if (grownPacket == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
 				return;
 			}
 
-			state->currentSpecialPacket = grownPacket;
+			state->currentPackets.special = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -728,8 +728,8 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		uint16_t shortTS = U16T((ts1Byte << 8) | ts2Byte);
 
 		// Timestamp reset.
-		if (atomic_load(&state->dvsTSReset)) {
-			atomic_store(&state->dvsTSReset, false);
+		if (atomic_load(&state->dvs.tsReset)) {
+			atomic_store(&state->dvs.tsReset, false);
 
 			// Send TS reset command to device. Ignore errors.
 			const char *cmdTSReset = "!ET0\n";
@@ -765,11 +765,11 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				// Increment TSOverflow counter.
 				state->timestamps.wrapOverflow++;
 
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
-					state->currentSpecialPacketPosition++);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
+					state->currentPackets.specialPosition++);
 				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
 				caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
-				caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
+				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
 
 				// Commit packets to separate before wrap from after cleanly.
 				tsBigWrap = true;
@@ -801,13 +801,13 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 				// Check range conformity.
 				if (x < EDVS_ARRAY_SIZE_X && y < EDVS_ARRAY_SIZE_Y) {
-					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
-						state->currentPolarityPacketPosition++);
+					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
+						state->currentPackets.polarityPosition++);
 					caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 					caerPolarityEventSetPolarity(currentEvent, polarity);
 					caerPolarityEventSetY(currentEvent, y);
 					caerPolarityEventSetX(currentEvent, x);
-					caerPolarityEventValidate(currentEvent, state->currentPolarityPacket);
+					caerPolarityEventValidate(currentEvent, state->currentPackets.polarity);
 				}
 				else {
 					if (x >= EDVS_ARRAY_SIZE_X) {
@@ -827,8 +827,8 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
-				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
+			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
 			state->timestamps.wrapOverflow, state->timestamps.current);
@@ -844,21 +844,21 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			// any non-empty packets. Empty packets are not forwarded to save memory.
 			bool emptyContainerCommit = true;
 
-			if (state->currentPolarityPacketPosition > 0) {
+			if (state->currentPackets.polarityPosition > 0) {
 				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
-					(caerEventPacketHeader) state->currentPolarityPacket);
+					(caerEventPacketHeader) state->currentPackets.polarity);
 
-				state->currentPolarityPacket = NULL;
-				state->currentPolarityPacketPosition = 0;
+				state->currentPackets.polarity = NULL;
+				state->currentPackets.polarityPosition = 0;
 				emptyContainerCommit = false;
 			}
 
-			if (state->currentSpecialPacketPosition > 0) {
+			if (state->currentPackets.specialPosition > 0) {
 				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentSpecialPacket);
+					(caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentSpecialPacket = NULL;
-				state->currentSpecialPacketPosition = 0;
+				state->currentPackets.special = NULL;
+				state->currentPackets.specialPosition = 0;
 				emptyContainerCommit = false;
 			}
 
@@ -885,7 +885,7 @@ static bool edvsSendBiases(edvsState state, int biasID) {
 	}
 
 	for (size_t i = startBias; i < stopBias; i++) {
-		snprintf(cmdSetBias, 128, "!B%zu=%" PRIu32 "\n", i, caerByteArrayToInteger(state->biases[i], BIAS_LENGTH));
+		snprintf(cmdSetBias, 128, "!B%zu=%" PRIu32 "\n", i, caerByteArrayToInteger(state->dvs.biases[i], BIAS_LENGTH));
 
 		if (!serialPortWrite(state, cmdSetBias)) {
 			return (false);

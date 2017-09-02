@@ -58,16 +58,20 @@ struct edvs_state {
 	} timestamps;
 	// Packet Container state
 	struct container_generation container;
-	// Polarity Packet State
-	caerPolarityEventPacket currentPolarityPacket;
-	int32_t currentPolarityPacketPosition;
-	// Special Packet State
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
-	// Camera bias and settings memory (for getter operations)
-	uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
-	atomic_bool dvsRunning;
-	atomic_bool dvsTSReset;
+	struct {
+		// Polarity Packet State
+		caerPolarityEventPacket polarity;
+		int32_t polarityPosition;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+	} currentPackets;
+	struct {
+		// Camera bias and settings memory (for getter operations)
+		uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
+		atomic_bool running;
+		atomic_bool tsReset;
+	} dvs;
 };
 
 typedef struct edvs_state *edvsState;
