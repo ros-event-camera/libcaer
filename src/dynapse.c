@@ -705,19 +705,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
-					usbSetTransfersNumber(&state->usbState, param);
-					break;
-
-				case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
-					usbSetTransfersSize(&state->usbState, param);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (usbConfigSet(&state->usbState, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
@@ -1032,19 +1020,7 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
-			switch (paramAddr) {
-				case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
-					*param = usbGetTransfersNumber(&state->usbState);
-					break;
-
-				case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
-					*param = usbGetTransfersSize(&state->usbState);
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			return (usbConfigGet(&state->usbState, paramAddr, param));
 			break;
 
 		case CAER_HOST_CONFIG_DATAEXCHANGE:

@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_USB_UTILS_H_
 
 #include "libcaer.h"
+#include "devices/usb.h"
 #include <libusb.h>
 #include <stdatomic.h>
 
@@ -70,6 +71,42 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber);
 void usbSetTransfersSize(usbState state, uint32_t transfersSize);
 uint32_t usbGetTransfersNumber(usbState state);
 uint32_t usbGetTransfersSize(usbState state);
+
+static inline bool usbConfigSet(usbState state, uint8_t paramAddr, uint32_t param) {
+	switch (paramAddr) {
+		case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
+			usbSetTransfersNumber(state, param);
+			break;
+
+		case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
+			usbSetTransfersSize(state, param);
+			break;
+
+		default:
+			return (false);
+			break;
+	}
+
+	return (true);
+}
+
+static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *param) {
+	switch (paramAddr) {
+		case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
+			*param = usbGetTransfersNumber(state);
+			break;
+
+		case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
+			*param = usbGetTransfersSize(state);
+			break;
+
+		default:
+			return (false);
+			break;
+	}
+
+	return (true);
+}
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
 
