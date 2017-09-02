@@ -14,11 +14,11 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 }
 
 static inline void checkMonotonicTimestamp(dvs128Handle handle) {
-	if (handle->state.currentTimestamp < handle->state.lastTimestamp) {
+	if (handle->state.timestamps.current < handle->state.timestamps.last) {
 		dvs128Log(CAER_LOG_ALERT, handle,
 			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.lastTimestamp, handle->state.currentTimestamp,
-			(handle->state.lastTimestamp - handle->state.currentTimestamp));
+			handle->state.timestamps.last, handle->state.timestamps.current,
+			(handle->state.timestamps.last - handle->state.timestamps.current));
 	}
 }
 
@@ -536,7 +536,7 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 
 static inline void initContainerCommitTimestamp(dvs128State state) {
 	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->currentTimestamp
+		state->currentPacketContainerCommitTimestamp = state->timestamps.current
 			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
 	}
 }
@@ -571,7 +571,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 		if (state->currentPolarityPacket == NULL) {
 			state->currentPolarityPacket = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->wrapOverflow);
+				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPolarityPacket == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -593,7 +593,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 		if (state->currentSpecialPacket == NULL) {
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->wrapOverflow);
+				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -618,16 +618,16 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 		if ((buffer[i + 3] & DVS128_TIMESTAMP_WRAP_MASK) == DVS128_TIMESTAMP_WRAP_MASK) {
 			// Detect big timestamp wrap-around.
-			if (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1))) {
+			if (state->timestamps.wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1))) {
 				// Reset wrapAdd to zero at this point, so we can again
 				// start detecting overruns of the 32bit value.
-				state->wrapAdd = 0;
+				state->timestamps.wrapAdd = 0;
 
-				state->lastTimestamp = 0;
-				state->currentTimestamp = 0;
+				state->timestamps.last = 0;
+				state->timestamps.current = 0;
 
 				// Increment TSOverflow counter.
-				state->wrapOverflow++;
+				state->timestamps.wrapOverflow++;
 
 				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
 					state->currentSpecialPacketPosition++);
@@ -641,10 +641,10 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			else {
 				// timestamp bit 15 is one -> wrap: now we need to increment
 				// the wrapAdd, uses only 14 bit timestamps. Each wrap is 2^14 µs (~16ms).
-				state->wrapAdd += TS_WRAP_ADD;
+				state->timestamps.wrapAdd += TS_WRAP_ADD;
 
-				state->lastTimestamp = state->currentTimestamp;
-				state->currentTimestamp = state->wrapAdd;
+				state->timestamps.last = state->timestamps.current;
+				state->timestamps.current = state->timestamps.wrapAdd;
 				initContainerCommitTimestamp(state);
 
 				// Check monotonicity of timestamps.
@@ -654,10 +654,10 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 		else if ((buffer[i + 3] & DVS128_TIMESTAMP_RESET_MASK) == DVS128_TIMESTAMP_RESET_MASK) {
 			// timestamp bit 14 is one -> wrapAdd reset: this firmware
 			// version uses reset events to reset timestamps
-			state->wrapOverflow = 0;
-			state->wrapAdd = 0;
-			state->lastTimestamp = 0;
-			state->currentTimestamp = 0;
+			state->timestamps.wrapOverflow = 0;
+			state->timestamps.wrapAdd = 0;
+			state->timestamps.last = 0;
+			state->timestamps.current = 0;
 			state->currentPacketContainerCommitTimestamp = -1;
 			initContainerCommitTimestamp(state);
 
@@ -675,8 +675,8 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			uint16_t timestampUSB = le16toh(*((uint16_t * ) (&buffer[i + 2])));
 
 			// Expand to 32 bits. (Tick is 1µs already.)
-			state->lastTimestamp = state->currentTimestamp;
-			state->currentTimestamp = state->wrapAdd + timestampUSB;
+			state->timestamps.last = state->timestamps.current;
+			state->timestamps.current = state->timestamps.wrapAdd + timestampUSB;
 			initContainerCommitTimestamp(state);
 
 			// Check monotonicity of timestamps.
@@ -686,7 +686,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 				// Special Trigger Event (MSB is set)
 				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
 					state->currentSpecialPacketPosition++);
-				caerSpecialEventSetTimestamp(currentEvent, state->currentTimestamp);
+				caerSpecialEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerSpecialEventSetType(currentEvent, EXTERNAL_INPUT_RISING_EDGE);
 				caerSpecialEventValidate(currentEvent, state->currentSpecialPacket);
 			}
@@ -714,7 +714,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
 					state->currentPolarityPacketPosition++);
-				caerPolarityEventSetTimestamp(currentEvent, state->currentTimestamp);
+				caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerPolarityEventSetPolarity(currentEvent, polarity);
 				caerPolarityEventSetY(currentEvent, y);
 				caerPolarityEventSetX(currentEvent, x);
@@ -731,7 +731,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+		bool containerTimeCommit = generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 			> state->currentPacketContainerCommitTimestamp;
 
 		// NOTE: with the current DVS128 architecture, currentTimestamp always comes together
@@ -767,7 +767,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 			// update the time related limit. The size related one is updated implicitly by size
 			// being reset to zero after commit (new packets are empty).
 			if (containerTimeCommit) {
-				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+				while (generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 					> state->currentPacketContainerCommitTimestamp) {
 					state->currentPacketContainerCommitTimestamp += I32T(
 						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
@@ -808,7 +808,7 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 
 				// Allocate special packet just for this event.
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
-					state->wrapOverflow);
+					state->timestamps.wrapOverflow);
 				if (tsResetPacket == NULL) {
 					dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;

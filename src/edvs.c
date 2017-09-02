@@ -30,11 +30,11 @@ static inline bool serialPortWrite(edvsState state, const char *cmd) {
 }
 
 static inline void checkMonotonicTimestamp(edvsHandle handle) {
-	if (handle->state.currentTimestamp < handle->state.lastTimestamp) {
+	if (handle->state.timestamps.current < handle->state.timestamps.last) {
 		edvsLog(CAER_LOG_ALERT, handle,
 			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.lastTimestamp, handle->state.currentTimestamp,
-			(handle->state.lastTimestamp - handle->state.currentTimestamp));
+			handle->state.timestamps.last, handle->state.timestamps.current,
+			(handle->state.timestamps.last - handle->state.timestamps.current));
 	}
 }
 
@@ -690,7 +690,7 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 
 static inline void initContainerCommitTimestamp(edvsState state) {
 	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->currentTimestamp
+		state->currentPacketContainerCommitTimestamp = state->timestamps.current
 			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
 	}
 }
@@ -734,7 +734,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentPolarityPacket == NULL) {
 			state->currentPolarityPacket = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->wrapOverflow);
+				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPolarityPacket == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -756,7 +756,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentSpecialPacket == NULL) {
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->wrapOverflow);
+				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -793,11 +793,11 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			const char *cmdTSReset = "!ET0\n";
 			serialPortWrite(state, cmdTSReset);
 
-			state->wrapOverflow = 0;
-			state->wrapAdd = 0;
-			state->lastShortTimestamp = 0;
-			state->lastTimestamp = 0;
-			state->currentTimestamp = 0;
+			state->timestamps.wrapOverflow = 0;
+			state->timestamps.wrapAdd = 0;
+			state->timestamps.lastShort = 0;
+			state->timestamps.last = 0;
+			state->timestamps.current = 0;
 			state->currentPacketContainerCommitTimestamp = -1;
 			initContainerCommitTimestamp(state);
 
@@ -807,21 +807,21 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			tsReset = true;
 		}
 		else {
-			bool tsWrap = (shortTS < state->lastShortTimestamp);
+			bool tsWrap = (shortTS < state->timestamps.lastShort);
 
 			// Timestamp big wrap.
-			if (tsWrap && (state->wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1)))) {
+			if (tsWrap && (state->timestamps.wrapAdd == (INT32_MAX - (TS_WRAP_ADD - 1)))) {
 				// Reset wrapAdd to zero at this point, so we can again
 				// start detecting overruns of the 32bit value.
-				state->wrapAdd = 0;
+				state->timestamps.wrapAdd = 0;
 
-				state->lastShortTimestamp = 0;
+				state->timestamps.lastShort = 0;
 
-				state->lastTimestamp = 0;
-				state->currentTimestamp = 0;
+				state->timestamps.last = 0;
+				state->timestamps.current = 0;
 
 				// Increment TSOverflow counter.
-				state->wrapOverflow++;
+				state->timestamps.wrapOverflow++;
 
 				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
 					state->currentSpecialPacketPosition++);
@@ -835,18 +835,18 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			else {
 				if (tsWrap) {
 					// Timestamp normal wrap (every ~65 ms).
-					state->wrapAdd += TS_WRAP_ADD;
+					state->timestamps.wrapAdd += TS_WRAP_ADD;
 
-					state->lastShortTimestamp = 0;
+					state->timestamps.lastShort = 0;
 				}
 				else {
 					// Not a wrap, set this to track wrapping.
-					state->lastShortTimestamp = shortTS;
+					state->timestamps.lastShort = shortTS;
 				}
 
 				// Expand to 32 bits. (Tick is 1µs already.)
-				state->lastTimestamp = state->currentTimestamp;
-				state->currentTimestamp = state->wrapAdd + shortTS;
+				state->timestamps.last = state->timestamps.current;
+				state->timestamps.current = state->timestamps.wrapAdd + shortTS;
 				initContainerCommitTimestamp(state);
 
 				// Check monotonicity of timestamps.
@@ -860,7 +860,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				if (x < EDVS_ARRAY_SIZE_X && y < EDVS_ARRAY_SIZE_Y) {
 					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPolarityPacket,
 						state->currentPolarityPacketPosition++);
-					caerPolarityEventSetTimestamp(currentEvent, state->currentTimestamp);
+					caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 					caerPolarityEventSetPolarity(currentEvent, polarity);
 					caerPolarityEventSetY(currentEvent, y);
 					caerPolarityEventSetX(currentEvent, x);
@@ -888,7 +888,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			&& ((state->currentPolarityPacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+		bool containerTimeCommit = generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 			> state->currentPacketContainerCommitTimestamp;
 
 		// NOTE: with the current EDVS architecture, currentTimestamp always comes together
@@ -924,7 +924,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			// update the time related limit. The size related one is updated implicitly by size
 			// being reset to zero after commit (new packets are empty).
 			if (containerTimeCommit) {
-				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+				while (generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 					> state->currentPacketContainerCommitTimestamp) {
 					state->currentPacketContainerCommitTimestamp += I32T(
 						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
@@ -965,7 +965,7 @@ static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 				// Allocate special packet just for this event.
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
-					state->wrapOverflow);
+					state->timestamps.wrapOverflow);
 				if (tsResetPacket == NULL) {
 					edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;

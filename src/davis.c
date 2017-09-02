@@ -32,11 +32,11 @@ static inline float clockFreqCorrect(davisState state, int16_t pureClock) {
 }
 
 static inline void checkStrictMonotonicTimestamp(davisHandle handle) {
-	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
+	if (handle->state.timestamps.current <= handle->state.timestamps.last) {
 		davisLog(CAER_LOG_ALERT, handle,
 			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.lastTimestamp, handle->state.currentTimestamp,
-			(handle->state.lastTimestamp - handle->state.currentTimestamp));
+			handle->state.timestamps.last, handle->state.timestamps.current,
+			(handle->state.timestamps.last - handle->state.timestamps.current));
 	}
 }
 
@@ -98,12 +98,12 @@ static inline void initFrame(davisHandle handle) {
 	}
 
 	// Write out start of frame timestamp.
-	caerFrameEventSetTSStartOfFrame(state->currentFrameEvent[0], state->currentTimestamp);
+	caerFrameEventSetTSStartOfFrame(state->currentFrameEvent[0], state->timestamps.current);
 
 	// Send APS info event out (as special event).
 	caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(state->currentSpecialPacket,
 		state->currentSpecialPacketPosition);
-	caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
 	caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 	state->currentSpecialPacketPosition++;
@@ -2390,7 +2390,7 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 
 static inline void initContainerCommitTimestamp(davisState state) {
 	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->currentTimestamp
+		state->currentPacketContainerCommitTimestamp = state->timestamps.current
 			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
 	}
 }
@@ -2425,7 +2425,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentPolarityPacket == NULL) {
 			state->currentPolarityPacket = caerPolarityEventPacketAllocate(
-			DAVIS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DAVIS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPolarityPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -2447,7 +2447,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentSpecialPacket == NULL) {
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
-			DAVIS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DAVIS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -2469,8 +2469,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentFramePacket == NULL) {
 			state->currentFramePacket = caerFrameEventPacketAllocate(
-			DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow, state->apsSizeX,
-				state->apsSizeY, 1);
+			DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow,
+				state->apsSizeX, state->apsSizeY, 1);
 			if (state->currentFramePacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
@@ -2492,7 +2492,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentIMU6Packet == NULL) {
 			state->currentIMU6Packet = caerIMU6EventPacketAllocate(
-			DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DAVIS_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentIMU6Packet == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 				return;
@@ -2514,7 +2514,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 		if (state->currentSamplePacket == NULL) {
 			state->currentSamplePacket = caerSampleEventPacketAllocate(
-			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSamplePacket == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
 				return;
@@ -2542,8 +2542,8 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
 			// Is a timestamp! Expand to 32 bits. (Tick is 1µs already.)
-			state->lastTimestamp = state->currentTimestamp;
-			state->currentTimestamp = state->wrapAdd + (event & 0x7FFF);
+			state->timestamps.last = state->timestamps.current;
+			state->timestamps.current = state->timestamps.wrapAdd + (event & 0x7FFF);
 			initContainerCommitTimestamp(state);
 
 			// Check monotonicity of timestamps.
@@ -2562,10 +2562,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							break;
 
 						case 1: { // Timetamp reset
-							state->wrapOverflow = 0;
-							state->wrapAdd = 0;
-							state->lastTimestamp = 0;
-							state->currentTimestamp = 0;
+							state->timestamps.wrapOverflow = 0;
+							state->timestamps.wrapAdd = 0;
+							state->timestamps.last = 0;
+							state->timestamps.current = 0;
 							state->currentPacketContainerCommitTimestamp = -1;
 							initContainerCommitTimestamp(state);
 
@@ -2588,7 +2588,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_FALLING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -2600,7 +2600,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_RISING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -2612,7 +2612,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT_PULSE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -2638,7 +2638,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							if (state->imuCount == IMU6_COUNT) {
 								// Timestamp at event-stream insertion point.
-								caerIMU6EventSetTimestamp(&state->currentIMU6Event, state->currentTimestamp);
+								caerIMU6EventSetTimestamp(&state->currentIMU6Event, state->timestamps.current);
 
 								caerIMU6EventValidate(&state->currentIMU6Event, state->currentIMU6Packet);
 
@@ -2715,12 +2715,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							}
 
 							// Write out end of frame timestamp.
-							caerFrameEventSetTSEndOfFrame(state->currentFrameEvent[0], state->currentTimestamp);
+							caerFrameEventSetTSEndOfFrame(state->currentFrameEvent[0], state->timestamps.current);
 
 							// Send APS info event out (as special event).
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_END);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -2798,12 +2798,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// of the exposure for the RS.
 							if (!state->apsGlobalShutter && state->apsCountX[APS_READOUT_RESET] == 0) {
 								caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0],
-									state->currentTimestamp);
+									state->timestamps.current);
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentSpecialPacket, state->currentSpecialPacketPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
 								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 								state->currentSpecialPacketPosition++;
@@ -2827,12 +2827,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							// The first Signal Column Read Start is also always the end
 							// of the exposure time, for both RS and GS.
 							if (state->apsCountX[APS_READOUT_SIGNAL] == 0) {
-								caerFrameEventSetTSEndOfExposure(state->currentFrameEvent[0], state->currentTimestamp);
+								caerFrameEventSetTSEndOfExposure(state->currentFrameEvent[0], state->timestamps.current);
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentSpecialPacket, state->currentSpecialPacketPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_END);
 								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 								state->currentSpecialPacketPosition++;
@@ -2868,12 +2868,12 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								&& state->apsCountX[APS_READOUT_RESET]
 									== caerFrameEventGetLengthX(state->currentFrameEvent[0])) {
 								caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0],
-									state->currentTimestamp);
+									state->timestamps.current);
 
 								// Send APS info event out (as special event).
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentSpecialPacket, state->currentSpecialPacketPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
 								caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 								state->currentSpecialPacketPosition++;
@@ -2892,7 +2892,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							// If reset reads are disabled, the start of exposure is closest to
 							// the start of frame.
-							caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0], state->currentTimestamp);
+							caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0], state->timestamps.current);
 
 							// No APS info event is sent out (as special event). Only one event
 							// per type can be sent out per cycle, and initFrame() already does
@@ -2911,7 +2911,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							// If reset reads are disabled, the start of exposure is closest to
 							// the start of frame.
-							caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0], state->currentTimestamp);
+							caerFrameEventSetTSStartOfExposure(state->currentFrameEvent[0], state->timestamps.current);
 
 							// No APS info event is sent out (as special event). Only one event
 							// per type can be sent out per cycle, and initFrame() already does
@@ -3001,7 +3001,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_FALLING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3013,7 +3013,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_RISING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3025,7 +3025,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_PULSE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3037,7 +3037,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_FALLING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3049,7 +3049,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_RISING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3061,7 +3061,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_PULSE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3073,7 +3073,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_GENERATOR_FALLING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3085,7 +3085,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentSpecialPacket, state->currentSpecialPacketPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_GENERATOR_RISING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
 							state->currentSpecialPacketPosition++;
@@ -3118,7 +3118,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 							state->currentSpecialPacket, state->currentSpecialPacketPosition);
 
 						// Timestamp at event-stream insertion point.
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->currentTimestamp);
+						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 						caerSpecialEventSetType(currentSpecialEvent, DVS_ROW_ONLY);
 						caerSpecialEventSetData(currentSpecialEvent, state->dvsLastY);
 						caerSpecialEventValidate(currentSpecialEvent, state->currentSpecialPacket);
@@ -3150,7 +3150,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						state->currentPolarityPacket, state->currentPolarityPacketPosition);
 
 					// Timestamp at event-stream insertion point.
-					caerPolarityEventSetTimestamp(currentPolarityEvent, state->currentTimestamp);
+					caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
 					caerPolarityEventSetPolarity(currentPolarityEvent, (polarity & 0x01));
 					if (state->dvsInvertXY) {
 						// Flip Y address to conform to CG format.
@@ -3526,7 +3526,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 								state->currentSamplePacketPosition);
 							caerSampleEventSetType(micSample, state->micRight);
 							caerSampleEventSetSample(micSample, micData);
-							caerSampleEventSetTimestamp(micSample, state->currentTimestamp);
+							caerSampleEventSetTimestamp(micSample, state->timestamps.current);
 							caerSampleEventValidate(micSample, state->currentSamplePacket);
 							state->currentSamplePacketPosition++;
 							break;
@@ -3562,7 +3562,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				case 7: { // Timestamp wrap
 					// Detect big timestamp wrap-around.
 					int64_t wrapJump = (TS_WRAP_ADD * data);
-					int64_t wrapSum = I64T(state->wrapAdd) + wrapJump;
+					int64_t wrapSum = I64T(state->timestamps.wrapAdd) + wrapJump;
 
 					if (wrapSum > I64T(INT32_MAX)) {
 						// Reset wrapAdd at this point, so we can again
@@ -3570,13 +3570,13 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						// We reset not to zero, but to the remaining value after
 						// multiple wrap-jumps are taken into account.
 						int64_t wrapRemainder = wrapSum - I64T(INT32_MAX) - 1LL;
-						state->wrapAdd = I32T(wrapRemainder);
+						state->timestamps.wrapAdd = I32T(wrapRemainder);
 
-						state->lastTimestamp = 0;
-						state->currentTimestamp = state->wrapAdd;
+						state->timestamps.last = 0;
+						state->timestamps.current = state->timestamps.wrapAdd;
 
 						// Increment TSOverflow counter.
-						state->wrapOverflow++;
+						state->timestamps.wrapOverflow++;
 
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 							state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -3593,10 +3593,10 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 						// to multiply it with the wrap counter,
 						// which is located in the data part of this
 						// event.
-						state->wrapAdd = I32T(wrapSum);
+						state->timestamps.wrapAdd = I32T(wrapSum);
 
-						state->lastTimestamp = state->currentTimestamp;
-						state->currentTimestamp = state->wrapAdd;
+						state->timestamps.last = state->timestamps.current;
+						state->timestamps.current = state->timestamps.wrapAdd;
 						initContainerCommitTimestamp(state);
 
 						// Check monotonicity of timestamps.
@@ -3627,7 +3627,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 				|| (state->currentIMU6PacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSamplePacketPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+		bool containerTimeCommit = generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 			> state->currentPacketContainerCommitTimestamp;
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
@@ -3698,7 +3698,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 			// update the time related limit. The size related one is updated implicitly by size
 			// being reset to zero after commit (new packets are empty).
 			if (containerTimeCommit) {
-				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+				while (generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 					> state->currentPacketContainerCommitTimestamp) {
 					state->currentPacketContainerCommitTimestamp += I32T(
 						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
@@ -3739,7 +3739,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 
 				// Allocate special packet just for this event.
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
-					state->wrapOverflow);
+					state->timestamps.wrapOverflow);
 				if (tsResetPacket == NULL) {
 					davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;

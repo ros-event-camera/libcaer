@@ -63,10 +63,12 @@ struct davis_state {
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
-	int32_t wrapOverflow;
-	int32_t wrapAdd;
-	int32_t lastTimestamp;
-	int32_t currentTimestamp;
+	struct {
+		int32_t wrapOverflow;
+		int32_t wrapAdd;
+		int32_t last;
+		int32_t current;
+	} timestamps;
 	// DVS specific fields
 	uint16_t dvsLastY;
 	bool dvsGotY;

@@ -201,11 +201,11 @@ static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, 
 }
 
 static inline void checkStrictMonotonicTimestamp(dynapseHandle handle) {
-	if (handle->state.currentTimestamp <= handle->state.lastTimestamp) {
+	if (handle->state.timestamps.current <= handle->state.timestamps.last) {
 		dynapseLog(CAER_LOG_ALERT, handle,
 			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
-			handle->state.lastTimestamp, handle->state.currentTimestamp,
-			(handle->state.lastTimestamp - handle->state.currentTimestamp));
+			handle->state.timestamps.last, handle->state.timestamps.current,
+			(handle->state.timestamps.last - handle->state.timestamps.current));
 	}
 }
 
@@ -1303,7 +1303,7 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 
 static inline void initContainerCommitTimestamp(dynapseState state) {
 	if (state->currentPacketContainerCommitTimestamp == -1) {
-		state->currentPacketContainerCommitTimestamp = state->currentTimestamp
+		state->currentPacketContainerCommitTimestamp = state->timestamps.current
 			+ I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)) - 1;
 	}
 }
@@ -1339,7 +1339,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 		if (state->currentSpikePacket == NULL) {
 			state->currentSpikePacket = caerSpikeEventPacketAllocate(
-			DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSpikePacket == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 				return;
@@ -1361,7 +1361,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 		if (state->currentSpecialPacket == NULL) {
 			state->currentSpecialPacket = caerSpecialEventPacketAllocate(
-			DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->wrapOverflow);
+			DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentSpecialPacket == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -1389,8 +1389,8 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
 			// Is a timestamp! Expand to 32 bits. (Tick is 1µs already.)
-			state->lastTimestamp = state->currentTimestamp;
-			state->currentTimestamp = state->wrapAdd + (event & 0x7FFF);
+			state->timestamps.last = state->timestamps.current;
+			state->timestamps.current = state->timestamps.wrapAdd + (event & 0x7FFF);
 			initContainerCommitTimestamp(state);
 
 			// Check monotonicity of timestamps.
@@ -1409,10 +1409,10 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 							break;
 
 						case 1: { // Timetamp reset
-							state->wrapOverflow = 0;
-							state->wrapAdd = 0;
-							state->lastTimestamp = 0;
-							state->currentTimestamp = 0;
+							state->timestamps.wrapOverflow = 0;
+							state->timestamps.wrapAdd = 0;
+							state->timestamps.last = 0;
+							state->timestamps.current = 0;
 							state->currentPacketContainerCommitTimestamp = -1;
 							initContainerCommitTimestamp(state);
 
@@ -1462,7 +1462,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						state->currentSpikePacketPosition);
 
 					// Timestamp at event-stream insertion point.
-					caerSpikeEventSetTimestamp(currentSpikeEvent, state->currentTimestamp);
+					caerSpikeEventSetTimestamp(currentSpikeEvent, state->timestamps.current);
 					caerSpikeEventSetSourceCoreID(currentSpikeEvent, sourceCoreID);
 					caerSpikeEventSetChipID(currentSpikeEvent, chipID);
 					caerSpikeEventSetNeuronID(currentSpikeEvent, neuronID);
@@ -1475,7 +1475,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 				case 7: { // Timestamp wrap
 					// Detect big timestamp wrap-around.
 					int64_t wrapJump = (TS_WRAP_ADD * data);
-					int64_t wrapSum = I64T(state->wrapAdd) + wrapJump;
+					int64_t wrapSum = I64T(state->timestamps.wrapAdd) + wrapJump;
 
 					if (wrapSum > I64T(INT32_MAX)) {
 						// Reset wrapAdd at this point, so we can again
@@ -1483,13 +1483,13 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						// We reset not to zero, but to the remaining value after
 						// multiple wrap-jumps are taken into account.
 						int64_t wrapRemainder = wrapSum - I64T(INT32_MAX) - 1LL;
-						state->wrapAdd = I32T(wrapRemainder);
+						state->timestamps.wrapAdd = I32T(wrapRemainder);
 
-						state->lastTimestamp = 0;
-						state->currentTimestamp = state->wrapAdd;
+						state->timestamps.last = 0;
+						state->timestamps.current = state->timestamps.wrapAdd;
 
 						// Increment TSOverflow counter.
-						state->wrapOverflow++;
+						state->timestamps.wrapOverflow++;
 
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 							state->currentSpecialPacket, state->currentSpecialPacketPosition);
@@ -1506,10 +1506,10 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 						// to multiply it with the wrap counter,
 						// which is located in the data part of this
 						// event.
-						state->wrapAdd = I32T(wrapSum);
+						state->timestamps.wrapAdd = I32T(wrapSum);
 
-						state->lastTimestamp = state->currentTimestamp;
-						state->currentTimestamp = state->wrapAdd;
+						state->timestamps.last = state->timestamps.current;
+						state->timestamps.current = state->timestamps.wrapAdd;
 						initContainerCommitTimestamp(state);
 
 						// Check monotonicity of timestamps.
@@ -1537,7 +1537,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			&& ((state->currentSpikePacketPosition >= currentPacketContainerCommitSize)
 				|| (state->currentSpecialPacketPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+		bool containerTimeCommit = generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 			> state->currentPacketContainerCommitTimestamp;
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
@@ -1569,7 +1569,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 			// update the time related limit. The size related one is updated implicitly by size
 			// being reset to zero after commit (new packets are empty).
 			if (containerTimeCommit) {
-				while (generateFullTimestamp(state->wrapOverflow, state->currentTimestamp)
+				while (generateFullTimestamp(state->timestamps.wrapOverflow, state->timestamps.current)
 					> state->currentPacketContainerCommitTimestamp) {
 					state->currentPacketContainerCommitTimestamp += I32T(
 						atomic_load_explicit( &state->maxPacketContainerInterval, memory_order_relaxed));
@@ -1610,7 +1610,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 
 				// Allocate special packet just for this event.
 				caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, I16T(handle->info.deviceID),
-					state->wrapOverflow);
+					state->timestamps.wrapOverflow);
 				if (tsResetPacket == NULL) {
 					dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate tsReset special event packet.");
 					return;

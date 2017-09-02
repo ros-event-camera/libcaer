@@ -48,11 +48,13 @@ struct edvs_state {
 	// Serial Device State
 	struct serial_state serialState;
 	// Timestamp fields
-	int32_t wrapOverflow;
-	int32_t wrapAdd;
-	int32_t lastTimestamp;
-	int32_t currentTimestamp;
-	uint16_t lastShortTimestamp; // For wrap detection.
+	struct {
+		int32_t wrapOverflow;
+		int32_t wrapAdd;
+		int32_t last;
+		int32_t current;
+		uint16_t lastShort; // For wrap detection.
+	} timestamps;
 	// Packet Container state
 	caerEventPacketContainer currentPacketContainer;
 	atomic_uint_fast32_t maxPacketContainerPacketSize;
