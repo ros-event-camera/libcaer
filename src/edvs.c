@@ -4,7 +4,7 @@ static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char 
 static bool serialThreadStart(edvsHandle handle);
 static void serialThreadStop(edvsHandle handle);
 static int serialThreadRun(void *handlePtr);
-static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
+static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool edvsSendBiases(edvsState state, int biasID);
 
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) {
@@ -640,7 +640,7 @@ caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 #define HIGH_BIT_MASK 0x80
 #define LOW_BITS_MASK 0x7F
 
-static void edvsEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	edvsHandle handle = vhd;
 	edvsState state = &handle->state;
 

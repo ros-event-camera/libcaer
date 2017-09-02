@@ -6,7 +6,7 @@
 
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, size_t configNum);
-static void dynapseEventTranslator(void *vdh, uint8_t *buffer, size_t bytesSent);
+static void dynapseEventTranslator(void *vdh, const uint8_t *buffer, size_t bytesSent);
 static void setSilentBiases(caerDeviceHandle cdh, uint8_t chipId);
 static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId);
 
@@ -1252,7 +1252,7 @@ caerEventPacketContainer dynapseDataGet(caerDeviceHandle cdh) {
 
 #define TS_WRAP_ADD 0x8000
 
-static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	dynapseHandle handle = vhd;
 	dynapseState state = &handle->state;
 
@@ -1324,7 +1324,7 @@ static void dynapseEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent)
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((uint16_t * ) (&buffer[i])));
+		uint16_t event = le16toh(*((const uint16_t *) (&buffer[i])));
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {

@@ -1,7 +1,7 @@
 #include "dvs128.h"
 
 static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
-static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
+static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
 
 static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) {
@@ -486,7 +486,7 @@ caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 #define DVS128_SYNC_EVENT_MASK 0x8000
 #define TS_WRAP_ADD 0x4000
 
-static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	dvs128Handle handle = vhd;
 	dvs128State state = &handle->state;
 
@@ -611,11 +611,11 @@ static void dvs128EventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) 
 		}
 		else {
 			// address is LSB MSB (USB is LE)
-			uint16_t addressUSB = le16toh(*((uint16_t * ) (&buffer[i])));
+			uint16_t addressUSB = le16toh(*((const uint16_t *) (&buffer[i])));
 
 			// same for timestamp, LSB MSB (USB is LE)
 			// 15 bit value of timestamp in 1 us tick
-			uint16_t timestampUSB = le16toh(*((uint16_t * ) (&buffer[i + 2])));
+			uint16_t timestampUSB = le16toh(*((const uint16_t *) (&buffer[i + 2])));
 
 			// Expand to 32 bits. (Tick is 1µs already.)
 			state->timestamps.last = state->timestamps.current;

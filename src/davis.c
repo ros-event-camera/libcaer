@@ -3,14 +3,14 @@
 static void davisLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisSendDefaultChipConfig(caerDeviceHandle cdh);
-static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent);
+static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static void davisTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
 
 // FX3 Debug Transfer Support
 static void allocateDebugTransfers(davisHandle handle);
 static void cancelAndDeallocateDebugTransfers(davisHandle handle);
 static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer);
-static void debugTranslator(davisHandle handle, uint8_t *buffer, size_t bytesSent);
+static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t bytesSent);
 
 static void davisLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) {
 	va_list argumentList;
@@ -2334,7 +2334,7 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 
 #define TS_WRAP_ADD 0x8000
 
-static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
+static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	davisHandle handle = vhd;
 	davisState state = &handle->state;
 
@@ -2473,7 +2473,7 @@ static void davisEventTranslator(void *vhd, uint8_t *buffer, size_t bytesSent) {
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((uint16_t * ) (&buffer[i])));
+		uint16_t event = le16toh(*((const uint16_t *) (&buffer[i])));
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
@@ -3861,12 +3861,12 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 	atomic_fetch_sub(&handle->state.fx3Support.activeDebugTransfers, 1);
 }
 
-static void debugTranslator(davisHandle handle, uint8_t *buffer, size_t bytesSent) {
+static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t bytesSent) {
 	// Check if this is a debug message (length 7-64 bytes).
 	if (bytesSent >= 7 && buffer[0] == 0x00) {
 		// Debug message, log this.
 		davisLog(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
-			*((uint32_t *) &buffer[2]));
+			*((const uint32_t *) &buffer[2]));
 	}
 	else {
 		// Unknown/invalid debug message, log this.

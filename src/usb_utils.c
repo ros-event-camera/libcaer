@@ -254,7 +254,7 @@ void usbSetThreadName(usbState state, const char *threadName) {
 }
 
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr) {
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr) {
 	state->usbDataCallback = usbDataCallback;
 	state->usbDataCallbackPtr = usbDataCallbackPtr;
 }

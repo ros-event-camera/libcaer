@@ -41,7 +41,7 @@ struct usb_state {
 	atomic_uint_fast32_t activeDataTransfers;
 	uint32_t failedDataTransfers;
 	// USB Data Transfers handling callback
-	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent);
 	void *usbDataCallbackPtr;
 	// USB Data Transfers shutdown callback
 	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
@@ -63,7 +63,7 @@ void usbDeviceClose(usbState state);
 
 void usbSetThreadName(usbState state, const char *threadName);
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
 void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
 	void *usbShutdownCallbackPtr);
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
