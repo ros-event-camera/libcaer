@@ -39,9 +39,11 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:lkoppel/opencv'
           packages:
             - g++-6
             - libusb-1.0-0-dev
+            - libopencv-dev
       env:
          - BUILD_NAME="linux-gcc-6"
          - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
@@ -53,10 +55,12 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:lkoppel/opencv'
             - llvm-toolchain-precise-3.6
           packages:
             - clang-3.6
             - libusb-1.0-0-dev
+            - libopencv-dev
       env:
         - BUILD_NAME="linux-clang-3.6"
         - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
@@ -65,10 +69,12 @@ matrix:
       addons:
         apt:
           sources:
+            - sourceline: 'ppa:lkoppel/opencv'
             - llvm-toolchain-trusty-4.0
           packages:
             - clang-4.0
             - libusb-1.0-0-dev
+            - libopencv-dev
       env:
         - BUILD_NAME="linux-clang-4.0"
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
@@ -80,9 +86,11 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:lkoppel/opencv'
           packages:
             - g++-4.9
             - libusb-1.0-0-dev
+            - libopencv-dev
         sonarcloud:
           organization: "inilabs-github"
           token: $SONAR_TOKEN
@@ -104,9 +112,11 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:lkoppel/opencv'
           packages:
             - g++-4.9
             - libusb-1.0-0-dev
+            - libopencv-dev
             - doxygen
       env:
          - BUILD_NAME="linux-docs-deploy"
