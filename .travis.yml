@@ -11,7 +11,6 @@ before_script:
   - mkdir build
   - cd build
   - cmake -DENABLE_SERIALDEV=0 -DENABLE_OPENCV=1 ..
-  - make clean
 
 script:
   - make -j2
@@ -143,6 +142,9 @@ matrix:
         - brew update
         - brew install libusb opencv
         - brew install --HEAD libserialport
+      script:
+        - cmake -DENABLE_SERIALDEV=1 ..
+        - make -j2
     - os: osx
       osx_image: xcode8
       compiler: clang
@@ -153,3 +155,6 @@ matrix:
         - brew update
         - brew install libusb opencv
         - brew install --HEAD libserialport
+      script:
+        - cmake -DENABLE_SERIALDEV=1 ..
+        - make -j2
