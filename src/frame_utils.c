@@ -19,8 +19,8 @@ enum pixelColorEnum {
 
 static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
 
-static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, int32_t x,
-	int32_t y) {
+static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, uint32_t x,
+	uint32_t y) {
 	switch (colorFilter) {
 		case RGBG:
 			if (x & 0x01) {
@@ -208,7 +208,7 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 			int32_t idxLEFTDOWN = idxCENTERDOWN - 1;
 			int32_t idxRIGHTDOWN = idxCENTERDOWN + 1;
 
-			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, x, y);
+			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, U32T(x), U32T(y));
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
@@ -527,6 +527,10 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 
 					break;
 				}
+
+				default:
+					// Do nothing, all colors are examined above.
+					break;
 			}
 
 			// Set color frame pixel values for all color channels.
@@ -563,8 +567,8 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
 			countValid++;
 
 			if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
@@ -594,10 +598,11 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
 			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex++);
+			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
+			colorIndex++;
 
 			// First copy all the metadata.
 			caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
