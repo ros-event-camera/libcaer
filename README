@@ -7,11 +7,12 @@ such as the Dynamic Vision Sensor (DVS) or DAVIS cameras.
 REQUIREMENTS:
 
 Linux, MacOS X or Windows (for Windows build instructions see README.Windows)
+pkg-config
 cmake >= 2.6
 gcc >= 4.9 or clang >= 3.6
 libusb >= 1.0.17
-Optional: libserialport >= 1.1.1
-Optional: OpenCV >= 3.1
+Optional: libserialport >= 0.1.0
+Optional: OpenCV >= 3.1.0
 
 Please make sure that you have the various development packages installed
 for the above dependencies. They are usually called PKG-dev or PKG-devel.

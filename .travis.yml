@@ -10,7 +10,7 @@ before_install:
 before_script:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -DENABLE_SERIALDEV=1 -DENABLE_OPENCV=1 ..
   - make clean
 
 script:
@@ -25,9 +25,13 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:jorik-kippendief/sigrok'
+            - sourceline: 'ppa:lkoppel/opencv'
           packages:
             - g++-4.9
             - libusb-1.0-0-dev
+            - libserialport-dev
+            - libopencv-dev
       env:
          - BUILD_NAME="linux-gcc-4.9"
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
@@ -127,13 +131,15 @@ matrix:
       env:
         - BUILD_NAME="osx-gcc-xcode8"
       before_install:
+        - brew tap rene-dev/sigrok
         - brew update
-        - brew install libusb
+        - brew install libusb libserialport opencv
     - os: osx
       osx_image: xcode8
       compiler: clang
       env:
         - BUILD_NAME="osx-clang-xcode8"
       before_install:
+        - brew tap rene-dev/sigrok
         - brew update
-        - brew install libusb
+        - brew install libusb libserialport opencv
