@@ -221,14 +221,14 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 		case DVS128_CONFIG_DVS:
 			switch (paramAddr) {
 				case DVS128_CONFIG_DVS_RUN:
-					if (param && !atomic_load(&state->dvs.running)) {
+					if ((param == 1) && (!atomic_load(&state->dvs.running))) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_START_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
 
 						atomic_store(&state->dvs.running, true);
 					}
-					else if (!param && atomic_load(&state->dvs.running)) {
+					else if ((param == 0) && atomic_load(&state->dvs.running)) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_STOP_TRANSFER, 0, 0, NULL, 0)) {
 							return (false);
 						}
@@ -238,7 +238,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					break;
 
 				case DVS128_CONFIG_DVS_TIMESTAMP_RESET:
-					if (param) {
+					if (param == 1) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET_TS, 0, 0, NULL, 0)) {
 							return (false);
 						}
@@ -246,7 +246,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					break;
 
 				case DVS128_CONFIG_DVS_ARRAY_RESET:
-					if (param) {
+					if (param == 1) {
 						if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET_ARRAY, 0, 0, NULL, 0)) {
 							return (false);
 						}
@@ -501,7 +501,7 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x03) != 0) {
 		dvs128Log(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bytesSent);
-		bytesSent &= (size_t) ~0x03;
+		bytesSent &= ~((size_t) 0x03);
 	}
 
 	for (size_t i = 0; i < bytesSent; i += 4) {
@@ -572,7 +572,9 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 				state->timestamps.wrapOverflow++;
 
 				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
-					state->currentPackets.specialPosition++);
+					state->currentPackets.specialPosition);
+				state->currentPackets.specialPosition++;
+
 				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
 				caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
 				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
@@ -629,7 +631,9 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 			if ((addressUSB & DVS128_SYNC_EVENT_MASK) != 0) {
 				// Special Trigger Event (MSB is set)
 				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
-					state->currentPackets.specialPosition++);
+					state->currentPackets.specialPosition);
+				state->currentPackets.specialPosition++;
+
 				caerSpecialEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerSpecialEventSetType(currentEvent, EXTERNAL_INPUT_RISING_EDGE);
 				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
@@ -642,7 +646,7 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 				uint16_t y = U16T(
 					(DVS_ARRAY_SIZE_Y - 1) - U16T((addressUSB >> DVS128_Y_ADDR_SHIFT) & DVS128_Y_ADDR_MASK));
 				// Invert polarity bit. Hardware is like this.
-				bool polarity = (((addressUSB >> DVS128_POLARITY_SHIFT) & DVS128_POLARITY_MASK) == 0) ? (1) : (0);
+				bool polarity = ((U16T(addressUSB >> DVS128_POLARITY_SHIFT) & DVS128_POLARITY_MASK) == 0) ? (1) : (0);
 
 				// Check range conformity.
 				if (x >= DVS_ARRAY_SIZE_X) {
@@ -657,7 +661,9 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 				}
 
 				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
-					state->currentPackets.polarityPosition++);
+					state->currentPackets.polarityPosition);
+				state->currentPackets.polarityPosition++;
+
 				caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 				caerPolarityEventSetPolarity(currentEvent, polarity);
 				caerPolarityEventSetY(currentEvent, y);

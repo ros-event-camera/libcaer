@@ -2636,7 +2636,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								int32_t checkValue = caerFrameEventGetLengthX(state->aps.currentEvent[0]);
 
 								// Check main reset read against zero if disabled.
-								if ((j == APS_READOUT_RESET) && !state->aps.resetRead) {
+								if ((j == APS_READOUT_RESET) && (!state->aps.resetRead)) {
 									checkValue = 0;
 								}
 

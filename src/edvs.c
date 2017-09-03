@@ -313,7 +313,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 		case EDVS_CONFIG_DVS:
 			switch (paramAddr) {
 				case EDVS_CONFIG_DVS_RUN:
-					if (param && !atomic_load(&state->dvs.running)) {
+					if ((param == 1) && (!atomic_load(&state->dvs.running))) {
 						const char *cmdStartDVS = "E+\n";
 						if (!serialPortWrite(state, cmdStartDVS)) {
 							return (false);
@@ -321,7 +321,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 
 						atomic_store(&state->dvs.running, true);
 					}
-					else if (!param && atomic_load(&state->dvs.running)) {
+					else if ((param == 0) && atomic_load(&state->dvs.running)) {
 						const char *cmdStopDVS = "E-\n";
 						if (!serialPortWrite(state, cmdStopDVS)) {
 							return (false);
@@ -332,7 +332,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 					break;
 
 				case EDVS_CONFIG_DVS_TIMESTAMP_RESET:
-					if (param) {
+					if (param == 1) {
 						atomic_store(&state->dvs.tsReset, true);
 					}
 					break;
