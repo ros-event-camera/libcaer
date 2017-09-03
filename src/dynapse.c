@@ -24,6 +24,9 @@ static inline uint8_t translateChipIdHostToDevice(uint8_t hostChipId) {
 
 		case DYNAPSE_CONFIG_DYNAPSE_U3:
 			return (12);
+
+		default:
+			break;
 	}
 
 	return (0);
@@ -43,6 +46,9 @@ static inline uint8_t translateChipIdDeviceToHost(uint8_t deviceChipId) {
 
 		case 12:
 			return (DYNAPSE_CONFIG_DYNAPSE_U3);
+
+		default:
+			break;
 	}
 
 	return (0);
@@ -85,15 +91,15 @@ bool sy, uint8_t dy, uint8_t destinationCore) {
 uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY) {
 	uint16_t neuronId = 0;
 
-	neuronId |= U16T(coreId & 0x03) << 8;
-	neuronId |= U16T(rowY & 0x0F) << 4;
-	neuronId |= U16T(columnX & 0x0F) << 0;
+	neuronId |= U16T(U16T(coreId & 0x03) << 8);
+	neuronId |= U16T(U16T(rowY & 0x0F) << 4);
+	neuronId |= U16T(U16T(columnX & 0x0F) << 0);
 
 	return (neuronId);
 }
 
 uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) {
-	return (caerDynapseCoreXYToNeuronId(coreId, ((neuronAddrCore >> 0) & 0x0F), ((neuronAddrCore >> 4) & 0x0F)));
+	return (caerDynapseCoreXYToNeuronId(coreId, (U8T(neuronAddrCore >> 0) & 0x0F), (U8T(neuronAddrCore >> 4) & 0x0F)));
 }
 
 uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
@@ -126,15 +132,15 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 	// Select chip. DYNAPSE_CONFIG_DYNAPSE_U0 default, doesn't need check.
 	uint8_t chipId = DYNAPSE_CONFIG_DYNAPSE_U0;
 
-	if (x >= DYNAPSE_CONFIG_XCHIPSIZE && y < DYNAPSE_CONFIG_YCHIPSIZE) {
+	if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y < DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U1;
 		x -= DYNAPSE_CONFIG_XCHIPSIZE;
 	}
-	else if (x < DYNAPSE_CONFIG_XCHIPSIZE && y >= DYNAPSE_CONFIG_YCHIPSIZE) {
+	else if ((x < DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U2;
 		y -= DYNAPSE_CONFIG_YCHIPSIZE;
 	}
-	else if (x >= DYNAPSE_CONFIG_XCHIPSIZE && y >= DYNAPSE_CONFIG_YCHIPSIZE) {
+	else if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U3;
 		x -= DYNAPSE_CONFIG_XCHIPSIZE;
 		y -= DYNAPSE_CONFIG_YCHIPSIZE;
@@ -143,15 +149,15 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 	// Select core. Core ID 0 default, doesn't need check.
 	uint8_t coreId = 0;
 
-	if (x >= DYNAPSE_CONFIG_NEUCOL && y < DYNAPSE_CONFIG_NEUROW) {
+	if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y < DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 1;
 		x -= DYNAPSE_CONFIG_NEUCOL;
 	}
-	else if (x < DYNAPSE_CONFIG_NEUCOL && y >= DYNAPSE_CONFIG_NEUROW) {
+	else if ((x < DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 2;
 		y -= DYNAPSE_CONFIG_NEUROW;
 	}
-	else if (x >= DYNAPSE_CONFIG_NEUCOL && y >= DYNAPSE_CONFIG_NEUROW) {
+	else if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 3;
 		x -= DYNAPSE_CONFIG_NEUCOL;
 		y -= DYNAPSE_CONFIG_NEUROW;
@@ -192,7 +198,7 @@ static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, 
 	uint8_t check[2] = { 0 };
 	bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check,
 		sizeof(check));
-	if (!result || check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE || check[1] != 0) {
+	if ((!result) || (check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE) || (check[1] != 0)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send chip config, USB transfer failed on verification.");
 		return (false);
 	}
@@ -839,7 +845,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		}
 
 		case DYNAPSE_CONFIG_MONITOR_NEU: {
-			if (paramAddr >= DYNAPSE_CONFIG_NUMCORES || param >= DYNAPSE_CONFIG_NUMNEURONS_CORE) {
+			if ((paramAddr >= DYNAPSE_CONFIG_NUMCORES) || (param >= DYNAPSE_CONFIG_NUMNEURONS_CORE)) {
 				return (false);
 			}
 
@@ -849,7 +855,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			uint32_t neuronMonitorConfig[2] = { 0 };
 
 			// Two commands: first reset core monitoring, then set neuron to monitor.
-			neuronMonitorConfig[0] = 0x01 << 11 | U32T(coreId & 0x03) << 8;
+			neuronMonitorConfig[0] = U32T(0x01 << 11) | U32T(U32T(coreId & 0x03) << 8);
 
 			neuronMonitorConfig[1] = caerDynapseCoreAddrToNeuronId(coreId, neuronId);
 
@@ -923,6 +929,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 					break;
 				}
+
+				default:
+					// Unknown chip ID.
+					return (false);
+					break;
 			}
 
 			uint32_t sramMonitorConfig[DYNAPSE_CONFIG_NUMNEURONS * DYNAPSE_CONFIG_NUMSRAM_NEU];
@@ -932,7 +943,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				for (uint8_t sramId = 0; sramId < DYNAPSE_CONFIG_NUMSRAM_NEU; sramId++) {
 					// use first sram for monitoring
 					if (sramId == 0) {
-						uint8_t virtualCoreId = (neuronId >> 8) & 0x03;
+						uint8_t virtualCoreId = U8T(neuronId >> 8) & 0x03;
 						uint8_t destinationCore = U8T(paramAddr + DYNAPSE_CHIPID_SHIFT); // (Ab)use chip ID for output.
 
 						sramMonitorConfig[idx++] = caerDynapseGenerateSramBits(neuronId, sramId, virtualCoreId, sx, dx,
@@ -1267,7 +1278,7 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 	// Truncate off any extra partial event.
 	if ((bytesSent & 0x01) != 0) {
 		dynapseLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bytesSent);
-		bytesSent &= (size_t) ~0x01;
+		bytesSent &= ~((size_t) 0x01);
 	}
 
 	for (size_t i = 0; i < bytesSent; i += 2) {
@@ -1397,7 +1408,7 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 					// See DYNAPSE_CONFIG_DEFAULT_SRAM for more details.
 					chipID = U8T(chipID - DYNAPSE_CHIPID_SHIFT);
 
-					uint32_t neuronID = (data >> 4) & 0x00FF;
+					uint32_t neuronID = U16T(data >> 4) & 0x00FF;
 
 					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(state->currentPackets.spike,
 						state->currentPackets.spikePosition);
@@ -1761,31 +1772,31 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 	uint32_t biasValue = U32T((dynapseBias.biasAddress & 0x7F) << 18) | U32T(0x01 << 16);
 
 	// SSN and SSP are different.
-	if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN
-		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+	if ((dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP) || (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN)
+		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP) || (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
 		// Special (bit 15) is always enabled for Shifted-Source biases.
 		// For all other bias types we keep it disabled, as it is not useful for users.
 		biasValue |= U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
 	}
 	// So are the Buffer biases.
-	else if (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER
-		|| dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
+	else if ((dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER)
+		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
 		biasValue |= U32T(
 			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 	// Standard coarse-fine biases.
 	else {
 		if (dynapseBias.enabled) {
-			biasValue |= 0x01;
+			biasValue |= 0x01U;
 		}
 		if (dynapseBias.sexN) {
-			biasValue |= 0x02;
+			biasValue |= 0x02U;
 		}
 		if (dynapseBias.typeNormal) {
-			biasValue |= 0x04;
+			biasValue |= 0x04U;
 		}
 		if (dynapseBias.biasHigh) {
-			biasValue |= 0x08;
+			biasValue |= 0x08U;
 		}
 
 		biasValue |= U32T(
@@ -1802,15 +1813,15 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
 	biasValue.biasAddress = (dynapseBias >> 18) & 0x7F;
 
 	// SSN and SSP are different.
-	if (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP || biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN
-		|| biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP || biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN) {
+	if ((biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP) || (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN)
+		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP) || (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
 		// Special (bit 15) is always enabled for Shifted-Source biases.
 		// For all other bias types we keep it disabled, as it is not useful for users.
 		biasValue.fineValue = (dynapseBias >> 4) & 0x3F;
 	}
 	// So are the Buffer biases.
-	else if (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER
-		|| biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER) {
+	else if ((biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER)
+		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
 		biasValue.coarseValue = coarseValueReverse((dynapseBias >> 12) & 0x07);
 		biasValue.fineValue = (dynapseBias >> 4) & 0xFF;
 	}
