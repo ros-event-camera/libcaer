@@ -27,7 +27,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 	Mat colorMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(colorFrame)),
 		caerFrameEventGetPixelArrayUnsafe(colorFrame));
 
-	CV_Assert(monoMat.type() == CV_16UC1 && colorMat.type() == CV_16UC3);
+	CV_Assert((monoMat.type() == CV_16UC1) && (colorMat.type() == CV_16UC3));
 
 	// Select correct type code for OpenCV demosaic algorithm.
 	int code = 0;
@@ -105,6 +105,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 			}
 			break;
 
+		case DEMOSAIC_STANDARD:
 		default:
 			break;
 	}
@@ -115,8 +116,8 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 
 caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
 	enum caer_frame_utils_demosaic_types demosaicType) {
-	if (framePacket == NULL) {
-		return (NULL);
+	if (framePacket == nullptr) {
+		return (nullptr);
 	}
 
 	int32_t countValid = 0;
@@ -126,12 +127,12 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
-			if (caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+			if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
 				countValid++;
 
 				if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
@@ -151,27 +152,27 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 
 	// Check if any frames did respect the requirements.
 	if (countValid == 0) {
-		return (NULL);
+		return (nullptr);
 	}
 
 	// Allocate new frame with RGB channels to hold resulting color image.
 	caerFrameEventPacket colorFramePacket = caerFrameEventPacketAllocate(countValid,
 		caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
 		caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
-	if (colorFramePacket == NULL) {
-		return (NULL);
+	if (colorFramePacket == nullptr) {
+		return (nullptr);
 	}
 
 	int32_t colorIndex = 0;
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
-			if (caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR
-				|| caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+			if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
+				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
 				// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
 				caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex++);
 
@@ -204,11 +205,12 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent) {
 	CV_Assert(intensity.type() == CV_16UC1);
-	CV_Assert(clipHistPercent >= 0 && clipHistPercent < 100);
+	CV_Assert((clipHistPercent >= 0) && (clipHistPercent < 100));
 
 	// O(x, y) = alpha * I(x, y) + beta, where alpha maximizes the range
 	// (contrast) and beta shifts it so lowest is zero (brightness).
-	double minValue, maxValue;
+	double minValue;
+	double maxValue;
 
 	if (clipHistPercent == 0) {
 		// Determine minimum and maximum values.
@@ -303,8 +305,8 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize) {
 	CV_Assert(intensity.type() == CV_16UC1);
-	CV_Assert(clipLimit >= 0 && clipLimit < 100);
-	CV_Assert(tilesGridSize >= 1 && tilesGridSize <= 64);
+	CV_Assert((clipLimit >= 0) && (clipLimit < 100));
+	CV_Assert((tilesGridSize >= 1) && (tilesGridSize <= 64));
 
 	// Apply the CLAHE algorithm to the intensity channel (luminance).
 	Ptr<CLAHE> clahe = createCLAHE();
@@ -314,7 +316,7 @@ static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int t
 }
 
 void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType) {
-	if (framePacket == NULL) {
+	if (framePacket == nullptr) {
 		return;
 	}
 
@@ -324,7 +326,7 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_fr
 		Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
 			caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));
 
-		CV_Assert(orig.type() == CV_16UC1 || orig.type() == CV_16UC3 || orig.type() == CV_16UC4);
+		CV_Assert((orig.type() == CV_16UC1) || (orig.type() == CV_16UC3) || (orig.type() == CV_16UC4));
 
 		// This generally only works well on grayscale intensity images.
 		// So, if this is a grayscale image, good, else if its a color
@@ -390,6 +392,7 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_fr
 				frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
 				break;
 
+			case CONTRAST_STANDARD:
 			default:
 				break;
 		}
