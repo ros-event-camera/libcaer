@@ -1,4 +1,4 @@
-Release 2.4.0 - XX.09.2017
+Release 2.4.0 - 04.09.2017
 INCOMPATIBLE CHANGES
 - devices/dynapse.h: the chip IDs are now mapped to be 0,1,2,3 for
   U0,U1,U2,U3 respectively, making them as easy to use and loop over

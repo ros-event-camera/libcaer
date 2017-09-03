@@ -1,6 +1,6 @@
 Summary: Minimal C library to access, configure and get/send AER data from sensors or to/from neuromorphic processors.
 Name:    libcaer
-Version: 2.3.0
+Version: 2.4.0
 Release: 0%{?dist}
 License: BSD
 URL:     https://github.com/inilabs/libcaer/
