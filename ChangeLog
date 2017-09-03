@@ -1,4 +1,4 @@
-Release 2.4.0 - XX.08.2017
+Release 2.4.0 - XX.09.2017
 INCOMPATIBLE CHANGES
 - devices/dynapse.h: the chip IDs are now mapped to be 0,1,2,3 for
   U0,U1,U2,U3 respectively, making them as easy to use and loop over
@@ -15,10 +15,10 @@ INCOMPATIBLE CHANGES
   This has now been corrected, and the functions moved to devices/dynapse.h
   with the new names of caerDynapseSpikeEventGetX/Y(), due to them being
   specific to the architecture of the Dynap-SE neuromorphic processor.
-  Now both cores and neurons, as interpreted through these functions,
+  Now both chips, cores and neurons, as interpreted through these functions,
   are set out in row-major order (similar to computer vision).
 - devices/dynapse.h: the caerDynapseWriteSram() function is being deprecated
-  in favour of its new veriant caerDynapseWriteSramN().
+  in favour of its newer variant caerDynapseWriteSramN().
 - devices/dynapse.h: removed define DYNAPSE_CONFIG_SRAMROW.
   Use DYNAPSE_CONFIG_NUMNEURONS and DYNAPSE_CONFIG_NUMSRAM_NEU.
 - devices/dynapse.h: removed defines DYNAPSE_MAX_USER_USB_PACKET_SIZE,
@@ -30,8 +30,8 @@ INCOMPATIBLE CHANGES
   reflect actual biasing of device correctly.
 - devices/device.h: CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE's
   default value has been changed to zero, disabling the size division of
-  packets by default. Packet size is dicated by time interval only by
-  default now, with a value of 10 milliseconds.
+  packets by default. Packet size is now dictated, by default, only by
+  the time interval, with a value of 10 milliseconds.
 
 NEW FEATURES
 - Packaging: packages for Fedora, Debian and Gentoo Linux, as well as
@@ -74,11 +74,12 @@ BUG FIXES
   each neuron in a chip, resulting in all CAMs being fully cleared.
 - events/frame.h: added documentation that using the assignment operator
   to copy Frame events is not possible, caerGenericEventCopy() should
-  be used instead. The C++ variant delets the assignment operator to
+  be used instead. The C++ variant deletes the assignment operator to
   enforce this. This fixes issue #26.
 - src/usb_utils.c: fixed shutdown callback not being called on MacOS X.
   Also fixed possible dead-lock on USB transfer re-submit on Windows.
   This fixes issue #32.
+- Fixed many code quality warnings by Sonarcloud.
 
 
 Release 2.3.0 - 30.06.2017

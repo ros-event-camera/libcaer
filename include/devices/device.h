@@ -62,7 +62,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * manually, which can be useful if you need precise control
  * over which ones are running at any time.
  */
- #define CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS 2
+#define CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS 2
 /**
  * Parameter address for module CAER_HOST_CONFIG_DATAEXCHANGE:
  * whether to stop all the data producer modules on the device
@@ -72,7 +72,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * manually, to halt the data flow, which can be useful if you
  * need precise control over which ones are running at any time.
  */
- #define CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS  3
+#define CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS  3
 
 /**
  * Parameter address for module CAER_HOST_CONFIG_PACKETS:
