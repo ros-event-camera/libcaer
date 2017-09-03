@@ -32,6 +32,7 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 	// Select correct type code for OpenCV demosaic algorithm.
 	int code = 0;
 
+	// NOTE: DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
 	switch (demosaicType) {
 		case DEMOSAIC_OPENCV_NORMAL:
 			switch (caerFrameEventGetColorFilter(monoFrame)) {
@@ -56,30 +57,6 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 					break;
 			}
 			break;
-
-			/*case DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS:
-			 switch (caerFrameEventGetColorFilter(monoFrame)) {
-			 case RGBG:
-			 code = COLOR_BayerBG2RGB_VNG;
-			 break;
-
-			 case GRGB:
-			 code = COLOR_BayerGB2RGB_VNG;
-			 break;
-
-			 case GBGR:
-			 code = COLOR_BayerGR2RGB_VNG;
-			 break;
-
-			 case BGRG:
-			 code = COLOR_BayerRG2RGB_VNG;
-			 break;
-
-			 default:
-			 // Impossible, other color filters get filtered out above.
-			 break;
-			 }
-			 break;*/
 
 		case DEMOSAIC_OPENCV_EDGE_AWARE:
 			switch (caerFrameEventGetColorFilter(monoFrame)) {
@@ -174,7 +151,8 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
 				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
 				// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-				caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex++);
+				caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
+				colorIndex++;
 
 				// First copy all the metadata.
 				caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
@@ -234,8 +212,8 @@ static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPerc
 
 		// Locate points that cut at required value.
 		float max = hist.at<float>(histSize - 1);
-		clipHistPercent *= (max / 100.0f); // Calculate absolute value from percent.
-		clipHistPercent /= 2.0f; // Left and right wings, so divide by two.
+		clipHistPercent *= (max / 100.0F); // Calculate absolute value from percent.
+		clipHistPercent /= 2.0F; // Left and right wings, so divide by two.
 
 		// Locate left cut.
 		minValue = 0;
