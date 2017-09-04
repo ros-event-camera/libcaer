@@ -69,13 +69,13 @@ extern "C" {
 /**
  * Clear SRAM content, use one SRAM cell (cell 0, out of the four available)
  * to monitor neurons via USB.
- * 'modAddr' is the chip ID on which to operate, other arguments are unused.
+ * 'paramAddr' is the chip ID on which to operate, other arguments are unused.
  * Remember to also select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
 /**
  * Setup analog neuron monitoring via SMA connectors.
- * 'modAddr' takes the core ID to be monitored, 'paramAddr' the neuron ID.
+ * 'paramAddr' takes the core ID to be monitored, 'param' the neuron ID.
  * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_MONITOR_NEU 12
@@ -87,7 +87,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
 /**
- * Module address: device side SRAM controller configuration.
+ * Module address: Device side SRAM controller configuration.
  * The module holds an address, a word to be written to SRAM,
  * the most recent word read using a read command, and a read/write command.
  * Reads/writes are triggered when the address field is changed.
@@ -116,11 +116,35 @@ extern "C" {
 #define DYNAPSE_CONFIG_SPIKEGEN 16
 
 /**
+ * Set certain neurons of a core to use the TAU2 neuron leak bias.
+ * By default neurons use the TAU1 neuron leak bias. You can also use
+ * DYNAPSE_CONFIG_TAU1_RESET and DYNAPSE_CONFIG_TAU2_RESET to reset
+ * all neurons in a core to the same bias.
+ * 'paramAddr' takes the core ID to be set, 'param' the neuron ID.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU2_SET 17
+
+/**
  * Module address: Device side poisson generator configuration
  * Provides run/stop control of poisson spike generation and
  * rate setting for 1024 sources.
  */
 #define DYNAPSE_CONFIG_POISSONSPIKEGEN 18
+
+/**
+ * Reset all neurons of a core to use the TAU1 neuron leak bias.
+ * 'paramAddr' takes the core ID to be reset, other arguments are unused.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU1_RESET 19
+
+/**
+ * Reset all neurons of a core to use the TAU2 neuron leak bias.
+ * 'paramAddr' takes the core ID to be reset, other arguments are unused.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU2_RESET 20
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN:

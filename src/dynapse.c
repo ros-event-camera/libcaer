@@ -860,15 +860,12 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				return (false);
 			}
 
-			uint8_t coreId = paramAddr;
-			uint8_t neuronId = U8T(param);
-
 			uint32_t neuronMonitorConfig[2] = { 0 };
 
 			// Two commands: first reset core monitoring, then set neuron to monitor.
-			neuronMonitorConfig[0] = U32T(0x01 << 11) | U32T(U32T(coreId & 0x03) << 8);
+			neuronMonitorConfig[0] = U32T(0x01 << 11) | U32T(U32T(paramAddr) << 8);
 
-			neuronMonitorConfig[1] = caerDynapseCoreAddrToNeuronId(coreId, neuronId);
+			neuronMonitorConfig[1] = caerDynapseCoreAddrToNeuronId(paramAddr, U8T(param));
 
 			return (caerDynapseSendDataToUSB(cdh, neuronMonitorConfig, 2));
 			break;
@@ -967,6 +964,39 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 			}
 
 			return (caerDynapseSendDataToUSB(cdh, sramMonitorConfig, idx));
+			break;
+		}
+
+		case DYNAPSE_CONFIG_TAU2_SET: {
+			if ((paramAddr >= DYNAPSE_CONFIG_NUMCORES) || (param >= DYNAPSE_CONFIG_NUMNEURONS_CORE)) {
+				return (false);
+			}
+
+			uint32_t neuronTau2Config = U32T(0x01 << 10) | U32T(caerDynapseCoreAddrToNeuronId(paramAddr, U8T(param)));
+
+			return (caerDynapseSendDataToUSB(cdh, &neuronTau2Config, 1));
+			break;
+		}
+
+		case DYNAPSE_CONFIG_TAU1_RESET: {
+			if (paramAddr >= DYNAPSE_CONFIG_NUMCORES) {
+				return (false);
+			}
+
+			uint32_t neuronTau1RstConfig = U32T(0x01 << 12) | U32T(U32T(paramAddr) << 8);
+
+			return (caerDynapseSendDataToUSB(cdh, &neuronTau1RstConfig, 1));
+			break;
+		}
+
+		case DYNAPSE_CONFIG_TAU2_RESET: {
+			if (paramAddr >= DYNAPSE_CONFIG_NUMCORES) {
+				return (false);
+			}
+
+			uint32_t neuronTau2RstConfig = U32T(0x01 << 12) | U32T(0x01 << 11) | U32T(U32T(paramAddr) << 8);
+
+			return (caerDynapseSendDataToUSB(cdh, &neuronTau2RstConfig, 1));
 			break;
 		}
 

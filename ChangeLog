@@ -1,4 +1,4 @@
-Release 2.4.0 - 04.09.2017
+Release 2.4.0 - 05.09.2017
 INCOMPATIBLE CHANGES
 - devices/dynapse.h: the chip IDs are now mapped to be 0,1,2,3 for
   U0,U1,U2,U3 respectively, making them as easy to use and loop over
@@ -59,6 +59,9 @@ NEW FEATURES
   neuron addresses (range [0,1023]).
 - devices/dynapse.h: added caerDynapseSpikeEventFromXY() function to
   have a reverse transformation to caerDynapseSpikeEventGetX/Y().
+- devices/dynapse.h: added DYNAPSE_CONFIG_TAU2_SET, DYNAPSE_CONFIG_TAU1_RESET
+  and DYNAPSE_CONFIG_TAU2_RESET defines for caerDeviceConfigSet()
+  usage, to allow configuration of which neuron leakage bias to use.
 - events/common.h: added caerGenericEventCopy() function to copy
   events from one place in memory to another.
 - ringbuffer.h/hpp: the ring-buffer functions for producer-consumer
