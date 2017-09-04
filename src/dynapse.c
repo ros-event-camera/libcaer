@@ -622,14 +622,18 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL, false);
 
-	// TODO: on next logic update, this will switch to be in cycles, not 125µs blocks.
-	// So will need to multiply by: 125 * 30 (FX2_USB_CLOCK_FREQ).
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_ACK_DELAY, 0);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_ACK_EXTENSION, 0);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL, false);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL, false);
+
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_DELAY, 30);
+	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_EXTENSION, 30);
+
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
 
 	// Turn on chip and AER communication for configuration.
 	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Initializing device ...");
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_DELAY, 30);
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_EXTENSION, 30);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, true);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, true);
 
@@ -819,9 +823,16 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case DYNAPSE_CONFIG_USB:
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
-				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
 					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
+
+				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY: {
+					// Early packet delay is 125µs slices on host, but in cycles
+					// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
+					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr,
+						U32T((float) param * (125.0F * DYNAPSE_FX2_USB_CLOCK_FREQ))));
+					break;
+				}
 
 				default:
 					return (false);
@@ -1105,9 +1116,22 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		case DYNAPSE_CONFIG_USB:
 			switch (paramAddr) {
 				case DYNAPSE_CONFIG_USB_RUN:
-				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY:
 					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr, param));
 					break;
+
+				case DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY: {
+					// Early packet delay is 125µs slices on host, but in cycles
+					// @ USB_CLOCK_FREQ on FPGA, so we must divide here.
+					uint32_t cyclesValue = 0;
+					if (!spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_USB, paramAddr, &cyclesValue)) {
+						return (false);
+					}
+
+					*param = U32T((float) cyclesValue / (125.0F * DYNAPSE_FX2_USB_CLOCK_FREQ));
+
+					return (true);
+					break;
+				}
 
 				default:
 					return (false);

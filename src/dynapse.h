@@ -22,6 +22,8 @@
 #define DYNAPSE_SPIKE_DEFAULT_SIZE 4096
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
 
+#define DYNAPSE_FX2_USB_CLOCK_FREQ 30
+
 // Chip ID 0 cannot be used for USB output, so we have to shift it by
 // adding 1, and also adding that to all others.
 #define DYNAPSE_CHIPID_SHIFT 1
