@@ -72,5 +72,13 @@ caerDeviceClose(&h);
 All configuration parameters and event types are specified in the
 public headers and documented there.
 
+HELP:
+
+Please use our GitHub bug tracker to report issues and bugs, or
+our Google Groups mailing list for discussions and announcements.
+
+BUG TRACKER: https://github.com/inilabs/libcaer/issues/
+MAILING LIST: https://groups.google.com/d/forum/caer-users/
+
 BUILD STATUS: https://travis-ci.org/inilabs/libcaer/
 CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inilabs.libcaer
