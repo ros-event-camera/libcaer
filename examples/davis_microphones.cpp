@@ -74,7 +74,7 @@ int main(void) {
 	// Don't start all producers automatically, we only want to start microphones.
 	davisHandle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS, false);
 
-	// Start microphones and USB data transfer.
+	// Start microphones and USB data transfer. Set sampling frequency to 48 KHz.
 	davisHandle.configSet(DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32);
 	davisHandle.configSet(DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, true);
 

@@ -1241,11 +1241,11 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_MICROPHONE:
  * allows setting the sample frequency of the stereo microphones,
  * by specifying the length of an SCK clock cycle in LogicClock cycles.
- * Value can be between 30 and 215 inclusive.
+ * Value can be between 30 and 219 inclusive.
  * The desired value can be calculated in the following way:
- * floor(100'000'000/64/<desired freq in Hz>)
+ * floor((100.8 * 1000)/(64 * <desired frequency in KHz>))
  * For example for 48 KHz sampling frequency, this would be 32.
- * For 44.1 KHz it would be 35, and for 16 KHz it would be 97.
+ * For 44.1 KHz it would be 35, and for 16 KHz it would be 98.
  */
 #define DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY 1
 
