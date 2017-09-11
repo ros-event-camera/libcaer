@@ -1301,11 +1301,11 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
-				// BIASING (DAVIS_CONFIG_BIAS).
+				// BIASING (DAVIS_CONFIG_BIAS). Validate all inputs.
 				if (IS_DAVIS240(handle->info.chipID)) {
 					// DAVIS240 uses the old bias generator with 22 branches, and uses all of them.
-					if (paramAddr < 22) {
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
+					if (paramAddr >= 22) {
+						return (false);
 					}
 				}
 				else if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
@@ -1340,15 +1340,14 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS128_CONFIG_BIAS_SSP:
 						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						case DAVIS346_CONFIG_BIAS_ADCTESTVOLTAGE:
 							// Only supported by DAVIS346 and DAVIS640 chips.
 							if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
-								return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								break;
 							}
-							break;
+							return (false);
 
 						case DAVIS208_CONFIG_BIAS_RESETHIGHPASS:
 						case DAVIS208_CONFIG_BIAS_REFSS:
@@ -1356,13 +1355,12 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						case DAVIS208_CONFIG_BIAS_REFSSBN:
 							// Only supported by DAVIS208 chips.
 							if (IS_DAVIS208(handle->info.chipID)) {
-								return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								break;
 							}
-							break;
+							return (false);
 
 						default:
 							return (false);
-							break;
 					}
 				}
 				else if (IS_DAVISRGB(handle->info.chipID)) {
@@ -1402,17 +1400,24 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						case DAVISRGB_CONFIG_BIAS_BIASBUFFER:
 						case DAVISRGB_CONFIG_BIAS_SSP:
 						case DAVISRGB_CONFIG_BIAS_SSN:
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						default:
 							return (false);
-							break;
 					}
 				}
+
+				// Send bias configuration to chip.
+				bool res = spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param);
+				if (res) {
+					// On success delay 500µs to allow change to propagate to chip.
+					struct timespec biasDelaySleep = { .tv_sec = 0, .tv_nsec = 500000 };
+					thrd_sleep(&biasDelaySleep, NULL);
+				}
+				return (res);
 			}
 			else {
-				// CHIP CONFIGURATION (DAVIS_CONFIG_CHIP).
+				// CHIP CONFIGURATION (DAVIS_CONFIG_CHIP). Validate all inputs.
 				switch (paramAddr) {
 					// Chip configuration common to all chips.
 					case DAVIS128_CONFIG_CHIP_DIGITALMUX0:
@@ -1428,67 +1433,72 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS240_CONFIG_CHIP_SPECIALPIXELCONTROL:
 						// Only supported by DAVIS240 A/B chips.
 						if (IS_DAVIS240A(handle->info.chipID) || IS_DAVIS240B(handle->info.chipID)) {
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							break;
 						}
-						break;
+						return (false);
 
 					case DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER:
 						// Only supported by some chips.
 						if (handle->info.apsHasGlobalShutter) {
 							// Keep in sync with APS module GlobalShutter parameter.
-							if (!spiConfigSend(&state->usbState, DAVIS_CONFIG_APS,
-							DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
+							if (!spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
 								return (false);
 							}
 
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							break;
 						}
-						break;
+						return (false);
 
 					case DAVIS128_CONFIG_CHIP_SELECTGRAYCOUNTER:
 						// Only supported by the new DAVIS chips.
-						if (IS_DAVIS128(
-							handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
+						if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
 							|| IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							break;
 						}
-						break;
+						return (false);
 
 					case DAVIS346_CONFIG_CHIP_TESTADC:
 						// Only supported by some of the new DAVIS chips.
-						if (IS_DAVIS346(
-							handle->info.chipID) || IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+						if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
+							break;
 						}
-						break;
+						return (false);
 
 					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG1LO: // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
 					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG2LO: // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
 					case DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							break;
 						}
-						break;
+						return (false);
 
 					case DAVIS208_CONFIG_CHIP_SELECTPOSFB:
 					case DAVIS208_CONFIG_CHIP_SELECTHIGHPASS:
 						// Only supported by DAVIS208.
 						if (IS_DAVIS208(handle->info.chipID)) {
-							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							break;
 						}
-						break;
+						return (false);
 
 					default:
 						return (false);
-						break;
 				}
+
+				// Send chip configuration to chip.
+				bool res = spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param);
+				if (res) {
+					// On success delay 700µs to allow change to propagate to chip.
+					// This to avoid collision with above bias sending right after chip config.
+					struct timespec chipDelaySleep = { .tv_sec = 0, .tv_nsec = 700000 };
+					thrd_sleep(&chipDelaySleep, NULL);
+				}
+				return (res);
 			}
 
 			return (false);
