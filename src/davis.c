@@ -3394,6 +3394,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// up in START_FRAME.
 							size_t apsROIRegion = state->aps.roi.update >> 2;
 
+							if (apsROIRegion >= APS_ROI_REGIONS_MAX) {
+								continue;
+							}
+
 							switch (state->aps.roi.update & 0x03) {
 								case 0:
 									// START COLUMN
