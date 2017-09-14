@@ -1393,14 +1393,9 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
-			// Is a timestamp! Expand to 32 bits. (Tick is 1µs already.)
-			state->timestamps.last = state->timestamps.current;
-			state->timestamps.current = state->timestamps.wrapAdd + (event & 0x7FFF);
-			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+			handleTimestampUpdateNewLogic(&state->timestamps, event, handle->info.deviceString, &state->deviceLogLevel);
 
-			// Check monotonicity of timestamps.
-			checkStrictMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
-				handle->info.deviceString, &handle->state.deviceLogLevel);
+			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 		}
 		else {
 			// Look at the code, to determine event and data type.
@@ -1415,14 +1410,10 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 							break;
 
 						case 1: { // Timetamp reset
-							state->timestamps.wrapOverflow = 0;
-							state->timestamps.wrapAdd = 0;
-							state->timestamps.last = 0;
-							state->timestamps.current = 0;
+							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString, &state->deviceLogLevel);
+
 							containerGenerationCommitTimestampReset(&state->container);
 							containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
-
-							dynapseLog(CAER_LOG_INFO, handle, "Timestamp reset event received.");
 
 							// Defer timestamp reset event to later, so we commit it
 							// alone, in its own packet.
@@ -1479,51 +1470,19 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 				}
 
 				case 7: { // Timestamp wrap
-					// Detect big timestamp wrap-around.
-					int64_t wrapJump = (TS_WRAP_ADD * data);
-					int64_t wrapSum = I64T(state->timestamps.wrapAdd) + wrapJump;
+					tsBigWrap = handleTimestampWrapNewLogic(&state->timestamps, data, TS_WRAP_ADD,
+						handle->info.deviceString, &state->deviceLogLevel);
 
-					if (wrapSum > I64T(INT32_MAX)) {
-						// Reset wrapAdd at this point, so we can again
-						// start detecting overruns of the 32bit value.
-						// We reset not to zero, but to the remaining value after
-						// multiple wrap-jumps are taken into account.
-						int64_t wrapRemainder = wrapSum - I64T(INT32_MAX) - 1LL;
-						state->timestamps.wrapAdd = I32T(wrapRemainder);
-
-						state->timestamps.last = 0;
-						state->timestamps.current = state->timestamps.wrapAdd;
-
-						// Increment TSOverflow counter.
-						state->timestamps.wrapOverflow++;
-
+					if (tsBigWrap) {
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 							state->currentPackets.special, state->currentPackets.specialPosition);
 						caerSpecialEventSetTimestamp(currentSpecialEvent, INT32_MAX);
 						caerSpecialEventSetType(currentSpecialEvent, TIMESTAMP_WRAP);
 						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
 						state->currentPackets.specialPosition++;
-
-						// Commit packets to separate before wrap from after cleanly.
-						tsBigWrap = true;
 					}
 					else {
-						// Each wrap is 2^15 µs (~32ms), and we have
-						// to multiply it with the wrap counter,
-						// which is located in the data part of this
-						// event.
-						state->timestamps.wrapAdd = I32T(wrapSum);
-
-						state->timestamps.last = state->timestamps.current;
-						state->timestamps.current = state->timestamps.wrapAdd;
 						containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
-
-						// Check monotonicity of timestamps.
-						checkStrictMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
-							handle->info.deviceString, &handle->state.deviceLogLevel);
-
-						dynapseLog(CAER_LOG_DEBUG, handle,
-							"Timestamp wrap event received with multiplier of %" PRIu16 ".", data);
 					}
 
 					break;
@@ -1573,7 +1532,7 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
 				state->timestamps.current, &state->dataExchange, &state->usbState.dataTransfersRun,
-				handle->info.deviceID, handle->info.deviceString, &handle->state.deviceLogLevel);
+				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
 }

@@ -36,12 +36,7 @@ struct dynapse_state {
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
-	struct {
-		int32_t wrapOverflow;
-		int32_t wrapAdd;
-		int32_t last;
-		int32_t current;
-	} timestamps;
+	struct timestamps_state_new_logic timestamps;
 	// Packet Container state
 	struct container_generation container;
 	struct {
