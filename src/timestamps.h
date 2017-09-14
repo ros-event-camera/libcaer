@@ -3,13 +3,22 @@
 
 #include "libcaer.h"
 #include "events/common.h"
+#include "portable_time.h"
 #include <stdatomic.h>
+
+#define TIMESTAMPS_DEBUG 0
+#define TIMESTAMPS_DEBUG_DRIFT_ALARM 100000 // in µs, default 100ms.
 
 struct timestamps_state_new_logic {
 	int32_t wrapOverflow;
 	int32_t wrapAdd;
 	int32_t last;
 	int32_t current;
+#if defined(TIMESTAMPS_DEBUG) && TIMESTAMPS_DEBUG == 1
+	bool debugInitialized;
+	int64_t debugStartTimestamp;
+	struct timespec debugStartTime;
+#endif
 };
 
 typedef struct timestamps_state_new_logic *timestampsStateNewLogic;
@@ -48,11 +57,24 @@ static inline void checkMonotonicTimestamp(int32_t tsCurrent, int32_t tsLast, co
 	}
 }
 
+#if defined(TIMESTAMPS_DEBUG) && TIMESTAMPS_DEBUG == 1
+static inline void timestampsDebugInit(timestampsStateNewLogic timestamps, bool reset) {
+	if ((timestamps->debugInitialized == false) || (reset == true)) {
+		timestamps->debugInitialized = true;
+
+		timestamps->debugStartTimestamp = generateFullTimestamp(timestamps->wrapOverflow, timestamps->current);
+
+		portable_clock_gettime_monotonic(&timestamps->debugStartTime);
+	}
+}
+#endif
+
 static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamps, uint16_t wrapData, uint32_t wrapAdd,
 	const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	// Detect big timestamp wrap-around.
 	int64_t wrapJump = (wrapAdd * wrapData);
 	int64_t wrapSum = I64T(timestamps->wrapAdd) + wrapJump;
+	bool bigWrap = false;
 
 	if (wrapSum > I64T(INT32_MAX)) {
 		// Reset wrapAdd at this point, so we can again
@@ -68,8 +90,8 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 		// Increment TSOverflow counter.
 		timestamps->wrapOverflow++;
 
-		// Commit packets to separate before wrap from after cleanly.
-		return (true);
+		// Commit packets to separate before big wrap from after cleanly.
+		bigWrap = true;
 	}
 	else {
 		// Each wrap is 2^15 µs (~32ms), and we have
@@ -86,9 +108,31 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 
 		commonLog(CAER_LOG_DEBUG, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
 			"Timestamp wrap event received with multiplier of %" PRIu16 ".", wrapData);
-
-		return (false);
 	}
+
+#if defined(TIMESTAMPS_DEBUG) && TIMESTAMPS_DEBUG == 1
+	timestampsDebugInit(timestamps, false);
+
+	// Timestamps debug mode: check elapsed system time (absolute monotonic time)
+	// against elapsed time on device. They should roughly align and not drift over time.
+	int64_t currentTimestamp = generateFullTimestamp(timestamps->wrapOverflow, timestamps->current);
+	struct timespec currentTime;
+	portable_clock_gettime_monotonic(&currentTime);
+
+	int64_t timestampDifferenceMicro = currentTimestamp - timestamps->debugStartTimestamp;
+
+	int64_t timeDifferenceNano = (I64T(currentTime.tv_sec - timestamps->debugStartTime.tv_sec) * 1000000000LL)
+		+ I64T(currentTime.tv_nsec - timestamps->debugStartTime.tv_nsec);
+	int64_t timeDifferenceMicro = timeDifferenceNano / 1000;
+
+	int64_t tsDrift = llabs(timeDifferenceMicro - timestampDifferenceMicro);
+	if (tsDrift >= TIMESTAMPS_DEBUG_DRIFT_ALARM) {
+		commonLog(CAER_LOG_ERROR, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
+			"Timestamps on host and device are drifting away, current drift is: %" PRIi64 " µs.", tsDrift);
+	}
+#endif
+
+	return (bigWrap);
 }
 
 static inline void handleTimestampUpdateNewLogic(timestampsStateNewLogic timestamps, uint16_t tsData,
@@ -99,6 +143,10 @@ static inline void handleTimestampUpdateNewLogic(timestampsStateNewLogic timesta
 
 	// Check monotonicity of timestamps.
 	checkStrictMonotonicTimestamp(timestamps->current, timestamps->last, deviceString, deviceLogLevelAtomic);
+
+#if defined(TIMESTAMPS_DEBUG) && TIMESTAMPS_DEBUG == 1
+	timestampsDebugInit(timestamps, false);
+#endif
 }
 
 static inline void handleTimestampResetNewLogic(timestampsStateNewLogic timestamps, const char *deviceString,
@@ -110,6 +158,10 @@ static inline void handleTimestampResetNewLogic(timestampsStateNewLogic timestam
 
 	commonLog(CAER_LOG_INFO, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
 		"Timestamp reset event received.");
+
+#if defined(TIMESTAMPS_DEBUG) && TIMESTAMPS_DEBUG == 1
+	timestampsDebugInit(timestamps, true);
+#endif
 }
 
 #endif /* LIBCAER_SRC_TIMESTAMPS_H_ */
