@@ -6,7 +6,12 @@
 #include "portable_time.h"
 #include <stdatomic.h>
 
+#ifdef NDEBUG
 #define TIMESTAMPS_DEBUG 0
+#else
+#define TIMESTAMPS_DEBUG 1
+#endif
+
 #define TIMESTAMPS_DEBUG_DRIFT_ALARM 100000 // in µs, default 100ms.
 
 struct timestamps_state_new_logic {

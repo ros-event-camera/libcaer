@@ -32,9 +32,9 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame, uint32_t exposureFrameValue,
 	uint32_t exposureLastSetValue) {
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	caerLog(CAER_LOG_ERROR, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
-	caerLog(CAER_LOG_ERROR, "AutoExposure", "Frame exposure value was: %d.", exposureFrameValue);
-	caerLog(CAER_LOG_ERROR, "AutoExposure", "Real frame exposure value was: %d.",
+	caerLog(CAER_LOG_INFO, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
+	caerLog(CAER_LOG_INFO, "AutoExposure", "Frame exposure value was: %d.", exposureFrameValue);
+	caerLog(CAER_LOG_INFO, "AutoExposure", "Real frame exposure value was: %d.",
 		caerFrameEventGetExposureLength(frame));
 #endif
 
@@ -87,7 +87,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	float pixelsFracHigh = (float) pixelsSumHigh / (float) pixelsSum;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	caerLog(CAER_LOG_ERROR, "AutoExposure",
+	caerLog(CAER_LOG_INFO, "AutoExposure",
 		"BinLow: %zu, BinHigh: %zu, Sum: %zu, SumLow: %zu, SumHigh: %zu, FracLow: %f, FracHigh: %f.", pixelsBinLow,
 		pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow, (double) pixelsFracHigh);
 #endif
@@ -131,7 +131,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0F) - meanSampleValue;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-		caerLog(CAER_LOG_ERROR, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
+		caerLog(CAER_LOG_INFO, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
 #endif
 
 		// If we're close to the under/over limits, we make the magnitude of changes smaller
@@ -162,7 +162,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	}
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	caerLog(CAER_LOG_ERROR, "AutoExposure", "New exposure value is: %d.", newExposure);
+	caerLog(CAER_LOG_INFO, "AutoExposure", "New exposure value is: %d.", newExposure);
 #endif
 
 	return ((newExposure == I32T(exposureLastSetValue)) ? (-1) : (newExposure));
