@@ -1009,6 +1009,8 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME:
+				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD:
+				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
@@ -1019,6 +1021,18 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
 					if (handle->info.dvsHasTestEventGenerator) {
+						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
+					if (handle->info.dvsHasROIFilter) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -1583,6 +1597,24 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					*param = false;
 					break;
 
+				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED + 1:
+					if (handle->info.muxHasStatistics) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
 				default:
 					return (false);
 					break;
@@ -1654,6 +1686,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME:
+				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD:
+				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
@@ -1664,6 +1698,54 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
 					if (handle->info.dvsHasTestEventGenerator) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
+					if (handle->info.dvsHasROIFilter) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW:
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW + 1:
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN:
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN + 1:
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED:
+				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED + 1:
+					if (handle->info.dvsHasStatistics) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS:
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS + 1:
+					if (handle->info.dvsHasStatistics && handle->info.dvsHasPixelFilter) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY:
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY + 1:
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD:
+				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD + 1:
+					if (handle->info.dvsHasStatistics && handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {

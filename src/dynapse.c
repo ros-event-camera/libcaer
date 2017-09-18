@@ -1084,6 +1084,16 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					*param = false;
 					break;
 
+				case DYNAPSE_CONFIG_MUX_STATISTICS_AER_DROPPED:
+				case DYNAPSE_CONFIG_MUX_STATISTICS_AER_DROPPED + 1:
+					if (handle->info.muxHasStatistics) {
+						return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_MUX, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
 				default:
 					return (false);
 					break;
@@ -1098,6 +1108,18 @@ bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				case DYNAPSE_CONFIG_AER_WAIT_ON_TRANSFER_STALL:
 				case DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL:
 					return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_AER, paramAddr, param));
+					break;
+
+				case DYNAPSE_CONFIG_AER_STATISTICS_EVENTS:
+				case DYNAPSE_CONFIG_AER_STATISTICS_EVENTS + 1:
+				case DYNAPSE_CONFIG_AER_STATISTICS_EVENTS_DROPPED:
+				case DYNAPSE_CONFIG_AER_STATISTICS_EVENTS_DROPPED + 1:
+					if (handle->info.aerHasStatistics) {
+						return (spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_AER, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
 					break;
 
 				default:
