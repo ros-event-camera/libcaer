@@ -307,12 +307,17 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	handle->info.adcClock = I16T(param32);
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
 	handle->info.chipID = I16T(param32);
+
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
 	handle->info.dvsHasPixelFilter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
 	handle->info.dvsHasBackgroundActivityFilter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR, &param32);
 	handle->info.dvsHasTestEventGenerator = param32;
+	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
+	handle->info.dvsHasROIFilter = param32;
+	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
+	handle->info.dvsHasStatistics = param32;
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
 	handle->info.apsColorFilter = U8T(param32);
@@ -329,6 +334,9 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	handle->info.extInputHasGenerator = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS, &param32);
 	handle->info.extInputHasExtraDetectors = param32;
+
+	spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
+	handle->info.muxHasStatistics = param32;
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
 	state->dvs.sizeX = I16T(param32);

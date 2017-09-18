@@ -314,6 +314,11 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
 	handle->info.chipID = I16T(param32);
 
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_HAS_STATISTICS, &param32);
+	handle->info.aerHasStatistics = param32;
+	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_HAS_STATISTICS, &param32);
+	handle->info.muxHasStatistics = param32;
+
 	dynapseLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
 		usbInfo.busNumber, usbInfo.devAddress);
 
