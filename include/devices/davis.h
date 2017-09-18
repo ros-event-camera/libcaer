@@ -242,6 +242,55 @@ extern "C" {
  * them pile up at the input FIFOs.
  */
 #define DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL      8
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_MUX_HAS_STATISTICS              10
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * DVS events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED      11
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * APS events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED      13
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * IMU events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED      15
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * External Input events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED 17
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * Microphone sample events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED      19
 
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
@@ -461,20 +510,20 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER    28
+#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER  28
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the background-activity filter, which tries to remove events
  * caused by transistor leakage, by rejecting uncorrelated events.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY        29
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY      29
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * specify the time difference constant for the background-activity
  * filter in microseconds. Events that do correlated within this
  * time-frame are let through, while others are filtered out.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT 30
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 30
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
@@ -483,7 +532,7 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR          31
+#define DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR        31
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the test event generator for debugging purposes.
@@ -493,7 +542,115 @@ extern "C" {
  * Both DAVIS_CONFIG_DVS_RUN and DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL
  * have to be turned off for this to work.
  */
-#define DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE       32
+#define DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE     32
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * enable the refractory period filter, which limits the firing rate
+ * of pixels. This is supported together with the background-activity
+ * filter.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD        33
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * specify the time constant for the refractory period filter.
+ * Pixels will be inhibited from generating new events during this
+ * time after the last even has fired.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME   34
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
+ * ROI filter feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_ROI_FILTER          35
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * start position on the X axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_X-1, and be smaller
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN 36
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * start position on the Y axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_Y-1, and be smaller
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW    37
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * end position on the X axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_X-1, and be greater
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN   38
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * end position on the Y axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_Y-1, and be greater
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW      39
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_STATISTICS             40
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of row event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW      41
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of column event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN   43
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * transaction sequences on the device due to full buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED  45
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the pixel filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS 47
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the background-activity filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY 49
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the refractory period filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
@@ -1712,7 +1869,7 @@ struct caer_davis_info {
 	int16_t dvsSizeY;
 	/// Feature test: DVS pixel-level filtering.
 	bool dvsHasPixelFilter;
-	/// Feature test: DVS Background Activity filter.
+	/// Feature test: DVS Background Activity filter (and Refractory Period filter).
 	bool dvsHasBackgroundActivityFilter;
 	/// Feature test: fake event generator (testing/debug).
 	bool dvsHasTestEventGenerator;
@@ -1734,6 +1891,12 @@ struct caer_davis_info {
 	bool extInputHasGenerator;
 	/// Feature test: External Input module supports extra detectors (1 & 2).
 	bool extInputHasExtraDetectors;
+	/// Feature test: DVS ROI filter.
+	bool dvsHasROIFilter;
+	/// Feature test: DVS statistics support.
+	bool dvsHasStatistics;
+	/// Feature test: Multiplexer statistics support (event drops).
+	bool muxHasStatistics;
 };
 
 /**

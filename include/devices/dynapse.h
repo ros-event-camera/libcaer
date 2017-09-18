@@ -350,6 +350,23 @@ extern "C" {
  * them pile up at the input FIFOs.
  */
 #define DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL      4
+/**
+ * Parameter address for module DYNAPSE_CONFIG_MUX:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_dynapse_info'
+ * documentation to get this information.
+ */
+#define DYNAPSE_CONFIG_MUX_HAS_STATISTICS                    10
+/**
+ * Parameter address for module DYNAPSE_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * AER (spike) events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_MUX_STATISTICS_AER_DROPPED            11
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_AER:
@@ -385,6 +402,31 @@ extern "C" {
  * DYNAPSE_CONFIG_AER_RUN has to be turned off for this to work.
  */
 #define DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL   10
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_dynapse_info'
+ * documentation to get this information.
+ */
+#define DYNAPSE_CONFIG_AER_HAS_STATISTICS            40
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, representing the number of event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_AER_STATISTICS_EVENTS         41
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, representing the number of dropped
+ * transaction sequences on the device due to full buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_AER_STATISTICS_EVENTS_DROPPED 45
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_CHIP:
@@ -687,6 +729,10 @@ struct caer_dynapse_info {
 	int16_t logicClock;
 	/// Chip identifier/type.
 	int16_t chipID;
+	/// Feature test: AER (spikes) statistics support.
+	bool aerHasStatistics;
+	/// Feature test: Multiplexer statistics support (event drops).
+	bool muxHasStatistics;
 };
 
 /**

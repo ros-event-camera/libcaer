@@ -337,3 +337,39 @@ caerEventPacketContainer caerDeviceDataGet(caerDeviceHandle handle) {
 
 	return (dataGetters[handle->deviceType](handle));
 }
+
+bool caerDeviceConfigGet64(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint64_t *param) {
+	// Ensure param is zeroed out.
+	*param = 0;
+
+	// This is implemented by doing two normal configGet() requests for 32bit
+	// numbers and then concatenating them. The given address contains the upper
+	// 32 bits, the +1 address the lower 32 bits. To guard against overflow, the
+	// upper 32 bits are read first, then the lower, and then again the upper ones
+	// to detect if they changed. If yes, we restart getting the value, because
+	// an overflow must have happened. If no, the value is good to use.
+	uint32_t upperBits, lowerBits, verifyUpperBits;
+
+retry:
+	if (!caerDeviceConfigGet(handle, modAddr, paramAddr, &upperBits)) {
+		return (false);
+	}
+
+	if (!caerDeviceConfigGet(handle, modAddr, U8T(paramAddr + 1), &lowerBits)) {
+		return (false);
+	}
+
+	if (!caerDeviceConfigGet(handle, modAddr, paramAddr, &verifyUpperBits)) {
+		return (false);
+	}
+
+	// Guard against overflow while reading.
+	if (upperBits != verifyUpperBits) {
+		goto retry;
+	}
+
+	// Concatenate two 32bit values to one 64bit one.
+	*param = U64T(U64T(upperBits) << 32) | U64T(lowerBits);
+
+	return (true);
+}

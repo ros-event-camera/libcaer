@@ -159,6 +159,27 @@ bool caerDeviceConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
 bool caerDeviceConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
 /**
+ * Get the value of a 64bit configuration parameter.
+ * This is for special read-only configuration parameters only!
+ * Use only when required by the parameter's documentation!
+ *
+ * @param handle a valid device handle.
+ * @param modAddr a module address, used to specify which configuration module
+ *                one wants to query. Negative addresses are used for host-side
+ *                configuration, while positive addresses (including zero) are
+ *                used for device-side configuration.
+ * @param paramAddr a parameter address, to select a specific parameter to query
+ *                  from this particular configuration module. Only positive numbers
+ *                  (including zero) are allowed.
+ * @param param a pointer to a 64bit integer, in which to store the configuration
+ *              parameter's current value. The integer will always be either set
+ *              to zero (on failure), or to the current value (on success).
+ *
+ * @return true if getting the configuration was successful, false on errors.
+ */
+bool caerDeviceConfigGet64(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint64_t *param);
+
+/**
  * Start getting data from the device, setting up the data transfers
  * and starting the data producers (see CAER_HOST_CONFIG_DATAEXCHANGE_START_PRODUCERS).
  * Supports notification of new data and exceptional shutdown events via user-defined call-backs.

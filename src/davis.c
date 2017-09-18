@@ -480,7 +480,7 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	}
 	if (handle->info.dvsHasBackgroundActivityFilter) {
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY, true);
-		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT, 20000);	// in µs
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME, 20000);	// in µs
 	}
 	if (handle->info.dvsHasTestEventGenerator) {
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE, false);
@@ -1000,7 +1000,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
-				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT:
+				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
@@ -1645,7 +1645,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY:
-				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT:
+				case DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
