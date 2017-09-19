@@ -25,7 +25,7 @@
 
 #define APS_ADC_CHANNELS 1
 
-#define APS_ROI_REGIONS_MAX 1
+#define APS_ROI_REGIONS 4
 
 #define IMU6_COUNT 15
 #define IMU9_COUNT 21
@@ -84,11 +84,15 @@ struct davis_state {
 		bool globalShutter;
 		bool resetRead;
 		uint16_t currentReadoutType;
-		uint16_t *currentResetFrame;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
-		// Current composite events, for later copy, to not loose them on commits.
-		caerFrameEvent currentEvent[APS_ROI_REGIONS_MAX];
+		uint16_t expectedCountY;
+		struct {
+			int32_t tsStartFrame;
+			int32_t tsStartExposure;
+			int32_t tsEndExposure;
+			uint16_t *pixels;
+		} frame;
 		struct {
 			bool offsetDirection; // 0 is increasing, 1 is decreasing.
 			int16_t offset;
@@ -96,10 +100,11 @@ struct davis_state {
 		struct {
 			uint16_t update;
 			uint16_t tmpData;
-			uint16_t sizeX[APS_ROI_REGIONS_MAX];
-			uint16_t sizeY[APS_ROI_REGIONS_MAX];
-			uint16_t positionX[APS_ROI_REGIONS_MAX];
-			uint16_t positionY[APS_ROI_REGIONS_MAX];
+			bool enabled[APS_ROI_REGIONS];
+			uint16_t sizeX[APS_ROI_REGIONS];
+			uint16_t sizeY[APS_ROI_REGIONS];
+			uint16_t positionX[APS_ROI_REGIONS];
+			uint16_t positionY[APS_ROI_REGIONS];
 		} roi;
 		struct {
 			uint8_t tmpData;
