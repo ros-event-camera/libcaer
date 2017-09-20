@@ -181,6 +181,11 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 	uint16_t x = state->aps.countX[state->aps.currentReadoutType];
 	uint16_t y = state->aps.countY[state->aps.currentReadoutType];
 
+	// Ignore too big X/Y counts, can happen if column start/end events are lost.
+	if (x >= state->aps.sizeX || y >= state->aps.sizeY) {
+		return;
+	}
+
 	size_t pixelPosition = state->aps.frame.pixelIndexes[(y * state->aps.sizeX) + x];
 
 	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
