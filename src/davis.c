@@ -2962,8 +2962,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]);
 							}
 
-							state->aps.expectedCountY = 0;
-
 							state->aps.countX[state->aps.currentReadoutType]++;
 
 							// The last Reset Column Read End is also the start
