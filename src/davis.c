@@ -92,6 +92,8 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 	uint16_t x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
 	uint16_t y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
+	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
+
 	for (uint16_t j = 0; j < state->aps.sizeY; j++) {
 		for (uint16_t i = 0; i < state->aps.sizeX; i++) {
 			if (apsPixelIsActive(state, x, y)) {
