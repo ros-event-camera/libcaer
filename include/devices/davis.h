@@ -1840,6 +1840,13 @@ extern "C" {
 //@}
 
 /**
+ * DAVIS: maximum number of APS Regions-of-Interest that
+ * can be produced by any DAVIS camera. See 'struct caer_davis_info'
+ * for actual number: 4 if apsHasQuadROI=true, else 1.
+ */
+#define DAVIS_APS_ROI_REGIONS_MAX 4
+
+/**
  * DAVIS device-related information.
  */
 struct caer_davis_info {
