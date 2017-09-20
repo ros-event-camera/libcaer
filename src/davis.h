@@ -25,7 +25,7 @@
 
 #define APS_ADC_CHANNELS 1
 
-#define APS_ROI_REGIONS 4
+#define APS_ROI_REGIONS DAVIS_APS_ROI_REGIONS_MAX
 
 #define IMU6_COUNT 15
 #define IMU9_COUNT 21
@@ -86,17 +86,14 @@ struct davis_state {
 		uint16_t currentReadoutType;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
-		uint16_t expectedCountY;
+		uint16_t *expectedCountY;
 		struct {
 			int32_t tsStartFrame;
 			int32_t tsStartExposure;
 			int32_t tsEndExposure;
+			size_t *pixelIndexes;
 			uint16_t *pixels;
 		} frame;
-		struct {
-			bool offsetDirection; // 0 is increasing, 1 is decreasing.
-			int16_t offset;
-		} cDavisSupport;
 		struct {
 			uint16_t update;
 			uint16_t tmpData;
