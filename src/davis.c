@@ -2858,8 +2858,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 										+ state->aps.roi.positionX[i];
 
 									for (uint16_t y = 0; y <  state->aps.roi.sizeY[i]; y++) {
-										frameOffset = 0;
-
 										memcpy(roiPixels + roiOffset, state->aps.frame.pixels + frameOffset,
 											state->aps.roi.sizeX[i] * sizeof(uint16_t));
 
