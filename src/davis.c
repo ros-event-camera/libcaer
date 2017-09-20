@@ -77,6 +77,7 @@ static inline void apsInitFrame(davisHandle handle) {
 
 	if (state->aps.roi.update != 0) {
 		apsROIUpdateSizes(handle);
+		state->aps.roi.update = 0;
 	}
 
 	// Write out start of frame timestamp.
@@ -2339,6 +2340,12 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	state->aps.globalShutter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
 	state->aps.resetRead = param32;
+
+	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
+		state->aps.roi.enabled[i] = false;
+		state->aps.roi.sizeX[i] = state->aps.roi.positionX[i] = U16T(state->aps.sizeX);
+		state->aps.roi.sizeY[i] = state->aps.roi.positionY[i] = U16T(state->aps.sizeY);
+	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
