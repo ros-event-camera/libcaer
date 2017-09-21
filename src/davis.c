@@ -750,18 +750,23 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROW_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE, U32T(handle->info.adcClock / 10)); // in cycles @ ADCClock
 	if (handle->info.apsHasQuadROI) {
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_1, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_1, U32T(handle->info.apsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_1, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_1, U32T(handle->info.apsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_2, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_2, U32T(handle->info.apsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_2, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_2, U32T(handle->info.apsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_3, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_3, U32T(handle->info.apsSizeY));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_3, U32T(handle->info.apsSizeX));
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_3, U32T(handle->info.apsSizeY));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_1, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_1, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_1, U32T(handle->info.apsSizeX - 1));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_1, U32T(handle->info.apsSizeY - 1));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_2, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_2, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_2, U32T(handle->info.apsSizeX - 1));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_2, U32T(handle->info.apsSizeY - 1));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_3, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_3, 0);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_3, U32T(handle->info.apsSizeX - 1));
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_3, U32T(handle->info.apsSizeY - 1));
+
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI0_ENABLED, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI1_ENABLED, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI2_ENABLED, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI3_ENABLED, false);
 	}
 	if (handle->info.apsHasInternalADC) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_USE_INTERNAL_ADC, true);
@@ -1339,6 +1344,10 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
+				case DAVIS_CONFIG_APS_ROI0_ENABLED:
+				case DAVIS_CONFIG_APS_ROI1_ENABLED:
+				case DAVIS_CONFIG_APS_ROI2_ENABLED:
+				case DAVIS_CONFIG_APS_ROI3_ENABLED:
 					if (handle->info.apsHasQuadROI) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
@@ -1989,6 +1998,10 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
+				case DAVIS_CONFIG_APS_ROI0_ENABLED:
+				case DAVIS_CONFIG_APS_ROI1_ENABLED:
+				case DAVIS_CONFIG_APS_ROI2_ENABLED:
+				case DAVIS_CONFIG_APS_ROI3_ENABLED:
 					if (handle->info.apsHasQuadROI) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}

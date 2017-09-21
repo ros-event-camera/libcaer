@@ -744,9 +744,10 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_0 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_0.
+ * ROI region 0 is always enabled if it is the only
+ * ROI region present (when apsHasQuadROI=false, see
+ * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_0         9
 /**
@@ -754,6 +755,9 @@ extern "C" {
  * start position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be smaller
  * or equal to DAVIS_CONFIG_APS_END_ROW_0.
+ * ROI region 0 is always enabled if it is the only
+ * ROI region present (when apsHasQuadROI=false, see
+ * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_START_ROW_0            10
 /**
@@ -761,6 +765,9 @@ extern "C" {
  * end position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_COLUMN_0.
+ * ROI region 0 is always enabled if it is the only
+ * ROI region present (when apsHasQuadROI=false, see
+ * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_END_COLUMN_0           11
 /**
@@ -768,6 +775,9 @@ extern "C" {
  * end position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_ROW_0.
+ * ROI region 0 is always enabled if it is the only
+ * ROI region present (when apsHasQuadROI=false, see
+ * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_END_ROW_0              12
 /**
@@ -819,9 +829,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 1.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_1 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_1.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_1         20
 /**
@@ -849,9 +857,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 2.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_2 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_2.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_2         24
 /**
@@ -879,9 +885,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 3.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_3 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_3.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_3         28
 /**
@@ -961,6 +965,35 @@ extern "C" {
  * ADC, to minimize noise.
  */
 #define DAVIS_CONFIG_APS_ADC_TEST_MODE          39
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 0.
+ * ROI region 0 is always enabled if it is the only
+ * ROI region present (when apsHasQuadROI=false, see
+ * 'struct caer_davis_info' for more information).
+ */
+#define DAVIS_CONFIG_APS_ROI0_ENABLED           40
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 1.
+ * ROI region 1 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI1_ENABLED           41
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 2.
+ * ROI region 2 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI2_ENABLED           42
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 3.
+ * ROI region 3 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI3_ENABLED           43
 
 // Extra timing settings for DAVISRGB APS module.
 /**
