@@ -31,43 +31,6 @@ static inline float clockFreqCorrect(davisState state, int16_t pureClock) {
 	return ((float) pureClock);
 }
 
-static inline void apsROIUpdateSizes(davisHandle handle) {
-	davisState state = &handle->state;
-
-	// Calculate APS ROI sizes for each region.
-	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-		uint16_t startColumn = state->aps.roi.positionX[i];
-		uint16_t startRow = state->aps.roi.positionY[i];
-		uint16_t endColumn = state->aps.roi.sizeX[i];
-		uint16_t endRow = state->aps.roi.sizeY[i];
-
-		// Check that ROI region is enabled and Start <= End.
-		bool roiEnabledCol = (startColumn < state->aps.sizeX) && (endColumn < state->aps.sizeX);
-		bool roiEnabledRow = (startRow < state->aps.sizeY) && (endRow < state->aps.sizeY);
-		bool roiValidColRow = (startColumn <= endColumn) && (startRow <= endRow);
-
-		if (roiEnabledCol && roiEnabledRow && roiValidColRow) {
-			state->aps.roi.enabled[i] = true;
-
-			// Position is already set to startCol/Row, so we don't have to reset
-			// it here. We only have to calculate size from start and end Col/Row.
-			state->aps.roi.sizeX[i] = U16T(endColumn + 1 - startColumn);
-			state->aps.roi.sizeY[i] = U16T(endRow + 1 - startRow);
-
-			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu enabled - posX=%d, posY=%d, sizeX=%d, sizeY=%d.", i,
-				state->aps.roi.positionX[i], state->aps.roi.positionY[i], state->aps.roi.sizeX[i], state->aps.roi.sizeY[i]);
-		}
-		else {
-			// Turn off this ROI region.
-			state->aps.roi.enabled[i] = false;
-			state->aps.roi.sizeX[i] = state->aps.roi.positionX[i] = U16T(state->aps.sizeX);
-			state->aps.roi.sizeY[i] = state->aps.roi.positionY[i] = U16T(state->aps.sizeY);
-
-			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu disabled.", i);
-		}
-	}
-}
-
 static inline bool apsPixelIsActive(davisState state, uint16_t x, uint16_t y) {
 	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
 		// Skip disabled ROI regions.
@@ -143,6 +106,70 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 //			state->aps.cDavisSupport.offset = I16T(state->aps.cDavisSupport.offset - 3);
 //		}
 //	}
+
+	davisLog(CAER_LOG_ERROR, handle, "Recalculated APS ROI indexes.");
+}
+
+static inline void apsROIUpdateSizes(davisHandle handle) {
+	davisState state = &handle->state;
+
+	bool recalculateIndexes = false;
+
+	// Calculate APS ROI sizes for each region.
+	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
+		uint16_t startColumn = state->aps.roi.startColumn[i];
+		uint16_t startRow = state->aps.roi.startRow[i];
+		uint16_t endColumn = state->aps.roi.endColumn[i];
+		uint16_t endRow = state->aps.roi.endRow[i];
+
+		// Check that ROI region is enabled and Start <= End.
+		bool roiEnabledCol = (startColumn < state->aps.sizeX) && (endColumn < state->aps.sizeX);
+		bool roiEnabledRow = (startRow < state->aps.sizeY) && (endRow < state->aps.sizeY);
+		bool roiValidColRow = (startColumn <= endColumn) && (startRow <= endRow);
+
+		if (roiEnabledCol && roiEnabledRow && roiValidColRow) {
+			state->aps.roi.enabled[i] = true;
+
+			uint16_t newPositionX = startColumn;
+			uint16_t newPositionY = startRow;
+
+			uint16_t newSizeX = U16T(endColumn + 1 - startColumn);
+			uint16_t newSizeY = U16T(endRow + 1 - startRow);
+
+			if ((state->aps.roi.positionX[i] != newPositionX) || (state->aps.roi.positionY[i] != newPositionY)
+				|| (state->aps.roi.sizeX[i] != newSizeX) || (state->aps.roi.sizeY[i] != newSizeY)) {
+				state->aps.roi.positionX[i] = newPositionX;
+				state->aps.roi.positionY[i] = newPositionY;
+
+				state->aps.roi.sizeX[i] = newSizeX;
+				state->aps.roi.sizeY[i] = newSizeY;
+
+				recalculateIndexes = true;
+			}
+
+			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu enabled - posX=%d, posY=%d, sizeX=%d, sizeY=%d.", i,
+				state->aps.roi.positionX[i], state->aps.roi.positionY[i], state->aps.roi.sizeX[i], state->aps.roi.sizeY[i]);
+		}
+		else {
+			// If was enabled but now isn't, must recalculate indexes.
+			if (state->aps.roi.enabled[i]) {
+				recalculateIndexes = true;
+			}
+
+			// Turn off this ROI region.
+			state->aps.roi.enabled[i] = false;
+
+			state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(state->aps.sizeX);
+			state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(state->aps.sizeY);
+
+			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu disabled.", i);
+		}
+	}
+
+	if (recalculateIndexes) {
+		// Calculate where pixels should go.
+		apsCalculateIndexes(handle);
+	}
 }
 
 static inline void apsInitFrame(davisHandle handle) {
@@ -159,9 +186,6 @@ static inline void apsInitFrame(davisHandle handle) {
 
 		// Update ROI region data (enabled, position, size).
 		apsROIUpdateSizes(handle);
-
-		// Calculate where pixels should go.
-		apsCalculateIndexes(handle);
 	}
 
 	// Write out start of frame timestamp.
@@ -2449,10 +2473,15 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
 	state->aps.resetRead = param32;
 
+	// Fully disable APS ROI by default. Device will send the correct values to enable.
 	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
 		state->aps.roi.enabled[i] = false;
-		state->aps.roi.sizeX[i] = state->aps.roi.positionX[i] = U16T(state->aps.sizeX);
-		state->aps.roi.sizeY[i] = state->aps.roi.positionY[i] = U16T(state->aps.sizeY);
+
+		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(state->aps.sizeX);
+		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(state->aps.sizeY);
+
+		state->aps.roi.startColumn[i] = state->aps.roi.endColumn[i] = U16T(state->aps.sizeX);
+		state->aps.roi.startRow[i] = state->aps.roi.endRow[i] = U16T(state->aps.sizeY);
 	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
@@ -3091,8 +3120,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 0.
 							// 0/1 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x00U << 2);
-							state->aps.roi.sizeX[0] = state->aps.roi.positionX[0] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[0] = state->aps.roi.positionY[0] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[0] = state->aps.roi.startRow[0] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3100,8 +3129,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x01U << 2);
-							state->aps.roi.sizeX[1] = state->aps.roi.positionX[1] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[1] = state->aps.roi.positionY[1] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[1] = state->aps.roi.startRow[1] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3109,8 +3138,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x02U << 2);
-							state->aps.roi.sizeX[2] = state->aps.roi.positionX[2] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[2] = state->aps.roi.positionY[2] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[2] = state->aps.roi.startRow[2] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3118,8 +3147,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x03U << 2);
-							state->aps.roi.sizeX[3] = state->aps.roi.positionX[3] = U16T(state->aps.sizeX);
-							state->aps.roi.sizeY[3] = state->aps.roi.positionY[3] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[3] = state->aps.roi.startRow[3] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3445,22 +3474,22 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							switch (state->aps.roi.update & 0x03) {
 								case 0:
 									// START COLUMN
-									state->aps.roi.positionX[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.startColumn[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 1:
 									// START ROW
-									state->aps.roi.positionY[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.startRow[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 2:
 									// END COLUMN
-									state->aps.roi.sizeX[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.endColumn[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 3:
 									// END ROW
-									state->aps.roi.sizeY[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.endRow[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								default:
