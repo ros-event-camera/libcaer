@@ -2401,7 +2401,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	}
 
 	state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), 0,
-		state->aps.sizeX, state->aps.sizeY, 1);
+		handle->info.apsSizeX, handle->info.apsSizeY, 1);
 	if (state->currentPackets.frame == NULL) {
 		freeAllDataMemory(state);
 
@@ -2642,7 +2642,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 		if (state->currentPackets.frame == NULL) {
 			state->currentPackets.frame = caerFrameEventPacketAllocate(
 			DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow,
-				state->aps.sizeX, state->aps.sizeY, 1);
+				handle->info.apsSizeX, handle->info.apsSizeY, 1);
 			if (state->currentPackets.frame == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
@@ -3022,7 +3022,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// The last Reset Column Read End is also the start
 							// of the exposure for the GS.
 							if ((state->aps.globalShutter) && (state->aps.currentReadoutType == APS_READOUT_RESET)
-								&& (state->aps.countX[APS_READOUT_RESET] == state->aps.sizeX)) {
+								&& (state->aps.countX[APS_READOUT_RESET] == state->aps.expectedCountX)) {
 								state->aps.frame.tsStartExposure = state->timestamps.current;
 
 								// Send APS info event out (as special event).
