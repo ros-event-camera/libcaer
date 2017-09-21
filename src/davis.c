@@ -38,8 +38,8 @@ static inline bool apsPixelIsActive(davisState state, uint16_t x, uint16_t y) {
 			continue;
 		}
 
-		if ((x >= state->aps.roi.positionX[i] && x <= (state->aps.roi.positionX[i] + state->aps.roi.sizeX[i] - 1))
-			&& (y >= state->aps.roi.positionY[i] && y <= (state->aps.roi.positionY[i] + state->aps.roi.sizeY[i] - 1))) {
+		if ((x >= state->aps.roi.positionX[i]) && (x < (state->aps.roi.positionX[i] + state->aps.roi.sizeX[i]))
+			&& (y >= state->aps.roi.positionY[i]) && (y < (state->aps.roi.positionY[i] + state->aps.roi.sizeY[i]))) {
 			return (true);
 		}
 	}
@@ -57,29 +57,31 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 
 	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
 
-	for (uint16_t j = 0; j < state->aps.sizeY; j++) {
-		for (uint16_t i = 0; i < state->aps.sizeX; i++) {
+	for (uint16_t i = 0; i < state->aps.sizeX; i++) {
+		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
 			if (apsPixelIsActive(state, x, y)) {
-				state->aps.frame.pixelIndexes[(j * state->aps.sizeX) + i] = (size_t) ((y * state->aps.sizeX) + x);
+				// pixelIndexes is laid out in column order because that's how
+				// frame update will access it naturally later.
+				state->aps.frame.pixelIndexes[(i * state->aps.sizeY) + j] = (size_t) ((y * state->aps.sizeX) + x);
 				state->aps.expectedCountY[i]++;
 			}
 
-			if (state->aps.flipX) {
-				x--;
+			if (state->aps.flipY) {
+				y--;
 			}
 			else {
-				x++;
+				y++;
 			}
 		}
 
-		// Reset X for next iteration.
-		x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
+		// Reset Y for next iteration.
+		y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
-		if (state->aps.flipY) {
-			y--;
+		if (state->aps.flipX) {
+			x--;
 		}
 		else {
-			y++;
+			x++;
 		}
 	}
 
@@ -211,7 +213,7 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 		return;
 	}
 
-	size_t pixelPosition = state->aps.frame.pixelIndexes[(y * state->aps.sizeX) + x];
+	size_t pixelPosition = state->aps.frame.pixelIndexes[(x * state->aps.sizeY) + y];
 
 	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
 
