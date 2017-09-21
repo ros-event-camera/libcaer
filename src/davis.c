@@ -58,6 +58,8 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 	state->aps.expectedCountX = 0;
 	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
 
+	size_t index = 0;
+
 	for (uint16_t i = 0; i < state->aps.sizeX; i++) {
 		uint16_t activePixels = 0;
 
@@ -65,7 +67,7 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 			if (apsPixelIsActive(state, x, y)) {
 				// pixelIndexes is laid out in column order because that's how
 				// frame update will access it naturally later.
-				state->aps.frame.pixelIndexes[(i * state->aps.sizeY) + j] = (size_t) ((y * state->aps.sizeX) + x);
+				state->aps.frame.pixelIndexes[index++] = (size_t) ((y * state->aps.sizeX) + x);
 				activePixels++;
 			}
 
@@ -189,6 +191,8 @@ static inline void apsInitFrame(davisHandle handle) {
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
 		state->aps.countX[i] = 0;
 		state->aps.countY[i] = 0;
+
+		state->aps.frame.pixelIndexesPosition[i] = 0;
 	}
 
 	if (state->aps.roi.update != 0) {
@@ -213,15 +217,8 @@ static inline void apsInitFrame(davisHandle handle) {
 static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 	davisState state = &handle->state;
 
-	uint16_t x = state->aps.countX[state->aps.currentReadoutType];
-	uint16_t y = state->aps.countY[state->aps.currentReadoutType];
-
-	// Ignore too big X/Y counts, can happen if column start/end events are lost.
-	if (x >= state->aps.sizeX || y >= state->aps.sizeY) {
-		return;
-	}
-
-	size_t pixelPosition = state->aps.frame.pixelIndexes[(x * state->aps.sizeY) + y];
+	size_t pixelPosition = state->aps.frame.pixelIndexes[state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]];
+	state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]++;
 
 	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
 
@@ -3337,6 +3334,12 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				case 4: {
 					if (state->aps.ignoreEvents) {
 						break;
+					}
+
+					// Ignore too big X/Y counts, can happen if column start/end events are lost.
+					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.sizeX)
+						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.sizeY)) {
+						return;
 					}
 
 					// DAVIS240 has a reduced dynamic range due to external

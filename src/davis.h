@@ -93,6 +93,7 @@ struct davis_state {
 			int32_t tsStartExposure;
 			int32_t tsEndExposure;
 			size_t *pixelIndexes;
+			size_t pixelIndexesPosition[APS_READOUT_TYPES_NUM];
 			uint16_t *resetPixels;
 			uint16_t *pixels;
 		} frame;
