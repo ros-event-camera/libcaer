@@ -64,10 +64,17 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 		uint16_t activePixels = 0;
 
 		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
-			if (apsPixelIsActive(state, x, y)) {
+			uint16_t xDest = x;
+			uint16_t yDest = y;
+
+			if (state->aps.invertXY) {
+				SWAP_VAR(uint16_t, xDest, yDest);
+			}
+
+			if (apsPixelIsActive(state, xDest, yDest)) {
 				// pixelIndexes is laid out in column order because that's how
 				// frame update will access it naturally later.
-				state->aps.frame.pixelIndexes[index++] = (size_t) ((y * state->aps.sizeX) + x);
+				state->aps.frame.pixelIndexes[index++] = (size_t) ((yDest * handle->info.apsSizeX) + xDest);
 				activePixels++;
 			}
 
@@ -79,8 +86,8 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 			}
 		}
 
-		state->aps.expectedCountY[i] = activePixels;
 		if (activePixels > 0) {
+			state->aps.expectedCountY[state->aps.expectedCountX] = activePixels;
 			state->aps.expectedCountX++;
 		}
 
@@ -119,7 +126,7 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 //		}
 //	}
 
-	davisLog(CAER_LOG_ERROR, handle, "Recalculated APS ROI indexes.");
+	davisLog(CAER_LOG_DEBUG, handle, "Recalculated APS ROI indexes.");
 }
 
 static inline void apsROIUpdateSizes(davisHandle handle) {
