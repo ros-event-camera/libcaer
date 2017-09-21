@@ -27,7 +27,8 @@ struct auto_exposure_state {
 
 typedef struct auto_exposure_state *autoExposureState;
 
-// Returns next exposure value in µs, or -1 if currently set is optimal.
+// Returns next exposure value in µs, or -1 if currently set is optimal/no change is desired.
+// Careful: frames can all be NULL!
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frames[DAVIS_APS_ROI_REGIONS_MAX],
 	uint32_t exposureFrameValue, uint32_t exposureLastSetValue);
 

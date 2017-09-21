@@ -175,6 +175,11 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		newExposureTotal += newExposure;
 	}
 
+	// No active APS ROI regions, nothing to analyze exposure on, so no change.
+	if (activeRoiRegions == 0) {
+		return (-1);
+	}
+
 	// Divide total by active ROI regions to get a mean.
 	newExposureTotal /= activeRoiRegions;
 
