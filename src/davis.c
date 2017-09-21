@@ -55,15 +55,18 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 	uint16_t x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
 	uint16_t y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
+	state->aps.expectedCountX = 0;
 	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
 
 	for (uint16_t i = 0; i < state->aps.sizeX; i++) {
+		uint16_t activePixels = 0;
+
 		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
 			if (apsPixelIsActive(state, x, y)) {
 				// pixelIndexes is laid out in column order because that's how
 				// frame update will access it naturally later.
 				state->aps.frame.pixelIndexes[(i * state->aps.sizeY) + j] = (size_t) ((y * state->aps.sizeX) + x);
-				state->aps.expectedCountY[i]++;
+				activePixels++;
 			}
 
 			if (state->aps.flipY) {
@@ -72,6 +75,11 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 			else {
 				y++;
 			}
+		}
+
+		state->aps.expectedCountY[i] = activePixels;
+		if (activePixels > 0) {
+			state->aps.expectedCountX++;
 		}
 
 		// Reset Y for next iteration.
@@ -290,7 +298,7 @@ static inline bool apsEndFrame(davisHandle handle) {
 	bool validFrame = true;
 
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
-		int32_t checkValue = state->aps.sizeX;
+		int32_t checkValue = state->aps.expectedCountX;
 
 		// Check main reset read against zero if disabled.
 		if ((i == APS_READOUT_RESET) && (!state->aps.resetRead)) {

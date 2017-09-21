@@ -86,6 +86,7 @@ struct davis_state {
 		uint16_t currentReadoutType;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
+		uint16_t expectedCountX;
 		uint16_t *expectedCountY;
 		struct {
 			int32_t tsStartFrame;
