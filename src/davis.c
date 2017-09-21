@@ -193,7 +193,7 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 
 	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
 		|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
-		state->aps.frame.pixels[pixelPosition] = data;
+		state->aps.frame.resetPixels[pixelPosition] = data;
 	}
 	else {
 		uint16_t resetValue = 0;
@@ -203,10 +203,10 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 			// DAVIS RGB GS has inverted samples, signal read comes first
 			// and was stored above inside state->aps.currentResetFrame.
 			resetValue = data;
-			signalValue = state->aps.frame.pixels[pixelPosition];
+			signalValue = state->aps.frame.resetPixels[pixelPosition];
 		}
 		else {
-			resetValue = state->aps.frame.pixels[pixelPosition];
+			resetValue = state->aps.frame.resetPixels[pixelPosition];
 			signalValue = data;
 		}
 
@@ -359,6 +359,11 @@ static inline void freeAllDataMemory(davisState state) {
 	if (state->aps.frame.pixels != NULL) {
 		free(state->aps.frame.pixels);
 		state->aps.frame.pixels = NULL;
+	}
+
+	if (state->aps.frame.resetPixels != NULL) {
+		free(state->aps.frame.resetPixels);
+		state->aps.frame.resetPixels = NULL;
 	}
 
 	if (state->aps.frame.pixelIndexes != NULL) {
@@ -2396,6 +2401,15 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		freeAllDataMemory(state);
 
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS pixels memory.");
+		return (false);
+	}
+
+	state->aps.frame.resetPixels = calloc((size_t) (state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS),
+		sizeof(uint16_t));
+	if (state->aps.frame.resetPixels == NULL) {
+		freeAllDataMemory(state);
+
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS reset pixels memory.");
 		return (false);
 	}
 

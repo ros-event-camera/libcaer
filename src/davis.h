@@ -92,16 +92,21 @@ struct davis_state {
 			int32_t tsStartExposure;
 			int32_t tsEndExposure;
 			size_t *pixelIndexes;
+			uint16_t *resetPixels;
 			uint16_t *pixels;
 		} frame;
 		struct {
 			uint16_t update;
 			uint16_t tmpData;
+			uint16_t startColumn[APS_ROI_REGIONS];
+			uint16_t startRow[APS_ROI_REGIONS];
+			uint16_t endColumn[APS_ROI_REGIONS];
+			uint16_t endRow[APS_ROI_REGIONS];
 			bool enabled[APS_ROI_REGIONS];
-			uint16_t sizeX[APS_ROI_REGIONS];
-			uint16_t sizeY[APS_ROI_REGIONS];
 			uint16_t positionX[APS_ROI_REGIONS];
 			uint16_t positionY[APS_ROI_REGIONS];
+			uint16_t sizeX[APS_ROI_REGIONS];
+			uint16_t sizeY[APS_ROI_REGIONS];
 		} roi;
 		struct {
 			uint8_t tmpData;
