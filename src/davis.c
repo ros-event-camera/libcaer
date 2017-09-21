@@ -148,6 +148,11 @@ static inline void apsROIUpdateSizes(davisHandle handle) {
 			uint16_t newSizeX = U16T(endColumn + 1 - startColumn);
 			uint16_t newSizeY = U16T(endRow + 1 - startRow);
 
+			if (state->aps.invertXY) {
+				SWAP_VAR(uint16_t, newPositionX, newPositionY);
+				SWAP_VAR(uint16_t, newSizeX, newSizeY);
+			}
+
 			if ((state->aps.roi.positionX[i] != newPositionX) || (state->aps.roi.positionY[i] != newPositionY)
 				|| (state->aps.roi.sizeX[i] != newSizeX) || (state->aps.roi.sizeY[i] != newSizeY)) {
 				state->aps.roi.positionX[i] = newPositionX;
@@ -171,8 +176,8 @@ static inline void apsROIUpdateSizes(davisHandle handle) {
 			// Turn off this ROI region.
 			state->aps.roi.enabled[i] = false;
 
-			state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(state->aps.sizeX);
-			state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(state->aps.sizeY);
+			state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
+			state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
 
 			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu disabled.", i);
 		}
@@ -2484,8 +2489,8 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
 		state->aps.roi.enabled[i] = false;
 
-		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(state->aps.sizeX);
-		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(state->aps.sizeY);
+		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
+		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
 
 		state->aps.roi.startColumn[i] = state->aps.roi.endColumn[i] = U16T(state->aps.sizeX);
 		state->aps.roi.startRow[i] = state->aps.roi.endRow[i] = U16T(state->aps.sizeY);
