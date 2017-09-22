@@ -900,28 +900,12 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * read-only parameter, information about the presence of an
- * external ADC to read the pixel values.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC       32
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * read-only parameter, information about the presence of an
  * internal, on-chip ADC to read the pixel values.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
 #define DAVIS_CONFIG_APS_HAS_INTERNAL_ADC       33
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * use the internal, on-chip ADC instead of the external one.
- * This enables a much faster and more power-efficient readout
- * for the frames, and should as such always be preferred.
- */
-#define DAVIS_CONFIG_APS_USE_INTERNAL_ADC       34
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * enable sampling of pixel voltage by the internal ADC circuitry.
