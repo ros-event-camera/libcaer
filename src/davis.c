@@ -554,10 +554,10 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	handle->info.apsHasGlobalShutter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_QUAD_ROI, &param32);
 	handle->info.apsHasQuadROI = param32;
-	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC, &param32);
-	handle->info.apsHasExternalADC = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_INTERNAL_ADC, &param32);
 	handle->info.apsHasInternalADC = param32;
+	handle->info.apsHasExternalADC = !handle->info.apsHasInternalADC;
+
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
@@ -765,7 +765,6 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI3_ENABLED, false);
 	}
 	if (handle->info.apsHasInternalADC) {
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_USE_INTERNAL_ADC, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SAMPLE_ENABLE, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SAMPLE_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RAMP_RESET, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
@@ -1352,7 +1351,6 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_APS_USE_INTERNAL_ADC:
 				case DAVIS_CONFIG_APS_SAMPLE_ENABLE:
 				case DAVIS_CONFIG_APS_SAMPLE_SETTLE:
 				case DAVIS_CONFIG_APS_RAMP_RESET:
@@ -1933,7 +1931,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_ROW_SETTLE:
 				case DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER:
 				case DAVIS_CONFIG_APS_HAS_QUAD_ROI:
-				case DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC:
 				case DAVIS_CONFIG_APS_HAS_INTERNAL_ADC:
 				case DAVIS_CONFIG_APS_START_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
@@ -2006,7 +2003,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_APS_USE_INTERNAL_ADC:
 				case DAVIS_CONFIG_APS_SAMPLE_ENABLE:
 				case DAVIS_CONFIG_APS_SAMPLE_SETTLE:
 				case DAVIS_CONFIG_APS_RAMP_RESET:
