@@ -98,12 +98,15 @@ struct davis_state {
 			uint16_t *pixels;
 		} frame;
 		struct {
+			// Temporary values from device.
 			uint16_t update;
 			uint16_t tmpData;
+			bool deviceEnabled[APS_ROI_REGIONS];
 			uint16_t startColumn[APS_ROI_REGIONS];
 			uint16_t startRow[APS_ROI_REGIONS];
 			uint16_t endColumn[APS_ROI_REGIONS];
 			uint16_t endRow[APS_ROI_REGIONS];
+			// Parameters for frame parsing.
 			bool enabled[APS_ROI_REGIONS];
 			uint16_t positionX[APS_ROI_REGIONS];
 			uint16_t positionY[APS_ROI_REGIONS];

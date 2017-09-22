@@ -146,7 +146,7 @@ static inline void apsROIUpdateSizes(davisHandle handle) {
 		bool roiEnabledRow = (startRow < state->aps.sizeY) && (endRow < state->aps.sizeY);
 		bool roiValidColRow = (startColumn <= endColumn) && (startRow <= endRow);
 
-		if (roiEnabledCol && roiEnabledRow && roiValidColRow) {
+		if (state->aps.roi.deviceEnabled[i] && roiEnabledCol && roiEnabledRow && roiValidColRow) {
 			state->aps.roi.enabled[i] = true;
 
 			uint16_t newPositionX = startColumn;
@@ -180,7 +180,7 @@ static inline void apsROIUpdateSizes(davisHandle handle) {
 				recalculateIndexes = true;
 			}
 
-			// Turn off this ROI region.
+			// Turn off this ROI region for sure, can be because disabled OR wrong col/row values.
 			state->aps.roi.enabled[i] = false;
 
 			state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
@@ -207,12 +207,8 @@ static inline void apsInitFrame(davisHandle handle) {
 		state->aps.frame.pixelIndexesPosition[i] = 0;
 	}
 
-	if (state->aps.roi.update != 0) {
-		state->aps.roi.update = 0;
-
-		// Update ROI region data (enabled, position, size).
-		apsROIUpdateSizes(handle);
-	}
+	// Update ROI region data (position, size).
+	apsROIUpdateSizes(handle);
 
 	// Write out start of frame timestamp.
 	state->aps.frame.tsStartFrame = state->timestamps.current;
@@ -2507,13 +2503,11 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 
 	// Fully disable APS ROI by default. Device will send the correct values to enable.
 	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-		state->aps.roi.enabled[i] = false;
+		state->aps.roi.startColumn[i] = state->aps.roi.endColumn[i] = U16T(state->aps.sizeX);
+		state->aps.roi.startRow[i] = state->aps.roi.endRow[i] = U16T(state->aps.sizeY);
 
 		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
 		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
-
-		state->aps.roi.startColumn[i] = state->aps.roi.endColumn[i] = U16T(state->aps.sizeX);
-		state->aps.roi.startRow[i] = state->aps.roi.endRow[i] = U16T(state->aps.sizeY);
 	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
@@ -3152,6 +3146,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 0.
 							// 0/1 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x00U << 2);
+							state->aps.roi.tmpData = 0;
+
+							state->aps.roi.deviceEnabled[0] = true;
 							state->aps.roi.startColumn[0] = state->aps.roi.startRow[0] = U16T(state->aps.sizeX);
 							state->aps.roi.endColumn[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
 							break;
@@ -3161,6 +3158,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 1.
 							// 2/3 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x01U << 2);
+							state->aps.roi.tmpData = 0;
+
+							state->aps.roi.deviceEnabled[1] = true;
 							state->aps.roi.startColumn[1] = state->aps.roi.startRow[1] = U16T(state->aps.sizeX);
 							state->aps.roi.endColumn[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
 							break;
@@ -3170,6 +3170,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 2.
 							// 4/5 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x02U << 2);
+							state->aps.roi.tmpData = 0;
+
+							state->aps.roi.deviceEnabled[2] = true;
 							state->aps.roi.startColumn[2] = state->aps.roi.startRow[2] = U16T(state->aps.sizeX);
 							state->aps.roi.endColumn[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
 							break;
@@ -3179,6 +3182,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Next Misc8 APS ROI Size events will refer to ROI region 3.
 							// 6/7 used to distinguish between X and Y sizes.
 							state->aps.roi.update = (0x03U << 2);
+							state->aps.roi.tmpData = 0;
+
+							state->aps.roi.deviceEnabled[3] = true;
 							state->aps.roi.startColumn[3] = state->aps.roi.startRow[3] = U16T(state->aps.sizeX);
 							state->aps.roi.endColumn[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
@@ -3284,6 +3290,38 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// Reset counter and value.
 							state->aps.autoExposure.tmpData = 0;
 							state->aps.autoExposure.currentFrameExposure = 0;
+							break;
+						}
+
+						case 49: {
+							// ROI region 0 disabled. No follow-up Misc8 info events.
+							state->aps.roi.deviceEnabled[0] = false;
+							state->aps.roi.startColumn[0] = state->aps.roi.startRow[0] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
+							break;
+						}
+
+						case 50: {
+							// ROI region 1 disabled. No follow-up Misc8 info events.
+							state->aps.roi.deviceEnabled[1] = false;
+							state->aps.roi.startColumn[1] = state->aps.roi.startRow[1] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
+							break;
+						}
+
+						case 51: {
+							// ROI region 2 disabled. No follow-up Misc8 info events.
+							state->aps.roi.deviceEnabled[2] = false;
+							state->aps.roi.startColumn[2] = state->aps.roi.startRow[2] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
+							break;
+						}
+
+						case 52: {
+							// ROI region 3 disabled. No follow-up Misc8 info events.
+							state->aps.roi.deviceEnabled[3] = false;
+							state->aps.roi.startColumn[3] = state->aps.roi.startRow[3] = U16T(state->aps.sizeX);
+							state->aps.roi.endColumn[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3505,7 +3543,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// up in START_FRAME.
 							size_t apsROIRegion = state->aps.roi.update >> 2;
 
-							if (apsROIRegion >= APS_ROI_REGIONS) {
+							if ((apsROIRegion >= APS_ROI_REGIONS) || (!state->aps.roi.deviceEnabled[apsROIRegion])) {
 								continue;
 							}
 
