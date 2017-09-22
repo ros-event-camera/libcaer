@@ -745,6 +745,7 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLUMN_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROW_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE, U32T(handle->info.adcClock / 10)); // in cycles @ ADCClock
+	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI0_ENABLED, true);
 	if (handle->info.apsHasQuadROI) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_1, 0);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_1, 0);
@@ -759,7 +760,6 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_3, U32T(handle->info.apsSizeX - 1));
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_3, U32T(handle->info.apsSizeY - 1));
 
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI0_ENABLED, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI1_ENABLED, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI2_ENABLED, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI3_ENABLED, false);
@@ -1278,6 +1278,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
+				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
@@ -1340,7 +1341,6 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
-				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 				case DAVIS_CONFIG_APS_ROI1_ENABLED:
 				case DAVIS_CONFIG_APS_ROI2_ENABLED:
 				case DAVIS_CONFIG_APS_ROI3_ENABLED:
@@ -1939,6 +1939,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
+				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
@@ -1994,7 +1995,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_END_ROW_2:
 				case DAVIS_CONFIG_APS_START_ROW_3:
 				case DAVIS_CONFIG_APS_END_ROW_3:
-				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 				case DAVIS_CONFIG_APS_ROI1_ENABLED:
 				case DAVIS_CONFIG_APS_ROI2_ENABLED:
 				case DAVIS_CONFIG_APS_ROI3_ENABLED:
@@ -3031,8 +3031,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							if (state->aps.countY[state->aps.currentReadoutType] !=
 								state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]) {
 								davisLog(CAER_LOG_ERROR, handle,
-									"APS Column End - %d: wrong row count %d detected, expected %d.",
-									state->aps.currentReadoutType, state->aps.countY[state->aps.currentReadoutType],
+									"APS Column End - %d - %d: wrong row count %d detected, expected %d.",
+									state->aps.currentReadoutType, state->aps.countX[state->aps.currentReadoutType],
+									state->aps.countY[state->aps.currentReadoutType],
 									state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]);
 							}
 

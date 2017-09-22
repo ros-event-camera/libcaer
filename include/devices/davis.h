@@ -745,9 +745,6 @@ extern "C" {
  * start position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
  * or equal to DAVIS_CONFIG_APS_END_COLUMN_0.
- * ROI region 0 is always enabled if it is the only
- * ROI region present (when apsHasQuadROI=false, see
- * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_0         9
 /**
@@ -755,9 +752,6 @@ extern "C" {
  * start position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be smaller
  * or equal to DAVIS_CONFIG_APS_END_ROW_0.
- * ROI region 0 is always enabled if it is the only
- * ROI region present (when apsHasQuadROI=false, see
- * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_START_ROW_0            10
 /**
@@ -765,9 +759,6 @@ extern "C" {
  * end position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_COLUMN_0.
- * ROI region 0 is always enabled if it is the only
- * ROI region present (when apsHasQuadROI=false, see
- * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_END_COLUMN_0           11
 /**
@@ -775,9 +766,6 @@ extern "C" {
  * end position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_ROW_0.
- * ROI region 0 is always enabled if it is the only
- * ROI region present (when apsHasQuadROI=false, see
- * 'struct caer_davis_info' for more information).
  */
 #define DAVIS_CONFIG_APS_END_ROW_0              12
 /**
@@ -968,9 +956,7 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * Enable/disable ROI region 0.
- * ROI region 0 is always enabled if it is the only
- * ROI region present (when apsHasQuadROI=false, see
- * 'struct caer_davis_info' for more information).
+ * ROI region 0 is always present.
  */
 #define DAVIS_CONFIG_APS_ROI0_ENABLED           40
 /**
