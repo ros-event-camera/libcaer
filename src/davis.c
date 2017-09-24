@@ -3399,7 +3399,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					// Ignore too big X/Y counts, can happen if column start/end events are lost.
 					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.sizeX)
 						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.sizeY)) {
-						return;
+						break;
 					}
 
 					// DAVIS240 has a reduced dynamic range due to external
@@ -3541,7 +3541,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							size_t apsROIRegion = state->aps.roi.update >> 2;
 
 							if ((apsROIRegion >= APS_ROI_REGIONS) || (!state->aps.roi.deviceEnabled[apsROIRegion])) {
-								continue;
+								break;
 							}
 
 							switch (state->aps.roi.update & 0x03) {
