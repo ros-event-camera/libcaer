@@ -3347,7 +3347,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
 						state->currentPackets.specialPosition++;
 
-						davisLog(CAER_LOG_NOTICE, handle, "DVS: row-only event received for address Y=%" PRIu16 ".",
+						davisLog(CAER_LOG_DEBUG, handle, "DVS: row-only event received for address Y=%" PRIu16 ".",
 							state->dvs.lastY);
 					}
 
