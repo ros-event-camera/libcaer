@@ -15,11 +15,11 @@
  * Enable APS frame debugging by only looking at the reset or signal
  * frames, and not at the resulting correlated frame.
  * Supported values:
- * 0 - both/CDS (default)
- * 1 - reset read only
- * 2 - signal read only
+ * 0 - normal output, no debug (default)
+ * 1 - both reset and signal separately (marked as ROI regions
+ *     [0,1,2,3] for signal and [4,5,6,7] for reset respectively)
  */
-#define APS_DEBUG_FRAME 0
+#define APS_DEBUG_FRAME 1
 
 #define APS_ADC_DEPTH 10
 

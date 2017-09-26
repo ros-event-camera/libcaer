@@ -228,6 +228,25 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 	size_t pixelPosition = state->aps.frame.pixelIndexes[state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]];
 	state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]++;
 
+	// Separate debug support.
+#if APS_DEBUG_FRAME == 1
+	// Check for overflow.
+	data = (data > 1023) ? (1023) : (data);
+
+	// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
+	data = U16T(data << (16 - APS_ADC_DEPTH));
+
+	// Reset read, put into resetPixels here.
+	if (state->aps.currentReadoutType == APS_READOUT_RESET) {
+		state->aps.frame.resetPixels[pixelPosition] = data;
+	}
+
+	// Signal read, put into pixels here.
+	if (state->aps.currentReadoutType == APS_READOUT_SIGNAL) {
+		state->aps.frame.pixels[pixelPosition] = data;
+	}
+#else
+	// Standard CDS support.
 	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
 
 	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
@@ -251,17 +270,6 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 
 		int32_t pixelValue = 0;
 
-#if defined(APS_DEBUG_FRAME) && APS_DEBUG_FRAME == 1
-		pixelValue = resetValue;
-
-		// Check for overflow.
-		pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
-#elif defined(APS_DEBUG_FRAME) && APS_DEBUG_FRAME == 2
-		pixelValue = signalValue;
-
-		// Check for overflow.
-		pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
-#else
 		if ((resetValue < 512) || (signalValue == 0)) {
 			// If the signal value is 0, that is only possible if the camera
 			// has seen tons of light. In that case, the photo-diode current
@@ -283,13 +291,13 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 			// Check for overflow.
 			pixelValue = (pixelValue > 1023) ? (1023) : (pixelValue);
 		}
-#endif
 
 		// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 		pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
 
 		state->aps.frame.pixels[pixelPosition] = htole16(U16T(pixelValue));
 	}
+#endif
 
 	davisLog(CAER_LOG_DEBUG, handle,
 		"APS ADC Sample: column=%" PRIu16 ", row=%" PRIu16 ", index=%zu, data=%" PRIu16 ".",
@@ -2615,8 +2623,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
-		}
-		else if ((state->currentPackets.specialPosition + 1) // +1 to ensure space for double frame info.
+		} // +1 to ensure space for double frame info.
+		else if ((state->currentPackets.specialPosition + 1)
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
@@ -2662,8 +2670,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
 			}
-		}
-		else if ((state->currentPackets.framePosition + 3) // +3 to ensure space for Quad-ROI.
+		} // +3 to ensure space for Quad-ROI (and +7 for debug Quad-ROI).
+		else if ((state->currentPackets.framePosition + ((APS_DEBUG_FRAME == 0) ? (3) : (3 + APS_ROI_REGIONS)))
 			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.frame)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
@@ -2929,6 +2937,41 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 										roiOffset += state->aps.roi.sizeX[i];
 										frameOffset += (size_t) handle->info.apsSizeX;
 									}
+
+									// Separate debug support.
+#if APS_DEBUG_FRAME == 1
+									// Get debug frame.
+									caerFrameEvent debugEvent = caerFrameEventPacketGetEvent(
+										state->currentPackets.frame, state->currentPackets.framePosition);
+									state->currentPackets.framePosition++;
+
+									// Setup new frame.
+									caerFrameEventSetColorFilter(debugEvent, handle->info.apsColorFilter);
+									caerFrameEventSetROIIdentifier(debugEvent, U8T(i + APS_ROI_REGIONS));
+									caerFrameEventSetTSStartOfFrame(debugEvent, state->aps.frame.tsStartFrame);
+									caerFrameEventSetTSStartOfExposure(debugEvent, state->aps.frame.tsStartExposure);
+									caerFrameEventSetTSEndOfExposure(debugEvent, state->aps.frame.tsEndExposure);
+									caerFrameEventSetTSEndOfFrame(debugEvent, state->timestamps.current);
+									caerFrameEventSetPositionX(debugEvent, state->aps.roi.positionX[i]);
+									caerFrameEventSetPositionY(debugEvent, state->aps.roi.positionY[i]);
+									caerFrameEventSetLengthXLengthYChannelNumber(debugEvent, state->aps.roi.sizeX[i],
+										state->aps.roi.sizeY[i], APS_ADC_CHANNELS, state->currentPackets.frame);
+									caerFrameEventValidate(debugEvent, state->currentPackets.frame);
+
+									// Copy pixels over row-wise.
+									roiPixels = caerFrameEventGetPixelArrayUnsafe(debugEvent);
+									roiOffset = 0;
+									frameOffset = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
+										+ state->aps.roi.positionX[i];
+
+									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
+										memcpy(roiPixels + roiOffset, state->aps.frame.resetPixels + frameOffset,
+											state->aps.roi.sizeX[i] * sizeof(uint16_t));
+
+										roiOffset += state->aps.roi.sizeX[i];
+										frameOffset += (size_t) handle->info.apsSizeX;
+									}
+#endif
 								}
 
 								// Automatic exposure control support. Call once for all ROI regions.
