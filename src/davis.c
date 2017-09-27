@@ -3189,8 +3189,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.roi.tmpData = 0;
 
 							state->aps.roi.deviceEnabled[0] = true;
-							state->aps.roi.startColumn[0] = state->aps.roi.startRow[0] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[0] = state->aps.roi.endColumn[0] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3201,8 +3201,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.roi.tmpData = 0;
 
 							state->aps.roi.deviceEnabled[1] = true;
-							state->aps.roi.startColumn[1] = state->aps.roi.startRow[1] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[1] = state->aps.roi.endColumn[1] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3213,8 +3213,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.roi.tmpData = 0;
 
 							state->aps.roi.deviceEnabled[2] = true;
-							state->aps.roi.startColumn[2] = state->aps.roi.startRow[2] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[2] = state->aps.roi.endColumn[2] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3225,8 +3225,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.roi.tmpData = 0;
 
 							state->aps.roi.deviceEnabled[3] = true;
-							state->aps.roi.startColumn[3] = state->aps.roi.startRow[3] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[3] = state->aps.roi.endColumn[3] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3336,32 +3336,32 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 49: {
 							// ROI region 0 disabled. No follow-up Misc8 info events.
 							state->aps.roi.deviceEnabled[0] = false;
-							state->aps.roi.startColumn[0] = state->aps.roi.startRow[0] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[0] = state->aps.roi.endColumn[0] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
 							break;
 						}
 
 						case 50: {
 							// ROI region 1 disabled. No follow-up Misc8 info events.
 							state->aps.roi.deviceEnabled[1] = false;
-							state->aps.roi.startColumn[1] = state->aps.roi.startRow[1] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[1] = state->aps.roi.endColumn[1] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
 							break;
 						}
 
 						case 51: {
 							// ROI region 2 disabled. No follow-up Misc8 info events.
 							state->aps.roi.deviceEnabled[2] = false;
-							state->aps.roi.startColumn[2] = state->aps.roi.startRow[2] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[2] = state->aps.roi.endColumn[2] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
 							break;
 						}
 
 						case 52: {
 							// ROI region 3 disabled. No follow-up Misc8 info events.
 							state->aps.roi.deviceEnabled[3] = false;
-							state->aps.roi.startColumn[3] = state->aps.roi.startRow[3] = U16T(state->aps.sizeX);
-							state->aps.roi.endColumn[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
+							state->aps.roi.startColumn[3] = state->aps.roi.endColumn[3] = U16T(state->aps.sizeX);
+							state->aps.roi.startRow[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3440,8 +3440,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					}
 
 					// Ignore too big X/Y counts, can happen if column start/end events are lost.
-					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.sizeX)
-						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.sizeY)) {
+					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.expectedCountX)
+						|| (state->aps.countY[state->aps.currentReadoutType] >=
+							state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]])) {
 						break;
 					}
 
