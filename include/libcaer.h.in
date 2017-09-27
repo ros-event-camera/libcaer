@@ -47,7 +47,17 @@
 #elif defined(_MSC_VER)
 	#define PACKED_STRUCT(STRUCT_DECLARATION) __pragma(pack(push, 1)) STRUCT_DECLARATION __pragma(pack(pop))
 #else
-	#error "Unable to ensure structures are properly packed."
+	#define PACKED_STRUCT(STRUCT_DECLARATION) STRUCT_DECLARATION
+	#warning "Unable to ensure structures are properly packed."
+#endif
+
+// Function deprecation.
+#if defined(__GNUC__) || defined(__clang__)
+	#define DEPRECATED_FUNCTION(DEPR_MSG) __attribute__((__deprecated__(DEPR_MSG)))
+#elif defined(_MSC_VER)
+	#define DEPRECATED_FUNCTION(DEPR_MSG) __declspec(deprecated(DEPR_MSG))
+#else
+	#define DEPRECATED_FUNCTION(DEPR_MSG)
 #endif
 
 #ifdef __cplusplus

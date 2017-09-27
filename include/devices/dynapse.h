@@ -839,8 +839,9 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore) __attribute__ ((__deprecated__));
+DEPRECATED_FUNCTION("Replaced by caerDynapseWriteSramN(), which has an improved interface.")
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId,
+	bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
 
 /**
  * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
