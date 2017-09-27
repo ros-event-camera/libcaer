@@ -2821,10 +2821,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						}
 
 						case 7: { // IMU End
-							davisLog(CAER_LOG_DEBUG, handle, "IMU End event received.");
 							if (state->imu.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "IMU End event received.");
 
 							if (state->imu.count == IMU6_COUNT) {
 								// Timestamp at event-stream insertion point.
@@ -2878,10 +2878,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						}
 
 						case 10: { // APS Frame End
-							davisLog(CAER_LOG_DEBUG, handle, "APS Frame End event received.");
 							if (state->aps.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Frame End event received.");
 
 							// NOTE: IMU6 and APS operate on an internal event and copy that to the actual output
 							// packet here, in the END state, for a reason: if a packetContainer, with all its
@@ -3005,10 +3005,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						}
 
 						case 11: { // APS Reset Column Start
-							davisLog(CAER_LOG_DEBUG, handle, "APS Reset Column Start event received.");
 							if (state->aps.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Reset Column Start event received.");
 
 							state->aps.currentReadoutType = APS_READOUT_RESET;
 							state->aps.countY[APS_READOUT_RESET] = 0;
@@ -3031,10 +3031,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						}
 
 						case 12: { // APS Signal Column Start
-							davisLog(CAER_LOG_DEBUG, handle, "APS Signal Column Start event received.");
 							if (state->aps.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Signal Column Start event received.");
 
 							state->aps.currentReadoutType = APS_READOUT_SIGNAL;
 							state->aps.countY[APS_READOUT_SIGNAL] = 0;
@@ -3057,10 +3057,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						}
 
 						case 13: { // APS Column End
-							davisLog(CAER_LOG_DEBUG, handle, "APS Column End event received.");
 							if (state->aps.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Column End event received.");
 
 							davisLog(CAER_LOG_DEBUG, handle, "APS Column End: CountX[%d] is %d.",
 								state->aps.currentReadoutType, state->aps.countX[state->aps.currentReadoutType]);
@@ -3158,10 +3158,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 29:
 						case 30:
 						case 31: {
-							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
 							if (state->imu.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
 
 							// Set correct IMU accel and gyro scales, used to interpret subsequent
 							// IMU samples from the device.
