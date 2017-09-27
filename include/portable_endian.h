@@ -102,6 +102,9 @@
 	#error platform not supported
 #endif
 
+#include <stdint.h>
+#include <string.h>
+
 // libcaer: define macros for floating-point conversions too.
 // Floats must be 4 bytes in size, so like a 32-bit integer, but their endianness
 // is undefined, so we use the 32bit conversion functions and memcpy() to do the
