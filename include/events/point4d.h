@@ -98,6 +98,38 @@ typedef const struct caer_point4d_event_packet *caerPoint4DEventPacketConst;
 caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Point4D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerPoint4DEventPacket caerPoint4DEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT4D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint4DEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Point4D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerPoint4DEventPacketConst caerPoint4DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT4D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint4DEventPacketConst) header);
+}
+
+/**
  * Get the Point4D event at the given index from the event packet.
  *
  * @param packet a valid Point4DEventPacket pointer. Cannot be NULL.

@@ -88,6 +88,38 @@ typedef const struct caer_spike_event_packet *caerSpikeEventPacketConst;
 caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Spike event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerSpikeEventPacket caerSpikeEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPIKE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpikeEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Spike event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerSpikeEventPacketConst caerSpikeEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPIKE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpikeEventPacketConst) header);
+}
+
+/**
  * Get the Spike event at the given index from the event packet.
  *
  * @param packet a valid SpikeEventPacket pointer. Cannot be NULL.

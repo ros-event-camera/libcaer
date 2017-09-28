@@ -160,6 +160,38 @@ caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t
 	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber);
 
 /**
+ * Transform a generic event packet header into a Frame event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerFrameEventPacket caerFrameEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != FRAME_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerFrameEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Frame event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerFrameEventPacketConst caerFrameEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != FRAME_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerFrameEventPacketConst) header);
+}
+
+/**
  * Get the frame event at the given index from the event packet.
  * To copy a frame event, the usual assignment operator = cannot be used.
  * Please use caerGenericEventCopy() to copy frame events!

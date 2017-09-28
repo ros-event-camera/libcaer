@@ -93,6 +93,38 @@ typedef const struct caer_point2d_event_packet *caerPoint2DEventPacketConst;
 caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Point2D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerPoint2DEventPacket caerPoint2DEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT2D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint2DEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Point2D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerPoint2DEventPacketConst caerPoint2DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT2D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint2DEventPacketConst) header);
+}
+
+/**
  * Get the Point2D event at the given index from the event packet.
  *
  * @param packet a valid Point2DEventPacket pointer. Cannot be NULL.

@@ -98,6 +98,38 @@ typedef const struct caer_imu9_event_packet *caerIMU9EventPacketConst;
 caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into an IMU 9-axes event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerIMU9EventPacket caerIMU9EventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != IMU9_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerIMU9EventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only IMU 9-axes event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerIMU9EventPacketConst caerIMU9EventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != IMU9_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerIMU9EventPacketConst) header);
+}
+
+/**
  * Get the IMU 9-axes event at the given index from the event packet.
  *
  * @param packet a valid IMU9EventPacket pointer. Cannot be NULL.
