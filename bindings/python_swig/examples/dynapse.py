@@ -7,9 +7,9 @@ import _libcaer_wrap as libcaer
 
 
 class DYNAPSE:
-    def __init__(self):
+    def __init__(self, busRestriction = 0, devAddressRestriction = 0, serialNumber = ""):
         """ init Dynapse, display info, and start data transfer """   
-        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DYNAPSE, 0, 0, "")
+        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DYNAPSE, busRestriction, devAddressRestriction, serialNumber)
         self.info = libcaer.caerDynapseInfoGet(self.handle)
         print("device ID: "+str(libcaer.caer_dynapse_info_deviceID_get(self.info)))
         print("device Logic Version: "+str(libcaer.caer_dynapse_info_logicVersion_get(self.info)))	

@@ -7,9 +7,9 @@ import _libcaer_wrap as libcaer
 import numpy as np
 
 class DAVIS:
-    def __init__(self):
+    def __init__(self, busRestriction = 0, devAddressRestriction = 0, serialNumber = ""):
         """ init DAVIS, display info, and start data transfer """   
-        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DAVIS, 0, 0, "")
+        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DAVIS, busRestriction, devAddressRestriction, serialNumber)
         self.info = libcaer.caerDavisInfoGet(self.handle)
         print("device ID: "+str(libcaer.caer_davis_info_deviceID_get(self.info)))
         if(libcaer.caer_davis_info_deviceIsMaster_get(self.info)):
