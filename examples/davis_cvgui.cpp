@@ -165,7 +165,7 @@ int main(void) {
 				printf("First frame event - ts: %d, sum: %" PRIu64 ".\n", ts, sum);
 
 				for (const auto &f : *frame) {
-					if (f.getROIIdentifier() != 4) {
+					if (f.getROIIdentifier() != 0) {
 						continue;
 					}
 
