@@ -746,14 +746,23 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, 0);
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, U32T(handle->info.apsSizeX - 1));
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, U32T(handle->info.apsSizeY - 1));
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4000); // in µs, converted to cycles @ ADCClock later
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_FRAME_DELAY, 1000); // in µs, converted to cycles @ ADCClock later
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLUMN_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROW_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
-	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE, U32T(handle->info.adcClock / 10)); // in cycles @ ADCClock
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROI0_ENABLED, true);
+	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
+	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4000); // in µs, converted to cycles @ ADCClock later
+	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_FRAME_DELAY, 1000); // in µs, converted to cycles @ ADCClock later
+	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROW_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
+
+	// Not supported on DAVIS RGB.
+	if (!IS_DAVISRGB(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE, U32T(handle->info.adcClock / 10)); // in cycles @ ADCClock
+	}
+
+	// Only available on DAVIS240 due to external ADC use, which has both a row and column timing.
+	if (IS_DAVIS240(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLUMN_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
+	}
+
 	if (handle->info.apsHasQuadROI) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_1, 0);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_1, 0);
@@ -1298,10 +1307,19 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					break;
 
 				case DAVIS_CONFIG_APS_RESET_SETTLE:
-				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
 					if (!IS_DAVISRGB(handle->info.chipID)) {
+						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
+					// Only available on DAVIS240 due to external ADC use, which has both a row and column timing.
+					if (IS_DAVIS240(handle->info.chipID)) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -1957,10 +1975,19 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					break;
 
 				case DAVIS_CONFIG_APS_RESET_SETTLE:
-				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
 					if (!IS_DAVISRGB(handle->info.chipID)) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
+					// Only available on DAVIS240 due to external ADC use, which has both a row and column timing.
+					if (IS_DAVIS240(handle->info.chipID)) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
