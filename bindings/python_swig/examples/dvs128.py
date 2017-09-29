@@ -6,9 +6,9 @@
 import _libcaer_wrap as libcaer
 
 class DVS128:
-    def __init__(self):
+    def __init__(self, busRestriction = 0, devAddressRestriction = 0, serialNumber = ""):
         """ init DVS128, display info, and start data transfer """   
-        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DVS128, 0, 0, "")
+        self.handle = libcaer.caerDeviceOpen(1, libcaer.CAER_DEVICE_DVS128, busRestriction, devAddressRestriction, serialNumber)
         self.info = libcaer.caerDVS128InfoGet(self.handle)
         print("device ID: "+str(libcaer.caer_dvs128_info_deviceID_get(self.info)))
         if(libcaer.caer_dvs128_info_deviceIsMaster_get(self.info)):
