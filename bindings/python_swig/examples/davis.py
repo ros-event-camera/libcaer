@@ -4,6 +4,7 @@
 # doc is here: https://inilabs.github.io/libcaer/
 
 import _libcaer_wrap as libcaer
+import numpy as np
 
 class DAVIS:
     def __init__(self):
@@ -21,7 +22,7 @@ class DAVIS:
         self.sizeX = libcaer.caer_davis_info_dvsSizeX_get(self.info)
         self.sizeY = libcaer.caer_davis_info_dvsSizeY_get(self.info)
         
-        # containers
+        # data containers
         self.x = []
         self.y = []
         self.ts = []
@@ -30,8 +31,10 @@ class DAVIS:
         self.special_ts = []
         self.frame = []
         self.frame_ts = []
-        self.imu = []
-        self.imtu_ts = []
+        self.imu_gyro = []
+        self.imu_acc = []
+        self.imu_ts = []
+        self.imu_temp = []
         
         # init default biases
         ret = libcaer.caerDeviceSendDefaultConfig(self.handle)
@@ -58,45 +61,80 @@ class DAVIS:
             raise Exception 
         
     def read_events(self):
-        """ A simple function that reads events from DAVIS """
+        """ A simple function that reads events from DAVIS sensors: polarity, imu6, special, frames"""
         packetContainer = libcaer.caerDeviceDataGet(self.handle)
-        packetNum = libcaer.caerEventPacketContainerGetEventPacketsNumber(packetContainer)
-        for i in range(packetNum):
-            packetHeader = libcaer.caerEventPacketContainerGetEventPacket(packetContainer, i)
-            if packetHeader == None:
-                continue
-            packetType = libcaer.caerEventPacketHeaderGetEventType(packetHeader)
-            
-            #get only polarity and special events
-            if packetType == libcaer.POLARITY_EVENT:
-                #loop over all events
-                nEvents = libcaer.caerEventPacketHeaderGetEventNumber(packetHeader)
-                for this_e in range(nEvents):
-                    polarity = libcaer.caerPolarityEventPacketFromPacketHeader(packetHeader)
-                    event = libcaer.caerPolarityEventPacketGetEvent(polarity, this_e)
-                    self.ts.append(libcaer.caerPolarityEventGetTimestamp(event))
-                    self.x.append(libcaer.caerPolarityEventGetX(event))
-                    self.y.append(libcaer.caerPolarityEventGetY(event))
-                    self.pol.append(libcaer.caerPolarityEventGetPolarity(event))
-            if packetType == libcaer.SPECIAL_EVENT:
-                #loop over all special events
-                nEvents = libcaer.caerEventPacketHeaderGetEventNumber(packetHeader)
-                for this_e in range(nEvents):
-                    polarity = libcaer.caerSpecialEventPacketFromPacketHeader(packetHeader)
-                    event = libcaer.caerPolarityEventPacketGetEvent(polarity, this_e)
-                    self.special_ts.append(libcaer.caerSpecialEventGetTimestamp(event))
-                    self.special.append(libcaer.caerSpecialEventGetData(event))
-             
+        if packetContainer == None:
+            return False
+        else:
+            packetNum = libcaer.caerEventPacketContainerGetEventPacketsNumber(packetContainer)
+            for i in range(packetNum):
+                packetHeader = libcaer.caerEventPacketContainerGetEventPacket(packetContainer, i)
+                if packetHeader == None:
+                    continue
+                packetType = libcaer.caerEventPacketHeaderGetEventType(packetHeader)
+                
+                #get only polarity and special events
+                if packetType == libcaer.POLARITY_EVENT:
+                    #loop over all polarity events
+                    nEvents = libcaer.caerEventPacketHeaderGetEventNumber(packetHeader)
+                    for this_e in range(nEvents):
+                        polarity = libcaer.caerPolarityEventPacketFromPacketHeader(packetHeader)
+                        event = libcaer.caerPolarityEventPacketGetEvent(polarity, this_e)
+                        self.ts.append(libcaer.caerPolarityEventGetTimestamp(event))
+                        self.x.append(libcaer.caerPolarityEventGetX(event))
+                        self.y.append(libcaer.caerPolarityEventGetY(event))
+                        self.pol.append(libcaer.caerPolarityEventGetPolarity(event))
+                        
+                if packetType == libcaer.SPECIAL_EVENT:
+                    #loop over all special events
+                    nEvents = libcaer.caerEventPacketHeaderGetEventNumber(packetHeader)
+                    for this_e in range(nEvents):
+                        special = libcaer.caerSpecialEventPacketFromPacketHeader(packetHeader)
+                        event = libcaer.caerSpecialEventPacketGetEvent(special, this_e)
+                        self.special_ts.append(libcaer.caerSpecialEventGetTimestamp(event))
+                        self.special.append(libcaer.caerSpecialEventGetData(event))
+                        
+                if packetType == libcaer.FRAME_EVENT:
+                    frame = libcaer.caerFrameEventPacketFromPacketHeader(packetHeader)
+                    # only get first frame event in packet
+                    firstEvent = libcaer.caerFrameEventPacketGetEventConst(frame, 0)
+                    self.frame_ts = libcaer.caerFrameEventGetTimestamp(firstEvent)
+                    matrix_frame = np.zeros([libcaer.caer_davis_info_dvsSizeX_get(self.info), libcaer.caer_davis_info_dvsSizeY_get(self.info)])
+                    #read pixels values
+                    for y in range(libcaer.caerFrameEventGetLengthY(firstEvent)):
+                        for x in range(libcaer.caerFrameEventGetLengthX(firstEvent)):
+                            matrix_frame[x,y] = libcaer.caerFrameEventGetPixel(firstEvent, x, y)
+                    self.frame.append(matrix_frame)
+                    
+                if packetType == libcaer.IMU6_EVENT:    
+                    nEvents = libcaer.caerEventPacketHeaderGetEventNumber(packetHeader)
+                    imu = libcaer.caerIMU6EventPacketFromPacketHeader(packetHeader)
+                    for this_e in range(nEvents):
+                        imu6 = libcaer.caerIMU6EventPacketGetEvent(imu, this_e)
+                        x_acc = libcaer.caerIMU6EventGetAccelX(imu6)
+                        y_acc = libcaer.caerIMU6EventGetAccelY(imu6)
+                        z_acc = libcaer.caerIMU6EventGetAccelZ(imu6)
+                        x_gyro = libcaer.caerIMU6EventGetGyroX(imu6)
+                        y_gyro = libcaer.caerIMU6EventGetGyroY(imu6)
+                        z_gyro = libcaer.caerIMU6EventGetGyroZ(imu6)
+                        self.imu_acc.append([x_acc, y_acc, z_acc])
+                        self.imu_gyro.append([x_gyro, y_gyro, z_gyro])
+                        self.imu_ts.append(libcaer.caerIMU6EventGetTimestamp(imu6))
+                        self.imu_temp.append(libcaer.caerIMU6EventGetTemp(imu6))                        
+        return True
         
 if __name__ == "__main__":
 
     import davis
 
     camera = davis.DAVIS()
-    camera.read_events()
-    print(" We print some events... ")
-    print("pixels x:"+str(camera.x))
-    print("pixels y:"+str(camera.y)) 
-    print("pixels ts:"+str(camera.ts))  
-    print("pixels pol:"+str(camera.pol))  
+    if(camera.read_events() == True):
+        print("succesfully read events from the device")
+        print("pixels x:"+str(camera.x))
+        print("pixels y:"+str(camera.y)) 
+        print("pixels ts:"+str(camera.ts))  
+        print("pixels pol:"+str(camera.pol)) 
+        print("camera frames:"+str(len(camera.frame))) 
+    else:
+        print("nothing read from the device")     
     
