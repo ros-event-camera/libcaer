@@ -270,7 +270,7 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 
 		int32_t pixelValue = 0;
 
-		if ((resetValue < 512) || (signalValue == 0)) {
+		if ((resetValue < 384) || (signalValue == 0)) {
 			// If the signal value is 0, that is only possible if the camera
 			// has seen tons of light. In that case, the photo-diode current
 			// may be greater than the reset current, and the reset value
