@@ -2,5 +2,6 @@
 /edvs_simple
 /davis_simple
 /davis_microphones
+/davis_cvgui
 /dynapse_simple
 /*.exe
