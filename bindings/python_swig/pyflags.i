@@ -31,6 +31,8 @@
 #include <libcaer/events/spike.h>
 %}
 
+%feature("autodoc", "1")
+
 %include "stdint.i"
 %include <libcaer/libcaer.h>
 %include <libcaer/network.h>
