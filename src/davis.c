@@ -754,7 +754,7 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 
 	// Not supported on DAVIS RGB.
 	if (!IS_DAVISRGB(handle->info.chipID)) {
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE, U32T(handle->info.adcClock / 10)); // in cycles @ ADCClock
 	}
 
