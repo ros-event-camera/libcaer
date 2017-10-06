@@ -583,6 +583,9 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
 	state->dvs.invertXY = param32 & 0x04;
 
+	davisLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
+		state->dvs.invertXY);
+
 	if (state->dvs.invertXY) {
 		handle->info.dvsSizeX = state->dvs.sizeY;
 		handle->info.dvsSizeY = state->dvs.sizeX;
@@ -602,6 +605,9 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	state->aps.flipX = param32 & 0x02;
 	state->aps.flipY = param32 & 0x01;
 
+	davisLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.", state->aps.sizeX,
+		state->aps.sizeY,state->aps.invertXY, state->aps.flipX, state->aps.flipY);
+
 	if (state->aps.invertXY) {
 		handle->info.apsSizeX = state->aps.sizeY;
 		handle->info.apsSizeY = state->aps.sizeX;
@@ -615,6 +621,9 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	state->imu.flipX = param32 & 0x04;
 	state->imu.flipY = param32 & 0x02;
 	state->imu.flipZ = param32 & 0x01;
+
+	davisLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX,
+		state->imu.flipY, state->imu.flipZ);
 
 	// On FX3, start the debug transfers once everything else is ready.
 	if (state->fx3Support.enabled) {
