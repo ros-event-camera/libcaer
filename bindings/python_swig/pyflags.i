@@ -1,6 +1,7 @@
-/* pyflags.i – interface file
-* Author: Federico Corradi
-    federico.corradi@inilabs.com
+/* pyflags.i - Python libcaer interface file
+* Authors:
+	Federico Corradi - federico.corradi@inilabs.com
+	Luca Longinotti - luca.longinotti@inilabs.com
 */
 %module libcaer_wrap
 %{
@@ -31,6 +32,10 @@
 #include <libcaer/events/spike.h>
 %}
 
+%feature("autodoc", "1");
+
+%ignore caerDeviceClose;
+
 %include "stdint.i"
 %include <libcaer/libcaer.h>
 %include <libcaer/network.h>
@@ -57,3 +62,11 @@
 %include <libcaer/events/sample.h>
 %include <libcaer/events/special.h>
 %include <libcaer/events/spike.h>
+
+%rename(caerDeviceClose) caerDeviceCloseW;
+
+%inline %{
+bool caerDeviceCloseW(caerDeviceHandle handle) {
+	return (caerDeviceClose(&handle));
+}
+%}
