@@ -73,7 +73,12 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 
 			// CDAVIS support: first 320 pixels are even, then odd.
 			if (IS_DAVISRGB(handle->info.chipID)) {
-				yDest = U16T(yDest + cDavisOffset);
+				if (state->aps.flipY) {
+					yDest = U16T(yDest - cDavisOffset);
+				}
+				else {
+					yDest = U16T(yDest + cDavisOffset);
+				}
 
 				if (!cDavisOffsetDirection) { // Increasing
 					cDavisOffset++;
