@@ -55,6 +55,10 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 	uint16_t x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
 	uint16_t y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
+	// CDAVIS support.
+	bool cDavisOffsetDirection = false;
+	int16_t cDavisOffset = 0;
+
 	state->aps.expectedCountX = 0;
 	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
 
@@ -66,6 +70,24 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
 			uint16_t xDest = x;
 			uint16_t yDest = y;
+
+			// CDAVIS support: first 320 pixels are even, then odd.
+			if (IS_DAVISRGB(handle->info.chipID)) {
+				yDest = U16T(yDest + cDavisOffset);
+
+				if (!cDavisOffsetDirection) { // Increasing
+					cDavisOffset++;
+
+					if (cDavisOffset == 320) {
+						// Switch to decreasing after last even pixel.
+						cDavisOffsetDirection = true;
+						cDavisOffset = 319;
+					}
+				}
+				else { // Decreasing
+					cDavisOffset = I16T(cDavisOffset - 3);
+				}
+			}
 
 			if (state->aps.invertXY) {
 				SWAP_VAR(uint16_t, xDest, yDest);
@@ -94,6 +116,12 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 		// Reset Y for next iteration.
 		y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
+		// CDAVIS support: reset for next iteration.
+		if (IS_DAVISRGB(handle->info.chipID)) {
+			cDavisOffsetDirection = false;
+			cDavisOffset = 0;
+		}
+
 		if (state->aps.flipX) {
 			x--;
 		}
@@ -101,30 +129,6 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 			x++;
 		}
 	}
-
-// TODO: DAVIS RGB support, calculations for inverleaved ADCs.
-//	state->aps.cDavisSupport.offsetDirection = 0;
-//	state->aps.cDavisSupport.offset = 1; // RGB support, first pixel of row always even.
-//
-//	if (IS_DAVISRGB(handle->info.chipID)) {
-//		yPos = U16T(yPos + state->aps.cDavisSupport.offset);
-//	}
-//
-//	// RGB support: first 320 pixels are even, then odd.
-//	if (IS_DAVISRGB(handle->info.chipID)) {
-//		if (state->aps.cDavisSupport.offsetDirection == 0) { // Increasing
-//			state->aps.cDavisSupport.offset++;
-//
-//			if (state->aps.cDavisSupport.offset == 321) {
-//				// Switch to decreasing after last even pixel.
-//				state->aps.cDavisSupport.offsetDirection = 1;
-//				state->aps.cDavisSupport.offset = 318;
-//			}
-//		}
-//		else { // Decreasing
-//			state->aps.cDavisSupport.offset = I16T(state->aps.cDavisSupport.offset - 3);
-//		}
-//	}
 
 	davisLog(CAER_LOG_DEBUG, handle, "Recalculated APS ROI indexes.");
 }
