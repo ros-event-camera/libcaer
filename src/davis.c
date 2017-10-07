@@ -604,6 +604,14 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 		handle->info.dvsSizeY = state->dvs.sizeY;
 	}
 
+	// CDAVIS support: double maximum reported DVS size to allow for properly spaced addresses.
+	if (IS_DAVISRGB(handle->info.chipID)) {
+		handle->info.dvsSizeX = I16T(handle->info.dvsSizeX * 2);
+		handle->info.dvsSizeY = I16T(handle->info.dvsSizeY * 2);
+
+		atomic_store(&state->dvs.cDavisSpacedAddresses, true);
+	}
+
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
 	state->aps.sizeX = I16T(param32);
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
@@ -707,6 +715,12 @@ bool davisSendDefaultConfig(caerDeviceHandle cdh) {
 
 static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisHandle handle = (davisHandle) cdh;
+
+	// CDAVIS support: this is handled like a device-like config and set to
+	// a defined value, so that sending DVS config that depends on size works.
+	if (IS_DAVISRGB(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_CDAVIS_SPACED_ADDRESSES, true);
+	}
 
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
@@ -1264,6 +1278,10 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN:
 					if (handle->info.dvsHasPixelFilter) {
+						// CDAVIS support: spaced apart DVS pixels.
+						if (atomic_load(&state->dvs.cDavisSpacedAddresses)) {
+							param /= 2;
+						}
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -1297,7 +1315,20 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
 					if (handle->info.dvsHasROIFilter) {
+						// CDAVIS support: spaced apart DVS pixels.
+						if (atomic_load(&state->dvs.cDavisSpacedAddresses)) {
+							param /= 2;
+						}
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_CDAVIS_SPACED_ADDRESSES:
+					if (IS_DAVISRGB(handle->info.chipID)) {
+						atomic_store(&state->dvs.cDavisSpacedAddresses, param);
 					}
 					else {
 						return (false);
@@ -1889,7 +1920,16 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN:
 					if (handle->info.dvsHasPixelFilter) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+						if (!spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param)) {
+							return (false);
+						}
+
+						// CDAVIS support: spaced apart DVS pixels.
+						if (atomic_load(&state->dvs.cDavisSpacedAddresses)) {
+							*param *= 2;
+						}
+
+						return (true);
 					}
 					else {
 						return (false);
@@ -1922,7 +1962,26 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
 					if (handle->info.dvsHasROIFilter) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+						if (!spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param)) {
+							return (false);
+						}
+
+						// CDAVIS support: spaced apart DVS pixels.
+						if (atomic_load(&state->dvs.cDavisSpacedAddresses)) {
+							*param *= 2;
+						}
+
+						return (true);
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_CDAVIS_SPACED_ADDRESSES:
+					if (IS_DAVISRGB(handle->info.chipID)) {
+						*param = atomic_load(&state->dvs.cDavisSpacedAddresses);
+						return (true);
 					}
 					else {
 						return (false);
@@ -3447,6 +3506,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->dvs.lastY);
 					}
 
+					// CDAVIS support: spaced apart DVS pixels.
+					if (atomic_load_explicit(&state->dvs.cDavisSpacedAddresses, memory_order_relaxed)) {
+						data = U16T(data * 2);
+					}
+
 					state->dvs.lastY = data;
 					state->dvs.gotY = true;
 
@@ -3464,6 +3528,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					// Invert polarity for PixelParade high gain pixels (DavisSense), because of
 					// negative gain from pre-amplifier.
 					uint8_t polarity = ((IS_DAVIS208(handle->info.chipID)) && (data < 192)) ? U8T(~code) : (code);
+
+					// CDAVIS support: spaced apart DVS pixels.
+					if (atomic_load_explicit(&state->dvs.cDavisSpacedAddresses, memory_order_relaxed)) {
+						data = U16T(data * 2);
+					}
 
 					caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
 						state->currentPackets.polarity, state->currentPackets.polarityPosition);

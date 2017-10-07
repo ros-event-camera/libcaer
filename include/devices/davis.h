@@ -651,6 +651,14 @@ extern "C" {
  * function: caerDeviceConfigGet64().
  */
 #define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * space addresses coming from the CDAVIS DVS sensor as they are
+ * on the array, doubling their AER addresses. This puts them in
+ * correct relation with the APS image and the actual physical
+ * layout of the sensor pixel array.
+ */
+#define DAVIS_CONFIG_DVS_CDAVIS_SPACED_ADDRESSES 80
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:

@@ -72,6 +72,7 @@ struct davis_state {
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
+		atomic_bool cDavisSpacedAddresses;
 	} dvs;
 	struct {
 		// APS specific fields
