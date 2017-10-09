@@ -15,9 +15,9 @@
  * Enable APS frame debugging by only looking at the reset or signal
  * frames, and not at the resulting correlated frame.
  * Supported values:
- * 0 - both/CDS (default)
- * 1 - reset read only
- * 2 - signal read only
+ * 0 - normal output, no debug (default)
+ * 1 - both reset and signal separately (marked as ROI regions
+ *     [0,1,2,3] for signal and [4,5,6,7] for reset respectively)
  */
 #define APS_DEBUG_FRAME 0
 
@@ -25,7 +25,7 @@
 
 #define APS_ADC_CHANNELS 1
 
-#define APS_ROI_REGIONS_MAX 1
+#define APS_ROI_REGIONS DAVIS_APS_ROI_REGIONS_MAX
 
 #define IMU6_COUNT 15
 #define IMU9_COUNT 21
@@ -35,20 +35,20 @@
 
 #define DAVIS_POLARITY_DEFAULT_SIZE 4096
 #define DAVIS_SPECIAL_DEFAULT_SIZE 128
-#define DAVIS_FRAME_DEFAULT_SIZE 4
+#define DAVIS_FRAME_DEFAULT_SIZE 8
 #define DAVIS_IMU_DEFAULT_SIZE 64
 #define DAVIS_SAMPLE_DEFAULT_SIZE 512
 
 #define DAVIS_DEVICE_NAME "DAVIS"
 
 #define DAVIS_FX2_DEVICE_PID 0x841B
-#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 9880
-#define DAVIS_FX2_REQUIRED_FIRMWARE_VERSION 3
+#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 9912
+#define DAVIS_FX2_REQUIRED_FIRMWARE_VERSION 4
 #define DAVIS_FX2_USB_CLOCK_FREQ 30
 
 #define DAVIS_FX3_DEVICE_PID 0x841A
-#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 9910
-#define DAVIS_FX3_REQUIRED_FIRMWARE_VERSION 3
+#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 9912
+#define DAVIS_FX3_REQUIRED_FIRMWARE_VERSION 4
 #define DAVIS_FX3_USB_CLOCK_FREQ 80
 #define DAVIS_FX3_CLOCK_FREQ_CORRECTION 1.008f
 
@@ -72,6 +72,7 @@ struct davis_state {
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
+		atomic_bool cDavisSpacedAddresses;
 	} dvs;
 	struct {
 		// APS specific fields
@@ -84,22 +85,34 @@ struct davis_state {
 		bool globalShutter;
 		bool resetRead;
 		uint16_t currentReadoutType;
-		uint16_t *currentResetFrame;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
-		// Current composite events, for later copy, to not loose them on commits.
-		caerFrameEvent currentEvent[APS_ROI_REGIONS_MAX];
+		uint16_t expectedCountX;
+		uint16_t *expectedCountY;
 		struct {
-			bool offsetDirection; // 0 is increasing, 1 is decreasing.
-			int16_t offset;
-		} cDavisSupport;
+			int32_t tsStartFrame;
+			int32_t tsStartExposure;
+			int32_t tsEndExposure;
+			size_t *pixelIndexes;
+			size_t pixelIndexesPosition[APS_READOUT_TYPES_NUM];
+			uint16_t *resetPixels;
+			uint16_t *pixels;
+		} frame;
 		struct {
+			// Temporary values from device.
 			uint16_t update;
 			uint16_t tmpData;
-			uint16_t sizeX[APS_ROI_REGIONS_MAX];
-			uint16_t sizeY[APS_ROI_REGIONS_MAX];
-			uint16_t positionX[APS_ROI_REGIONS_MAX];
-			uint16_t positionY[APS_ROI_REGIONS_MAX];
+			bool deviceEnabled[APS_ROI_REGIONS];
+			uint16_t startColumn[APS_ROI_REGIONS];
+			uint16_t startRow[APS_ROI_REGIONS];
+			uint16_t endColumn[APS_ROI_REGIONS];
+			uint16_t endRow[APS_ROI_REGIONS];
+			// Parameters for frame parsing.
+			bool enabled[APS_ROI_REGIONS];
+			uint16_t positionX[APS_ROI_REGIONS];
+			uint16_t positionY[APS_ROI_REGIONS];
+			uint16_t sizeX[APS_ROI_REGIONS];
+			uint16_t sizeY[APS_ROI_REGIONS];
 		} roi;
 		struct {
 			uint8_t tmpData;
