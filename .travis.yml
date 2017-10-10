@@ -138,6 +138,7 @@ matrix:
       env:
         - BUILD_NAME="osx-gcc-xcode8"
       before_install:
+        - brew update
         - brew tap rene-dev/sigrok
         - brew update
         - brew install libusb opencv
@@ -151,6 +152,7 @@ matrix:
       env:
         - BUILD_NAME="osx-clang-xcode8"
       before_install:
+        - brew update
         - brew tap rene-dev/sigrok
         - brew update
         - brew install libusb opencv
