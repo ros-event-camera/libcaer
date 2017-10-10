@@ -2050,6 +2050,23 @@ uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shif
  */
 struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
 
+/**
+ * Configure an APS ROI region in one step. This function guarantees efficiency and
+ * atomicity (no intermediate-sized results possible).
+ *
+ * @param handle a valid device handle.
+ * @param roiRegion which ROI region to configure, 0 or [0,3] if 'apsHasQuadROI' is defined.
+ * @param enable whether to enable or disable this ROI region.
+ * @param startX start corner X coordinate (0, 0 is upper left of frame).
+ * @param startY start corner Y coordinate (0, 0 is upper left of frame).
+ * @param endX end corner X coordinate (0, 0 is upper left of frame). Must be bigger than start.
+ * @param endY end corner Y coordinate (0, 0 is upper left of frame). Must be bigger than start.
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDavisROIConfigure(caerDeviceHandle handle, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
+	uint16_t endX, uint16_t endY);
+
 #ifdef __cplusplus
 }
 #endif

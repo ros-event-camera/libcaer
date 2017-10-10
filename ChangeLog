@@ -52,6 +52,8 @@ NEW FEATURES
 - DAVIS: added support for APS Quad-ROI (up to four independent
   regions of interest can be configured and enabled). The number of
   supported ROI regions is defined with DAVIS_APS_ROI_REGIONS_MAX.
+- devices/davis.h: added 'caerDavisROIConfigure()' function to atomically
+  and efficiently configure and enable ROI regions.
 - devices/davis.h: expanded 'struct caer_davis_info' to account for the
   above new features: 'dvsHasROIFilter', 'dvsHasStatistics' and 'muxHasStatistics'.
 - devices/dynapse.h: expanded 'struct caer_dynapse_info' to account for
