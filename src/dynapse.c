@@ -511,9 +511,9 @@ static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId) {
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_RFR_N, 3, 3, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_DC_P, 1, 30, true, true, false, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_TAU1_N, 7, 10, false, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_TAU1_N, 7, 5, false, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_TAU2_N, 6, 100, true, true, true, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_THR_N, 3, 120, true, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_THR_N, 4, 120, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_AHW_P, 7, 0, true, true, false, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_AHTAU_N, 7, 35, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N, 7, 0, true, true, true, true);
@@ -565,7 +565,7 @@ static void setLowPowerBiases(caerDeviceHandle cdh, uint8_t chipId) {
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_RFR_N, 3, 3, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_NMDA_N, 7, 0, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_DC_P, 1, 30, true, true, false, true);
-	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_TAU1_N, 7, 10, false, true, true, true);
+	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_TAU1_N, 7, 5, false, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_TAU2_N, 6, 100, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_THR_N, 4, 120, true, true, true, true);
 	setDynapseBias(cdh, DYNAPSE_CONFIG_BIAS_C2_IF_AHW_P, 7, 0, true, true, false, true);
