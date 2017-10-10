@@ -1,5 +1,7 @@
 Release 2.4.0 - 05.09.2017
 INCOMPATIBLE CHANGES
+- DAVIS: require new firmware version 4 and logic version 9912.
+- Dynap-SE: require new logic version 5.
 - devices/dynapse.h: the chip IDs are now mapped to be 0,1,2,3 for
   U0,U1,U2,U3 respectively, making them as easy to use and loop over
   as the core IDs. The defines have been updated, so if you've been
@@ -38,8 +40,24 @@ NEW FEATURES
   MacOS X via Homebrew are now available for each new libcaer release.
   For more information please visit:
   https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
+- Python bindings: added bindings for Python 2/3 using SWIG. See
+  bindings/python_swig/ and bindings/python_swig/examples/ for examples.
 - CMake: added support for generating RPM/DEB files via CPack, to
   easily be able to package one's own build.
+- DAVIS/Dynap-SE: added support for AER and Multiplexer statistics, to
+  examine number of events received, filtered and dropped.
+- DAVIS: added support for hardware DVS Refractory Period filter on
+  newer FX3 based devices.
+- DAVIS: added support for DVS ROI filtering.
+- DAVIS: added support for APS Quad-ROI (up to four independent
+  regions of interest can be configured and enabled). The number of
+  supported ROI regions is defined with DAVIS_APS_ROI_REGIONS_MAX.
+- devices/davis.h: expanded 'struct caer_davis_info' to account for the
+  above new features: 'dvsHasROIFilter', 'dvsHasStatistics' and 'muxHasStatistics'.
+- devices/dynapse.h: expanded 'struct caer_dynapse_info' to account for
+  the above new features: 'aerHasStatistics' and 'muxHasStatistics'.
+- devices/device.h: added 'caerDeviceConfigGet64()' to read 64-bit
+  configuration parameters, needed for statistics support.
 - src/dynapse.c: the Dynap-SE caerDeviceSendDefaultConfig() function now
   performs full initialization of the device and its chips. To reliably
   work with the device, make sure to always call this before setting
@@ -64,10 +82,20 @@ NEW FEATURES
   usage, to allow configuration of which neuron leakage bias to use.
 - events/common.h: added caerGenericEventCopy() function to copy
   events from one place in memory to another.
+- events/*.h: added two new functions 'caerXXXEventPacketFromPacketHeader()'
+  and 'caerXXXEventPacketFromPacketHeaderConst()' to transform a packet
+  header pointer to the proper event packet pointer. This checks the
+  type, and is needed for proper bindings support.
 - ringbuffer.h/hpp: the ring-buffer functions for producer-consumer
   high-performance communication between two threads are now exposed
   as part of the API, to allow re-use in other projects such as cAER.
 - examples/dynapse_simple.c: added simple example for Dynap-SE access.
+- examples/davis_cvgui.cpp: added example for converting frames to OpenCV
+  Mat and visualizing them using OpenCV's GUI.
+- src/timestamps.h: added timestamp debugging code, to measure drift
+  between host and device. Only enabled in debug builds.
+- src/davis.h: improved APS_DEBUG_FRAME support, now splits signal and
+  reset read for debugging over all ROI regions.
 
 BUG FIXES
 - devices/dynapse.h: major API documentation cleanup.
@@ -75,6 +103,8 @@ BUG FIXES
   sized more correctly to reflect the range of their arguments.
 - src/dynapse.c: DYNAPSE_CONFIG_CLEAR_CAM now clears all 64 CAMs for
   each neuron in a chip, resulting in all CAMs being fully cleared.
+- DAVIS: improved default timings for APS, providing better image quality,
+  especially on new chips with internal ADC support.
 - events/frame.h: added documentation that using the assignment operator
   to copy Frame events is not possible, caerGenericEventCopy() should
   be used instead. The C++ variant deletes the assignment operator to
@@ -82,6 +112,7 @@ BUG FIXES
 - src/usb_utils.c: fixed shutdown callback not being called on MacOS X.
   Also fixed possible dead-lock on USB transfer re-submit on Windows.
   This fixes issue #32.
+- portable_endian.h: fixed stand-alone compilation.
 - Fixed many code quality warnings by Sonarcloud.
 
 
