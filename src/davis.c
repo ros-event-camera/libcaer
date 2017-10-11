@@ -1,4 +1,5 @@
 #include "davis.h"
+#include <math.h>
 
 static void davisLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh);
@@ -1350,20 +1351,22 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					// by multiplying with ADC clock value.
 					if (!atomic_load(&state->aps.autoExposure.enabled)) {
 						state->aps.autoExposure.lastSetExposure = param;
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr,
-							U32T((float) param * clockFreqCorrect(state, handle->info.adcClock))));
+
+						float exposureCC = roundf((float) param * clockFreqCorrect(state, handle->info.adcClock));
+						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, U32T(exposureCC)));
 					}
 					else {
 						return (false);
 					}
 					break;
 
-				case DAVIS_CONFIG_APS_FRAME_DELAY:
+				case DAVIS_CONFIG_APS_FRAME_DELAY: {
 					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
-					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr,
-						U32T((float) param * clockFreqCorrect(state, handle->info.adcClock))));
+					float delayCC = roundf((float) param * clockFreqCorrect(state, handle->info.adcClock));
+					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, U32T(delayCC)));
 					break;
+				}
 
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
@@ -1763,8 +1766,8 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					// Early packet delay is 125µs slices on host, but in cycles
 					// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
 					int16_t pureClock = (state->fx3Support.enabled) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
-					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr,
-						U32T((float) param * (125.0F * clockFreqCorrect(state, pureClock)))));
+					float delayCC = roundf((float) param * (125.0F * clockFreqCorrect(state, pureClock)));
+					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr, U32T(delayCC)));
 					break;
 				}
 
@@ -2026,7 +2029,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						return (false);
 					}
 
-					*param = U32T((float) cyclesValue / clockFreqCorrect(state, handle->info.adcClock));
+					float delayCC = roundf((float) cyclesValue / clockFreqCorrect(state, handle->info.adcClock));
+					*param = U32T(delayCC);
 
 					return (true);
 					break;
@@ -2415,7 +2419,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 
 					int16_t pureClock = (state->fx3Support.enabled) ? (DAVIS_FX3_USB_CLOCK_FREQ) : (DAVIS_FX2_USB_CLOCK_FREQ);
-					*param = U32T((float) cyclesValue / (125.0F * clockFreqCorrect(state, pureClock)));
+					float delayCC = roundf((float) cyclesValue / (125.0F * clockFreqCorrect(state, pureClock)));
+					*param = U32T(delayCC);
 
 					return (true);
 					break;
@@ -3031,25 +3036,23 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								if (atomic_load_explicit(&state->aps.autoExposure.enabled, memory_order_relaxed)) {
 									float clockCorrect = clockFreqCorrect(state, handle->info.adcClock);
 
-									uint32_t exposureFrame = U32T(
-										(float ) state->aps.autoExposure.currentFrameExposure / clockCorrect);
+									float exposureFrameCC = roundf((float) state->aps.autoExposure.currentFrameExposure / clockCorrect);
 
 									int32_t newExposureValue = autoExposureCalculate(&state->aps.autoExposure.state,
-										newFrameEvents, exposureFrame, state->aps.autoExposure.lastSetExposure);
+										newFrameEvents, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure);
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
 										davisLog(CAER_LOG_DEBUG, handle,
-											"Automatic exposure control set exposure to %" PRIu32 " µs.",
+											"Automatic exposure control set exposure to %" PRIi32 " µs.",
 											newExposureValue);
 
 										state->aps.autoExposure.lastSetExposure = U32T(newExposureValue);
 
-										uint32_t newExposureValueConfig = U32T(
-											(float ) newExposureValue * clockCorrect);
+										float newExposureCC = roundf((float) newExposureValue * clockCorrect);
 
 										spiConfigSendAsync(&state->usbState, DAVIS_CONFIG_APS,
-											DAVIS_CONFIG_APS_EXPOSURE, newExposureValueConfig, NULL, NULL);
+											DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureCC), NULL, NULL);
 									}
 								}
 							}
