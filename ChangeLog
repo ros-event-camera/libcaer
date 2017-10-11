@@ -105,8 +105,12 @@ BUG FIXES
   sized more correctly to reflect the range of their arguments.
 - src/dynapse.c: DYNAPSE_CONFIG_CLEAR_CAM now clears all 64 CAMs for
   each neuron in a chip, resulting in all CAMs being fully cleared.
+- Dynap-SE: default low-power biases are now the same across all cores.
 - DAVIS: improved default timings for APS, providing better image quality,
   especially on new chips with internal ADC support.
+- DAVIS/AutoExposure: fixed auto-exposure on FX3 devices, sometimes didn't
+  run due to rounding errors when correcting for clock skew between
+  parameters sent to the devices and parameters received back.
 - events/frame.h: added documentation that using the assignment operator
   to copy Frame events is not possible, caerGenericEventCopy() should
   be used instead. The C++ variant deletes the assignment operator to
@@ -114,8 +118,9 @@ BUG FIXES
 - src/usb_utils.c: fixed shutdown callback not being called on MacOS X.
   Also fixed possible dead-lock on USB transfer re-submit on Windows.
   This fixes issue #32.
-- portable_endian.h: fixed stand-alone compilation.
+- portable_endian.h, portable_time.h: fixed stand-alone compilation.
 - Fixed many code quality warnings by Sonarcloud.
+- Travis-CI: fixed automatic test build issues on MacOS X.
 
 
 Release 2.3.0 - 30.06.2017
