@@ -2,6 +2,7 @@
 #define PORTABLE_TIME_H_
 
 #if defined(__APPLE__)
+	#include <stdbool.h>
 	#include <time.h>
 	#include <sys/time.h>
 	#include <mach/mach.h>
@@ -69,6 +70,7 @@
 		return (true);
 	}
 #elif ((defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L) || (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 600) || (defined(_WIN32) && defined(__MINGW32__)))
+	#include <stdbool.h>
 	#include <time.h>
 
 	static inline bool portable_clock_gettime_monotonic(struct timespec *monoTime) {
