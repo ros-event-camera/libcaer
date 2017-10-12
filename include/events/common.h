@@ -65,6 +65,7 @@ enum caer_default_event_types {
 	POINT3D_EVENT = 10, //!< 3D measurement events.
 	POINT4D_EVENT = 11, //!< 4D measurement events.
 	SPIKE_EVENT = 12,   //!< Spike events.
+	MATRIX4x4_EVENT = 13, //!< 4D matrix events.
 };
 
 /**
