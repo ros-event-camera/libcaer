@@ -2,6 +2,7 @@
 
 #include "dvs128.h"
 #include "davis.h"
+#include "davis_rpi.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -18,8 +19,9 @@
  * 3 - CAER_DEVICE_DYNAPSE
  * 4 - CAER_DEVICE_DAVIS
  * 5 - CAER_DEVICE_EDVS
+ * 6 - CAER_DEVICE_DAVIS_RPI
  */
-#define SUPPORTED_DEVICES_NUMBER 6
+#define SUPPORTED_DEVICES_NUMBER 7
 
 // Supported devices and their functions.
 static caerDeviceHandle (*usbConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
@@ -30,6 +32,7 @@ static caerDeviceHandle (*usbConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t de
 		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
 		[CAER_DEVICE_DAVIS] = &davisOpen,
 		[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_DAVIS_RPI] = &davisRPiOpen,
 };
 
 static caerDeviceHandle (*serialConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, const char *serialPortName,
@@ -44,6 +47,7 @@ static caerDeviceHandle (*serialConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t
 #else
 		[CAER_DEVICE_EDVS] = NULL,
 #endif
+		[CAER_DEVICE_DAVIS_RPI] = NULL,
 };
 
 static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -57,6 +61,7 @@ static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = 
 #else
 	[CAER_DEVICE_EDVS] = NULL,
 #endif
+	[CAER_DEVICE_DAVIS_RPI] = &davisRPiClose,
 };
 
 static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -70,6 +75,7 @@ static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle h
 #else
 	[CAER_DEVICE_EDVS] = NULL,
 #endif
+	[CAER_DEVICE_DAVIS_RPI] = &davisRPiSendDefaultConfig,
 };
 
 static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -84,6 +90,7 @@ static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 #else
 		[CAER_DEVICE_EDVS] = NULL,
 #endif
+		[CAER_DEVICE_DAVIS_RPI] = &davisRPiConfigSet,
 };
 
 static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
@@ -98,6 +105,7 @@ static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 #else
 		[CAER_DEVICE_EDVS] = NULL,
 #endif
+		[CAER_DEVICE_DAVIS_RPI] = &davisRPiConfigGet,
 };
 
 static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
@@ -113,6 +121,7 @@ static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, v
 #else
 		[CAER_DEVICE_EDVS] = NULL,
 #endif
+		[CAER_DEVICE_DAVIS_RPI] = &davisRPiDataStart,
 };
 
 static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -126,6 +135,7 @@ static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) =
 #else
 	[CAER_DEVICE_EDVS] = NULL,
 #endif
+	[CAER_DEVICE_DAVIS_RPI] = &davisRPiDataStop,
 };
 
 static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -139,6 +149,7 @@ static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDev
 #else
 	[CAER_DEVICE_EDVS] = NULL,
 #endif
+	[CAER_DEVICE_DAVIS_RPI] = &davisRPiDataGet,
 };
 
 // Add empty InfoGet for optional devices, such as serial ones.

@@ -8,6 +8,7 @@ SET(LIBCAER_SRC_FILES
 	device.c
 	dvs128.c
 	davis.c
+	davis_rpi.c
 	dynapse.c)
 
 IF (ENABLE_SERIALDEV)

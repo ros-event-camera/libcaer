@@ -33,6 +33,10 @@ extern "C" {
  * generation devices. This is the preferred way to access cameras now.
  */
 #define CAER_DEVICE_DAVIS     4
+/**
+ * Device type definition for iniLabs Raspberry Pi-based DAVIS boards.
+ */
+#define CAER_DEVICE_DAVIS_RPI 6
 
 /**
  * DAVIS240A chip identifier.

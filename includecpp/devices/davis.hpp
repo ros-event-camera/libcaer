@@ -96,6 +96,13 @@ public:
 	}
 };
 
+class davisrpi final: public davis {
+public:
+	davisrpi(uint16_t deviceID) :
+			davis(deviceID, CAER_DEVICE_DAVIS_RPI) {
+	}
+};
+
 }
 }
 
