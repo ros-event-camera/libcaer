@@ -2146,6 +2146,14 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 							// alone, in its own packet.
 							// Commit packets when doing a reset to clearly separate them.
 							tsReset = true;
+
+							// Update Master/Slave status on incoming TS resets.
+							uint32_t param = 0;
+							spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param);
+
+							atomic_thread_fence(memory_order_seq_cst);
+							handle->info.deviceIsMaster = param;
+							atomic_thread_fence(memory_order_seq_cst);
 							break;
 						}
 
