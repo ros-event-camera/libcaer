@@ -538,7 +538,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	// TODO: Open the DAVIS device on the Raspberry Pi. Check logic version.
 	if (!initRPi(state)) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		davisRPiLog(CAER_LOG_CRITICAL, __func__, "Failed to open device.");
 		free(handle);
 
 		return (NULL);
