@@ -1,5 +1,40 @@
 #include "davis_rpi.h"
 #include <math.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#define PIZERO_PERI_BASE 0x20000000
+#define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
+#define GPIO_REG_LEN  0xB4
+#define CLK_REG_BASE  (PIZERO_PERI_BASE + 0x101000) /* GPCLK controller */
+#define CLK_REG_LEN   0xA8
+
+// GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
+#define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId)/10] &= U32T(~(7 << (((gpioId)%10)*3)))
+#define GPIO_OUT(gpioReg, gpioId) gpioReg[(gpioId)/10] |= U32T(1 << (((gpioId)%10)*3))
+#define GPIO_ALT(gpioReg, gpioId, altFunc) gpioReg[(gpioId)/10] |= U32T(((altFunc)<=3?(altFunc)+4:(altFunc)==4?3:2) << (((gpioId)%10)*3))
+
+#define GPIO_SET(gpioReg) gpioReg[7]  // sets   bits which are 1 ignores bits which are 0
+#define GPIO_CLR(gpioReg) gpioReg[10] // clears bits which are 1 ignores bits which are 0
+
+#define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & (1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
+
+#define GPIO_PULL(gpioReg) gpioReg[37] // Pull up/pull down
+#define GPIO_PULLCLK0(gpioReg) gpioReg[38] // Pull up/pull down clock
+
+#define CLK_GP0_CTL 28
+#define CLK_GP0_DIV 29
+
+#define CLK_PASSWD  (0x5A << 24)
+
+#define CLK_CTL_MASH(x) ((x) << 9)
+#define CLK_CTL_BUSY      (1 << 7)
+#define CLK_CTL_KILL      (1 << 5)
+#define CLK_CTL_ENAB      (1 << 4)
+#define CLK_CTL_SRC(x)  ((x) << 0)
+
+#define CLK_CTL_SRC_OSC  1  /* 19.2 MHz oscillator */
 
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
@@ -9,6 +44,61 @@ static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t param
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY);
+
+static inline void killGPCLK0(davisRPiState state) {
+	state->gpio.gpclkReg[CLK_GP0_CTL] = CLK_PASSWD | CLK_CTL_KILL; // Disable current clock.
+
+	while (state->gpio.gpclkReg[CLK_GP0_CTL] & CLK_CTL_BUSY) {
+		usleep(10); // Wait for clock to stop.
+	}
+}
+
+static bool initRPi(davisRPiState state) {
+	int devMemFd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (devMemFd < 0) {
+		return (false);
+	}
+
+	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED,
+		devMemFd, GPIO_REG_BASE);
+
+	state->gpio.gpclkReg = mmap(NULL, CLK_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED,
+		devMemFd, CLK_REG_BASE);
+
+	close(devMemFd);
+
+	if ((state->gpio.gpioReg == MAP_FAILED) || (state->gpio.gpclkReg == MAP_FAILED)) {
+		return (false);
+	}
+
+	// Configure GPCLK0 clock source to oscillator.
+	killGPCLK0(state);
+	state->gpio.gpclkReg[CLK_GP0_DIV] = (CLK_PASSWD | 0); // No dividers.
+	usleep(10);
+	state->gpio.gpclkReg[CLK_GP0_CTL] = (CLK_PASSWD | CLK_CTL_MASH(0) | CLK_CTL_SRC(CLK_CTL_SRC_OSC)); // Configure oscillator as clock source, disable MASH.
+	usleep(10);
+	state->gpio.gpclkReg[CLK_GP0_CTL] |= (CLK_PASSWD | CLK_CTL_ENAB); // Enable new clock.
+
+	// GPIO4: GPCLK0 set to oscillator (most precise clock source).
+	GPIO_INP(state->gpio.gpioReg, 4);
+	GPIO_ALT(state->gpio.gpioReg, 4, 0); // ALT0 function: GPCLK0.
+
+	return (true);
+}
+
+static bool closeRPi(davisRPiState state) {
+	// Reset GPIO4 to default state.
+	GPIO_INP(state->gpio.gpioReg, 4);
+
+	// Disable GPCLK0.
+	killGPCLK0(state);
+
+	// Unmap memory regions.
+	munmap((void *) state->gpio.gpioReg, GPIO_REG_LEN);
+	munmap((void *) state->gpio.gpclkReg, CLK_REG_LEN);
+
+	return (true);
+}
 
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) {
 	va_list argumentList;
@@ -169,7 +259,8 @@ static inline void apsROIUpdateSizes(davisRPiHandle handle) {
 			}
 
 			davisRPiLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu enabled - posX=%d, posY=%d, sizeX=%d, sizeY=%d.", i,
-				state->aps.roi.positionX[i], state->aps.roi.positionY[i], state->aps.roi.sizeX[i], state->aps.roi.sizeY[i]);
+				state->aps.roi.positionX[i], state->aps.roi.positionY[i], state->aps.roi.sizeX[i],
+				state->aps.roi.sizeY[i]);
 		}
 		else {
 			// If was enabled but now isn't, must recalculate indexes.
@@ -222,7 +313,8 @@ static inline void apsInitFrame(davisRPiHandle handle) {
 static inline void apsUpdateFrame(davisRPiHandle handle, uint16_t data) {
 	davisRPiState state = &handle->state;
 
-	size_t pixelPosition = state->aps.frame.pixelIndexes[state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]];
+	size_t pixelPosition = state->aps.frame.pixelIndexes[state->aps.frame.pixelIndexesPosition[state->aps
+		.currentReadoutType]];
 	state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]++;
 
 	// Separate debug support.
@@ -445,7 +537,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
 
 	// TODO: Open the DAVIS device on the Raspberry Pi. Check logic version.
-	if (false) {
+	if (!initRPi(state)) {
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle);
 
@@ -495,7 +587,6 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	handle->info.apsHasInternalADC = param32;
 	handle->info.apsHasExternalADC = !handle->info.apsHasInternalADC;
 
-
 	spiConfigReceive(state, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
 	spiConfigReceive(state, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS, &param32);
@@ -534,8 +625,8 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	state->aps.flipX = param32 & 0x02;
 	state->aps.flipY = param32 & 0x01;
 
-	davisRPiLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.", state->aps.sizeX,
-		state->aps.sizeY,state->aps.invertXY, state->aps.flipX, state->aps.flipY);
+	davisRPiLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.",
+		state->aps.sizeX, state->aps.sizeY, state->aps.invertXY, state->aps.flipX, state->aps.flipY);
 
 	if (state->aps.invertXY) {
 		handle->info.apsSizeX = state->aps.sizeY;
@@ -551,8 +642,8 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	state->imu.flipY = param32 & 0x02;
 	state->imu.flipZ = param32 & 0x01;
 
-	davisRPiLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX,
-		state->imu.flipY, state->imu.flipZ);
+	davisRPiLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
+		state->imu.flipZ);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Initialized device successfully.");
 
@@ -566,6 +657,7 @@ bool davisRPiClose(caerDeviceHandle cdh) {
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// TODO: Finally, close the device fully.
+	closeRPi(state);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
@@ -638,7 +730,8 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	if (handle->info.dvsHasROIFilter) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN, 0);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW, 0);
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN, U32T(handle->info.dvsSizeX - 1));
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN,
+			U32T(handle->info.dvsSizeX - 1));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW, U32T(handle->info.dvsSizeY - 1));
 	}
 
@@ -791,10 +884,12 @@ static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh) {
 			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 39)));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ONBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN,
+			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP,
+			caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRSFBP,
 			caerBiasCoarseFineGenerate(CF_P_TYPE(1, 16)));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_REFRBP,
@@ -1033,7 +1128,7 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 					if (handle->info.apsHasGlobalShutter) {
 						// Keep in sync with chip config module GlobalShutter parameter.
 						if (!spiConfigSend(state, DAVIS_CONFIG_CHIP,
-							DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
+						DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
 							return (false);
 						}
 
@@ -1241,7 +1336,7 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 						if (handle->info.apsHasGlobalShutter) {
 							// Keep in sync with APS module GlobalShutter parameter.
 							if (!spiConfigSend(state, DAVIS_CONFIG_APS,
-								DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
+							DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
 								return (false);
 							}
 
@@ -1803,8 +1898,9 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 	return (true);
 }
 
-bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
-	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
+bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
+	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
+	void *dataShutdownUserPtr) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 	davisRPiState state = &handle->state;
 
@@ -1846,8 +1942,8 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		return (false);
 	}
 
-	state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_RPI_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), 0,
-		handle->info.apsSizeX, handle->info.apsSizeY, APS_ADC_CHANNELS);
+	state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_RPI_FRAME_DEFAULT_SIZE,
+		I16T(handle->info.deviceID), 0, handle->info.apsSizeX, handle->info.apsSizeY, APS_ADC_CHANNELS);
 	if (state->currentPackets.frame == NULL) {
 		freeAllDataMemory(state);
 
@@ -1855,7 +1951,8 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		return (false);
 	}
 
-	state->currentPackets.imu6 = caerIMU6EventPacketAllocate(DAVIS_RPI_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+	state->currentPackets.imu6 = caerIMU6EventPacketAllocate(DAVIS_RPI_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID),
+		0);
 	if (state->currentPackets.imu6 == NULL) {
 		freeAllDataMemory(state);
 
@@ -2137,7 +2234,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 							break;
 
 						case 1: { // Timetamp reset
-							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString, &state->deviceLogLevel);
+							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString,
+								&state->deviceLogLevel);
 
 							containerGenerationCommitTimestampReset(&state->container);
 							containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
@@ -2149,7 +2247,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 
 							// Update Master/Slave status on incoming TS resets.
 							uint32_t param = 0;
-							spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param);
+							spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER,
+								&param);
 
 							atomic_thread_fence(memory_order_seq_cst);
 							handle->info.deviceIsMaster = param;
@@ -2290,8 +2389,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 									}
 
 									// Get next frame.
-									caerFrameEvent frameEvent = caerFrameEventPacketGetEvent(state->currentPackets.frame,
-										state->currentPackets.framePosition);
+									caerFrameEvent frameEvent = caerFrameEventPacketGetEvent(
+										state->currentPackets.frame, state->currentPackets.framePosition);
 									state->currentPackets.framePosition++;
 									newFrameEvents[i] = frameEvent;
 
@@ -2314,7 +2413,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 									size_t frameOffset = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
 										+ state->aps.roi.positionX[i];
 
-									for (uint16_t y = 0; y <  state->aps.roi.sizeY[i]; y++) {
+									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
 										memcpy(roiPixels + roiOffset, state->aps.frame.pixels + frameOffset,
 											state->aps.roi.sizeX[i] * sizeof(uint16_t));
 
@@ -2346,7 +2445,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 									roiPixels = caerFrameEventGetPixelArrayUnsafe(debugEvent);
 									roiOffset = 0;
 									frameOffset = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
-										+ state->aps.roi.positionX[i];
+									+ state->aps.roi.positionX[i];
 
 									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
 										memcpy(roiPixels + roiOffset, state->aps.frame.resetPixels + frameOffset,
@@ -2360,7 +2459,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 
 								// Automatic exposure control support. Call once for all ROI regions.
 								if (atomic_load_explicit(&state->aps.autoExposure.enabled, memory_order_relaxed)) {
-									uint32_t exposureFrameCC = U32T(state->aps.autoExposure.currentFrameExposure / U16T(handle->info.adcClock));
+									uint32_t exposureFrameCC = U32T(
+										state->aps.autoExposure.currentFrameExposure / U16T(handle->info.adcClock));
 
 									int32_t newExposureValue = autoExposureCalculate(&state->aps.autoExposure.state,
 										newFrameEvents, exposureFrameCC, state->aps.autoExposure.lastSetExposure);
@@ -2375,7 +2475,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 
 										uint32_t newExposureCC = U32T(newExposureValue * U16T(handle->info.adcClock));
 
-										spiConfigSend(state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, newExposureCC);
+										spiConfigSend(state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE,
+											newExposureCC);
 									}
 								}
 							}
@@ -2446,8 +2547,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 							davisRPiLog(CAER_LOG_DEBUG, handle, "APS Column End: CountY[%d] is %d.",
 								state->aps.currentReadoutType, state->aps.countY[state->aps.currentReadoutType]);
 
-							if (state->aps.countY[state->aps.currentReadoutType] !=
-								state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]) {
+							if (state->aps.countY[state->aps.currentReadoutType]
+								!= state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]) {
 								davisRPiLog(CAER_LOG_ERROR, handle,
 									"APS Column End - %d - %d: wrong row count %d detected, expected %d.",
 									state->aps.currentReadoutType, state->aps.countX[state->aps.currentReadoutType],
@@ -2745,7 +2846,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 						}
 
 						default:
-							davisRPiLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.", data);
+							davisRPiLog(CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.",
+								data);
 							break;
 					}
 					break;
@@ -2816,8 +2918,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 
 					// Ignore too big X/Y counts, can happen if column start/end events are lost.
 					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.expectedCountX)
-						|| (state->aps.countY[state->aps.currentReadoutType] >=
-							state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]])) {
+						|| (state->aps.countY[state->aps.currentReadoutType]
+							>= state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]])) {
 						break;
 					}
 
@@ -3002,8 +3104,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 
 					switch (misc10Code) {
 						case 0:
-							state->aps.autoExposure.currentFrameExposure |=
-								(U32T(misc10Data) << U32T(10 * state->aps.autoExposure.tmpData));
+							state->aps.autoExposure.currentFrameExposure |= (U32T(misc10Data)
+								<< U32T(10 * state->aps.autoExposure.tmpData));
 							state->aps.autoExposure.tmpData++;
 							break;
 
@@ -3109,8 +3211,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
-				state->timestamps.current, &state->dataExchange, &state->gpio.dataTransfersRun,
-				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
+				state->timestamps.current, &state->dataExchange, &state->gpio.dataTransfersRun, handle->info.deviceID,
+				handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
 }

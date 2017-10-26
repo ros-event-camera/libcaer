@@ -47,6 +47,8 @@ struct davis_rpi_state {
 	struct data_exchange dataExchange;
 	// Data transfer via GPIO.
 	struct {
+		volatile uint32_t *gpioReg;
+		volatile uint32_t *gpclkReg;
 		atomic_bool dataTransfersRun;
 	} gpio;
 	// Timestamp fields
