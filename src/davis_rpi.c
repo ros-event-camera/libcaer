@@ -15,10 +15,13 @@
 #define GPIO_OUT(gpioReg, gpioId) gpioReg[(gpioId)/10] |= U32T(1 << (((gpioId)%10)*3))
 #define GPIO_ALT(gpioReg, gpioId, altFunc) gpioReg[(gpioId)/10] |= U32T(((altFunc)<=3?(altFunc)+4:(altFunc)==4?3:2) << (((gpioId)%10)*3))
 
-#define GPIO_SET(gpioReg) gpioReg[7]  // sets   bits which are 1 ignores bits which are 0
-#define GPIO_CLR(gpioReg) gpioReg[10] // clears bits which are 1 ignores bits which are 0
+#define GPIO_SET(gpioReg, gpioId) gpioReg[7] = U32T(1 << (gpioId))  // sets   bits which are 1 ignores bits which are 0
+#define GPIO_CLR(gpioReg, gpioId) gpioReg[10] = U32T(1 << (gpioId)) // clears bits which are 1 ignores bits which are 0
 
-#define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & (1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
+#define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
+
+// Data is in GPIOs 12-27, so just shift and mask (by cast to 16bit).
+#define GPIO_GET_DATA(gpioReg) U16T(gpioReg[13] >> 12)
 
 #define GPIO_PULL(gpioReg) gpioReg[37] // Pull up/pull down
 #define GPIO_PULLCLK0(gpioReg) gpioReg[38] // Pull up/pull down clock
@@ -47,6 +50,7 @@ bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, 
 
 static inline void killGPCLK0(davisRPiState state) {
 	state->gpio.gpclkReg[CLK_GP0_CTL] = CLK_PASSWD | CLK_CTL_KILL; // Disable current clock.
+	usleep(10);
 
 	while (state->gpio.gpclkReg[CLK_GP0_CTL] & CLK_CTL_BUSY) {
 		usleep(10); // Wait for clock to stop.
@@ -78,10 +82,39 @@ static bool initRPi(davisRPiState state) {
 	state->gpio.gpclkReg[CLK_GP0_CTL] = (CLK_PASSWD | CLK_CTL_MASH(0) | CLK_CTL_SRC(CLK_CTL_SRC_OSC)); // Configure oscillator as clock source, disable MASH.
 	usleep(10);
 	state->gpio.gpclkReg[CLK_GP0_CTL] |= (CLK_PASSWD | CLK_CTL_ENAB); // Enable new clock.
+	usleep(10);
 
 	// GPIO4: GPCLK0 set to oscillator (most precise clock source).
 	GPIO_INP(state->gpio.gpioReg, 4);
 	GPIO_ALT(state->gpio.gpioReg, 4, 0); // ALT0 function: GPCLK0.
+
+	// GPIOs for DDR-AER communication: set to default state.
+	for (size_t i = 12; i <= 27; i++) {
+		// GPIO 12-27 are 16 bit data input.
+		GPIO_INP(state->gpio.gpioReg, i);
+	}
+
+	// Five control GPIOs: 2,3,5,6,7.
+	GPIO_INP(state->gpio.gpioReg, 2); // Reset CPLD.
+	GPIO_INP(state->gpio.gpioReg, 3); // CTRL0: DDR-AER Acknowledge.
+	GPIO_INP(state->gpio.gpioReg, 5); // CTRL1: DDR-AER Request.
+	GPIO_INP(state->gpio.gpioReg, 6); // CTRL2: Unused.
+	GPIO_INP(state->gpio.gpioReg, 7); // CTRL3: Unused.
+
+	GPIO_OUT(state->gpio.gpioReg, 2); // Reset CPLD is output.
+	GPIO_CLR(state->gpio.gpioReg, 2); // Default to LOW.
+
+	GPIO_OUT(state->gpio.gpioReg, 3); // DDR-AER Acknowledge is output.
+	GPIO_SET(state->gpio.gpioReg, 3); // Default to HIGH.
+
+	// TODO: upload CPLD logic via SPI. First query if exists with proper
+	// version, if not, upload and check again.
+
+	// Reset CPLD for 20µs.
+	GPIO_SET(state->gpio.gpioReg, 2);
+	usleep(10);
+	GPIO_CLR(state->gpio.gpioReg, 2);
+	usleep(10);
 
 	return (true);
 }
