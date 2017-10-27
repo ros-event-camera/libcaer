@@ -96,21 +96,21 @@ static bool initRPi(davisRPiState state) {
 
 	// Five control GPIOs: 2,3,5,6,7.
 	GPIO_INP(state->gpio.gpioReg, 2); // Reset CPLD.
-	GPIO_INP(state->gpio.gpioReg, 3); // CTRL0: DDR-AER Acknowledge.
-	GPIO_INP(state->gpio.gpioReg, 5); // CTRL1: DDR-AER Request.
-	GPIO_INP(state->gpio.gpioReg, 6); // CTRL2: Unused.
-	GPIO_INP(state->gpio.gpioReg, 7); // CTRL3: Unused.
+	GPIO_INP(state->gpio.gpioReg, 3); // DDR-AER Acknowledge.
+	GPIO_INP(state->gpio.gpioReg, 5); // DDR-AER Request.
+	GPIO_INP(state->gpio.gpioReg, 6); // Unused.
+	GPIO_INP(state->gpio.gpioReg, 7); // Unused.
 
 	GPIO_OUT(state->gpio.gpioReg, 2); // Reset CPLD is output.
-	GPIO_CLR(state->gpio.gpioReg, 2); // Default to LOW.
+	GPIO_CLR(state->gpio.gpioReg, 2); // Default to LOW (to then pulse reset).
 
 	GPIO_OUT(state->gpio.gpioReg, 3); // DDR-AER Acknowledge is output.
-	GPIO_SET(state->gpio.gpioReg, 3); // Default to HIGH.
+	GPIO_SET(state->gpio.gpioReg, 3); // Default to HIGH (AER active-low).
 
-	// TODO: upload CPLD logic via SPI. First query if exists with proper
-	// version, if not, upload and check again.
+	// TODO: setup SPI. After CPLD reset, query logic version. Upload done by
+	// separate tool, at boot.
 
-	// Reset CPLD for 20µs.
+	// Reset CPLD for 10µs.
 	GPIO_SET(state->gpio.gpioReg, 2);
 	usleep(10);
 	GPIO_CLR(state->gpio.gpioReg, 2);
