@@ -1,8 +1,11 @@
 #include "davis_rpi.h"
 #include <math.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/types.h>
+#include <linux/spi/spidev.h>
 
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
@@ -39,6 +42,8 @@
 
 #define CLK_CTL_SRC_OSC  1  /* 19.2 MHz oscillator */
 
+#define PI_SPI_DEVICE "/dev/spidev0.0"
+
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh);
@@ -63,11 +68,11 @@ static bool initRPi(davisRPiState state) {
 		return (false);
 	}
 
-	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED,
-		devMemFd, GPIO_REG_BASE);
+	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
+		GPIO_REG_BASE);
 
-	state->gpio.gpclkReg = mmap(NULL, CLK_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED,
-		devMemFd, CLK_REG_BASE);
+	state->gpio.gpclkReg = mmap(NULL, CLK_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
+		CLK_REG_BASE);
 
 	close(devMemFd);
 
@@ -98,7 +103,7 @@ static bool initRPi(davisRPiState state) {
 	GPIO_INP(state->gpio.gpioReg, 2); // Reset CPLD.
 	GPIO_INP(state->gpio.gpioReg, 3); // DDR-AER Acknowledge.
 	GPIO_INP(state->gpio.gpioReg, 5); // DDR-AER Request.
-	GPIO_INP(state->gpio.gpioReg, 6); // Unused.
+	GPIO_INP(state->gpio.gpioReg, 6); // DDR-AER Interrupt (config later via sysfs).
 	GPIO_INP(state->gpio.gpioReg, 7); // Unused.
 
 	GPIO_OUT(state->gpio.gpioReg, 2); // Reset CPLD is output.
@@ -107,14 +112,20 @@ static bool initRPi(davisRPiState state) {
 	GPIO_OUT(state->gpio.gpioReg, 3); // DDR-AER Acknowledge is output.
 	GPIO_SET(state->gpio.gpioReg, 3); // Default to HIGH (AER active-low).
 
-	// TODO: setup SPI. After CPLD reset, query logic version. Upload done by
-	// separate tool, at boot.
-
 	// Reset CPLD for 10µs.
+	usleep(10);
 	GPIO_SET(state->gpio.gpioReg, 2);
 	usleep(10);
 	GPIO_CLR(state->gpio.gpioReg, 2);
 	usleep(10);
+
+	// GPIO 6 is get-data interrupt.
+	// For interrupt handling, manual setup is required via sysfs.
+
+
+	// TODO: setup SPI. After CPLD reset, query logic version. Upload done by
+	// separate tool, at boot.
+
 
 	return (true);
 }
@@ -569,15 +580,13 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
 
-	// TODO: Open the DAVIS device on the Raspberry Pi. Check logic version.
+	// Open the DAVIS device on the Raspberry Pi.
 	if (!initRPi(state)) {
-		davisRPiLog(CAER_LOG_CRITICAL, __func__, "Failed to open device.");
+		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to open device.");
 		free(handle);
 
 		return (NULL);
 	}
-
-	// TODO: start data handling thread.
 
 	// Populate info variables based on data from device.
 	uint32_t param32 = 0;
@@ -689,7 +698,7 @@ bool davisRPiClose(caerDeviceHandle cdh) {
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
-	// TODO: Finally, close the device fully.
+	// Close the device fully.
 	closeRPi(state);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
@@ -2246,7 +2255,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((const uint16_t *) (&buffer[bytesIdx])));
+		uint16_t event = le16toh(*((const uint16_t * ) (&buffer[bytesIdx])));
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
