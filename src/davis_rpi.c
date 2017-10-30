@@ -47,6 +47,9 @@
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh);
+static bool gpioThreadStart(davisRPiHandle handle);
+static void gpioThreadStop(davisRPiHandle handle);
+static int gpioThreadRun(void *handlePtr);
 static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
@@ -69,10 +72,10 @@ static bool initRPi(davisRPiState state) {
 	}
 
 	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
-		GPIO_REG_BASE);
+	GPIO_REG_BASE);
 
 	state->gpio.gpclkReg = mmap(NULL, CLK_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
-		CLK_REG_BASE);
+	CLK_REG_BASE);
 
 	close(devMemFd);
 
@@ -122,10 +125,8 @@ static bool initRPi(davisRPiState state) {
 	// GPIO 6 is get-data interrupt.
 	// For interrupt handling, manual setup is required via sysfs.
 
-
 	// TODO: setup SPI. After CPLD reset, query logic version. Upload done by
 	// separate tool, at boot.
-
 
 	return (true);
 }
@@ -580,9 +581,25 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
 
+	// Set device string.
+	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16, DAVIS_RPI_DEVICE_NAME, deviceID);
+
+	char *fullLogString = malloc(fullLogStringLength + 1);
+	if (fullLogString == NULL) {
+		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device string.");
+		free(handle);
+
+		return (NULL);
+	}
+
+	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16, DAVIS_RPI_DEVICE_NAME, deviceID);
+
+	handle->info.deviceString = fullLogString;
+
 	// Open the DAVIS device on the Raspberry Pi.
 	if (!initRPi(state)) {
-		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to open device.");
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		free(handle->info.deviceString);
 		free(handle);
 
 		return (NULL);
@@ -591,12 +608,10 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	// Populate info variables based on data from device.
 	uint32_t param32 = 0;
 
-	// TODO: rethink info parameters, strings especially.
 	handle->info.deviceID = I16T(deviceID);
 	strncpy(handle->info.deviceSerialNumber, "0001", 8 + 1);
 	handle->info.deviceUSBBusNumber = 0;
 	handle->info.deviceUSBDeviceAddress = 0;
-	handle->info.deviceString = strdup(DAVIS_RPI_DEVICE_NAME);
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
@@ -870,7 +885,8 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 			U32T(handle->info.logicClock)); // in cycles @ LogicClock
 	}
 
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_REQ_DELAY, 10); // in cycles @ LogicClock
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_ACK_DELAY, 10); // in cycles @ LogicClock
 
 	return (true);
 }
@@ -1409,19 +1425,13 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 			return (false);
 			break;
 
-		case DAVIS_CONFIG_USB:
+		case DAVIS_CONFIG_DDRAER:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_USB_RUN:
-					return (spiConfigSend(state, DAVIS_CONFIG_USB, paramAddr, param));
+				case DAVIS_CONFIG_DDRAER_RUN:
+				case DAVIS_CONFIG_DDRAER_REQ_DELAY:
+				case DAVIS_CONFIG_DDRAER_ACK_DELAY:
+					return (spiConfigSend(state, DAVIS_CONFIG_DDRAER, paramAddr, param));
 					break;
-
-				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
-					// Early packet delay is 125µs slices on host, but in cycles
-					// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
-					uint32_t delayCC = (param * (125 * DAVIS_RPI_TRANSFER_CLOCK_FREQ));
-					return (spiConfigSend(state, DAVIS_CONFIG_USB, paramAddr, delayCC));
-					break;
-				}
 
 				default:
 					return (false);
@@ -1906,25 +1916,13 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 			}
 			break;
 
-		case DAVIS_CONFIG_USB:
+		case DAVIS_CONFIG_DDRAER:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_USB_RUN:
-					return (spiConfigReceive(state, DAVIS_CONFIG_USB, paramAddr, param));
+				case DAVIS_CONFIG_DDRAER_RUN:
+				case DAVIS_CONFIG_DDRAER_REQ_DELAY:
+				case DAVIS_CONFIG_DDRAER_ACK_DELAY:
+					return (spiConfigReceive(state, DAVIS_CONFIG_DDRAER, paramAddr, param));
 					break;
-
-				case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
-					// Early packet delay is 125µs slices on host, but in cycles
-					// @ USB_CLOCK_FREQ on FPGA, so we must divide here.
-					uint32_t cyclesValue = 0;
-					if (!spiConfigReceive(state, DAVIS_CONFIG_USB, paramAddr, &cyclesValue)) {
-						return (false);
-					}
-
-					*param = U32T(cyclesValue / (125 * DAVIS_RPI_TRANSFER_CLOCK_FREQ));
-
-					return (true);
-					break;
-				}
 
 				default:
 					return (false);
@@ -1940,6 +1938,70 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 	return (true);
 }
 
+static bool gpioThreadStart(davisRPiHandle handle) {
+	// Start GPIO communication thread.
+	if ((errno = thrd_create(&handle->state.gpio.thread, &gpioThreadRun, handle)) != thrd_success) {
+		return (false);
+	}
+
+	// Wait for GPIO communication thread to be ready.
+	while (!atomic_load_explicit(&handle->state.gpio.threadRun, memory_order_relaxed)) {
+		;
+	}
+
+	return (true);
+}
+
+static void gpioThreadStop(davisRPiHandle handle) {
+	// Shut down GPIO communication thread.
+	atomic_store(&handle->state.gpio.threadRun, false);
+
+	// Wait for GPIO communication thread to terminate.
+	if ((errno = thrd_join(handle->state.gpio.thread, NULL)) != thrd_success) {
+		// This should never happen!
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to join GPIO thread. Error: %d.", errno);
+	}
+}
+
+static int gpioThreadRun(void *handlePtr) {
+	davisRPiHandle handle = handlePtr;
+	davisRPiState state = &handle->state;
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "Starting GPIO communication thread ...");
+
+	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
+	char threadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	strncpy(threadName, handle->info.deviceString, MAX_THREAD_NAME_LENGTH);
+	threadName[MAX_THREAD_NAME_LENGTH] = '\0';
+
+	thrd_set_name(threadName);
+
+	// Signal data thread ready back to start function.
+	atomic_store(&state->gpio.threadRun, true);
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread running.");
+
+	// Handle GPIO port reading (wait on data, configurable timeout).
+	while (atomic_load_explicit(&state->gpio.threadRun, memory_order_relaxed)) {
+		uint32_t readNumber = atomic_load_explicit(&state->gpio.readNumber, memory_order_relaxed);
+		uint32_t readTimeout = atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed);
+
+		// TODO: epoll() with timeout, then do DDR-AER REQ/ACK.
+
+		// ERROR: call exceptional shut-down callback and exit.
+		if (state->gpio.shutdownCallback != NULL) {
+			state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
+		}
+	}
+
+	// Ensure threadRun is false on termination.
+	atomic_store(&state->gpio.threadRun, false);
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread shut down.");
+
+	return (EXIT_SUCCESS);
+}
+
 bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr) {
@@ -1949,7 +2011,8 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 	// Store new data available/not available anymore call-backs.
 	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
 
-	// TODO: handle shutdown notification.
+	state->gpio.shutdownCallback = dataShutdownNotify;
+	state->gpio.shutdownCallbackPtr = dataShutdownUserPtr;
 
 	containerGenerationCommitTimestampReset(&state->container);
 
@@ -2065,7 +2128,12 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
 	}
 
-	// TODO: start data transfer.
+	if (!gpioThreadStart(handle)) {
+		freeAllDataMemory(state);
+
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to start GPIO data transfers.");
+		return (false);
+	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
@@ -2080,7 +2148,7 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 500000000 };
 		thrd_sleep(&noDataSleep, NULL);
 
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
 	}
@@ -2103,10 +2171,10 @@ bool davisRPiDataStop(caerDeviceHandle cdh) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, false);
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, false);
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);
 	}
 
-	// TODO: stop data transfer.
+	gpioThreadStop(handle);
 
 	dataExchangeBufferEmpty(&state->dataExchange);
 
@@ -2129,7 +2197,7 @@ caerEventPacketContainer davisRPiDataGet(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 	davisRPiState state = &handle->state;
 
-	return (dataExchangeGet(&state->dataExchange, &state->gpio.dataTransfersRun));
+	return (dataExchangeGet(&state->dataExchange, &state->gpio.threadRun));
 }
 
 #define TS_WRAP_ADD 0x8000
@@ -2142,7 +2210,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
 	// then any subsequent buffers should also detect shut-down and not be handled.
-	if (!atomic_load(&state->gpio.dataTransfersRun)) {
+	if (!atomic_load(&state->gpio.threadRun)) {
 		return;
 	}
 
@@ -3253,7 +3321,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
-				state->timestamps.current, &state->dataExchange, &state->gpio.dataTransfersRun, handle->info.deviceID,
+				state->timestamps.current, &state->dataExchange, &state->gpio.threadRun, handle->info.deviceID,
 				handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
