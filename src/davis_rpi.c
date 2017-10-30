@@ -49,10 +49,12 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh);
 static bool gpioThreadStart(davisRPiHandle handle);
 static void gpioThreadStop(davisRPiHandle handle);
+static bool initRPi(davisRPiState state);
+static void closeRPi(davisRPiState state);
 static int gpioThreadRun(void *handlePtr);
-static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
+static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY);
 
@@ -131,7 +133,7 @@ static bool initRPi(davisRPiState state) {
 	return (true);
 }
 
-static bool closeRPi(davisRPiState state) {
+static void closeRPi(davisRPiState state) {
 	// Reset GPIO4 to default state.
 	GPIO_INP(state->gpio.gpioReg, 4);
 
@@ -141,8 +143,56 @@ static bool closeRPi(davisRPiState state) {
 	// Unmap memory regions.
 	munmap((void *) state->gpio.gpioReg, GPIO_REG_LEN);
 	munmap((void *) state->gpio.gpclkReg, CLK_REG_LEN);
+}
 
-	return (true);
+static int gpioThreadRun(void *handlePtr) {
+	davisRPiHandle handle = handlePtr;
+	davisRPiState state = &handle->state;
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "Starting GPIO communication thread ...");
+
+	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
+	char threadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	strncpy(threadName, handle->info.deviceString, MAX_THREAD_NAME_LENGTH);
+	threadName[MAX_THREAD_NAME_LENGTH] = '\0';
+
+	thrd_set_name(threadName);
+
+	// Signal data thread ready back to start function.
+	atomic_store(&state->gpio.threadRun, true);
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread running.");
+
+	// Handle GPIO port reading (wait on data, configurable timeout).
+	while (atomic_load_explicit(&state->gpio.threadRun, memory_order_relaxed)) {
+		uint32_t readNumber = atomic_load_explicit(&state->gpio.readNumber, memory_order_relaxed);
+		uint32_t readTimeout = atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed);
+
+		// TODO: epoll() with timeout, then do DDR-AER REQ/ACK.
+		// TODO: must address second DDR-AER data being all zeros in some cases, that means no
+		// more data and should quit data getting for the current read cycle.
+		// TODO: use davisRPiEventTranslator() on resulting data.
+
+		// ERROR: call exceptional shut-down callback and exit.
+		if (state->gpio.shutdownCallback != NULL) {
+			state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
+		}
+	}
+
+	// Ensure threadRun is false on termination.
+	atomic_store(&state->gpio.threadRun, false);
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread shut down.");
+
+	return (EXIT_SUCCESS);
+}
+
+static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	return (false);
+}
+
+static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+	return (false);
 }
 
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) {
@@ -701,6 +751,10 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
+
+	// Default values for configuration.
+	atomic_store(&state->gpio.readNumber, 128); // number of data values to read.
+	atomic_store(&state->gpio.readTimeout, 10000); // interrupt timeout, in µs.
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Initialized device successfully.");
 
@@ -1961,45 +2015,6 @@ static void gpioThreadStop(davisRPiHandle handle) {
 		// This should never happen!
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to join GPIO thread. Error: %d.", errno);
 	}
-}
-
-static int gpioThreadRun(void *handlePtr) {
-	davisRPiHandle handle = handlePtr;
-	davisRPiState state = &handle->state;
-
-	davisRPiLog(CAER_LOG_DEBUG, handle, "Starting GPIO communication thread ...");
-
-	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
-	char threadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
-	strncpy(threadName, handle->info.deviceString, MAX_THREAD_NAME_LENGTH);
-	threadName[MAX_THREAD_NAME_LENGTH] = '\0';
-
-	thrd_set_name(threadName);
-
-	// Signal data thread ready back to start function.
-	atomic_store(&state->gpio.threadRun, true);
-
-	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread running.");
-
-	// Handle GPIO port reading (wait on data, configurable timeout).
-	while (atomic_load_explicit(&state->gpio.threadRun, memory_order_relaxed)) {
-		uint32_t readNumber = atomic_load_explicit(&state->gpio.readNumber, memory_order_relaxed);
-		uint32_t readTimeout = atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed);
-
-		// TODO: epoll() with timeout, then do DDR-AER REQ/ACK.
-
-		// ERROR: call exceptional shut-down callback and exit.
-		if (state->gpio.shutdownCallback != NULL) {
-			state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
-		}
-	}
-
-	// Ensure threadRun is false on termination.
-	atomic_store(&state->gpio.threadRun, false);
-
-	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread shut down.");
-
-	return (EXIT_SUCCESS);
 }
 
 bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
@@ -3325,14 +3340,6 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 				handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
-}
-
-static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	return (false);
-}
-
-static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	return (false);
 }
 
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
