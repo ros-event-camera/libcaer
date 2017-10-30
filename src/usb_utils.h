@@ -10,7 +10,6 @@
 #include "c11threads_posix.h"
 #endif
 
-#define MAX_THREAD_NAME_LENGTH 15
 #define MAX_SERIAL_NUMBER_LENGTH 8
 
 #define USB_DEFAULT_DEVICE_VID 0x152A

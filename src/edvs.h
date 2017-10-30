@@ -11,8 +11,6 @@
 #include "c11threads_posix.h"
 #endif
 
-#define MAX_THREAD_NAME_LENGTH 15
-
 #define EDVS_DEVICE_NAME "eDVS4337"
 
 #define EDVS_ARRAY_SIZE_X 128

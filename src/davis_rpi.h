@@ -49,7 +49,8 @@ struct davis_rpi_state {
 	struct {
 		volatile uint32_t *gpioReg;
 		volatile uint32_t *gpclkReg;
-		atomic_bool dataTransfersRun;
+		atomic_bool gpioThreadRun;
+		thrd_t gpioThread;
 	} gpio;
 	// Timestamp fields
 	struct timestamps_state_new_logic timestamps;
