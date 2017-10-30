@@ -4112,8 +4112,15 @@ static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t by
 }
 
 // For special Raspberry Pi version usage.
+#if defined(OS_LINUX)
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY);
+#else
+bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
+	uint16_t endX, uint16_t endY) {
+	return (false);
+}
+#endif
 
 bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY) {
