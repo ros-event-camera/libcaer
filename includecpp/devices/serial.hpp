@@ -14,7 +14,9 @@ protected:
 
 		// Handle constructor failure.
 		if (h == nullptr) {
-			throw std::runtime_error("Failed to open serial port device.");
+			std::string exc = "Failed to open serial port device, id=" + std::to_string(deviceID) + ", type="
+				+ std::to_string(deviceType) + ", portName=" + serialPortName + ".";
+			throw std::runtime_error(exc);
 		}
 
 		// Use stateless lambda for shared_ptr custom deleter.

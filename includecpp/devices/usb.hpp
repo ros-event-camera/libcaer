@@ -20,7 +20,10 @@ protected:
 
 		// Handle constructor failure.
 		if (h == nullptr) {
-			throw std::runtime_error("Failed to open USB device.");
+			std::string exc = "Failed to open USB device, id=" + std::to_string(deviceID) + ", type="
+				+ std::to_string(deviceType) + ", busNumber=" + std::to_string(busNumberRestrict) + ", devAddress="
+				+ std::to_string(devAddressRestrict) + ", serialNumber=" + serialNumberRestrict + ".";
+			throw std::runtime_error(exc);
 		}
 
 		// Use stateless lambda for shared_ptr custom deleter.

@@ -38,11 +38,16 @@ public:
 		return (caerDavisInfoGet(handle.get()));
 	}
 
-	void roiConfigure(uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-		uint16_t endX, uint16_t endY) const {
+	std::string toString() const noexcept override {
+		return (infoGet().deviceString);
+	}
+
+	void roiConfigure(uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY, uint16_t endX,
+		uint16_t endY) const {
 		bool success = caerDavisROIConfigure(handle.get(), roiRegion, enable, startX, startY, endX, endY);
 		if (!success) {
-			throw std::runtime_error("Failed to configure APS ROI region.");
+			std::string exc = toString() + ": failed to configure APS ROI region.";
+			throw std::runtime_error(exc);
 		}
 	}
 
