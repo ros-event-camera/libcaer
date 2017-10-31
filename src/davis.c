@@ -1207,7 +1207,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					// Use multi-command VR for more efficient implementation of reset,
 					// that also guarantees returning to the default state.
 					if (param) {
-						uint8_t spiMultiConfig[6 + 6] = { 0 };
+						uint8_t spiMultiConfig[2 * SPI_CONFIG_MSG_SIZE] = { 0 };
 
 						spiMultiConfig[0] = DAVIS_CONFIG_MUX;
 						spiMultiConfig[1] = DAVIS_CONFIG_MUX_TIMESTAMP_RESET;
@@ -1438,7 +1438,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					// Use multi-command VR for more efficient implementation of snapshot,
 					// that also guarantees returning to the default state (not running).
 					if (param) {
-						uint8_t spiMultiConfig[6 + 6] = { 0 };
+						uint8_t spiMultiConfig[2 * SPI_CONFIG_MSG_SIZE] = { 0 };
 
 						spiMultiConfig[0] = DAVIS_CONFIG_APS;
 						spiMultiConfig[1] = DAVIS_CONFIG_APS_RUN;
@@ -4161,112 +4161,112 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable,
 	}
 
 	// First disable, then set all four coordinates, then enable again IF requested.
-	uint8_t spiMultiConfig[6 * commandsNumber];
+	uint8_t spiMultiConfig[SPI_CONFIG_MSG_SIZE * commandsNumber];
 
 	for (size_t i = 0; i < commandsNumber; i++) {
-		spiMultiConfig[(6 * i) + 0] = DAVIS_CONFIG_APS;
-		spiMultiConfig[(6 * i) + 2] = 0x00;
-		spiMultiConfig[(6 * i) + 3] = 0x00;
+		spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 0] = DAVIS_CONFIG_APS;
+		spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 2] = 0x00;
+		spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 3] = 0x00;
 
 		switch (i) {
 			case 0: // Disable.
-				spiMultiConfig[(6 * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
-				spiMultiConfig[(6 * i) + 4] = 0x00;
-				spiMultiConfig[(6 * i) + 5] = 0x00;
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = 0x00;
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = 0x00;
 				break;
 
 			case 1: // StartX.
 				switch (roiRegion) {
 					case 0:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_0;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_0;
 						break;
 
 					case 1:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_1;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_1;
 						break;
 
 					case 2:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_2;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_2;
 						break;
 
 					case 3:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_3;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_3;
 						break;
 				}
-				spiMultiConfig[(6 * i) + 4] = U8T((startX >> 8) & 0x00FF);
-				spiMultiConfig[(6 * i) + 5] = U8T(startX & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((startX >> 8) & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(startX & 0x00FF);
 				break;
 
 			case 2: // StartY.
 				switch (roiRegion) {
 					case 0:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_ROW_0;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_0;
 						break;
 
 					case 1:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_ROW_1;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_1;
 						break;
 
 					case 2:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_ROW_2;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_2;
 						break;
 
 					case 3:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_START_ROW_3;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_3;
 						break;
 				}
-				spiMultiConfig[(6 * i) + 4] = U8T((startY >> 8) & 0x00FF);
-				spiMultiConfig[(6 * i) + 5] = U8T(startY & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((startY >> 8) & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(startY & 0x00FF);
 				break;
 
 			case 3: // EndX.
 				switch (roiRegion) {
 					case 0:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_0;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_0;
 						break;
 
 					case 1:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_1;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_1;
 						break;
 
 					case 2:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_2;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_2;
 						break;
 
 					case 3:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_3;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_3;
 						break;
 				}
-				spiMultiConfig[(6 * i) + 4] = U8T((endX >> 8) & 0x00FF);
-				spiMultiConfig[(6 * i) + 5] = U8T(endX & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((endX >> 8) & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(endX & 0x00FF);
 				break;
 
 			case 4: // EndY.
 				switch (roiRegion) {
 					case 0:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_ROW_0;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_0;
 						break;
 
 					case 1:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_ROW_1;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_1;
 						break;
 
 					case 2:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_ROW_2;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_2;
 						break;
 
 					case 3:
-						spiMultiConfig[(6 * i) + 1] = DAVIS_CONFIG_APS_END_ROW_3;
+						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_3;
 						break;
 				}
-				spiMultiConfig[(6 * i) + 4] = U8T((endY >> 8) & 0x00FF);
-				spiMultiConfig[(6 * i) + 5] = U8T(endY & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((endY >> 8) & 0x00FF);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(endY & 0x00FF);
 				break;
 
 			case 5: // Enable.
-				spiMultiConfig[(6 * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
-				spiMultiConfig[(6 * i) + 4] = 0x00;
-				spiMultiConfig[(6 * i) + 5] = 0x01;
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = 0x00;
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = 0x01;
 				break;
 		}
 	}

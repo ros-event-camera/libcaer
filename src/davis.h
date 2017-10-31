@@ -29,6 +29,8 @@
 
 #define IMU6_COUNT 15
 
+#define SPI_CONFIG_MSG_SIZE 6
+
 #define DAVIS_EVENT_TYPES 5
 #define DAVIS_SAMPLE_POSITION 4
 
