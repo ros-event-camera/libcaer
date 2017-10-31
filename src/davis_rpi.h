@@ -28,6 +28,8 @@
 
 #define IMU6_COUNT 15
 
+#define SPI_CONFIG_MSG_SIZE 6
+
 #define DAVIS_RPI_EVENT_TYPES 4
 
 #define DAVIS_RPI_POLARITY_DEFAULT_SIZE 4096
@@ -40,6 +42,9 @@
 #define DAVIS_RPI_REQUIRED_LOGIC_REVISION 9912
 #define DAVIS_RPI_TRANSFER_CLOCK_FREQ 80
 
+#define DAVIS_BIAS_ADDRESS_MAX 36
+#define DAVIS_CHIP_REG_LENGTH 7
+
 struct davis_rpi_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
@@ -49,6 +54,7 @@ struct davis_rpi_state {
 	struct {
 		volatile uint32_t *gpioReg;
 		volatile uint32_t *gpclkReg;
+		int spiFd;
 		atomic_uint_fast32_t readNumber;
 		atomic_uint_fast32_t readTimeout;
 		atomic_bool threadRun;
@@ -56,6 +62,10 @@ struct davis_rpi_state {
 		void (*shutdownCallback)(void *shutdownCallbackPtr);
 		void *shutdownCallbackPtr;
 	} gpio;
+	struct {
+		uint8_t currentBiasArray[DAVIS_BIAS_ADDRESS_MAX + 1][2];
+		uint8_t currentChipRegister[DAVIS_CHIP_REG_LENGTH];
+	} biasing;
 	// Timestamp fields
 	struct timestamps_state_new_logic timestamps;
 	struct {

@@ -42,7 +42,9 @@
 
 #define CLK_CTL_SRC_OSC  1  /* 19.2 MHz oscillator */
 
-#define PI_SPI_DEVICE "/dev/spidev0.0"
+#define SPI_DEVICE0_CS0 "/dev/spidev0.0"
+#define SPI_BITS_PER_WORD 8
+#define SPI_SPEED_HZ (8 * 1000 * 1000)
 
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
@@ -52,8 +54,12 @@ static void gpioThreadStop(davisRPiHandle handle);
 static bool initRPi(davisRPiState state);
 static void closeRPi(davisRPiState state);
 static int gpioThreadRun(void *handlePtr);
+static bool spiInit(davisRPiState state);
+static void spiClose(davisRPiState state);
 static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
+static bool handleChipBiasSend(davisRPiState state, uint8_t paramAddr, uint32_t param);
+static bool handleChipBiasReceive(davisRPiState state, uint8_t paramAddr, uint32_t *param);
 static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY);
@@ -124,16 +130,22 @@ static bool initRPi(davisRPiState state) {
 	GPIO_CLR(state->gpio.gpioReg, 2);
 	usleep(10);
 
+	// Setup SPI. After CPLD reset, query logic version. Upload done by
+	// separate tool, at boot.
+	if (!spiInit(state)) {
+		closeRPi(state);
+		return (false);
+	}
+
 	// GPIO 6 is get-data interrupt.
 	// For interrupt handling, manual setup is required via sysfs.
-
-	// TODO: setup SPI. After CPLD reset, query logic version. Upload done by
-	// separate tool, at boot.
 
 	return (true);
 }
 
 static void closeRPi(davisRPiState state) {
+	spiClose(state);
+
 	// Reset GPIO4 to default state.
 	GPIO_INP(state->gpio.gpioReg, 4);
 
@@ -187,12 +199,397 @@ static int gpioThreadRun(void *handlePtr) {
 	return (EXIT_SUCCESS);
 }
 
-static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+static bool spiInit(davisRPiState state) {
+	state->gpio.spiFd = open(SPI_DEVICE0_CS0, O_RDWR);
+	if (state->gpio.spiFd < 0) {
+		return (false);
+	}
+
+	uint8_t spiMode = SPI_MODE_0;
+
+	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MODE, &spiMode) < 0)
+		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MODE, &spiMode) < 0)) {
+		return (false);
+	}
+
+	uint8_t spiBitsPerWord = SPI_BITS_PER_WORD;
+
+	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord) < 0)
+		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_BITS_PER_WORD, &spiBitsPerWord) < 0)) {
+		return (false);
+	}
+
+	uint32_t spiSpeedHz = SPI_SPEED_HZ;
+
+	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeedHz) < 0)
+		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeedHz) < 0)) {
+		return (false);
+	}
+
+	return (true);
+}
+
+static void spiClose(davisRPiState state) {
+	if (state->gpio.spiFd >= 0) {
+		close(state->gpio.spiFd);
+	}
+}
+
+static inline bool spiTransfer(davisRPiState state, uint8_t *spiOutput, uint8_t *spiInput) {
+	struct spi_ioc_transfer spiTransfer = { .tx_buf = (__u64) spiOutput,
+	.rx_buf = (__u64) spiInput,
+	.len = SPI_CONFIG_MSG_SIZE,
+	.delay_usecs = 0,
+	.speed_hz = SPI_SPEED_HZ,
+	.bits_per_word = SPI_BITS_PER_WORD,
+	.cs_change = true,
+};
+
+if (ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer) < 0) {
 	return (false);
 }
 
+return (true);
+}
+
+static inline bool spiSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	uint8_t spiOutput[SPI_CONFIG_MSG_SIZE] = { 0 };
+
+	// Highest bit of first byte is zero to indicate write operation.
+	spiOutput[0] = (moduleAddr & 0x7F);
+	spiOutput[1] = paramAddr;
+	spiOutput[2] = (uint8_t) (param >> 24);
+	spiOutput[3] = (uint8_t) (param >> 16);
+	spiOutput[4] = (uint8_t) (param >> 8);
+	spiOutput[5] = (uint8_t) (param >> 0);
+
+	return (spiTransfer(state, spiOutput, NULL));
+}
+
+static bool spiReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+	uint8_t spiOutput[SPI_CONFIG_MSG_SIZE] = { 0 };
+	uint8_t spiInput[SPI_CONFIG_MSG_SIZE] = { 0 };
+
+	// Highest bit of first byte is one to indicate read operation.
+	spiOutput[0] = (moduleAddr | 0x80);
+	spiOutput[1] = paramAddr;
+
+	if (!spiTransfer(state, spiOutput, spiInput)) {
+		return (false);
+	}
+
+	*param = 0;
+	*param |= U32T(spiInput[2] << 24);
+	*param |= U32T(spiInput[3] << 16);
+	*param |= U32T(spiInput[4] << 8);
+	*param |= U32T(spiInput[5] << 0);
+
+	return (true);
+}
+
+static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	// Handle biases/chip config separately.
+	if (moduleAddr == DAVIS_CONFIG_BIAS) {
+		return (handleChipBiasSend(state, paramAddr, param));
+	}
+
+	// Standard SPI send.
+	return (spiSend(state, moduleAddr, paramAddr, param));
+}
+
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	return (false);
+	// Handle biases/chip config separately.
+	if (moduleAddr == DAVIS_CONFIG_BIAS) {
+		return (handleChipBiasReceive(state, paramAddr, param));
+	}
+
+	// Standard SPI receive.
+	return (spiReceive(state, moduleAddr, paramAddr, param));
+}
+
+static inline uint8_t setBitInByte(uint8_t byteIn, uint8_t idx, bool value) {
+	if (value) {
+		// Flip bit on if enabled.
+		return (byteIn | (uint8_t) (0x01 << idx));
+	}
+	else {
+		// Flip bit off if disabled.
+		return (byteIn & (uint8_t) (~(0x01 << idx)));
+	}
+}
+
+static inline uint8_t getBitInByte(uint8_t byteIn, uint8_t idx) {
+	return ((byteIn >> idx) & 0x01);
+}
+
+static bool handleChipBiasSend(davisRPiState state, uint8_t paramAddr, uint32_t param) {
+	// All addresses below 128 are biases, 128 and up are chip configuration register elements.
+
+	// Entry delay.
+	usleep(500);
+
+	if (paramAddr <= DAVIS_BIAS_ADDRESS_MAX) {
+		// Handle biases.
+		if ((state->biasing.currentBiasArray[paramAddr][0] == U8T(param >> 8))
+			&& (state->biasing.currentBiasArray[paramAddr][1] == U8T(param >> 0))) {
+			// No changes, return right away.
+			return (true);
+		}
+
+		// Store new values.
+		state->biasing.currentBiasArray[paramAddr][0] = U8T(param >> 8);
+		state->biasing.currentBiasArray[paramAddr][1] = U8T(param >> 0);
+
+		uint8_t biasVal0, biasVal1;
+
+		if (paramAddr < 8) {
+			// Flip and reverse coarse bits, due to an on-chip routing mistake.
+			biasVal0 = ((((state->biasing.currentBiasArray[paramAddr][0] & 0x01) ^ 0x01) << 4) & 0x10);
+			biasVal0 = (uint8_t) (biasVal0
+				| ((((state->biasing.currentBiasArray[paramAddr][1] & 0x80) ^ 0x80) >> 2) & 0x20));
+			biasVal0 = (uint8_t) (biasVal0 | (((state->biasing.currentBiasArray[paramAddr][1] & 0x40) ^ 0x40) & 0x40));
+
+			biasVal1 = state->biasing.currentBiasArray[paramAddr][1] & 0x3F;
+		}
+		else if (paramAddr < 35) {
+			// The first byte of a coarse/fine bias needs to have the coarse bits
+			// flipped and reversed, due to an on-chip routing mistake.
+			biasVal0 = state->biasing.currentBiasArray[paramAddr][0] ^ 0x70;
+			biasVal0 = (uint8_t) ((biasVal0 & ~0x50) | ((biasVal0 & 0x40) >> 2) | ((biasVal0 & 0x10) << 2));
+
+			biasVal1 = state->biasing.currentBiasArray[paramAddr][1];
+		}
+		else {
+			// SSN/SSP are fine as-is.
+			biasVal0 = state->biasing.currentBiasArray[paramAddr][0];
+			biasVal1 = state->biasing.currentBiasArray[paramAddr][1];
+		}
+
+		// Write bias: 8bit address + 16bit value to register 0.
+		uint32_t value = 0;
+		value |= U32T(paramAddr << 16);
+		value |= U32T(biasVal0 << 8);
+		value |= U32T(biasVal1 << 0);
+
+		if (!spiSend(state, DAVIS_CONFIG_BIAS, 0, value)) {
+			return (false);
+		}
+
+		// Wait 480us for bias write to complete, so sleep for 1ms.
+		usleep(480 * 2);
+
+		return (true);
+	}
+	else {
+		// Handle chip configuration.
+		// Store old value for later change detection.
+		uint8_t oldChipRegister[DAVIS_CHIP_REG_LENGTH] = { 0 };
+		memcpy(oldChipRegister, state->biasing.currentChipRegister, DAVIS_CHIP_REG_LENGTH);
+
+		switch (paramAddr) {
+			case 128: // DigitalMux0
+				state->biasing.currentChipRegister[5] = (uint8_t) ((state->biasing.currentChipRegister[5] & 0xF0)
+					| (U8T(param) & 0x0F));
+				break;
+
+			case 129: // DigitalMux1
+				state->biasing.currentChipRegister[5] = (uint8_t) ((state->biasing.currentChipRegister[5] & 0x0F)
+					| ((U8T(param) << 4) & 0xF0));
+				break;
+
+			case 130: // DigitalMux2
+				state->biasing.currentChipRegister[6] = (uint8_t) ((state->biasing.currentChipRegister[6] & 0xF0)
+					| (U8T(param) & 0x0F));
+				break;
+
+			case 131: // DigitalMux3
+				state->biasing.currentChipRegister[6] = (uint8_t) ((state->biasing.currentChipRegister[6] & 0x0F)
+					| ((U8T(param) << 4) & 0xF0));
+				break;
+
+			case 132: // AnalogMux0
+				state->biasing.currentChipRegister[0] = (uint8_t) ((state->biasing.currentChipRegister[0] & 0x0F)
+					| ((U8T(param) << 4) & 0xF0));
+				break;
+
+			case 133: // AnalogMux1
+				state->biasing.currentChipRegister[1] = (uint8_t) ((state->biasing.currentChipRegister[1] & 0xF0)
+					| (U8T(param) & 0x0F));
+				break;
+
+			case 134: // AnalogMux2
+				state->biasing.currentChipRegister[1] = (uint8_t) ((state->biasing.currentChipRegister[1] & 0x0F)
+					| ((U8T(param) << 4) & 0xF0));
+				break;
+
+			case 135: // BiasMux0
+				state->biasing.currentChipRegister[0] = (uint8_t) ((state->biasing.currentChipRegister[0] & 0xF0)
+					| (U8T(param) & 0x0F));
+				break;
+
+			case 136: // ResetCalibNeuron
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 0,
+					(U8T(param) & 0x01));
+				break;
+
+			case 137: // TypeNCalibNeuron
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 1,
+					(U8T(param) & 0x01));
+				break;
+
+			case 138: // ResetTestPixel
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 2,
+					(U8T(param) & 0x01));
+				break;
+
+			case 140: // AERnArow
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 4,
+					(U8T(param) & 0x01));
+				break;
+
+			case 141: // UseAOut
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 5,
+					(U8T(param) & 0x01));
+				break;
+
+			case 142: // GlobalShutter
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 6,
+					(U8T(param) & 0x01));
+				break;
+
+			case 143: // SelectGrayCounter
+				state->biasing.currentChipRegister[3] = setBitInByte(state->biasing.currentChipRegister[3], 0,
+					(U8T(param) & 0x01));
+				break;
+
+			case 144: // TestADC
+				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 7,
+					(U8T(param) & 0x01));
+				break;
+
+			default:
+				return (false);
+		}
+
+		// Check if value changed, only send out if it did.
+		if (memcmp(oldChipRegister, state->biasing.currentChipRegister, DAVIS_CHIP_REG_LENGTH) == 0) {
+			return (true);
+		}
+
+		// Write config chain lower bits: 32bits to register 1.
+		uint32_t value = 0;
+		value |= U32T(state->biasing.currentChipRegister[3] << 24);
+		value |= U32T(state->biasing.currentChipRegister[2] << 16);
+		value |= U32T(state->biasing.currentChipRegister[1] << 8);
+		value |= U32T(state->biasing.currentChipRegister[0] << 0);
+
+		if (!spiSend(state, DAVIS_CONFIG_BIAS, 1, value)) {
+			return (false);
+		}
+
+		// Write config chain upper bits: 24bits to register 2.
+		value = 0;
+		value |= U32T(state->biasing.currentChipRegister[6] << 16);
+		value |= U32T(state->biasing.currentChipRegister[5] << 8);
+		value |= U32T(state->biasing.currentChipRegister[4] << 0);
+
+		if (!spiSend(state, DAVIS_CONFIG_BIAS, 2, value)) {
+			return (false);
+		}
+
+		// Wait 700us for chip configuration write to complete, so sleep for 2ms.
+		usleep(700 * 2);
+
+		return (true);
+	}
+}
+
+static bool handleChipBiasReceive(davisRPiState state, uint8_t paramAddr, uint32_t *param) {
+	// All addresses below 128 are biases, 128 and up are chip configuration register elements.
+	*param = 0;
+
+	if (paramAddr <= DAVIS_BIAS_ADDRESS_MAX) {
+		// Handle biases.
+		// Get value directly from FX3 memory. Device doesn't support reads.
+		*param |= U32T(state->biasing.currentBiasArray[paramAddr][0] << 8);
+		*param |= U32T(state->biasing.currentBiasArray[paramAddr][1] << 0);
+
+		return (true);
+	}
+	else {
+		// Handle chip configuration.
+		// Get value directly from FX3 memory. Device doesn't support reads.
+		switch (paramAddr) {
+			case 128: // DigitalMux0
+				*param |= (state->biasing.currentChipRegister[5] & 0x0F);
+				break;
+
+			case 129: // DigitalMux1
+				*param |= ((state->biasing.currentChipRegister[5] >> 4) & 0x0F);
+				break;
+
+			case 130: // DigitalMux2
+				*param |= (state->biasing.currentChipRegister[6] & 0x0F);
+				break;
+
+			case 131: // DigitalMux3
+				*param |= ((state->biasing.currentChipRegister[6] >> 4) & 0x0F);
+				break;
+
+			case 132: // AnalogMux0
+				*param |= ((state->biasing.currentChipRegister[0] >> 4) & 0x0F);
+				break;
+
+			case 133: // AnalogMux1
+				*param |= (state->biasing.currentChipRegister[1] & 0x0F);
+				break;
+
+			case 134: // AnalogMux2
+				*param |= ((state->biasing.currentChipRegister[1] >> 4) & 0x0F);
+				break;
+
+			case 135: // BiasMux0
+				*param |= (state->biasing.currentChipRegister[0] & 0x0F);
+				break;
+
+			case 136: // ResetCalibNeuron
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 0);
+				break;
+
+			case 137: // TypeNCalibNeuron
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 1);
+				break;
+
+			case 138: // ResetTestPixel
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 2);
+				break;
+
+			case 140: // AERnArow
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 4);
+				break;
+
+			case 141: // UseAOut
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 5);
+				break;
+
+			case 142: // GlobalShutter
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 6);
+				break;
+
+			case 143: // SelectGrayCounter
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 7);
+				break;
+
+			case 144: // TestADC
+				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[3], 0);
+				break;
+
+			default:
+				return (false);
+		}
+
+		return (true);
+	}
 }
 
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) {
