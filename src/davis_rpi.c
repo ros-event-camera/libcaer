@@ -130,9 +130,17 @@ static bool initRPi(davisRPiState state) {
 	GPIO_CLR(state->gpio.gpioReg, 2);
 	usleep(10);
 
-	// Setup SPI. After CPLD reset, query logic version. Upload done by
-	// separate tool, at boot.
+	// Setup SPI. Upload done by separate tool, at boot.
 	if (!spiInit(state)) {
+		closeRPi(state);
+		return (false);
+	}
+
+	// After CPLD reset, query logic version.
+	uint32_t param = 0;
+	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param);
+
+	if (param < DAVIS_RPI_REQUIRED_LOGIC_REVISION) {
 		closeRPi(state);
 		return (false);
 	}
