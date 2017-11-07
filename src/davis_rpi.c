@@ -257,6 +257,7 @@ static int gpioThreadRun(void *handlePtr) {
 
 #if DAVIS_RPI_BENCHMARK == 1
 	// Start GPIO testing.
+	spiConfigSend(state, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
 	setupGPIOTest(handle, ZEROS);
 #endif
 
@@ -331,6 +332,8 @@ static int gpioThreadRun(void *handlePtr) {
 
 			if (state->benchmark.testMode == ALTERNATING) {
 				// Last test just done.
+				spiConfigSend(state, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);
+
 				// SPECIAL OUT: call exceptional shut-down callback and exit.
 				if (state->gpio.shutdownCallback != NULL) {
 					state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
@@ -2705,8 +2708,8 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		return (false);
 	}
 
-	if (dataExchangeStartProducers(&state->dataExchange)) {
 #if DAVIS_RPI_BENCHMARK == 0
+	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
@@ -2718,14 +2721,12 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		// has time to start up and we avoid the initial data flood.
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 500000000 };
 		thrd_sleep(&noDataSleep, NULL);
-#endif
 
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
-#if DAVIS_RPI_BENCHMARK == 0
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
-#endif
 	}
+#endif
 
 	return (true);
 }
@@ -2734,8 +2735,8 @@ bool davisRPiDataStop(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 	davisRPiState state = &handle->state;
 
-	if (dataExchangeStopProducers(&state->dataExchange)) {
 #if DAVIS_RPI_BENCHMARK == 0
+	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
@@ -2746,9 +2747,9 @@ bool davisRPiDataStop(caerDeviceHandle cdh) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, false);
-#endif
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);
 	}
+#endif
 
 	gpioThreadStop(handle);
 
@@ -2876,9 +2877,9 @@ static void shutdownGPIOTest(davisRPiHandle handle) {
 	spiConfigSend(state, 0x00, 0x08, 0);
 
 	// Drain FIFOs by disabling.
-	spiConfigSend(state, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, false);
+	spiConfigSend(state, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);
 	sleep(1);
-	spiConfigSend(state, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+	spiConfigSend(state, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
 
 	// Check if test was successful.
 	if (state->benchmark.errorCount == 0) {
