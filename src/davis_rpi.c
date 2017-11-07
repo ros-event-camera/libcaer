@@ -217,6 +217,7 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MODE, &spiMode) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MODE, &spiMode) < 0)) {
+		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -224,6 +225,7 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_BITS_PER_WORD, &spiBitsPerWord) < 0)) {
+		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -231,6 +233,7 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeedHz) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeedHz) < 0)) {
+		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -244,20 +247,21 @@ static void spiClose(davisRPiState state) {
 }
 
 static inline bool spiTransfer(davisRPiState state, uint8_t *spiOutput, uint8_t *spiInput) {
-	struct spi_ioc_transfer spiTransfer = { .tx_buf = (__u64) spiOutput,
-	.rx_buf = (__u64) spiInput,
-	.len = SPI_CONFIG_MSG_SIZE,
-	.delay_usecs = 0,
-	.speed_hz = SPI_SPEED_HZ,
-	.bits_per_word = SPI_BITS_PER_WORD,
-	.cs_change = true,
-};
+	struct spi_ioc_transfer spiTransfer;
+	memset(&spiTransfer, 0, sizeof(struct spi_ioc_transfer));
 
-if (ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer) < 0) {
-	return (false);
-}
+	spiTransfer.tx_buf = (__u64) spiOutput;
+	spiTransfer.rx_buf = (__u64) spiInput;
+	spiTransfer.len = SPI_CONFIG_MSG_SIZE;
+	spiTransfer.speed_hz = SPI_SPEED_HZ;
+	spiTransfer.bits_per_word = SPI_BITS_PER_WORD;
+	spiTransfer.cs_change = false; // Documentation is misleading, see 'https://github.com/beagleboard/kernel/issues/85#issuecomment-32304365'.
 
-return (true);
+	if (ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer) < 0) {
+		return (false);
+	}
+
+	return (true);
 }
 
 static inline bool spiSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
