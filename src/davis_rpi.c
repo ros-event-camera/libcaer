@@ -1198,7 +1198,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	// Open the DAVIS device on the Raspberry Pi.
 	if (!initRPi(handle)) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device. Are you running as root? Need access to '/dev/mem'!");
 		free(handle->info.deviceString);
 		free(handle);
 
