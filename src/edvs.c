@@ -466,10 +466,9 @@ static bool serialThreadStart(edvsHandle handle) {
 		return (false);
 	}
 
-	// Wait for serial communication thread to be ready.
-	while (!atomic_load_explicit(&handle->state.serialState.serialThreadRun, memory_order_relaxed)) {
-		;
-	}
+	// Give some time for data thread to initialize (10ms).
+	struct timespec threadWaitSleep = { .tv_sec = 0, .tv_nsec = 10000000 };
+	thrd_sleep(&threadWaitSleep, NULL);
 
 	return (true);
 }
