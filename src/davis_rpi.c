@@ -269,8 +269,9 @@ static int gpioThreadRun(void *handlePtr) {
 		int result = poll(&interruptPoll, 1,
 			I32T(atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed)));
 
-		// Poll result < 0: error. Also if >= 0 and POLLERR is set.
-		if ((result < 0) || (result >= 0 && (interruptPoll.revents & POLLERR))) {
+		// Poll result < 0: error. POLLERR should be disregarded, as it is always set:
+		// https://stackoverflow.com/questions/27411013/poll-returns-both-pollpri-pollerr
+		if (result < 0) {
 			// ERROR: call exceptional shut-down callback and exit.
 			if (state->gpio.shutdownCallback != NULL) {
 				state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
@@ -330,6 +331,10 @@ static int gpioThreadRun(void *handlePtr) {
 
 			if (state->benchmark.testMode == ALTERNATING) {
 				// Last test just done.
+				// SPECIAL OUT: call exceptional shut-down callback and exit.
+				if (state->gpio.shutdownCallback != NULL) {
+					state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
+				}
 				break;
 			}
 
