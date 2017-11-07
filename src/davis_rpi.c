@@ -51,8 +51,8 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh);
 static bool gpioThreadStart(davisRPiHandle handle);
 static void gpioThreadStop(davisRPiHandle handle);
-static bool initRPi(davisRPiState state);
-static void closeRPi(davisRPiState state);
+static bool initRPi(davisRPiHandle handle);
+static void closeRPi(davisRPiHandle handle);
 static int gpioThreadRun(void *handlePtr);
 static bool spiInit(davisRPiState state);
 static void spiClose(davisRPiState state);
@@ -73,7 +73,9 @@ static inline void killGPCLK0(davisRPiState state) {
 	}
 }
 
-static bool initRPi(davisRPiState state) {
+static bool initRPi(davisRPiHandle handle) {
+	davisRPiState state = &handle->state;
+
 	int devMemFd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (devMemFd < 0) {
 		return (false);
@@ -132,7 +134,8 @@ static bool initRPi(davisRPiState state) {
 
 	// Setup SPI. Upload done by separate tool, at boot.
 	if (!spiInit(state)) {
-		closeRPi(state);
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI.");
+		closeRPi(handle);
 		return (false);
 	}
 
@@ -141,7 +144,11 @@ static bool initRPi(davisRPiState state) {
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param);
 
 	if (param < DAVIS_RPI_REQUIRED_LOGIC_REVISION) {
-		closeRPi(state);
+		davisRPiLog(CAER_LOG_CRITICAL, handle,
+			"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
+			param, DAVIS_RPI_REQUIRED_LOGIC_REVISION);
+
+		closeRPi(handle);
 		return (false);
 	}
 
@@ -151,11 +158,10 @@ static bool initRPi(davisRPiState state) {
 	return (true);
 }
 
-static void closeRPi(davisRPiState state) {
-	spiClose(state);
+static void closeRPi(davisRPiHandle handle) {
+	davisRPiState state = &handle->state;
 
-	// Reset GPIO4 to default state.
-	GPIO_INP(state->gpio.gpioReg, 4);
+	spiClose(state);
 
 	// Disable GPCLK0.
 	killGPCLK0(state);
@@ -1056,7 +1062,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	handle->info.deviceString = fullLogString;
 
 	// Open the DAVIS device on the Raspberry Pi.
-	if (!initRPi(state)) {
+	if (!initRPi(handle)) {
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle->info.deviceString);
 		free(handle);
@@ -1172,12 +1178,11 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 bool davisRPiClose(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
-	davisRPiState state = &handle->state;
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Close the device fully.
-	closeRPi(state);
+	closeRPi(handle);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
