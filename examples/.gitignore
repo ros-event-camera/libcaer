@@ -4,5 +4,6 @@
 /davis_microphones
 /davis_cvgui
 /davis_rpi
+/davis_rpi_benchmark
 /dynapse_simple
 /*.exe

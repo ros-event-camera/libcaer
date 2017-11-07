@@ -2585,6 +2585,7 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		return (false);
 	}
 
+#if DAVIS_RPI_BENCHMARK == 0
 	// Allocate packets.
 	if (!containerGenerationAllocate(&state->container, DAVIS_RPI_EVENT_TYPES)) {
 		freeAllDataMemory(state);
@@ -2691,6 +2692,7 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
 		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
 	}
+#endif
 
 	if (!gpioThreadStart(handle)) {
 		freeAllDataMemory(state);
