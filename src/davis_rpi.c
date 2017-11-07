@@ -6,6 +6,7 @@
 #include <sys/ioctl.h>
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
+#include <poll.h>
 
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
@@ -22,9 +23,6 @@
 #define GPIO_CLR(gpioReg, gpioId) gpioReg[10] = U32T(1 << (gpioId)) // clears bits which are 1 ignores bits which are 0
 
 #define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
-
-// Data is in GPIOs 12-27, so just shift and mask (by cast to 16bit).
-#define GPIO_GET_DATA(gpioReg) U16T(gpioReg[13] >> 12)
 
 #define GPIO_PULL(gpioReg) gpioReg[37] // Pull up/pull down
 #define GPIO_PULLCLK0(gpioReg) gpioReg[38] // Pull up/pull down clock
@@ -46,6 +44,14 @@
 #define SPI_BITS_PER_WORD 8
 #define SPI_SPEED_HZ (8 * 1000 * 1000)
 
+#define GPIO_CPLD_RESET 2
+
+#define GPIO_AER_REQ 5
+#define GPIO_AER_ACK 3
+
+// Data is in GPIOs 12-27, so just shift and mask (by cast to 16bit).
+#define GPIO_AER_DATA(gpioReg) U16T(gpioReg[13] >> 12)
+
 static void davisRPiLog(enum caer_log_level logLevel, davisRPiHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh);
@@ -60,9 +66,14 @@ static bool spiConfigSend(davisRPiState state, uint8_t moduleAddr, uint8_t param
 static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
 static bool handleChipBiasSend(davisRPiState state, uint8_t paramAddr, uint32_t param);
 static bool handleChipBiasReceive(davisRPiState state, uint8_t paramAddr, uint32_t *param);
-static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
+static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize);
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY);
+
+#if DAVIS_RPI_BENCHMARK == 1
+static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode);
+static void shutdownGPIOTest(davisRPiHandle handle);
+#endif
 
 static inline void killGPCLK0(davisRPiState state) {
 	state->gpio.gpclkReg[CLK_GP0_CTL] = CLK_PASSWD | CLK_CTL_KILL; // Disable current clock.
@@ -113,23 +124,23 @@ static bool initRPi(davisRPiHandle handle) {
 	}
 
 	// Five control GPIOs: 2,3,5,6,7.
-	GPIO_INP(state->gpio.gpioReg, 2); // Reset CPLD.
-	GPIO_INP(state->gpio.gpioReg, 3); // DDR-AER Acknowledge.
-	GPIO_INP(state->gpio.gpioReg, 5); // DDR-AER Request.
+	GPIO_INP(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD.
+	GPIO_INP(state->gpio.gpioReg, GPIO_AER_ACK); // DDR-AER Acknowledge.
+	GPIO_INP(state->gpio.gpioReg, GPIO_AER_REQ); // DDR-AER Request.
 	GPIO_INP(state->gpio.gpioReg, 6); // DDR-AER Interrupt (config later via sysfs).
 	GPIO_INP(state->gpio.gpioReg, 7); // Unused.
 
-	GPIO_OUT(state->gpio.gpioReg, 2); // Reset CPLD is output.
-	GPIO_CLR(state->gpio.gpioReg, 2); // Default to LOW (to then pulse reset).
+	GPIO_OUT(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD is output.
+	GPIO_CLR(state->gpio.gpioReg, GPIO_CPLD_RESET); // Default to LOW (to then pulse reset).
 
-	GPIO_OUT(state->gpio.gpioReg, 3); // DDR-AER Acknowledge is output.
-	GPIO_SET(state->gpio.gpioReg, 3); // Default to HIGH (AER active-low).
+	GPIO_OUT(state->gpio.gpioReg, GPIO_AER_ACK); // DDR-AER Acknowledge is output.
+	GPIO_SET(state->gpio.gpioReg, GPIO_AER_ACK); // Default to HIGH (AER active-low).
 
 	// Reset CPLD for 10µs.
 	usleep(10);
-	GPIO_SET(state->gpio.gpioReg, 2);
+	GPIO_SET(state->gpio.gpioReg, GPIO_CPLD_RESET);
 	usleep(10);
-	GPIO_CLR(state->gpio.gpioReg, 2);
+	GPIO_CLR(state->gpio.gpioReg, GPIO_CPLD_RESET);
 	usleep(10);
 
 	// Setup SPI. Upload done by separate tool, at boot.
@@ -139,6 +150,7 @@ static bool initRPi(davisRPiHandle handle) {
 		return (false);
 	}
 
+#if DAVIS_RPI_BENCHMARK == 0
 	// After CPLD reset, query logic version.
 	uint32_t param = 0;
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param);
@@ -151,15 +163,56 @@ static bool initRPi(davisRPiHandle handle) {
 		closeRPi(handle);
 		return (false);
 	}
+#endif
 
 	// GPIO 6 is get-data interrupt.
 	// For interrupt handling, manual setup is required via sysfs.
+	int gpioExFd = open("/sys/class/gpio/export", O_WRONLY);
+	if (gpioExFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to export Interrupt GPIO.");
+		closeRPi(handle);
+		return (false);
+	}
+
+	write(gpioExFd, "6", 1);
+	close(gpioExFd);
+
+	int gpioDirFd = open("/sys/class/gpio/gpio6/direction", O_WRONLY);
+	if (gpioDirFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to set direction for Interrupt GPIO.");
+		closeRPi(handle);
+		return (false);
+	}
+
+	write(gpioDirFd, "in", 2);
+	close(gpioDirFd);
+
+	int gpioEdgeFd = open("/sys/class/gpio/gpio6/edge", O_WRONLY);
+	if (gpioEdgeFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to set edge for Interrupt GPIO.");
+		closeRPi(handle);
+		return (false);
+	}
+
+	write(gpioEdgeFd, "rising", 6);
+	close(gpioEdgeFd);
+
+	state->gpio.intFd = open("/sys/class/gpio/gpio6/value", O_RDONLY);
+	if (state->gpio.intFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open value for Interrupt GPIO.");
+		closeRPi(handle);
+		return (false);
+	}
 
 	return (true);
 }
 
 static void closeRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
+
+	if (state->gpio.intFd >= 0) {
+		close(state->gpio.intFd);
+	}
 
 	spiClose(state);
 
@@ -184,26 +237,108 @@ static int gpioThreadRun(void *handlePtr) {
 
 	thrd_set_name(threadName);
 
+	// Setup GPIO interrupt.
+	struct pollfd interruptPoll;
+
+	interruptPoll.fd = state->gpio.intFd;
+	interruptPoll.events = POLLPRI;
+
+	// Allocate data memory. Up to two data points per transaction.
+	uint16_t *data = malloc(DAVIS_RPI_MAX_TRANSACTION_NUM * 2 * sizeof(uint16_t));
+	if (data == NULL) {
+		davisRPiLog(CAER_LOG_DEBUG, handle, "Failed to allocate memory for GPIO communication.");
+		return (EXIT_FAILURE);
+	}
+
 	// Signal data thread ready back to start function.
 	atomic_store(&state->gpio.threadRun, true);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread running.");
 
+#if DAVIS_RPI_BENCHMARK == 1
+	// Start GPIO testing.
+	setupGPIOTest(handle, ZEROS);
+#endif
+
 	// Handle GPIO port reading (wait on data, configurable timeout).
 	while (atomic_load_explicit(&state->gpio.threadRun, memory_order_relaxed)) {
-		uint32_t readNumber = atomic_load_explicit(&state->gpio.readNumber, memory_order_relaxed);
-		uint32_t readTimeout = atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed);
+		// Consume previous interrupt.
+		lseek(state->gpio.intFd, 0, SEEK_SET);
 
-		// TODO: epoll() with timeout, then do DDR-AER REQ/ACK.
-		// TODO: must address second DDR-AER data being all zeros in some cases, that means no
-		// more data and should quit data getting for the current read cycle.
-		// TODO: use davisRPiEventTranslator() on resulting data.
+		// Wait for interrupt.
+		int result = poll(&interruptPoll, 1,
+			I32T(atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed)));
 
-		// ERROR: call exceptional shut-down callback and exit.
-		if (state->gpio.shutdownCallback != NULL) {
-			state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
+		// Poll result < 0: error. Also if >= 0 and POLLERR is set.
+		if ((result < 0) || (result >= 0 && (interruptPoll.revents & POLLERR))) {
+			// ERROR: call exceptional shut-down callback and exit.
+			if (state->gpio.shutdownCallback != NULL) {
+				state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
+			}
+			break;
 		}
+
+		// Poll result 0: timeout reached.
+		// Poll result > 0 (1 in our case): got something to report, so interrupt!
+		// In both cases we want to read up to 'readTransactions' data points from GPIO.
+		uint32_t readTransactions = U32T(atomic_load_explicit(&state->gpio.readTransactions, memory_order_relaxed));
+
+		size_t dataSize = 0;
+
+		while (readTransactions-- > 0) {
+			// Do transaction via DDR-AER.
+			// Is there a request? If not, break early.
+			if (GPIO_GET(state->gpio.gpioReg, GPIO_AER_REQ) != 0) {
+				// Value is 1, so no request (active-low).
+				break;
+			}
+
+			// Request is present, latch data.
+			data[dataSize] = GPIO_AER_DATA(state->gpio.gpioReg);
+			dataSize++;
+
+			// ACK ACK! (active-low, so clear).
+			GPIO_CLR(state->gpio.gpioReg, GPIO_AER_ACK);
+
+			// Wait for REQ to go back off (high).
+			while (GPIO_GET(state->gpio.gpioReg, GPIO_AER_REQ) == 0) {
+				;
+			}
+
+			// Latch data again.
+			data[dataSize] = GPIO_AER_DATA(state->gpio.gpioReg);
+
+			// ACK ACK off! (active-low, so set).
+			GPIO_SET(state->gpio.gpioReg, GPIO_AER_ACK);
+
+#if DAVIS_RPI_BENCHMARK == 0
+			// Data all zeros means no more data on device right now, so break early.
+			if (data[dataSize] == 0) {
+				break;
+			}
+#endif
+
+			dataSize++;
+		}
+
+		// Translate data. Support testing/benchmarking.
+		davisRPiDataTranslator(handle, data, dataSize);
+
+#if DAVIS_RPI_BENCHMARK == 1
+		if (state->benchmark.transCount >= DAVIS_RPI_BENCHMARK_LIMIT_EVENTS) {
+			shutdownGPIOTest(handle);
+
+			if (state->benchmark.testMode == ALTERNATING) {
+				// Last test just done.
+				break;
+			}
+
+			setupGPIOTest(handle, state->benchmark.testMode + 1);
+		}
+#endif
 	}
+
+	free(data);
 
 	// Ensure threadRun is false on termination.
 	atomic_store(&state->gpio.threadRun, false);
@@ -1168,8 +1303,8 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 		state->imu.flipZ);
 
 	// Default values for configuration.
-	atomic_store(&state->gpio.readNumber, 128); // number of data values to read.
-	atomic_store(&state->gpio.readTimeout, 10000); // interrupt timeout, in µs.
+	atomic_store(&state->gpio.readTransactions, 128); // number of read data transactions to execute.
+	atomic_store(&state->gpio.readTimeout, 10); // interrupt timeout, in ms.
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Initialized device successfully.");
 
@@ -2565,6 +2700,7 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
+#if DAVIS_RPI_BENCHMARK == 0
 		// Enable data transfer on USB end-point 2.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
@@ -2576,10 +2712,13 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		// has time to start up and we avoid the initial data flood.
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 500000000 };
 		thrd_sleep(&noDataSleep, NULL);
+#endif
 
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
+#if DAVIS_RPI_BENCHMARK == 0
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
+#endif
 	}
 
 	return (true);
@@ -2590,6 +2729,7 @@ bool davisRPiDataStop(caerDeviceHandle cdh) {
 	davisRPiState state = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
+#if DAVIS_RPI_BENCHMARK == 0
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
@@ -2600,6 +2740,7 @@ bool davisRPiDataStop(caerDeviceHandle cdh) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, false);
+#endif
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);
 	}
 
@@ -2629,10 +2770,127 @@ caerEventPacketContainer davisRPiDataGet(caerDeviceHandle cdh) {
 	return (dataExchangeGet(&state->dataExchange, &state->gpio.threadRun));
 }
 
+#if DAVIS_RPI_BENCHMARK == 1
+
+static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize) {
+	davisRPiState state = &handle->state;
+
+	// Return right away if not running anymore. This prevents useless work if many
+	// buffers are still waiting when shut down.
+	if (!atomic_load(&state->gpio.threadRun)) {
+		return;
+	}
+
+	for (size_t eventIdx = 0; eventIdx < bufferSize; eventIdx++) {
+		uint16_t value = le16toh(buffer[eventIdx]);
+
+		if (value != state->benchmark.expectedValue) {
+			davisRPiLog(CAER_LOG_ERROR, handle, "Failed benchmark test, unexpected value of %d, instead of %d.", value,
+				state->benchmark.expectedValue);
+			state->benchmark.expectedValue = value;
+		}
+
+		switch (state->benchmark.testMode) {
+			case ZEROS:
+				state->benchmark.expectedValue = 0;
+
+				break;
+
+			case ONES:
+				state->benchmark.expectedValue = 0xFFFF;
+
+				break;
+
+			case SWITCHING:
+				if (state->benchmark.expectedValue == 0xFFFF) {
+					state->benchmark.expectedValue = 0;
+				}
+				else {
+					state->benchmark.expectedValue = 0xFFFF;
+				}
+
+				break;
+
+			case ALTERNATING:
+				if (state->benchmark.expectedValue == 0x5555) {
+					state->benchmark.expectedValue = 0xAAAA;
+				}
+				else {
+					state->benchmark.expectedValue = 0x5555;
+				}
+
+				break;
+
+			case COUNTER:
+			default:
+				state->benchmark.expectedValue++;
+
+				break;
+		}
+	}
+
+	// Count transactions.
+	state->benchmark.transCount += U32T(bufferSize);
+}
+
+static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode) {
+	davisRPiState state = &handle->state;
+
+	// Reset global variables.
+	state->benchmark.transCount = 0;
+	state->benchmark.errorCount = 0;
+
+	if (mode == ONES) {
+		state->benchmark.expectedValue = 0xFFFF;
+	}
+	else if (mode == ALTERNATING) {
+		state->benchmark.expectedValue = 0x5555;
+	}
+	else {
+		state->benchmark.expectedValue = 0;
+	}
+
+	// Set global test mode variable.
+	state->benchmark.testMode = mode;
+
+	// Set USB test output gets sent via USB.
+	spiConfigSend(state, 0x00, 0x07, 0);
+
+	// Set test mode.
+	spiConfigSend(state, 0x00, 0x09, mode);
+
+	// Enable test.
+	spiConfigSend(state, 0x00, 0x08, 1);
+}
+
+static void shutdownGPIOTest(davisRPiHandle handle) {
+	davisRPiState state = &handle->state;
+
+	// Disable current tests.
+	spiConfigSend(state, 0x00, 0x08, 0);
+
+	// Drain FIFOs by disabling.
+	spiConfigSend(state, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, false);
+	sleep(1);
+	spiConfigSend(state, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+
+	// Check if test was successful.
+	if (state->benchmark.errorCount == 0) {
+		davisRPiLog(CAER_LOG_ERROR, handle, "Test %d successful (%zu transactions). No errors encountered.",
+			state->benchmark.testMode, state->benchmark.transCount);
+	}
+	else {
+		davisRPiLog(CAER_LOG_ERROR, handle,
+			"Test %d failed (%zu transactions). %zu errors encountered. See the console for more details.",
+			state->benchmark.testMode, state->benchmark.transCount, state->benchmark.errorCount);
+	}
+}
+
+#else
+
 #define TS_WRAP_ADD 0x8000
 
-static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
-	davisRPiHandle handle = vhd;
+static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize) {
 	davisRPiState state = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
@@ -2643,13 +2901,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 		return;
 	}
 
-	// Truncate off any extra partial event.
-	if ((bytesSent & 0x01) != 0) {
-		davisRPiLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bytesSent);
-		bytesSent &= ~((size_t) 0x01);
-	}
-
-	for (size_t bytesIdx = 0; bytesIdx < bytesSent; bytesIdx += 2) {
+	for (size_t eventIdx = 0; eventIdx < bufferSize; eventIdx++) {
 		// Allocate new packets for next iteration as needed.
 		if (!containerGenerationAllocate(&state->container, DAVIS_RPI_EVENT_TYPES)) {
 			davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
@@ -2752,7 +3004,7 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((const uint16_t * ) (&buffer[bytesIdx])));
+		uint16_t event = le16toh(buffer[eventIdx]);
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
@@ -3755,6 +4007,8 @@ static void davisRPiEventTranslator(void *vhd, const uint8_t *buffer, size_t byt
 		}
 	}
 }
+
+#endif
 
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY) {

@@ -41,6 +41,19 @@
 
 #define DAVIS_RPI_REQUIRED_LOGIC_REVISION 9912
 
+#define DAVIS_RPI_MAX_TRANSACTION_NUM 4096
+
+/**
+ * Support benchmarking the GPIO data exchange performance on RPi,
+ * using the appropriate StreamTester logic (MachXO3_IoT).
+ */
+#define DAVIS_RPI_BENCHMARK 1
+
+#define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (100 * 1024)
+
+enum benchmarkMode { ZEROS = 0, ONES = 1, COUNTER = 2, SWITCHING = 3, ALTERNATING = 4 };
+
+// Alternative, simplified biasing support.
 #define DAVIS_BIAS_ADDRESS_MAX 36
 #define DAVIS_CHIP_REG_LENGTH 7
 
@@ -54,13 +67,22 @@ struct davis_rpi_state {
 		volatile uint32_t *gpioReg;
 		volatile uint32_t *gpclkReg;
 		int spiFd;
-		atomic_uint_fast32_t readNumber;
+		int intFd;
+		atomic_uint_fast32_t readTransactions;
 		atomic_uint_fast32_t readTimeout;
 		atomic_bool threadRun;
 		thrd_t thread;
 		void (*shutdownCallback)(void *shutdownCallbackPtr);
 		void *shutdownCallbackPtr;
 	} gpio;
+#if DAVIS_RPI_BENCHMARK == 1
+	struct {
+		enum benchmarkMode testMode;
+		uint16_t expectedValue;
+		size_t transCount;
+		size_t errorCount;
+	} benchmark;
+#endif
 	struct {
 		uint8_t currentBiasArray[DAVIS_BIAS_ADDRESS_MAX + 1][2];
 		uint8_t currentChipRegister[DAVIS_CHIP_REG_LENGTH];
