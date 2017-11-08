@@ -91,8 +91,13 @@ static inline void killGPCLK0(davisRPiState state) {
 static bool initRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
 
+	// Ensure global FDs are always uninitialized.
+	state->gpio.intFd = -1;
+	state->gpio.spiFd = -1;
+
 	int devMemFd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (devMemFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open '/dev/mem'. Are you running as root?");
 		return (false);
 	}
 
@@ -105,6 +110,7 @@ static bool initRPi(davisRPiHandle handle) {
 	close(devMemFd);
 
 	if ((state->gpio.gpioReg == MAP_FAILED) || (state->gpio.gpclkReg == MAP_FAILED)) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to map memory regions.");
 		return (false);
 	}
 
@@ -208,11 +214,21 @@ static bool initRPi(davisRPiHandle handle) {
 		return (false);
 	}
 
+	// Initialize SPI lock last! This avoids having to track its initialization status
+	// separately. We also don't have to destroy it in closeRPi(), but only later in exit.
+	if (mtx_init(&state->gpio.spiLock, mtx_plain) != thrd_success) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI lock.");
+		closeRPi(handle);
+		return (false);
+	}
+
 	return (true);
 }
 
 static void closeRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
+
+	// Mutex destroyed in main exit.
 
 	if (state->gpio.intFd >= 0) {
 		close(state->gpio.intFd);
@@ -370,7 +386,6 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MODE, &spiMode) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MODE, &spiMode) < 0)) {
-		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -378,7 +393,6 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_BITS_PER_WORD, &spiBitsPerWord) < 0)) {
-		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -386,7 +400,6 @@ static bool spiInit(davisRPiState state) {
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeedHz) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeedHz) < 0)) {
-		close(state->gpio.spiFd);
 		return (false);
 	}
 
@@ -410,14 +423,16 @@ static inline bool spiTransfer(davisRPiState state, uint8_t *spiOutput, uint8_t 
 	spiTransfer.bits_per_word = SPI_BITS_PER_WORD;
 	spiTransfer.cs_change = false; // Documentation is misleading, see 'https://github.com/beagleboard/kernel/issues/85#issuecomment-32304365'.
 
-	if (ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer) < 0) {
-		return (false);
-	}
+	mtx_lock(&state->gpio.spiLock);
 
-	return (true);
+	int result = ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer);
+
+	mtx_unlock(&state->gpio.spiLock);
+
+	return ((result < 0) ? (false) : (true));
 }
 
-static inline bool spiSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+static bool spiSend(davisRPiState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
 	uint8_t spiOutput[SPI_CONFIG_MSG_SIZE] = { 0 };
 
 	// Highest bit of first byte is zero to indicate write operation.
@@ -1210,7 +1225,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 	// Open the DAVIS device on the Raspberry Pi.
 	if (!initRPi(handle)) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device. Are you running as root? Need access to '/dev/mem'!");
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 		free(handle->info.deviceString);
 		free(handle);
 
@@ -1325,11 +1340,15 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 bool davisRPiClose(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
+	davisRPiState state = &handle->state;
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Close the device fully.
 	closeRPi(handle);
+
+	// Destroy SPI mutex here, as it is initialized for sure.
+	mtx_destroy(&state->gpio.spiLock);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
@@ -2556,6 +2575,7 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 static bool gpioThreadStart(davisRPiHandle handle) {
 	// Start GPIO communication thread.
 	if ((errno = thrd_create(&handle->state.gpio.thread, &gpioThreadRun, handle)) != thrd_success) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to create GPIO thread. Error: %d.", errno);
 		return (false);
 	}
 
@@ -2870,14 +2890,14 @@ static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode) {
 	spiConfigSend(state, 0x00, 0x09, mode);
 
 	// Enable test.
-	spiConfigSend(state, 0x00, 0x08, 1);
+	spiConfigSend(state, 0x00, 0x08, true);
 }
 
 static void shutdownGPIOTest(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
 
 	// Disable current tests.
-	spiConfigSend(state, 0x00, 0x08, 0);
+	spiConfigSend(state, 0x00, 0x08, false);
 
 	// Drain FIFOs by disabling.
 	spiConfigSend(state, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, false);

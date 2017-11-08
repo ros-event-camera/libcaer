@@ -358,6 +358,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 bool usbThreadStart(usbState state) {
 	// Start USB thread.
 	if ((errno = thrd_create(&state->usbThread, &usbThreadRun, state)) != thrd_success) {
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to create USB thread. Error: %d.", errno);
 		return (false);
 	}
 

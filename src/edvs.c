@@ -463,6 +463,7 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 static bool serialThreadStart(edvsHandle handle) {
 	// Start serial communication thread.
 	if ((errno = thrd_create(&handle->state.serialState.serialThread, &serialThreadRun, handle)) != thrd_success) {
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to create serial thread. Error: %d.", errno);
 		return (false);
 	}
 

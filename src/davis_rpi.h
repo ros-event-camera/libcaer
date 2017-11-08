@@ -66,8 +66,9 @@ struct davis_rpi_state {
 	struct {
 		volatile uint32_t *gpioReg;
 		volatile uint32_t *gpclkReg;
-		int spiFd;
 		int intFd;
+		int spiFd;
+		mtx_t spiLock;
 		atomic_uint_fast32_t readTransactions;
 		atomic_uint_fast32_t readTimeout;
 		atomic_bool threadRun;
