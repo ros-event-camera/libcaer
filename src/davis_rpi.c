@@ -2866,9 +2866,6 @@ static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode) {
 	// Set global test mode variable.
 	state->benchmark.testMode = mode;
 
-	// Set USB test output gets sent via USB.
-	spiConfigSend(state, 0x00, 0x07, 0);
-
 	// Set test mode.
 	spiConfigSend(state, 0x00, 0x09, mode);
 
