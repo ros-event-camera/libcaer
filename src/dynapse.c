@@ -86,13 +86,7 @@ bool sy, uint8_t dy, uint8_t destinationCore) {
 }
 
 uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY) {
-	uint16_t neuronId = 0;
-
-	neuronId |= U16T(U16T(coreId & 0x03) << 8);
-	neuronId |= U16T(U16T(rowY & 0x0F) << 4);
-	neuronId |= U16T(U16T(columnX & 0x0F) << 0);
-
-	return (neuronId);
+	return (U16T(U16T((coreId & 0x03) << 8) | U16T((rowY & 0x0F) << 4) | U16T((columnX & 0x0F) << 0)));
 }
 
 uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) {
@@ -131,16 +125,16 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 
 	if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y < DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U1;
-		x -= DYNAPSE_CONFIG_XCHIPSIZE;
+		x = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
 	}
 	else if ((x < DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U2;
-		y -= DYNAPSE_CONFIG_YCHIPSIZE;
+		y = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
 	}
 	else if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U3;
-		x -= DYNAPSE_CONFIG_XCHIPSIZE;
-		y -= DYNAPSE_CONFIG_YCHIPSIZE;
+		x = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
+		y = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
 	}
 
 	// Select core. Core ID 0 default, doesn't need check.
@@ -148,16 +142,16 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 
 	if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y < DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 1;
-		x -= DYNAPSE_CONFIG_NEUCOL;
+		x = U16T(x - DYNAPSE_CONFIG_NEUCOL);
 	}
 	else if ((x < DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 2;
-		y -= DYNAPSE_CONFIG_NEUROW;
+		y = U16T(y - DYNAPSE_CONFIG_NEUROW);
 	}
 	else if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 3;
-		x -= DYNAPSE_CONFIG_NEUCOL;
-		y -= DYNAPSE_CONFIG_NEUROW;
+		x = U16T(x - DYNAPSE_CONFIG_NEUCOL);
+		y = U16T(y - DYNAPSE_CONFIG_NEUROW);
 	}
 
 	// Per-core neuron ID.
