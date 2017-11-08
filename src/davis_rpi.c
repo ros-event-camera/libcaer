@@ -2798,6 +2798,8 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 		if (value != state->benchmark.expectedValue) {
 			davisRPiLog(CAER_LOG_ERROR, handle, "Failed benchmark test, unexpected value of %d, instead of %d.", value,
 				state->benchmark.expectedValue);
+			state->benchmark.errorCount++;
+
 			state->benchmark.expectedValue = value;
 		}
 
