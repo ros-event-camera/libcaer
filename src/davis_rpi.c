@@ -267,11 +267,13 @@ static int gpioThreadRun(void *handlePtr) {
 	uint16_t *data = malloc(DAVIS_RPI_MAX_TRANSACTION_NUM * 2 * sizeof(uint16_t));
 	if (data == NULL) {
 		davisRPiLog(CAER_LOG_DEBUG, handle, "Failed to allocate memory for GPIO communication.");
+
+		atomic_store(&state->gpio.threadState, THR_EXITED);
 		return (EXIT_FAILURE);
 	}
 
 	// Signal data thread ready back to start function.
-	atomic_store(&state->gpio.threadRun, true);
+	atomic_store(&state->gpio.threadState, THR_RUNNING);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread running.");
 
@@ -282,7 +284,7 @@ static int gpioThreadRun(void *handlePtr) {
 #endif
 
 	// Handle GPIO port reading (wait on data, configurable timeout).
-	while (atomic_load_explicit(&state->gpio.threadRun, memory_order_relaxed)) {
+	while (atomic_load_explicit(&state->gpio.threadState, memory_order_relaxed) == THR_RUNNING) {
 		// Consume previous interrupt.
 		lseek(state->gpio.intFd, 0, SEEK_SET);
 
@@ -369,7 +371,7 @@ static int gpioThreadRun(void *handlePtr) {
 	free(data);
 
 	// Ensure threadRun is false on termination.
-	atomic_store(&state->gpio.threadRun, false);
+	atomic_store(&state->gpio.threadState, THR_EXITED);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "GPIO communication thread shut down.");
 
@@ -490,11 +492,11 @@ static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t pa
 static inline uint8_t setBitInByte(uint8_t byteIn, uint8_t idx, bool value) {
 	if (value) {
 		// Flip bit on if enabled.
-		return (byteIn | (uint8_t) (0x01 << idx));
+		return (U8T(byteIn | U8T(0x01 << idx)));
 	}
 	else {
 		// Flip bit off if disabled.
-		return (byteIn & (uint8_t) (~(0x01 << idx)));
+		return (U8T(byteIn & U8T(~(0x01 << idx))));
 	}
 }
 
@@ -2579,16 +2581,16 @@ static bool gpioThreadStart(davisRPiHandle handle) {
 		return (false);
 	}
 
-	// Give some time for data thread to initialize (10ms).
-	struct timespec threadWaitSleep = { .tv_sec = 0, .tv_nsec = 10000000 };
-	thrd_sleep(&threadWaitSleep, NULL);
+	while (atomic_load(&handle->state.gpio.threadState) == THR_IDLE) {
+		thrd_yield();
+	}
 
 	return (true);
 }
 
 static void gpioThreadStop(davisRPiHandle handle) {
 	// Shut down GPIO communication thread.
-	atomic_store(&handle->state.gpio.threadRun, false);
+	atomic_store(&handle->state.gpio.threadState, THR_EXITED);
 
 	// Wait for GPIO communication thread to terminate.
 	if ((errno = thrd_join(handle->state.gpio.thread, NULL)) != thrd_success) {
@@ -2798,7 +2800,7 @@ caerEventPacketContainer davisRPiDataGet(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 	davisRPiState state = &handle->state;
 
-	return (dataExchangeGet(&state->dataExchange, &state->gpio.threadRun));
+	return (dataExchangeGet(&state->dataExchange, &state->gpio.threadState));
 }
 
 #if DAVIS_RPI_BENCHMARK == 1
@@ -2808,7 +2810,7 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down.
-	if (!atomic_load(&state->gpio.threadRun)) {
+	if (atomic_load(&state->gpio.threadState) != THR_RUNNING) {
 		return;
 	}
 
@@ -2927,7 +2929,7 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
 	// then any subsequent buffers should also detect shut-down and not be handled.
-	if (!atomic_load(&state->gpio.threadRun)) {
+	if (atomic_load(&state->gpio.threadState) != THR_RUNNING) {
 		return;
 	}
 
@@ -4032,7 +4034,7 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
-				state->timestamps.current, &state->dataExchange, &state->gpio.threadRun, handle->info.deviceID,
+				state->timestamps.current, &state->dataExchange, &state->gpio.threadState, handle->info.deviceID,
 				handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}

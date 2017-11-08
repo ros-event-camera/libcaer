@@ -10,6 +10,8 @@
 #include "c11threads_posix.h"
 #endif
 
+enum { THR_IDLE = 0, THR_RUNNING = 1, THR_EXITED = 2 };
+
 struct data_exchange {
 	caerRingBuffer buffer;
 	atomic_uint_fast32_t bufferSize; // Only takes effect on DataStart() calls!
@@ -47,7 +49,7 @@ static inline void dataExchangeDestroy(dataExchange state) {
 	}
 }
 
-static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomic_bool *transfersRunning) {
+static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomic_uint_fast32_t *transfersRunning) {
 	caerEventPacketContainer container = NULL;
 
 	retry: container = caerRingBufferGet(state->buffer);
@@ -64,7 +66,7 @@ static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomi
 
 	// Didn't find any event container, either report this or retry, depending
 	// on blocking setting.
-	if (atomic_load_explicit(&state->blocking, memory_order_relaxed) && atomic_load(transfersRunning)) {
+	if (atomic_load_explicit(&state->blocking, memory_order_relaxed) && atomic_load(transfersRunning) == THR_RUNNING) {
 		// Don't retry right away in a tight loop, back off and wait a little.
 		// If no data is available, sleep for a millisecond to avoid wasting resources.
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
@@ -90,13 +92,13 @@ static inline bool dataExchangePut(dataExchange state, caerEventPacketContainer 
 	}
 }
 
-static inline void dataExchangePutForce(dataExchange state, atomic_bool *transfersRunning,
+static inline void dataExchangePutForce(dataExchange state, atomic_uint_fast32_t *transfersRunning,
 	caerEventPacketContainer container) {
 	while (!caerRingBufferPut(state->buffer, container)) {
 		// Prevent dead-lock if shutdown is requested and nothing is consuming
 		// data anymore, but the ring-buffer is full (and would thus never empty),
 		// thus blocking the USB handling thread in this loop.
-		if (!atomic_load(transfersRunning)) {
+		if (atomic_load(transfersRunning) != THR_RUNNING) {
 			return;
 		}
 	}

@@ -73,7 +73,7 @@ static inline void containerGenerationCommitTimestampInit(containerGeneration st
 }
 
 static inline void containerGenerationExecute(containerGeneration state, bool emptyContainerCommit, bool tsReset,
-	int32_t tsWrapOverflow, int32_t tsCurrent, dataExchange dataState, atomic_bool *transfersRunning, int16_t deviceId,
+	int32_t tsWrapOverflow, int32_t tsCurrent, dataExchange dataState, atomic_uint_fast32_t *transfersRunning, int16_t deviceId,
 	const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	uint8_t deviceLogLevel = atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed);
 

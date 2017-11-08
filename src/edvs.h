@@ -31,7 +31,7 @@ struct serial_state {
 	mtx_t serialWriteLock;
 	// Serial thread state
 	thrd_t serialThread;
-	atomic_bool serialThreadRun;
+	atomic_uint_fast32_t serialThreadState;
 	// Serial Data Transfers
 	atomic_uint_fast32_t serialReadSize;
 	// Serial Data Transfers shutdown callback

@@ -71,7 +71,7 @@ struct davis_rpi_state {
 		mtx_t spiLock;
 		atomic_uint_fast32_t readTransactions;
 		atomic_uint_fast32_t readTimeout;
-		atomic_bool threadRun;
+		atomic_uint_fast32_t threadState;
 		thrd_t thread;
 		void (*shutdownCallback)(void *shutdownCallbackPtr);
 		void *shutdownCallbackPtr;
