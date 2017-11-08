@@ -39,6 +39,10 @@
 #define CLK_CTL_SRC(x)  ((x) << 0)
 
 #define CLK_CTL_SRC_OSC  1  /* 19.2 MHz oscillator */
+#define CLK_CTL_SRC_PLLD 6  /*  500 MHz PLL */
+
+#define CLK_DIV_DIVI(x) ((x) << 12)
+#define CLK_DIV_DIVF(x) ((x) <<  0)
 
 #define SPI_DEVICE0_CS0 "/dev/spidev0.0"
 #define SPI_BITS_PER_WORD 8
@@ -104,11 +108,11 @@ static bool initRPi(davisRPiHandle handle) {
 		return (false);
 	}
 
-	// Configure GPCLK0 clock source to oscillator.
+	// Configure GPCLK0 clock source, use PLLD to have 20MHz output.
 	killGPCLK0(state);
-	state->gpio.gpclkReg[CLK_GP0_DIV] = (CLK_PASSWD | 0); // No dividers.
+	state->gpio.gpclkReg[CLK_GP0_DIV] = (CLK_PASSWD | CLK_DIV_DIVI(25) | CLK_DIV_DIVF(0)); // Only integer division.
 	usleep(10);
-	state->gpio.gpclkReg[CLK_GP0_CTL] = (CLK_PASSWD | CLK_CTL_MASH(0) | CLK_CTL_SRC(CLK_CTL_SRC_OSC)); // Configure oscillator as clock source, disable MASH.
+	state->gpio.gpclkReg[CLK_GP0_CTL] = (CLK_PASSWD | CLK_CTL_MASH(0) | CLK_CTL_SRC(CLK_CTL_SRC_PLLD)); // Disable MASH.
 	usleep(10);
 	state->gpio.gpclkReg[CLK_GP0_CTL] |= (CLK_PASSWD | CLK_CTL_ENAB); // Enable new clock.
 	usleep(10);
