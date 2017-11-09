@@ -349,7 +349,7 @@ static int gpioThreadRun(void *handlePtr) {
 		davisRPiDataTranslator(handle, data, dataSize);
 
 #if DAVIS_RPI_BENCHMARK == 1
-		if (state->benchmark.transCount >= DAVIS_RPI_BENCHMARK_LIMIT_EVENTS) {
+		if (state->benchmark.dataCount >= DAVIS_RPI_BENCHMARK_LIMIT_EVENTS) {
 			shutdownGPIOTest(handle);
 
 			if (state->benchmark.testMode == ALTERNATING) {
@@ -2864,15 +2864,15 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 		}
 	}
 
-	// Count transactions.
-	state->benchmark.transCount += U32T(bufferSize);
+	// Count events.
+	state->benchmark.dataCount += U32T(bufferSize);
 }
 
 static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode) {
 	davisRPiState state = &handle->state;
 
 	// Reset global variables.
-	state->benchmark.transCount = 0;
+	state->benchmark.dataCount = 0;
 	state->benchmark.errorCount = 0;
 
 	if (mode == ONES) {
@@ -2893,10 +2893,17 @@ static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode) {
 
 	// Enable test.
 	spiConfigSend(state, 0x00, 0x08, true);
+
+	// Remember test start time.
+	portable_clock_gettime_monotonic(&state->benchmark.startTime);
 }
 
 static void shutdownGPIOTest(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
+
+	// Get test end time.
+	struct timespec endTime;
+	portable_clock_gettime_monotonic(&endTime);
 
 	// Disable current tests.
 	spiConfigSend(state, 0x00, 0x08, false);
@@ -2908,14 +2915,25 @@ static void shutdownGPIOTest(davisRPiHandle handle) {
 
 	// Check if test was successful.
 	if (state->benchmark.errorCount == 0) {
-		davisRPiLog(CAER_LOG_ERROR, handle, "Test %d successful (%zu transactions). No errors encountered.",
-			state->benchmark.testMode, state->benchmark.transCount);
+		davisRPiLog(CAER_LOG_ERROR, handle, "Test %d successful (%zu events). No errors encountered.",
+			state->benchmark.testMode, state->benchmark.dataCount);
 	}
 	else {
 		davisRPiLog(CAER_LOG_ERROR, handle,
-			"Test %d failed (%zu transactions). %zu errors encountered. See the console for more details.",
-			state->benchmark.testMode, state->benchmark.transCount, state->benchmark.errorCount);
+			"Test %d failed (%zu events). %zu errors encountered. See the console for more details.",
+			state->benchmark.testMode, state->benchmark.dataCount, state->benchmark.errorCount);
 	}
+
+	// Calculate bandwidth.
+	uint64_t diffNanoTime = (uint64_t) (((int64_t) (endTime.tv_sec - state->benchmark.startTime.tv_sec) * 1000000000LL)
+		+ (int64_t) (endTime.tv_nsec - state->benchmark.startTime.tv_nsec));
+
+	double diffSecondTime = ((double) diffNanoTime) / ((double) 1000000000ULL);
+
+	double eventsPerSecond = ((double) state->benchmark.dataCount) / diffSecondTime;
+
+	davisRPiLog(CAER_LOG_ERROR, handle, "Test %d: bandwidth of %g events/second (%zu events in %g seconds).",
+		state->benchmark.testMode, eventsPerSecond, state->benchmark.dataCount, diffSecondTime);
 }
 
 #else

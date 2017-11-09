@@ -80,8 +80,9 @@ struct davis_rpi_state {
 	struct {
 		enum benchmarkMode testMode;
 		uint16_t expectedValue;
-		size_t transCount;
+		size_t dataCount;
 		size_t errorCount;
+		struct timespec startTime;
 	} benchmark;
 #endif
 	struct {
