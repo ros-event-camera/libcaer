@@ -51,6 +51,7 @@ static inline void dataExchangeDestroy(dataExchange state) {
 
 static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomic_uint_fast32_t *transfersRunning) {
 	caerEventPacketContainer container = NULL;
+	uint32_t sleepCounter = 0;
 
 	retry: container = caerRingBufferGet(state->buffer);
 
@@ -65,12 +66,15 @@ static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomi
 	}
 
 	// Didn't find any event container, either report this or retry, depending
-	// on blocking setting.
-	if (atomic_load_explicit(&state->blocking, memory_order_relaxed) && atomic_load(transfersRunning) == THR_RUNNING) {
+	// on blocking setting. Every 1000 sleeps (so ~1s) we return, to avoid possible
+	// dead-lock on this function.
+	if (atomic_load_explicit(&state->blocking, memory_order_relaxed) && (atomic_load(transfersRunning) == THR_RUNNING)
+		&& (sleepCounter < 1000)) {
 		// Don't retry right away in a tight loop, back off and wait a little.
 		// If no data is available, sleep for a millisecond to avoid wasting resources.
 		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
 		if (thrd_sleep(&noDataSleep, NULL) == 0) {
+			sleepCounter++;
 			goto retry;
 		}
 	}
