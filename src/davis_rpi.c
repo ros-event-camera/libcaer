@@ -379,7 +379,7 @@ static int gpioThreadRun(void *handlePtr) {
 }
 
 static bool spiInit(davisRPiState state) {
-	state->gpio.spiFd = open(SPI_DEVICE0_CS0, O_RDWR);
+	state->gpio.spiFd = open(SPI_DEVICE0_CS0, O_RDWR | O_SYNC);
 	if (state->gpio.spiFd < 0) {
 		return (false);
 	}
