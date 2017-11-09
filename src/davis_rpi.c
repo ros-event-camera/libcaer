@@ -47,6 +47,7 @@
 #define SPI_DEVICE0_CS0 "/dev/spidev0.0"
 #define SPI_BITS_PER_WORD 8
 #define SPI_SPEED_HZ (8 * 1000 * 1000)
+#define SPI_GPIO_CS0 8
 
 #define GPIO_CPLD_RESET 2
 
@@ -384,7 +385,7 @@ static bool spiInit(davisRPiState state) {
 		return (false);
 	}
 
-	uint8_t spiMode = SPI_MODE_0;
+	uint8_t spiMode = SPI_MODE_0 | SPI_NO_CS;
 
 	if ((ioctl(state->gpio.spiFd, SPI_IOC_WR_MODE, &spiMode) < 0)
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MODE, &spiMode) < 0)) {
@@ -404,6 +405,12 @@ static bool spiInit(davisRPiState state) {
 		|| (ioctl(state->gpio.spiFd, SPI_IOC_RD_MAX_SPEED_HZ, &spiSpeedHz) < 0)) {
 		return (false);
 	}
+
+	// Setup CS manually.
+	GPIO_INP(state->gpio.gpioReg, SPI_GPIO_CS0);
+
+	GPIO_OUT(state->gpio.gpioReg, SPI_GPIO_CS0); // SPI CS is output.
+	GPIO_SET(state->gpio.gpioReg, SPI_GPIO_CS0); // Default to HIGH (active-low).
 
 	return (true);
 }
@@ -427,7 +434,11 @@ static inline bool spiTransfer(davisRPiState state, uint8_t *spiOutput, uint8_t 
 
 	mtx_lock(&state->gpio.spiLock);
 
+	GPIO_CLR(state->gpio.gpioReg, SPI_GPIO_CS0);
+
 	int result = ioctl(state->gpio.spiFd, SPI_IOC_MESSAGE(1), &spiTransfer);
+
+	GPIO_SET(state->gpio.gpioReg, SPI_GPIO_CS0);
 
 	mtx_unlock(&state->gpio.spiLock);
 
