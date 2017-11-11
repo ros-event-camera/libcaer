@@ -42,6 +42,7 @@
 #define DAVIS_RPI_REQUIRED_LOGIC_REVISION 9912
 
 #define DAVIS_RPI_MAX_TRANSACTION_NUM 4096
+#define DAVIS_RPI_MAX_WAIT_REQ_COUNT   100
 
 /**
  * Support benchmarking the GPIO data exchange performance on RPi,
@@ -49,7 +50,7 @@
  */
 #define DAVIS_RPI_BENCHMARK 1
 
-#define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (100 * 1000)
+#define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (4 * 1000 * 1000)
 
 enum benchmarkMode { ZEROS = 0, ONES = 1, COUNTER = 2, SWITCHING = 3, ALTERNATING = 4 };
 
@@ -66,11 +67,8 @@ struct davis_rpi_state {
 	struct {
 		volatile uint32_t *gpioReg;
 		volatile uint32_t *gpclkReg;
-		int intFd;
 		int spiFd;
 		mtx_t spiLock;
-		atomic_uint_fast32_t readTransactions;
-		atomic_uint_fast32_t readTimeout;
 		atomic_uint_fast32_t threadState;
 		thrd_t thread;
 		void (*shutdownCallback)(void *shutdownCallbackPtr);

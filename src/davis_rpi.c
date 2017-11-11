@@ -6,7 +6,6 @@
 #include <sys/ioctl.h>
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
-#include <poll.h>
 
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
@@ -23,9 +22,6 @@
 #define GPIO_CLR(gpioReg, gpioId) gpioReg[10] = U32T(1 << (gpioId)) // clears bits which are 1 ignores bits which are 0
 
 #define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
-
-#define GPIO_PULL(gpioReg) gpioReg[37] // Pull up/pull down
-#define GPIO_PULLCLK0(gpioReg) gpioReg[38] // Pull up/pull down clock
 
 #define CLK_GP0_CTL 28
 #define CLK_GP0_DIV 29
@@ -92,7 +88,6 @@ static bool initRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
 
 	// Ensure global FDs are always uninitialized.
-	state->gpio.intFd = -1;
 	state->gpio.spiFd = -1;
 
 	int devMemFd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -137,7 +132,7 @@ static bool initRPi(davisRPiHandle handle) {
 	GPIO_INP(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD.
 	GPIO_INP(state->gpio.gpioReg, GPIO_AER_ACK); // DDR-AER Acknowledge.
 	GPIO_INP(state->gpio.gpioReg, GPIO_AER_REQ); // DDR-AER Request.
-	GPIO_INP(state->gpio.gpioReg, 6); // DDR-AER Interrupt (config later via sysfs).
+	GPIO_INP(state->gpio.gpioReg, 6); // Unused.
 	GPIO_INP(state->gpio.gpioReg, 7); // Unused.
 
 	GPIO_OUT(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD is output.
@@ -160,6 +155,14 @@ static bool initRPi(davisRPiHandle handle) {
 		return (false);
 	}
 
+	// Initialize SPI lock last! This avoids having to track its initialization status
+	// separately. We also don't have to destroy it in closeRPi(), but only later in exit.
+	if (mtx_init(&state->gpio.spiLock, mtx_plain) != thrd_success) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI lock.");
+		closeRPi(handle);
+		return (false);
+	}
+
 #if DAVIS_RPI_BENCHMARK == 0
 	// After CPLD reset, query logic version.
 	uint32_t param = 0;
@@ -171,56 +174,10 @@ static bool initRPi(davisRPiHandle handle) {
 			param, DAVIS_RPI_REQUIRED_LOGIC_REVISION);
 
 		closeRPi(handle);
+		mtx_destroy(&state->gpio.spiLock);
 		return (false);
 	}
 #endif
-
-	// GPIO 6 is get-data interrupt.
-	// For interrupt handling, manual setup is required via sysfs.
-	int gpioExFd = open("/sys/class/gpio/export", O_WRONLY);
-	if (gpioExFd < 0) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to export Interrupt GPIO.");
-		closeRPi(handle);
-		return (false);
-	}
-
-	write(gpioExFd, "6", 1);
-	close(gpioExFd);
-
-	int gpioDirFd = open("/sys/class/gpio/gpio6/direction", O_WRONLY);
-	if (gpioDirFd < 0) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to set direction for Interrupt GPIO.");
-		closeRPi(handle);
-		return (false);
-	}
-
-	write(gpioDirFd, "in", 2);
-	close(gpioDirFd);
-
-	int gpioEdgeFd = open("/sys/class/gpio/gpio6/edge", O_WRONLY);
-	if (gpioEdgeFd < 0) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to set edge for Interrupt GPIO.");
-		closeRPi(handle);
-		return (false);
-	}
-
-	write(gpioEdgeFd, "rising", 6);
-	close(gpioEdgeFd);
-
-	state->gpio.intFd = open("/sys/class/gpio/gpio6/value", O_RDONLY);
-	if (state->gpio.intFd < 0) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open value for Interrupt GPIO.");
-		closeRPi(handle);
-		return (false);
-	}
-
-	// Initialize SPI lock last! This avoids having to track its initialization status
-	// separately. We also don't have to destroy it in closeRPi(), but only later in exit.
-	if (mtx_init(&state->gpio.spiLock, mtx_plain) != thrd_success) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI lock.");
-		closeRPi(handle);
-		return (false);
-	}
 
 	return (true);
 }
@@ -228,12 +185,7 @@ static bool initRPi(davisRPiHandle handle) {
 static void closeRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
 
-	// Mutex destroyed in main exit.
-
-	if (state->gpio.intFd >= 0) {
-		close(state->gpio.intFd);
-	}
-
+	// SPI lock mutex destroyed in main exit.
 	spiClose(state);
 
 	// Disable GPCLK0.
@@ -257,12 +209,6 @@ static int gpioThreadRun(void *handlePtr) {
 
 	thrd_set_name(threadName);
 
-	// Setup GPIO interrupt.
-	struct pollfd interruptPoll;
-
-	interruptPoll.fd = state->gpio.intFd;
-	interruptPoll.events = POLLPRI;
-
 	// Allocate data memory. Up to two data points per transaction.
 	uint16_t *data = malloc(DAVIS_RPI_MAX_TRANSACTION_NUM * 2 * sizeof(uint16_t));
 	if (data == NULL) {
@@ -283,38 +229,21 @@ static int gpioThreadRun(void *handlePtr) {
 	setupGPIOTest(handle, ZEROS);
 #endif
 
-	// Handle GPIO port reading (wait on data, configurable timeout).
+	// Handle GPIO port reading.
 	while (atomic_load_explicit(&state->gpio.threadState, memory_order_relaxed) == THR_RUNNING) {
-		// Consume previous interrupt.
-		lseek(state->gpio.intFd, 0, SEEK_SET);
-
-		// Wait for interrupt.
-		int result = poll(&interruptPoll, 1,
-			I32T(atomic_load_explicit(&state->gpio.readTimeout, memory_order_relaxed)));
-
-		// Poll result < 0: error. POLLERR should be disregarded, as it is always set:
-		// https://stackoverflow.com/questions/27411013/poll-returns-both-pollpri-pollerr
-		if (result < 0) {
-			// ERROR: call exceptional shut-down callback and exit.
-			if (state->gpio.shutdownCallback != NULL) {
-				state->gpio.shutdownCallback(state->gpio.shutdownCallbackPtr);
-			}
-			break;
-		}
-
-		// Poll result 0: timeout reached.
-		// Poll result > 0 (1 in our case): got something to report, so interrupt!
-		// In both cases we want to read up to 'readTransactions' data points from GPIO.
-		uint32_t readTransactions = U32T(atomic_load_explicit(&state->gpio.readTransactions, memory_order_relaxed));
-
+		size_t readTransactions = DAVIS_RPI_MAX_TRANSACTION_NUM;
 		size_t dataSize = 0;
 
 		while (readTransactions-- > 0) {
-			// Do transaction via DDR-AER.
-			// Is there a request? If not, break early.
-			if (GPIO_GET(state->gpio.gpioReg, GPIO_AER_REQ) != 0) {
-				// Value is 1, so no request (active-low).
-				break;
+			// Do transaction via DDR-AER. Is there a request?
+			size_t noReqCount = 0;
+			while (GPIO_GET(state->gpio.gpioReg, GPIO_AER_REQ) != 0) {
+				// Track failed wait on requests, and simply break early once
+				// the maximum is reached, to avoid dead-locking in here.
+				noReqCount++;
+				if (noReqCount == DAVIS_RPI_MAX_WAIT_REQ_COUNT) {
+					goto processData;
+				}
 			}
 
 			// Request is present, latch data.
@@ -331,22 +260,17 @@ static int gpioThreadRun(void *handlePtr) {
 
 			// Latch data again.
 			data[dataSize] = GPIO_AER_DATA(state->gpio.gpioReg);
+			dataSize++;
 
 			// ACK ACK off! (active-low, so set).
 			GPIO_SET(state->gpio.gpioReg, GPIO_AER_ACK);
-
-#if DAVIS_RPI_BENCHMARK == 0
-			// Data all zeros means no more data on device right now, so break early.
-			if (data[dataSize] == 0) {
-				break;
-			}
-#endif
-
-			dataSize++;
 		}
 
 		// Translate data. Support testing/benchmarking.
-		davisRPiDataTranslator(handle, data, dataSize);
+processData:
+		if (dataSize > 0) {
+			davisRPiDataTranslator(handle, data, dataSize);
+		}
 
 #if DAVIS_RPI_BENCHMARK == 1
 		if (state->benchmark.dataCount >= DAVIS_RPI_BENCHMARK_LIMIT_EVENTS) {
@@ -1331,10 +1255,6 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	davisRPiLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
 
-	// Default values for configuration.
-	atomic_store(&state->gpio.readTransactions, 128); // number of read data transactions to execute.
-	atomic_store(&state->gpio.readTimeout, 10); // interrupt timeout, in ms.
-
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Initialized device successfully.");
 
 	return ((caerDeviceHandle) handle);
@@ -1347,9 +1267,8 @@ bool davisRPiClose(caerDeviceHandle cdh) {
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	// Close the device fully.
-	closeRPi(handle);
-
 	// Destroy SPI mutex here, as it is initialized for sure.
+	closeRPi(handle);
 	mtx_destroy(&state->gpio.spiLock);
 
 	davisRPiLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
