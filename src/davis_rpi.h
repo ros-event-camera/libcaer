@@ -48,7 +48,7 @@
  * Support benchmarking the GPIO data exchange performance on RPi,
  * using the appropriate StreamTester logic (MachXO3_IoT).
  */
-#define DAVIS_RPI_BENCHMARK 1
+#define DAVIS_RPI_BENCHMARK 0
 
 #define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (4 * 1000 * 1000)
 
