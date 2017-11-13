@@ -163,6 +163,9 @@ static bool initRPi(davisRPiHandle handle) {
 		return (false);
 	}
 
+	// Wait for CPLD to be up.
+	sleep(1);
+
 #if DAVIS_RPI_BENCHMARK == 0
 	// After CPLD reset, query logic version.
 	uint32_t param = 0;
