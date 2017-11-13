@@ -1440,8 +1440,8 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 			U32T(handle->info.logicClock)); // in cycles @ LogicClock
 	}
 
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_REQ_DELAY, 10); // in cycles @ LogicClock
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_ACK_DELAY, 10); // in cycles @ LogicClock
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_REQ_DELAY, 1); // in cycles @ LogicClock
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_ACK_DELAY, 1); // in cycles @ LogicClock
 
 	return (true);
 }

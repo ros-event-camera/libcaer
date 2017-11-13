@@ -67,8 +67,8 @@ int main(void) {
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!
-	davisHandle.configSet(DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_REQ_DELAY, 10); // in cycles @ LogicClock
-	davisHandle.configSet(DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_ACK_DELAY, 10); // in cycles @ LogicClock
+	davisHandle.configSet(DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_REQ_DELAY, 1); // in cycles @ LogicClock
+	davisHandle.configSet(DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_ACK_DELAY, 1); // in cycles @ LogicClock
 
 	// Now let's get start getting some data from the device. We just loop in blocking mode,
 	// no notification needed regarding new events. The shutdown notification, for example if
