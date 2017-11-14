@@ -1573,10 +1573,6 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 	davisRPiState state = &handle->state;
 
 	switch (modAddr) {
-		case CAER_HOST_CONFIG_USB:
-			// TODO: RPi support.
-			break;
-
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
 			return (dataExchangeConfigSet(&state->dataExchange, paramAddr, param));
 			break;
@@ -2010,10 +2006,6 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 	davisRPiState state = &handle->state;
 
 	switch (modAddr) {
-		case CAER_HOST_CONFIG_USB:
-			// TODO: RPi support.
-			break;
-
 		case CAER_HOST_CONFIG_DATAEXCHANGE:
 			return (dataExchangeConfigGet(&state->dataExchange, paramAddr, param));
 			break;
