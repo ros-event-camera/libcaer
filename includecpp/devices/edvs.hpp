@@ -18,6 +18,10 @@ public:
 	struct caer_edvs_info infoGet() const noexcept {
 		return (caerEDVSInfoGet(handle.get()));
 	}
+
+	std::string toString() const noexcept override {
+		return (infoGet().deviceString);
+	}
 };
 
 }

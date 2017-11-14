@@ -33,6 +33,10 @@ extern "C" {
  * generation devices. This is the preferred way to access cameras now.
  */
 #define CAER_DEVICE_DAVIS     4
+/**
+ * Device type definition for iniLabs Raspberry Pi-based DAVIS boards.
+ */
+#define CAER_DEVICE_DAVIS_RPI 6
 
 /**
  * DAVIS240A chip identifier.
@@ -177,6 +181,12 @@ extern "C" {
  * the USB chip, usually a Cypress FX2 or FX3.
  */
 #define DAVIS_CONFIG_USB      9
+/**
+ * Module address: device-side DDR-AER output configuration.
+ * The DDR-AER output module forwards the data from the device and the FPGA/CPLD to
+ * some external device using a 4-phase handshake with data on both flanks.
+ */
+#define DAVIS_CONFIG_DDRAER   9
 
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
@@ -1426,6 +1436,23 @@ extern "C" {
  * USB packet to the host).
  */
 #define DAVIS_CONFIG_USB_EARLY_PACKET_DELAY 1
+
+/**
+ * Parameter address for module DAVIS_CONFIG_DDRAER:
+ * enable the DDR-AER output module, which transfers the data from the
+ * FPGA/CPLD to some external device like a Raspberry Pi.
+ */
+#define DAVIS_CONFIG_DDRAER_RUN       0
+/**
+ * Parameter address for module DAVIS_CONFIG_DDRAER:
+ * delay the request by this many cycles after having output the data.
+ */
+#define DAVIS_CONFIG_DDRAER_REQ_DELAY 1
+/**
+ * Parameter address for module DAVIS_CONFIG_DDRAER:
+ * wait this many cycles after having received the acknowledge.
+ */
+#define DAVIS_CONFIG_DDRAER_ACK_DELAY 2
 
 //@{
 /**

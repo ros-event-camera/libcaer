@@ -1,10 +1,9 @@
-#ifndef LIBCAER_SRC_DAVIS_H_
-#define LIBCAER_SRC_DAVIS_H_
+#ifndef LIBCAER_SRC_DAVIS_RPI_H_
+#define LIBCAER_SRC_DAVIS_RPI_H_
 
 #include "devices/davis.h"
 #include "data_exchange.h"
 #include "container_generation.h"
-#include "usb_utils.h"
 #include "autoexposure.h"
 
 #define APS_READOUT_TYPES_NUM 2
@@ -31,39 +30,62 @@
 
 #define SPI_CONFIG_MSG_SIZE 6
 
-#define DAVIS_EVENT_TYPES 5
-#define DAVIS_SAMPLE_POSITION 4
+#define DAVIS_RPI_EVENT_TYPES 4
 
-#define DAVIS_POLARITY_DEFAULT_SIZE 4096
-#define DAVIS_SPECIAL_DEFAULT_SIZE 128
-#define DAVIS_FRAME_DEFAULT_SIZE 8
-#define DAVIS_IMU_DEFAULT_SIZE 64
-#define DAVIS_SAMPLE_DEFAULT_SIZE 512
+#define DAVIS_RPI_POLARITY_DEFAULT_SIZE 4096
+#define DAVIS_RPI_SPECIAL_DEFAULT_SIZE 128
+#define DAVIS_RPI_FRAME_DEFAULT_SIZE 8
+#define DAVIS_RPI_IMU_DEFAULT_SIZE 64
 
-#define DAVIS_DEVICE_NAME "DAVIS"
+#define DAVIS_RPI_DEVICE_NAME "DAVISRPi"
 
-#define DAVIS_FX2_DEVICE_PID 0x841B
-#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 9912
-#define DAVIS_FX2_REQUIRED_FIRMWARE_VERSION 4
-#define DAVIS_FX2_USB_CLOCK_FREQ 30
+#define DAVIS_RPI_REQUIRED_LOGIC_REVISION 9912
 
-#define DAVIS_FX3_DEVICE_PID 0x841A
-#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 9912
-#define DAVIS_FX3_REQUIRED_FIRMWARE_VERSION 4
-#define DAVIS_FX3_USB_CLOCK_FREQ 80
-#define DAVIS_FX3_CLOCK_FREQ_CORRECTION 1.008f
+#define DAVIS_RPI_MAX_TRANSACTION_NUM 4096
+#define DAVIS_RPI_MAX_WAIT_REQ_COUNT   100
 
-#define DEBUG_ENDPOINT 0x81
-#define DEBUG_TRANSFER_NUM 4
-#define DEBUG_TRANSFER_SIZE 64
+/**
+ * Support benchmarking the GPIO data exchange performance on RPi,
+ * using the appropriate StreamTester logic (MachXO3_IoT).
+ */
+#define DAVIS_RPI_BENCHMARK 0
 
-struct davis_state {
+#define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (4 * 1000 * 1000)
+
+enum benchmarkMode { ZEROS = 0, ONES = 1, COUNTER = 2, SWITCHING = 3, ALTERNATING = 4 };
+
+// Alternative, simplified biasing support.
+#define DAVIS_BIAS_ADDRESS_MAX 36
+#define DAVIS_CHIP_REG_LENGTH 7
+
+struct davis_rpi_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
 	struct data_exchange dataExchange;
-	// USB Device State
-	struct usb_state usbState;
+	// Data transfer via GPIO.
+	struct {
+		volatile uint32_t *gpioReg;
+		int spiFd;
+		mtx_t spiLock;
+		atomic_uint_fast32_t threadState;
+		thrd_t thread;
+		void (*shutdownCallback)(void *shutdownCallbackPtr);
+		void *shutdownCallbackPtr;
+	} gpio;
+#if DAVIS_RPI_BENCHMARK == 1
+	struct {
+		enum benchmarkMode testMode;
+		uint16_t expectedValue;
+		size_t dataCount;
+		size_t errorCount;
+		struct timespec startTime;
+	} benchmark;
+#endif
+	struct {
+		uint8_t currentBiasArray[DAVIS_BIAS_ADDRESS_MAX + 1][2];
+		uint8_t currentChipRegister[DAVIS_CHIP_REG_LENGTH];
+	} biasing;
 	// Timestamp fields
 	struct timestamps_state_new_logic timestamps;
 	struct {
@@ -135,12 +157,6 @@ struct davis_state {
 		// Current composite events, for later copy, to not loose them on commits.
 		struct caer_imu6_event currentEvent;
 	} imu;
-	struct {
-		// Microphone specific fields
-		bool isRight;
-		uint8_t count;
-		uint16_t tmpData;
-	} mic;
 	// Packet Container state
 	struct container_generation container;
 	struct {
@@ -156,51 +172,36 @@ struct davis_state {
 		// Special Packet state
 		caerSpecialEventPacket special;
 		int32_t specialPosition;
-		// Microphone Sample Packet state
-		caerSampleEventPacket sample;
-		int32_t samplePosition;
 	} currentPackets;
-	struct {
-		// Debug transfer support (FX3 only).
-		bool enabled;
-		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
-		atomic_uint_fast32_t activeDebugTransfers;
-	} fx3Support;
 };
 
-typedef struct davis_state *davisState;
+typedef struct davis_rpi_state *davisRPiState;
 
-struct davis_handle {
+struct davis_rpi_handle {
 	uint16_t deviceType;
 	// Information fields
 	struct caer_davis_info info;
-	// State for data management, common to all DAVIS.
-	struct davis_state state;
+	// State for data management, for DAVIS IOT version.
+	struct davis_rpi_state state;
 };
 
-typedef struct davis_handle *davisHandle;
+typedef struct davis_rpi_handle *davisRPiHandle;
 
-caerDeviceHandle davisOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+// busNumberRestrict, devAddressRestrict and serialNumberRestrict are ignored, only one device connected.
+caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
-caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
-caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
+bool davisRPiClose(caerDeviceHandle cdh);
 
-caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict);
-bool davisClose(caerDeviceHandle cdh);
-
-bool davisSendDefaultConfig(caerDeviceHandle cdh);
+bool davisRPiSendDefaultConfig(caerDeviceHandle cdh);
 // Negative addresses are used for host-side configuration.
 // Positive addresses (including zero) are used for device-side configuration.
-bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
-bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
+bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
+bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
-bool davisDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
+bool davisRPiDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr);
-bool davisDataStop(caerDeviceHandle handle);
-caerEventPacketContainer davisDataGet(caerDeviceHandle handle);
+bool davisRPiDataStop(caerDeviceHandle handle);
+caerEventPacketContainer davisRPiDataGet(caerDeviceHandle handle);
 
-#endif /* LIBCAER_SRC_DAVIS_H_ */
+#endif /* LIBCAER_SRC_DAVIS_RPI_H_ */

@@ -10,7 +10,6 @@
 #include "c11threads_posix.h"
 #endif
 
-#define MAX_THREAD_NAME_LENGTH 15
 #define MAX_SERIAL_NUMBER_LENGTH 8
 
 #define USB_DEFAULT_DEVICE_VID 0x152A
@@ -19,6 +18,8 @@
 
 #define VENDOR_REQUEST_FPGA_CONFIG          0xBF
 #define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
+
+enum { TRANS_STOPPED = 0, TRANS_RUNNING = 1 };
 
 struct usb_state {
 	// Per-device log-level (USB functions)
@@ -34,7 +35,7 @@ struct usb_state {
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
 	uint8_t dataEndPoint;
-	atomic_bool dataTransfersRun;
+	atomic_uint_fast32_t dataTransfersRun;
 	mtx_t dataTransfersLock;
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
@@ -110,14 +111,11 @@ static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *par
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
 
-static inline bool usbThreadIsRunning(usbState state) {
-	return (atomic_load(&state->usbThreadRun));
-}
 bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);
 
 static inline bool usbDataTransfersAreRunning(usbState state) {
-	return (atomic_load(&state->dataTransfersRun));
+	return (atomic_load(&state->dataTransfersRun) == TRANS_RUNNING);
 }
 bool usbDataTransfersStart(usbState state);
 void usbDataTransfersStop(usbState state);

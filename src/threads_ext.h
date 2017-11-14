@@ -25,6 +25,8 @@ extern "C" {
 	#include <sys/resource.h>
 #endif
 
+#define MAX_THREAD_NAME_LENGTH 15
+
 enum {
 	thrd_success = 0, thrd_error = 1, thrd_nomem = 2, thrd_timedout = 3, thrd_busy = 4,
 };

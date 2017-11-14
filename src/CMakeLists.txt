@@ -9,6 +9,11 @@ SET(LIBCAER_SRC_FILES
 	dvs128.c
 	davis.c
 	dynapse.c)
+	
+IF(OS_LINUX)
+	# Raspberry Pi support available only on Linux.
+	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} davis_rpi.c)
+ENDIF()
 
 IF (ENABLE_SERIALDEV)
 	# Add serial devices.

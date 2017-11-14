@@ -463,12 +463,12 @@ bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 static bool serialThreadStart(edvsHandle handle) {
 	// Start serial communication thread.
 	if ((errno = thrd_create(&handle->state.serialState.serialThread, &serialThreadRun, handle)) != thrd_success) {
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to create serial thread. Error: %d.", errno);
 		return (false);
 	}
 
-	// Wait for serial communication thread to be ready.
-	while (!atomic_load_explicit(&handle->state.serialState.serialThreadRun, memory_order_relaxed)) {
-		;
+	while (atomic_load(&handle->state.serialState.serialThreadState) == THR_IDLE) {
+		thrd_yield();
 	}
 
 	return (true);
@@ -476,7 +476,7 @@ static bool serialThreadStart(edvsHandle handle) {
 
 static void serialThreadStop(edvsHandle handle) {
 	// Shut down serial communication thread.
-	atomic_store(&handle->state.serialState.serialThreadRun, false);
+	atomic_store(&handle->state.serialState.serialThreadState, THR_EXITED);
 
 	// Wait for serial communication thread to terminate.
 	if ((errno = thrd_join(handle->state.serialState.serialThread, NULL)) != thrd_success) {
@@ -499,19 +499,19 @@ static int serialThreadRun(void *handlePtr) {
 	thrd_set_name(threadName);
 
 	// Signal data thread ready back to start function.
-	atomic_store(&state->serialState.serialThreadRun, true);
+	atomic_store(&state->serialState.serialThreadState, THR_RUNNING);
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Serial communication thread running.");
 
 	// Handle serial port reading (wait on data, 10 ms timeout).
-	while (atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
+	while (atomic_load_explicit(&state->serialState.serialThreadState, memory_order_relaxed) == THR_RUNNING) {
 		size_t readSize = atomic_load_explicit(&state->serialState.serialReadSize, memory_order_relaxed);
 
 		// Wait for at least 16 full events to be present in the buffer.
 		int bytesAvailable = 0;
 
 		while ((bytesAvailable < (16 * EDVS_EVENT_SIZE))
-			&& atomic_load_explicit(&state->serialState.serialThreadRun, memory_order_relaxed)) {
+			&& atomic_load_explicit(&state->serialState.serialThreadState, memory_order_relaxed) == THR_RUNNING) {
 			bytesAvailable = sp_input_waiting(state->serialState.serialPort);
 		}
 
@@ -539,7 +539,7 @@ static int serialThreadRun(void *handlePtr) {
 	}
 
 	// Ensure threadRun is false on termination.
-	atomic_store(&state->serialState.serialThreadRun, false);
+	atomic_store(&state->serialState.serialThreadState, THR_EXITED);
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Serial communication thread shut down.");
 
@@ -633,7 +633,7 @@ caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 	edvsHandle handle = (edvsHandle) cdh;
 	edvsState state = &handle->state;
 
-	return (dataExchangeGet(&state->dataExchange, &state->serialState.serialThreadRun));
+	return (dataExchangeGet(&state->dataExchange, &state->serialState.serialThreadState));
 }
 
 #define TS_WRAP_ADD 0x10000
@@ -648,7 +648,7 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
 	// then any subsequent buffers should also detect shut-down and not be handled.
-	if (!atomic_load(&state->serialState.serialThreadRun)) {
+	if (atomic_load(&state->serialState.serialThreadState) != THR_RUNNING) {
 		return;
 	}
 
@@ -863,7 +863,7 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
-				state->timestamps.current, &state->dataExchange, &state->serialState.serialThreadRun,
+				state->timestamps.current, &state->dataExchange, &state->serialState.serialThreadState,
 				handle->info.deviceID, handle->info.deviceString, &handle->state.deviceLogLevel);
 		}
 

@@ -23,6 +23,10 @@ public:
 	struct caer_dvs128_info infoGet() const noexcept {
 		return (caerDVS128InfoGet(handle.get()));
 	}
+
+	std::string toString() const noexcept override {
+		return (infoGet().deviceString);
+	}
 };
 
 }

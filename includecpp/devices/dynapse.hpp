@@ -24,24 +24,34 @@ public:
 		return (caerDynapseInfoGet(handle.get()));
 	}
 
+	std::string toString() const noexcept override {
+		return (infoGet().deviceString);
+	}
+
 	void sendDataToUSB(const uint32_t *data, size_t numConfig) const {
 		bool success = caerDynapseSendDataToUSB(handle.get(), data, numConfig);
 		if (!success) {
-			throw std::runtime_error("Failed to send USB config data to device.");
+			std::string exc = toString() + ": failed to send USB config data to device, numConfig="
+				+ std::to_string(numConfig) + ".";
+			throw std::runtime_error(exc);
 		}
 	}
 
 	void writeSramWords(const uint16_t *data, uint32_t baseAddr, size_t numWords) const {
 		bool success = caerDynapseWriteSramWords(handle.get(), data, baseAddr, numWords);
 		if (!success) {
-			throw std::runtime_error("Failed to write SRAM words to FPGA SRAM.");
+			std::string exc = toString() + ": failed to write SRAM words to FPGA SRAM, baseAddr="
+				+ std::to_string(baseAddr) + ", numWords=" + std::to_string(numWords) + ".";
+			throw std::runtime_error(exc);
 		}
 	}
 
 	void writePoissonSpikeRate(uint16_t neuronAddr, float rateHz) const {
 		bool success = caerDynapseWritePoissonSpikeRate(handle.get(), neuronAddr, rateHz);
 		if (!success) {
-			throw std::runtime_error("Failed to write Poisson Spike Rate.");
+			std::string exc = toString() + ": failed to write Poisson Spike Rate, rateHz=" + std::to_string(rateHz)
+				+ ".";
+			throw std::runtime_error(exc);
 		}
 	}
 
@@ -51,7 +61,11 @@ public:
 		bool success = caerDynapseWriteSram(handle.get(), coreId, neuronAddrCore, virtualCoreId, sx, dx, sy, dy, sramId,
 			destinationCore);
 		if (!success) {
-			throw std::runtime_error("Failed to write on-chip SRAM.");
+			std::string exc = toString() + ": failed to write on-chip SRAM, coreId=" + std::to_string(coreId)
+				+ ", neuronAddrCore=" + std::to_string(neuronAddrCore) + +", sramId=" + std::to_string(sramId)
+				+ ", virtualCoreId=" + std::to_string(virtualCoreId) + ", destinationCore="
+				+ std::to_string(destinationCore) + ".";
+			throw std::runtime_error(exc);
 		}
 	}
 
@@ -60,14 +74,20 @@ public:
 		bool success = caerDynapseWriteSramN(handle.get(), neuronAddr, sramId, virtualCoreId, sx, dx, sy, dy,
 			destinationCore);
 		if (!success) {
-			throw std::runtime_error("Failed to write on-chip SRAM.");
+			std::string exc = toString() + ": failed to write on-chip SRAM, neuronAddr=" + std::to_string(neuronAddr)
+				+ ", sramId=" + std::to_string(sramId) + ", virtualCoreId=" + std::to_string(virtualCoreId)
+				+ ", destinationCore=" + std::to_string(destinationCore) + ".";
+			throw std::runtime_error(exc);
 		}
 	}
 
 	void writeCam(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType) const {
 		bool success = caerDynapseWriteCam(handle.get(), inputNeuronAddr, neuronAddr, camId, synapseType);
 		if (!success) {
-			throw std::runtime_error("Failed to write on-chip CAM.");
+			std::string exc = toString() + ": failed to write on-chip CAM, inputNeuronAddr="
+				+ std::to_string(inputNeuronAddr) + ", neuronAddr=" + std::to_string(neuronAddr) + ", camId="
+				+ std::to_string(camId) + ", synapseType=" + std::to_string(synapseType) + ".";
+			throw std::runtime_error(exc);
 		}
 	}
 

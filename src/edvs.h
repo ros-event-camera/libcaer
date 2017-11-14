@@ -11,8 +11,6 @@
 #include "c11threads_posix.h"
 #endif
 
-#define MAX_THREAD_NAME_LENGTH 15
-
 #define EDVS_DEVICE_NAME "eDVS4337"
 
 #define EDVS_ARRAY_SIZE_X 128
@@ -33,7 +31,7 @@ struct serial_state {
 	mtx_t serialWriteLock;
 	// Serial thread state
 	thrd_t serialThread;
-	atomic_bool serialThreadRun;
+	atomic_uint_fast32_t serialThreadState;
 	// Serial Data Transfers
 	atomic_uint_fast32_t serialReadSize;
 	// Serial Data Transfers shutdown callback
