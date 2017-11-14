@@ -66,7 +66,6 @@ struct davis_rpi_state {
 	// Data transfer via GPIO.
 	struct {
 		volatile uint32_t *gpioReg;
-		volatile uint32_t *gpclkReg;
 		int spiFd;
 		mtx_t spiLock;
 		atomic_uint_fast32_t threadState;

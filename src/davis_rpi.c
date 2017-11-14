@@ -10,8 +10,6 @@
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
 #define GPIO_REG_LEN  0xB4
-#define CLK_REG_BASE  (PIZERO_PERI_BASE + 0x101000) /* GPCLK controller */
-#define CLK_REG_LEN   0xA8
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
 #define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId)/10] &= U32T(~(7 << (((gpioId)%10)*3)))
@@ -23,28 +21,9 @@
 
 #define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
 
-#define CLK_GP0_CTL 28
-#define CLK_GP0_DIV 29
-
-#define CLK_PASSWD  (0x5A << 24)
-
-#define CLK_CTL_MASH(x) ((x) << 9)
-#define CLK_CTL_BUSY      (1 << 7)
-#define CLK_CTL_KILL      (1 << 5)
-#define CLK_CTL_ENAB      (1 << 4)
-#define CLK_CTL_SRC(x)  ((x) << 0)
-
-#define CLK_CTL_SRC_OSC  1  /* 19.2 MHz oscillator */
-#define CLK_CTL_SRC_PLLD 6  /*  500 MHz PLL */
-
-#define CLK_DIV_DIVI(x) ((x) << 12)
-#define CLK_DIV_DIVF(x) ((x) <<  0)
-
 #define SPI_DEVICE0_CS0 "/dev/spidev0.0"
 #define SPI_BITS_PER_WORD 8
 #define SPI_SPEED_HZ (8 * 1000 * 1000)
-
-#define GPIO_CPLD_RESET 2
 
 #define GPIO_AER_REQ 5
 #define GPIO_AER_ACK 3
@@ -75,78 +54,27 @@ static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode);
 static void shutdownGPIOTest(davisRPiHandle handle);
 #endif
 
-static inline void killGPCLK0(davisRPiState state) {
-	state->gpio.gpclkReg[CLK_GP0_CTL] = CLK_PASSWD | CLK_CTL_KILL; // Disable current clock.
-	usleep(10);
-
-	while (state->gpio.gpclkReg[CLK_GP0_CTL] & CLK_CTL_BUSY) {
-		usleep(10); // Wait for clock to stop.
-	}
-}
-
 static bool initRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
 
 	// Ensure global FDs are always uninitialized.
 	state->gpio.spiFd = -1;
 
-	int devMemFd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (devMemFd < 0) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open '/dev/mem'. Are you running as root?");
+	int devGpioMemFd = open("/dev/gpiomem", O_RDWR | O_SYNC);
+	if (devGpioMemFd < 0) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open '/dev/gpiomem'.");
 		return (false);
 	}
 
-	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
-	GPIO_REG_BASE);
+	state->gpio.gpioReg = mmap(NULL, GPIO_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devGpioMemFd,
+		GPIO_REG_BASE);
 
-	state->gpio.gpclkReg = mmap(NULL, CLK_REG_LEN, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_LOCKED, devMemFd,
-	CLK_REG_BASE);
+	close(devGpioMemFd);
 
-	close(devMemFd);
-
-	if ((state->gpio.gpioReg == MAP_FAILED) || (state->gpio.gpclkReg == MAP_FAILED)) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to map memory regions.");
+	if (state->gpio.gpioReg == MAP_FAILED) {
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to map GPIO memory region.");
 		return (false);
 	}
-
-	// Configure GPCLK0 clock source, use PLLD to have 20MHz output.
-	killGPCLK0(state);
-	state->gpio.gpclkReg[CLK_GP0_DIV] = (CLK_PASSWD | CLK_DIV_DIVI(25) | CLK_DIV_DIVF(0)); // Only integer division.
-	usleep(10);
-	state->gpio.gpclkReg[CLK_GP0_CTL] = (CLK_PASSWD | CLK_CTL_MASH(0) | CLK_CTL_SRC(CLK_CTL_SRC_PLLD)); // Disable MASH.
-	usleep(10);
-	state->gpio.gpclkReg[CLK_GP0_CTL] |= (CLK_PASSWD | CLK_CTL_ENAB); // Enable new clock.
-	usleep(10);
-
-	// GPIO4: GPCLK0 set to oscillator (most precise clock source).
-	GPIO_INP(state->gpio.gpioReg, 4);
-	GPIO_ALT(state->gpio.gpioReg, 4, 0); // ALT0 function: GPCLK0.
-
-	// GPIOs for DDR-AER communication: set to default state.
-	for (size_t i = 12; i <= 27; i++) {
-		// GPIO 12-27 are 16 bit data input.
-		GPIO_INP(state->gpio.gpioReg, i);
-	}
-
-	// Five control GPIOs: 2,3,5,6,7.
-	GPIO_INP(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD.
-	GPIO_INP(state->gpio.gpioReg, GPIO_AER_ACK); // DDR-AER Acknowledge.
-	GPIO_INP(state->gpio.gpioReg, GPIO_AER_REQ); // DDR-AER Request.
-	GPIO_INP(state->gpio.gpioReg, 6); // Unused.
-	GPIO_INP(state->gpio.gpioReg, 7); // Unused.
-
-	GPIO_OUT(state->gpio.gpioReg, GPIO_CPLD_RESET); // Reset CPLD is output.
-	GPIO_CLR(state->gpio.gpioReg, GPIO_CPLD_RESET); // Default to LOW (to then pulse reset).
-
-	GPIO_OUT(state->gpio.gpioReg, GPIO_AER_ACK); // DDR-AER Acknowledge is output.
-	GPIO_SET(state->gpio.gpioReg, GPIO_AER_ACK); // Default to HIGH (AER active-low).
-
-	// Reset CPLD for 10µs.
-	usleep(10);
-	GPIO_SET(state->gpio.gpioReg, GPIO_CPLD_RESET);
-	usleep(10);
-	GPIO_CLR(state->gpio.gpioReg, GPIO_CPLD_RESET);
-	usleep(10);
 
 	// Setup SPI. Upload done by separate tool, at boot.
 	if (!spiInit(state)) {
@@ -162,9 +90,6 @@ static bool initRPi(davisRPiHandle handle) {
 		closeRPi(handle);
 		return (false);
 	}
-
-	// Wait for CPLD to be up.
-	sleep(1);
 
 #if DAVIS_RPI_BENCHMARK == 0
 	// After CPLD reset, query logic version.
@@ -191,12 +116,8 @@ static void closeRPi(davisRPiHandle handle) {
 	// SPI lock mutex destroyed in main exit.
 	spiClose(state);
 
-	// Disable GPCLK0.
-	killGPCLK0(state);
-
-	// Unmap memory regions.
+	// Unmap GPIO memory region.
 	munmap((void *) state->gpio.gpioReg, GPIO_REG_LEN);
-	munmap((void *) state->gpio.gpclkReg, CLK_REG_LEN);
 }
 
 static int gpioThreadRun(void *handlePtr) {
@@ -1473,8 +1394,6 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	{ .voltageValue = VOLT, .currentValue = CURR }
 
 static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh) {
-	davisRPiHandle handle = (davisRPiHandle) cdh;
-
 	// Default bias configuration.
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL, caerBiasVDACGenerate(VDAC(27, 6)));
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 6)));
