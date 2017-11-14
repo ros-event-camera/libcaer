@@ -567,11 +567,6 @@ static bool handleChipBiasSend(davisRPiState state, uint8_t paramAddr, uint32_t 
 				break;
 
 			case 143: // SelectGrayCounter
-				state->biasing.currentChipRegister[3] = setBitInByte(state->biasing.currentChipRegister[3], 0,
-					(U8T(param) & 0x01));
-				break;
-
-			case 144: // TestADC
 				state->biasing.currentChipRegister[2] = setBitInByte(state->biasing.currentChipRegister[2], 7,
 					(U8T(param) & 0x01));
 				break;
@@ -687,10 +682,6 @@ static bool handleChipBiasReceive(davisRPiState state, uint8_t paramAddr, uint32
 
 			case 143: // SelectGrayCounter
 				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[2], 7);
-				break;
-
-			case 144: // TestADC
-				*param |= (uint8_t) getBitInByte(state->biasing.currentChipRegister[3], 0);
 				break;
 
 			default:
@@ -1485,62 +1476,56 @@ static bool davisRPiSendDefaultChipConfig(caerDeviceHandle cdh) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 
 	// Default bias configuration.
-	if (IS_DAVIS128(handle->info.chipID)) {
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL,
-			caerBiasVDACGenerate(VDAC(27, 6)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 6)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(32, 7)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(1, 7)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL, caerBiasVDACGenerate(VDAC(27, 6)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 6)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(32, 7)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(1, 7)));
 
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_LOCALBUFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 164)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PADFOLLBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(7, 215)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_DIFFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 39)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ONBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRSFBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(1, 16)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_REFRBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(4, 25)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_READOUTBUFBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(6, 20)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSROSFBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(6, 219)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCCOMPBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(5, 20)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_COLSELLOWBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(0, 1)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_DACBUFBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(6, 60)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 49)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPDBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(6, 91)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPUXBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(4, 80)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPUYBP,
-			caerBiasCoarseFineGenerate(CF_P_TYPE(7, 152)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_IFREFRBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_IFTHRBN,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_LOCALBUFBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 164)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PADFOLLBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(7, 215)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_DIFFBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(4, 39)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ONBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRSFBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(1, 16)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_REFRBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(4, 25)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_READOUTBUFBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(6, 20)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_APSROSFBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(6, 219)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ADCCOMPBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(5, 20)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_COLSELLOWBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(0, 1)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_DACBUFBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(6, 60)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 49)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPDBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(6, 91)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPUXBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(4, 80)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_AEPUYBP,
+		caerBiasCoarseFineGenerate(CF_P_TYPE(7, 152)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_IFREFRBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_IFTHRBN,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
 
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_BIASBUFFER,
-			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 254)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_BIASBUFFER,
+		caerBiasCoarseFineGenerate(CF_N_TYPE(5, 254)));
 
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_SSP,
-			caerBiasShiftedSourceGenerate(SHIFTSOURCE(1, 33, SHIFTED_SOURCE)));
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_SSN,
-			caerBiasShiftedSourceGenerate(SHIFTSOURCE(1, 33, SHIFTED_SOURCE)));
-	}
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_SSP,
+		caerBiasShiftedSourceGenerate(SHIFTSOURCE(1, 33, SHIFTED_SOURCE)));
+	davisRPiConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_SSN,
+		caerBiasShiftedSourceGenerate(SHIFTSOURCE(1, 33, SHIFTED_SOURCE)));
 
 	// Default chip configuration.
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVIS128_CONFIG_CHIP_DIGITALMUX0, 0);
@@ -1883,44 +1868,42 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
-				if (IS_DAVIS128(handle->info.chipID)) {
-					// All new DAVISes use the new bias generator with 37 branches.
-					switch (paramAddr) {
-						// Same and shared between all of the above chips.
-						case DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL:
-						case DAVIS128_CONFIG_BIAS_APSCAS:
-						case DAVIS128_CONFIG_BIAS_ADCREFHIGH:
-						case DAVIS128_CONFIG_BIAS_ADCREFLOW:
-						case DAVIS128_CONFIG_BIAS_LOCALBUFBN:
-						case DAVIS128_CONFIG_BIAS_PADFOLLBN:
-						case DAVIS128_CONFIG_BIAS_DIFFBN:
-						case DAVIS128_CONFIG_BIAS_ONBN:
-						case DAVIS128_CONFIG_BIAS_OFFBN:
-						case DAVIS128_CONFIG_BIAS_PIXINVBN:
-						case DAVIS128_CONFIG_BIAS_PRBP:
-						case DAVIS128_CONFIG_BIAS_PRSFBP:
-						case DAVIS128_CONFIG_BIAS_REFRBP:
-						case DAVIS128_CONFIG_BIAS_READOUTBUFBP:
-						case DAVIS128_CONFIG_BIAS_APSROSFBN:
-						case DAVIS128_CONFIG_BIAS_ADCCOMPBP:
-						case DAVIS128_CONFIG_BIAS_COLSELLOWBN:
-						case DAVIS128_CONFIG_BIAS_DACBUFBP:
-						case DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN:
-						case DAVIS128_CONFIG_BIAS_AEPDBN:
-						case DAVIS128_CONFIG_BIAS_AEPUXBP:
-						case DAVIS128_CONFIG_BIAS_AEPUYBP:
-						case DAVIS128_CONFIG_BIAS_IFREFRBN:
-						case DAVIS128_CONFIG_BIAS_IFTHRBN:
-						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
-						case DAVIS128_CONFIG_BIAS_SSP:
-						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigSend(state, DAVIS_CONFIG_BIAS, paramAddr, param));
-							break;
+				// All new DAVISes use the new bias generator with 37 branches.
+				switch (paramAddr) {
+					// Same and shared between all of the above chips.
+					case DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL:
+					case DAVIS128_CONFIG_BIAS_APSCAS:
+					case DAVIS128_CONFIG_BIAS_ADCREFHIGH:
+					case DAVIS128_CONFIG_BIAS_ADCREFLOW:
+					case DAVIS128_CONFIG_BIAS_LOCALBUFBN:
+					case DAVIS128_CONFIG_BIAS_PADFOLLBN:
+					case DAVIS128_CONFIG_BIAS_DIFFBN:
+					case DAVIS128_CONFIG_BIAS_ONBN:
+					case DAVIS128_CONFIG_BIAS_OFFBN:
+					case DAVIS128_CONFIG_BIAS_PIXINVBN:
+					case DAVIS128_CONFIG_BIAS_PRBP:
+					case DAVIS128_CONFIG_BIAS_PRSFBP:
+					case DAVIS128_CONFIG_BIAS_REFRBP:
+					case DAVIS128_CONFIG_BIAS_READOUTBUFBP:
+					case DAVIS128_CONFIG_BIAS_APSROSFBN:
+					case DAVIS128_CONFIG_BIAS_ADCCOMPBP:
+					case DAVIS128_CONFIG_BIAS_COLSELLOWBN:
+					case DAVIS128_CONFIG_BIAS_DACBUFBP:
+					case DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN:
+					case DAVIS128_CONFIG_BIAS_AEPDBN:
+					case DAVIS128_CONFIG_BIAS_AEPUXBP:
+					case DAVIS128_CONFIG_BIAS_AEPUYBP:
+					case DAVIS128_CONFIG_BIAS_IFREFRBN:
+					case DAVIS128_CONFIG_BIAS_IFTHRBN:
+					case DAVIS128_CONFIG_BIAS_BIASBUFFER:
+					case DAVIS128_CONFIG_BIAS_SSP:
+					case DAVIS128_CONFIG_BIAS_SSN:
+						return (spiConfigSend(state, DAVIS_CONFIG_BIAS, paramAddr, param));
+						break;
 
-						default:
-							return (false);
-							break;
-					}
+					default:
+						return (false);
+						break;
 				}
 			}
 			else {
@@ -1940,6 +1923,7 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
+					case DAVIS128_CONFIG_CHIP_SELECTGRAYCOUNTER:
 						return (spiConfigSend(state, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
@@ -1952,15 +1936,6 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 								return (false);
 							}
 
-							return (spiConfigSend(state, DAVIS_CONFIG_CHIP, paramAddr, param));
-						}
-						break;
-
-					case DAVIS128_CONFIG_CHIP_SELECTGRAYCOUNTER:
-						// Only supported by the new DAVIS chips.
-						if (IS_DAVIS128(
-							handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
-							|| IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
 							return (spiConfigSend(state, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
@@ -2365,44 +2340,42 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
-				if (IS_DAVIS128(handle->info.chipID)) {
-					// All new DAVISes use the new bias generator with 37 branches.
-					switch (paramAddr) {
-						// Same and shared between all of the above chips.
-						case DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL:
-						case DAVIS128_CONFIG_BIAS_APSCAS:
-						case DAVIS128_CONFIG_BIAS_ADCREFHIGH:
-						case DAVIS128_CONFIG_BIAS_ADCREFLOW:
-						case DAVIS128_CONFIG_BIAS_LOCALBUFBN:
-						case DAVIS128_CONFIG_BIAS_PADFOLLBN:
-						case DAVIS128_CONFIG_BIAS_DIFFBN:
-						case DAVIS128_CONFIG_BIAS_ONBN:
-						case DAVIS128_CONFIG_BIAS_OFFBN:
-						case DAVIS128_CONFIG_BIAS_PIXINVBN:
-						case DAVIS128_CONFIG_BIAS_PRBP:
-						case DAVIS128_CONFIG_BIAS_PRSFBP:
-						case DAVIS128_CONFIG_BIAS_REFRBP:
-						case DAVIS128_CONFIG_BIAS_READOUTBUFBP:
-						case DAVIS128_CONFIG_BIAS_APSROSFBN:
-						case DAVIS128_CONFIG_BIAS_ADCCOMPBP:
-						case DAVIS128_CONFIG_BIAS_COLSELLOWBN:
-						case DAVIS128_CONFIG_BIAS_DACBUFBP:
-						case DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN:
-						case DAVIS128_CONFIG_BIAS_AEPDBN:
-						case DAVIS128_CONFIG_BIAS_AEPUXBP:
-						case DAVIS128_CONFIG_BIAS_AEPUYBP:
-						case DAVIS128_CONFIG_BIAS_IFREFRBN:
-						case DAVIS128_CONFIG_BIAS_IFTHRBN:
-						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
-						case DAVIS128_CONFIG_BIAS_SSP:
-						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigReceive(state, DAVIS_CONFIG_BIAS, paramAddr, param));
-							break;
+				// All new DAVISes use the new bias generator with 37 branches.
+				switch (paramAddr) {
+					// Same and shared between all of the above chips.
+					case DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL:
+					case DAVIS128_CONFIG_BIAS_APSCAS:
+					case DAVIS128_CONFIG_BIAS_ADCREFHIGH:
+					case DAVIS128_CONFIG_BIAS_ADCREFLOW:
+					case DAVIS128_CONFIG_BIAS_LOCALBUFBN:
+					case DAVIS128_CONFIG_BIAS_PADFOLLBN:
+					case DAVIS128_CONFIG_BIAS_DIFFBN:
+					case DAVIS128_CONFIG_BIAS_ONBN:
+					case DAVIS128_CONFIG_BIAS_OFFBN:
+					case DAVIS128_CONFIG_BIAS_PIXINVBN:
+					case DAVIS128_CONFIG_BIAS_PRBP:
+					case DAVIS128_CONFIG_BIAS_PRSFBP:
+					case DAVIS128_CONFIG_BIAS_REFRBP:
+					case DAVIS128_CONFIG_BIAS_READOUTBUFBP:
+					case DAVIS128_CONFIG_BIAS_APSROSFBN:
+					case DAVIS128_CONFIG_BIAS_ADCCOMPBP:
+					case DAVIS128_CONFIG_BIAS_COLSELLOWBN:
+					case DAVIS128_CONFIG_BIAS_DACBUFBP:
+					case DAVIS128_CONFIG_BIAS_LCOLTIMEOUTBN:
+					case DAVIS128_CONFIG_BIAS_AEPDBN:
+					case DAVIS128_CONFIG_BIAS_AEPUXBP:
+					case DAVIS128_CONFIG_BIAS_AEPUYBP:
+					case DAVIS128_CONFIG_BIAS_IFREFRBN:
+					case DAVIS128_CONFIG_BIAS_IFTHRBN:
+					case DAVIS128_CONFIG_BIAS_BIASBUFFER:
+					case DAVIS128_CONFIG_BIAS_SSP:
+					case DAVIS128_CONFIG_BIAS_SSN:
+						return (spiConfigReceive(state, DAVIS_CONFIG_BIAS, paramAddr, param));
+						break;
 
-						default:
-							return (false);
-							break;
-					}
+					default:
+						return (false);
+						break;
 				}
 			}
 			else {
@@ -2422,21 +2395,13 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
+					case DAVIS128_CONFIG_CHIP_SELECTGRAYCOUNTER:
 						return (spiConfigReceive(state, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER:
 						// Only supported by some chips.
 						if (handle->info.apsHasGlobalShutter) {
-							return (spiConfigReceive(state, DAVIS_CONFIG_CHIP, paramAddr, param));
-						}
-						break;
-
-					case DAVIS128_CONFIG_CHIP_SELECTGRAYCOUNTER:
-						// Only supported by the new DAVIS chips.
-						if (IS_DAVIS128(
-							handle->info.chipID) || IS_DAVIS208(handle->info.chipID) || IS_DAVIS346(handle->info.chipID)
-							|| IS_DAVIS640(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
 							return (spiConfigReceive(state, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
