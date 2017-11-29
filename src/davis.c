@@ -1036,12 +1036,12 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 				caerBiasCoarseFineGenerate(CF_P_TYPE(2, 3)));
 			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640_CONFIG_BIAS_PRSFBP,
 				caerBiasCoarseFineGenerate(CF_P_TYPE(1, 1)));
-			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_ONBN,
+			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640_CONFIG_BIAS_ONBN,
 				caerBiasCoarseFineGenerate(CF_N_TYPE(5, 155)));
-			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN,
+			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640_CONFIG_BIAS_OFFBN,
 				caerBiasCoarseFineGenerate(CF_N_TYPE(1, 4)));
 
-			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_BIASBUFFER,
+			davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640_CONFIG_BIAS_BIASBUFFER,
 				caerBiasCoarseFineGenerate(CF_N_TYPE(6, 125)));
 		}
 	}
