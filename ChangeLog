@@ -1,4 +1,4 @@
-Release 2.4.0 - 05.09.2017
+Release 2.4.0 - 05.12.2017
 INCOMPATIBLE CHANGES
 - DAVIS: require new firmware version 4 and logic version 9912.
 - Dynap-SE: require new logic version 5.
@@ -42,6 +42,7 @@ NEW FEATURES
   https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
 - Python bindings: added bindings for Python 2/3 using SWIG. See
   bindings/python_swig/ and bindings/python_swig/examples/ for examples.
+  NOTE: this needs a patched Swig, see 'https://github.com/swig/swig/pull/1166'.
 - CMake: added support for generating RPM/DEB files via CPack, to
   easily be able to package one's own build.
 - DAVIS/Dynap-SE: added support for AER and Multiplexer statistics, to
@@ -98,6 +99,9 @@ NEW FEATURES
   between host and device. Only enabled in debug builds.
 - src/davis.h: improved APS_DEBUG_FRAME support, now splits signal and
   reset read for debugging over all ROI regions.
+- New device: support for upcoming DAVIS128 Raspberry-Pi integration.
+- events/matrix4x4.h: new event type for 4x4 Matrices.
+- C++ support: added toString() for devices.
 
 BUG FIXES
 - devices/dynapse.h: major API documentation cleanup.
@@ -118,6 +122,8 @@ BUG FIXES
 - src/usb_utils.c: fixed shutdown callback not being called on MacOS X.
   Also fixed possible dead-lock on USB transfer re-submit on Windows.
   This fixes issue #32.
+- src/date_exchange.h: prevent possible dead-lock inside dataExchangeGet(),
+  if signals are delivered always while not sleeping.
 - portable_endian.h, portable_time.h: fixed stand-alone compilation.
 - Fixed many code quality warnings by Sonarcloud.
 - Travis-CI: fixed automatic test build issues on MacOS X.
