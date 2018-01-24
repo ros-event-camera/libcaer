@@ -57,10 +57,10 @@ class DAVIS:
 
     def read_events(self):
         """ A simple function that reads events from DAVIS sensors: polarity, frame, imu, special"""
-        polarity = []
-        frame = []
-        imu = []
-        special = []
+        polarity = None
+        frame = None
+        imu = None
+        special = None
 
         packetContainer = libcaer.caerDeviceDataGet(self.handle)
 
@@ -80,27 +80,37 @@ class DAVIS:
                     # loop over all polarity events
                     polarityPacket = libcaer.caerPolarityEventPacketFromPacketHeaderConst(packetHeader)
 
+                    polarity_ts = numpy.empty(eventNum, dtype=numpy.int32)
+                    polarity_x = numpy.empty(eventNum, dtype=numpy.uint16)
+                    polarity_y = numpy.empty(eventNum, dtype=numpy.uint16)
+                    polarity_pol = numpy.empty(eventNum, dtype=numpy.bool)
+
                     for e in range(eventNum):
                         polarityEvent = libcaer.caerPolarityEventPacketGetEventConst(polarityPacket, e)
 
-                        polarity_ts = libcaer.caerPolarityEventGetTimestamp(polarityEvent)
-                        polarity_x = libcaer.caerPolarityEventGetX(polarityEvent)
-                        polarity_y = libcaer.caerPolarityEventGetY(polarityEvent)
-                        polarity_pol = libcaer.caerPolarityEventGetPolarity(polarityEvent)
+                        polarity_ts[e] = libcaer.caerPolarityEventGetTimestamp(polarityEvent)
+                        polarity_x[e] = libcaer.caerPolarityEventGetX(polarityEvent)
+                        polarity_y[e] = libcaer.caerPolarityEventGetY(polarityEvent)
+                        polarity_pol[e] = libcaer.caerPolarityEventGetPolarity(polarityEvent)
 
-                        polarity.append((polarity_ts, polarity_x, polarity_y, polarity_pol))
+                    polarity = (polarity_ts, polarity_x, polarity_y, polarity_pol)
 
                 elif packetType == libcaer.SPECIAL_EVENT:
                     # loop over all special events
                     specialPacket = libcaer.caerSpecialEventPacketFromPacketHeaderConst(packetHeader)
 
+                    special_ts = numpy.empty(eventNum, dtype=numpy.int32)
+                    special_type = numpy.empty(eventNum, dtype=numpy.uint8)
+                    special_data = numpy.empty(eventNum, dtype=numpy.uint32)
+
                     for e in range(eventNum):
                         specialEvent = libcaer.caerSpecialEventPacketGetEventConst(specialPacket, e)
 
-                        special_ts = libcaer.caerSpecialEventGetTimestamp(specialEvent)
-                        special_type = libcaer.caerSpecialEventGetType(specialEvent)
+                        special_ts[e] = libcaer.caerSpecialEventGetTimestamp(specialEvent)
+                        special_type[e] = libcaer.caerSpecialEventGetType(specialEvent)
+                        special_data[e] = libcaer.caerSpecialEventGetData(specialEvent)
 
-                        special.append((special_ts, special_type))
+                    special = (special_ts, special_type, special_data)
 
                 elif packetType == libcaer.FRAME_EVENT:
                     # only get first frame event in packet
@@ -108,7 +118,7 @@ class DAVIS:
 
                     frameEvent = libcaer.caerFrameEventPacketGetEventConst(framePacket, 0)
 
-                    frame_numpy = numpy.zeros((self.apsSizeY, self.apsSizeX), dtype=numpy.uint16)
+                    frame_numpy = numpy.empty((self.apsSizeY, self.apsSizeX), dtype=numpy.uint16)
 
                     # read pixels values
                     for y in range(libcaer.caerFrameEventGetLengthY(frameEvent)):
@@ -117,28 +127,30 @@ class DAVIS:
 
                     frame_ts = libcaer.caerFrameEventGetTimestamp(frameEvent)
 
-                    frame.append((frame_ts, frame_numpy))
+                    frame = (frame_ts, frame_numpy)
 
                 elif packetType == libcaer.IMU6_EVENT:
                     # loop over all IMU 6-axis events
                     imuPacket = libcaer.caerIMU6EventPacketFromPacketHeaderConst(packetHeader)
 
+                    imu_ts = numpy.empty(eventNum, dtype=numpy.int32)
+                    imu_acc = numpy.empty((eventNum, 3), dtype=numpy.float32)
+                    imu_gyro = numpy.empty((eventNum, 3), dtype=numpy.float32)
+                    imu_temp = numpy.empty(eventNum, dtype=numpy.float32)
+
                     for e in range(eventNum):
                         imuEvent = libcaer.caerIMU6EventPacketGetEventConst(imuPacket, e)
 
-                        x_acc = libcaer.caerIMU6EventGetAccelX(imuEvent)
-                        y_acc = libcaer.caerIMU6EventGetAccelY(imuEvent)
-                        z_acc = libcaer.caerIMU6EventGetAccelZ(imuEvent)
-                        x_gyro = libcaer.caerIMU6EventGetGyroX(imuEvent)
-                        y_gyro = libcaer.caerIMU6EventGetGyroY(imuEvent)
-                        z_gyro = libcaer.caerIMU6EventGetGyroZ(imuEvent)
+                        imu_ts[e] = libcaer.caerIMU6EventGetTimestamp(imuEvent)
+                        imu_acc[e, 0] = libcaer.caerIMU6EventGetAccelX(imuEvent)
+                        imu_acc[e, 1] = libcaer.caerIMU6EventGetAccelY(imuEvent)
+                        imu_acc[e, 2] = libcaer.caerIMU6EventGetAccelZ(imuEvent)
+                        imu_gyro[e, 0] = libcaer.caerIMU6EventGetGyroX(imuEvent)
+                        imu_gyro[e, 1] = libcaer.caerIMU6EventGetGyroY(imuEvent)
+                        imu_gyro[e, 2] = libcaer.caerIMU6EventGetGyroZ(imuEvent)
+                        imu_temp[e] = libcaer.caerIMU6EventGetTemp(imuEvent)
 
-                        imu_ts = libcaer.caerIMU6EventGetTimestamp(imuEvent)
-                        imu_acc = (x_acc, y_acc, z_acc)
-                        imu_gyro = (x_gyro, y_gyro, z_gyro)
-                        imu_temp = libcaer.caerIMU6EventGetTemp(imuEvent)
-
-                        imu.append((imu_ts, imu_acc, imu_gyro, imu_temp))
+                    imu = (imu_ts, imu_acc, imu_gyro, imu_temp)
 
         return polarity, frame, imu, special
 
@@ -152,20 +164,24 @@ if __name__ == "__main__":
 
             # if there are polarity events, accumulate them into a numpy array
             # and display it (black/white coding)
-            if len(polarity) > 0:
+            if polarity != None:
+                (polarity_ts, polarity_x, polarity_y, polarity_pol) = polarity
+
                 matrix_events = numpy.full((camera.dvsSizeY, camera.dvsSizeX), 0.5)
 
-                for evt in polarity:
-                    matrix_events[evt[2], evt[1]] = evt[3]
+                for e in range(len(polarity_ts)):
+                    matrix_events[polarity_y[e], polarity_x[e]] = polarity_pol[e]
 
                 cv2.imshow("polarity", matrix_events)
 
             # if a standard frame exists, show it
-            if len(frame) > 0:
-                cv2.imshow("frame", frame[0][1])
+            if frame != None:
+                (frame_ts, frame_numpy) = frame
+
+                cv2.imshow("frame", frame_numpy)
 
             # wait 1ms on user input, required for OpenCV imshow()
-            if len(polarity) > 0 or len(frame) > 0:
+            if polarity != None or frame != None:
                 cv2.waitKey(1)
 
     except KeyboardInterrupt:

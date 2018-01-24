@@ -54,8 +54,8 @@ class DVS128:
 
     def read_events(self):
         """ A simple function that reads events from DVS128 sensors: polarity, special"""
-        polarity = []
-        special = []
+        polarity = None
+        special = None
 
         packetContainer = libcaer.caerDeviceDataGet(self.handle)
 
@@ -75,27 +75,37 @@ class DVS128:
                     # loop over all polarity events
                     polarityPacket = libcaer.caerPolarityEventPacketFromPacketHeaderConst(packetHeader)
 
+                    polarity_ts = numpy.empty(eventNum, dtype=numpy.int32)
+                    polarity_x = numpy.empty(eventNum, dtype=numpy.uint16)
+                    polarity_y = numpy.empty(eventNum, dtype=numpy.uint16)
+                    polarity_pol = numpy.empty(eventNum, dtype=numpy.bool)
+
                     for e in range(eventNum):
                         polarityEvent = libcaer.caerPolarityEventPacketGetEventConst(polarityPacket, e)
 
-                        polarity_ts = libcaer.caerPolarityEventGetTimestamp(polarityEvent)
-                        polarity_x = libcaer.caerPolarityEventGetX(polarityEvent)
-                        polarity_y = libcaer.caerPolarityEventGetY(polarityEvent)
-                        polarity_pol = libcaer.caerPolarityEventGetPolarity(polarityEvent)
+                        polarity_ts[e] = libcaer.caerPolarityEventGetTimestamp(polarityEvent)
+                        polarity_x[e] = libcaer.caerPolarityEventGetX(polarityEvent)
+                        polarity_y[e] = libcaer.caerPolarityEventGetY(polarityEvent)
+                        polarity_pol[e] = libcaer.caerPolarityEventGetPolarity(polarityEvent)
 
-                        polarity.append((polarity_ts, polarity_x, polarity_y, polarity_pol))
+                    polarity = (polarity_ts, polarity_x, polarity_y, polarity_pol)
 
                 elif packetType == libcaer.SPECIAL_EVENT:
                     # loop over all special events
                     specialPacket = libcaer.caerSpecialEventPacketFromPacketHeaderConst(packetHeader)
 
+                    special_ts = numpy.empty(eventNum, dtype=numpy.int32)
+                    special_type = numpy.empty(eventNum, dtype=numpy.uint8)
+                    special_data = numpy.empty(eventNum, dtype=numpy.uint32)
+
                     for e in range(eventNum):
                         specialEvent = libcaer.caerSpecialEventPacketGetEventConst(specialPacket, e)
 
-                        special_ts = libcaer.caerSpecialEventGetTimestamp(specialEvent)
-                        special_type = libcaer.caerSpecialEventGetType(specialEvent)
+                        special_ts[e] = libcaer.caerSpecialEventGetTimestamp(specialEvent)
+                        special_type[e] = libcaer.caerSpecialEventGetType(specialEvent)
+                        special_data[e] = libcaer.caerSpecialEventGetData(specialEvent)
 
-                        special.append((special_ts, special_type))
+                    special = (special_ts, special_type, special_data)
 
         return polarity, special
 
@@ -109,11 +119,13 @@ if __name__ == "__main__":
 
             # if there are polarity events, accumulate them into a numpy array
             # and display it (black/white coding)
-            if len(polarity) > 0:
+            if polarity != None:
+                (polarity_ts, polarity_x, polarity_y, polarity_pol) = polarity
+
                 matrix_events = numpy.full((camera.dvsSizeY, camera.dvsSizeX), 0.5)
 
-                for evt in polarity:
-                    matrix_events[evt[2], evt[1]] = evt[3]
+                for e in range(len(polarity_ts)):
+                    matrix_events[polarity_y[e], polarity_x[e]] = polarity_pol[e]
 
                 cv2.imshow("polarity", matrix_events)
                 cv2.waitKey(1)
