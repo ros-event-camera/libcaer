@@ -9,7 +9,7 @@
 namespace libcaer {
 namespace devices {
 
-class dynapse final: public usb {
+class dynapse : public usb {
 public:
 	dynapse(uint16_t deviceID) :
 			usb(deviceID, CAER_DEVICE_DYNAPSE) {
