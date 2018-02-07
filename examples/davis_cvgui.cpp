@@ -1,7 +1,12 @@
-#include <libcaercpp/devices/davis.hpp>
 #include <csignal>
 #include <atomic>
+#include <libcaercpp/devices/davis.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
+#if !defined(LIBCAER_HAVE_OPENCV) || LIBCAER_HAVE_OPENCV == 0
+#error "This example requires OpenCV support in libcaer to be enabled."
+#endif
 
 using namespace std;
 
@@ -111,8 +116,10 @@ int main(void) {
 	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
 	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4200);
 
+	cv::namedWindow("PLOT_EVENTS", cv::WindowFlags::WINDOW_AUTOSIZE |
+		cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
 	cv::namedWindow("PLOT_FRAME", cv::WindowFlags::WINDOW_AUTOSIZE |
-			cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
+		cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
 
 	while (!globalShutdown.load(memory_order_relaxed)) {
 		std::unique_ptr<libcaer::events::EventPacketContainer> packetContainer = davisHandle.dataGet();
@@ -144,6 +151,14 @@ int main(void) {
 				bool pol = firstEvent.getPolarity();
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
+
+				cv::Mat cvEvents(davis_info.dvsSizeY, davis_info.dvsSizeX, CV_8UC3, cv::Vec3b{127, 127, 127});
+				for(const auto &e: *polarity) {
+					cvEvents.at<cv::Vec3b>(e.getY(), e.getX()) = e.getPolarity() ? cv::Vec3b{255, 255, 255} : cv::Vec3b{0, 0, 0};
+				}
+
+				cv::imshow("PLOT_EVENTS", cvEvents);
+				cv::waitKey(1);
 			}
 
 			if (packet->getEventType() == FRAME_EVENT) {
@@ -183,6 +198,7 @@ int main(void) {
 
 	// Close automatically done by destructor.
 
+	cv::destroyWindow("PLOT_EVENTS");
 	cv::destroyWindow("PLOT_FRAME");
 
 	printf("Shutdown successful.\n");
