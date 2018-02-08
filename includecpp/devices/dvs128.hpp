@@ -9,7 +9,7 @@
 namespace libcaer {
 namespace devices {
 
-class dvs128 final: public usb {
+class dvs128 : public usb {
 public:
 	dvs128(uint16_t deviceID) :
 			usb(deviceID, CAER_DEVICE_DVS128) {

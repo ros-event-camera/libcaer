@@ -9,7 +9,7 @@
 namespace libcaer {
 namespace devices {
 
-class edvs final: public serial {
+class edvs : public serial {
 public:
 	edvs(uint16_t deviceID, const std::string &serialPortName, uint32_t serialBaudRate) :
 			serial(deviceID, CAER_DEVICE_EDVS, serialPortName, serialBaudRate) {
