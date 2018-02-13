@@ -415,20 +415,11 @@ public:
 
 	// Generic Event access methods.
 	const_value_type genericGetEvent(size_type index) const {
-		// Support negative indexes to go from the end of the event packet.
-		if (index < 0) {
-			index = size() + index;
-		}
-
 		// Accessing elements after size() but before capacity() doesn't
 		// make any sense here for Generic Events, as we only support
 		// reading/querying data from those events, and that would always
 		// fail for those empty events.
-		if (index < 0 || index >= size()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		const void *evt = caerGenericEventGetEvent(header, index);
+		const void *evt = caerGenericEventGetEvent(header, getEventIndex(index, false));
 
 		return (GenericEvent { evt, header });
 	}
@@ -607,6 +598,20 @@ protected:
 			throw std::runtime_error("Failed to initialize event packet: wrong type.");
 		}
 	}
+
+	size_type getEventIndex(size_type index, bool limitIsCapacity) const {
+		// Support negative indexes to go from the last existing/defined event
+		// backwards (not from the capacity!).
+		if (index < 0) {
+			index = size() + index;
+		}
+
+		if (index < 0 || index >= ((limitIsCapacity) ? (capacity()) : (size()))) {
+			throw std::out_of_range("Index out of range.");
+		}
+
+		return (index);
+	}
 };
 
 template<class PKT, class EVT>
@@ -624,29 +629,11 @@ public:
 
 	// Event access methods.
 	reference getEvent(size_type index) {
-		// Support negative indexes to go from the end of the event packet.
-		if (index < 0) {
-			index = size() + index;
-		}
-
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		return (virtualGetEvent(index));
+		return (virtualGetEvent(getEventIndex(index, true)));
 	}
 
 	const_reference getEvent(size_type index) const {
-		// Support negative indexes to go from the end of the event packet.
-		if (index < 0) {
-			index = size() + index;
-		}
-
-		if (index < 0 || index >= capacity()) {
-			throw std::out_of_range("Index out of range.");
-		}
-
-		return (virtualGetEvent(index));
+		return (virtualGetEvent(getEventIndex(index, true)));
 	}
 
 	reference operator[](size_type index) {
@@ -666,10 +653,24 @@ public:
 	}
 
 	reference back() {
+		// On empty packet, define back() as returning the same element
+		// as front(), the first one, which always exists due to minimum
+		// packet capacity being 1.
+		if (size() == 0) {
+			return (getEvent(0));
+		}
+
 		return (getEvent(-1));
 	}
 
 	const_reference back() const {
+		// On empty packet, define back() as returning the same element
+		// as front(), the first one, which always exists due to minimum
+		// packet capacity being 1.
+		if (size() == 0) {
+			return (getEvent(0));
+		}
+
 		return (getEvent(-1));
 	}
 
