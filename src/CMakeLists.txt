@@ -9,7 +9,7 @@ SET(LIBCAER_SRC_FILES
 	dvs128.c
 	davis.c
 	dynapse.c)
-	
+
 IF(OS_LINUX)
 	# Raspberry Pi support available only on Linux.
 	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} davis_rpi.c)
@@ -25,13 +25,8 @@ IF (ENABLE_OPENCV)
 	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} frame_utils_opencv.cpp)
 ENDIF()
 
-# Set in parent scope for info printout.
-SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} PARENT_SCOPE)
-
-IF (OS_UNIX AND NOT OS_MACOSX)
-	# Add --as-needed to linker flags for libraries.
-	SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
-ENDIF()
+# Set full RPATH
+SET(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
 ADD_LIBRARY(caer SHARED ${LIBCAER_SRC_FILES})
 
