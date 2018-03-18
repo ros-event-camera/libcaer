@@ -8,10 +8,10 @@ Makefile
 cmake_install.cmake
 /install_manifest.txt
 /libcaer.pc
+/*.sh
 *~
 *.swp
 *.swo
 *.gch
-/*.sh
 /*.rpm
 /*.deb
