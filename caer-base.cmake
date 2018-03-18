@@ -138,6 +138,9 @@ ADD_DEFINITIONS(-DCM_BUILD_DIR=${CM_BUILD_DIR} -DCM_SHARE_DIR=${CM_SHARE_DIR})
 SET(CM_BUILD_DIR ${CM_BUILD_DIR} PARENT_SCOPE)
 SET(CM_SHARE_DIR ${CM_SHARE_DIR} PARENT_SCOPE)
 
+# Set here for convenience.
+SET(CAER_MODULES_DIR ${CM_SHARE_DIR}/modules PARENT_SCOPE)
+
 # Set C/C++ compiler options
 IF (CC_GCC OR CC_CLANG)
 	# C11 standard needed (atomics, threads)
