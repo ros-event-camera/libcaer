@@ -62,7 +62,7 @@ echo "$PKG_NAME ($PKG_VERSION-$PKG_RELEASE~$DISTRO) $DISTRO; urgency=low" > "$CH
 echo "" >> "$CHANGELOG_FILE"
 echo "  * Released $PKG_NAME version $PKG_VERSION for distro $DISTRO." >> "$CHANGELOG_FILE"
 echo "" >> "$CHANGELOG_FILE"
-echo " -- iniLabs <support@inilabs.com>  $DATE" >> "$CHANGELOG_FILE"
+echo " -- iniVation AG <support@inivation.com>  $DATE" >> "$CHANGELOG_FILE"
 
 # Launch debuild
 cd "$PKG_BUILD_DIR"

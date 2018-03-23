@@ -1,8 +1,9 @@
 libcaer
 ====
 
-Minimal C library to access, configure and get data out of AER sensors,
-such as the Dynamic Vision Sensor (DVS) or DAVIS cameras.
+Minimal C library to access, configure and get data from neuromorphic sensors and processors.
+Currently supported devices are the Dynamic Vision Sensor (DVS), the DAVIS cameras, and the
+Dynap-SE neuromorphic processor.
 
 REQUIREMENTS:
 
