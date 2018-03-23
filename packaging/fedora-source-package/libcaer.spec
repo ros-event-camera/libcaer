@@ -31,5 +31,5 @@ make install DESTDIR=%{buildroot}
 %{_includedir}/*
 
 %changelog
-* Fri Mar 23 2018 Luca Longinotti <luca.longinotti@inivation.com>
+* Fri Mar 23 2018 iniVation AG <support@inivation.com>
 See ChangeLog file in source or GitHub.
