@@ -1,3 +1,19 @@
+Release 2.4.2 - 23.03.2018
+NEW FEATURES
+- Install shared CMake file 'caer-base.cmake' to simplify common build
+  steps and checks used in libcaer, cAER and its modules.
+- examples/davis_cvgui.cpp: improved example, checks for libcaer compiled
+  with proper OpenCV support (issue #55), shows events in a separate
+  window, compilation documented in README (PR #53).
+
+BUG FIXES
+- Improve Python examples, use numpby for better performance.
+- C++ Devices: let users derive from device classes (PR #56).
+- C++ EventPackets: fix iteration over empty packet, due to back()
+  incorrectly throwing an exception when size is zero because of the
+  usage of the -1 backwards lookup notation.
+
+
 Release 2.4.0 - 05.12.2017
 INCOMPATIBLE CHANGES
 - DAVIS: require new firmware version 4 and logic version 9912.

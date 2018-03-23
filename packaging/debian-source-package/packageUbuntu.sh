@@ -4,7 +4,7 @@
 
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
-PKG_VERSION=2.4.0
+PKG_VERSION=2.4.2
 PKG_RELEASE=1
 DISTRO=xenial
 SRC_URI="https://github.com/inilabs/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
