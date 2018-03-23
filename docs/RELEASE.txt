@@ -6,7 +6,7 @@
 5) Update Homebrew repo (change version, SHA256 sum).
 6) Update Gentoo repo (copy ebuild, update hashes).
 7) Update Fedora package: go to packaging/fedora-source-package/,
-   execute ./packageFedora.sh from a Fedora system to generare src.rpm.
+   execute ./packageFedora.sh from a Fedora system to generate src.rpm.
    Login to https://copr.fedorainfracloud.org/coprs/llongi/inilabs/,
    go to Builds -> New Build, upload src.rpm, tick all distributions.
 8) Update Ubuntu package: go to packaging/debian-source-package/,
