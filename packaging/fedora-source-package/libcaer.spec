@@ -29,6 +29,7 @@ make install DESTDIR=%{buildroot}
 %files
 %{_libdir}/*
 %{_includedir}/*
+%{_datarootdir}/*
 
 %changelog
 * Fri Mar 23 2018 iniVation AG <support@inivation.com>
