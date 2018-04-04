@@ -5,6 +5,7 @@
 #include "../libcaer.hpp"
 #include <cassert>
 #include <memory>
+#include <utility>
 
 namespace libcaer {
 namespace events {

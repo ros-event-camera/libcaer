@@ -2,6 +2,7 @@
 #define LIBCAER_DEVICES_DEVICE_HPP_
 
 #include <libcaer/devices/device.h>
+#include <memory>
 #include <string>
 #include "../libcaer.hpp"
 #include "../events/packetContainer.hpp"

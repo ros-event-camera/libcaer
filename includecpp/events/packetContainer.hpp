@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include <vector>
 #include <memory>
+#include <utility>
 
 namespace libcaer {
 namespace events {

@@ -1,5 +1,8 @@
 #include "frame_utils.h"
 
+#include <algorithm>
+#include <vector>
+
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>

@@ -3,6 +3,7 @@
 
 #include <libcaer/ringbuffer.h>
 #include <memory>
+#include <stdexcept>
 
 namespace libcaer {
 namespace ringbuffer {
