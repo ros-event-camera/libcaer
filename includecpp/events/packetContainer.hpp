@@ -240,7 +240,12 @@ public:
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(packetContainer, i);
 
-			eventPackets.push_back(libcaer::events::utils::makeSharedFromCStruct(packet, takeMemoryOwnership));
+			if (packet != nullptr) {
+				eventPackets.push_back(libcaer::events::utils::makeSharedFromCStruct(packet, takeMemoryOwnership));
+			}
+			else {
+				eventPackets.emplace_back(); // Call empty constructor.
+			}
 		}
 	}
 
