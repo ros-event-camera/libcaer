@@ -15,6 +15,7 @@
 #include "sample.hpp"
 #include "special.hpp"
 #include "spike.hpp"
+#include "matrix4x4.hpp"
 #include <memory>
 
 namespace libcaer {
@@ -78,6 +79,10 @@ inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader 
 			return (std::unique_ptr<SpikeEventPacket>(new SpikeEventPacket(packet, takeMemoryOwnership)));
 			break;
 
+		case MATRIX4x4_EVENT:
+			return (std::unique_ptr<Matrix4x4EventPacket>(new Matrix4x4EventPacket(packet, takeMemoryOwnership)));
+			break;
+
 		default:
 			return (std::unique_ptr<EventPacket>(new EventPacket(packet, takeMemoryOwnership)));
 			break;
@@ -136,6 +141,10 @@ inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader 
 
 		case SPIKE_EVENT:
 			return (std::make_shared<SpikeEventPacket>(packet, takeMemoryOwnership));
+			break;
+
+		case MATRIX4x4_EVENT:
+			return (std::make_shared<Matrix4x4EventPacket>(packet, takeMemoryOwnership));
 			break;
 
 		default:

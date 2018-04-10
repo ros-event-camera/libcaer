@@ -1,7 +1,9 @@
 #ifndef LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 #define LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 
+#include <libcaer/events/packetContainer.h>
 #include "common.hpp"
+#include "utils.hpp"
 #include <vector>
 #include <memory>
 #include <utility>
@@ -18,7 +20,7 @@ private:
 	// currElement acts as a kind of cache: not only does it allow us
 	// to add deep-constness (when needed), but it also stores a copy of
 	// the shared_ptr we're iterating over, effectively increasing its
-	// reference count by one until it is in use by the iterator and its
+	// reference count by one while it is in use by the iterator and its
 	// user, thus ensuring the object can never disappear from under us.
 	mutable SharedPtrType currElement;
 
@@ -206,6 +208,39 @@ public:
 
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
+		}
+	}
+
+	/**
+	 * Construct a new EventPacketContainer from a C-style
+	 * caerEventPacketContainer. The contained packets can take over memory
+	 * ownership if so requested.
+	 *
+	 * @param packetContainer C-style caerEventPacketContainer from which to
+	 *                        initialize the new packet container.
+	 * @param takeMemoryOwnership true if the container packets shall take
+	 *                            over the ownership of the memory containing
+	 *                            the events from the C-style packets.
+	 */
+	EventPacketContainer(caerEventPacketContainer packetContainer, bool takeMemoryOwnership = true) {
+		if (packetContainer == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet container: null pointer.");
+		}
+
+		lowestEventTimestamp = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+		highestEventTimestamp = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+		eventsNumber = caerEventPacketContainerGetEventsNumber(packetContainer);
+		eventsValidNumber = caerEventPacketContainerGetEventsValidNumber(packetContainer);
+
+		// Initialize and fill vector.
+		int32_t eventPacketsNumber = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+
+		eventPackets = std::vector<std::shared_ptr<EventPacket>>(static_cast<size_t>(eventPacketsNumber));
+
+		for (size_type i = 0; i < eventPacketsNumber; i++) {
+			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(packetContainer, i);
+
+			eventPackets.push_back(libcaer::events::utils::makeSharedFromCStruct(packet, takeMemoryOwnership));
 		}
 	}
 

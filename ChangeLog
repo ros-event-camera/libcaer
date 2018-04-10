@@ -1,3 +1,15 @@
+Release 2.4.X - XX.XX.2018
+NEW FEATURES
+- C++ packetContainer.hpp: support construction of a new packet container
+  based on a C-style caerEventPacketContainer, with optional memory
+  ownership takeover for the contained packets.
+- C++ utils.hpp: libcaer::events::utils::makeShared/Unique now support the
+  Matrix 4x4 event type too.
+
+BUG FIXES
+- C++: add header inclusions for possibly missing types.
+
+
 Release 2.4.2 - 23.03.2018
 NEW FEATURES
 - Install shared CMake file 'caer-base.cmake' to simplify common build
