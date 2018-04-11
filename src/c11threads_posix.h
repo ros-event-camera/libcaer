@@ -1,13 +1,18 @@
 #ifndef C11THREADS_POSIX_H_
 #define C11THREADS_POSIX_H_
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 #include <sched.h>
 #include <errno.h>
 
-#include "threads_ext.h"
+#if defined(__linux__)
+	#include <sys/prctl.h>
+	#include <sys/resource.h>
+#endif
 
 typedef pthread_t thrd_t;
 typedef pthread_once_t once_flag;
@@ -16,10 +21,16 @@ typedef pthread_rwlock_t mtx_shared_t; // NON STANDARD!
 typedef int (*thrd_start_t)(void *);
 
 enum {
+	thrd_success = 0, thrd_error = 1, thrd_nomem = 2, thrd_timedout = 3, thrd_busy = 4,
+};
+
+enum {
 	mtx_plain = 0, mtx_timed = 1, mtx_recursive = 2,
 };
 
 #define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
+
+#define MAX_THREAD_NAME_LENGTH 15
 
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 	int ret = pthread_create(thr, NULL, (void *(*)(void *)) func, arg);
@@ -333,6 +344,50 @@ static inline int mtx_shared_unlock_shared(mtx_shared_t *mutex) {
 	}
 
 	return (thrd_success);
+}
+
+// NON STANDARD!
+static inline int thrd_set_name(const char *name) {
+#if defined(__linux__)
+	if (prctl(PR_SET_NAME, name) != 0) {
+		return (thrd_error);
+	}
+
+	return (thrd_success);
+#elif defined(__APPLE__)
+	if (pthread_setname_np(name) != 0) {
+		return (thrd_error);
+	}
+
+	return (thrd_success);
+#else
+	(void)(name); // UNUSED.
+
+	return (thrd_error);
+#endif
+}
+
+static inline int thrd_get_name(char *name, size_t maxNameLength) {
+#if defined(__linux__)
+	(void)(maxNameLength); // UNUSED ON LINUX.
+
+	if (prctl(PR_GET_NAME, name) != 0) {
+		return (thrd_error);
+	}
+
+	return (thrd_success);
+#elif defined(__APPLE__)
+	if (pthread_getname_np(pthread_self(), name, maxNameLength) != 0) {
+		return (thrd_error);
+	}
+
+	return (thrd_success);
+#else
+	(void)(name); // UNUSED.
+	(void)(maxNameLength); // UNUSED.
+
+	return (thrd_error);
+#endif
 }
 
 #endif	/* C11THREADS_POSIX_H_ */

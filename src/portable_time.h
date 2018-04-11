@@ -81,7 +81,7 @@
 		return (clock_gettime(CLOCK_REALTIME, realTime) == 0);
 	}
 #else
-	#error "No portable way of getting absolute monotonic time."
+	#error "No portable way of getting absolute monotonic time found."
 #endif
 
 #endif /* PORTABLE_TIME_H_ */
