@@ -11,20 +11,8 @@
 #include "devices/edvs.h"
 #endif
 
-/**
- * Number of devices supported by this library.
- * 0 - CAER_DEVICE_DVS128
- * 1 - CAER_DEVICE_DAVIS_FX2
- * 2 - CAER_DEVICE_DAVIS_FX3
- * 3 - CAER_DEVICE_DYNAPSE
- * 4 - CAER_DEVICE_DAVIS
- * 5 - CAER_DEVICE_EDVS
- * 6 - CAER_DEVICE_DAVIS_RPI
- */
-#define SUPPORTED_DEVICES_NUMBER 7
-
 // Supported devices and their functions.
-static caerDeviceHandle (*usbConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
+static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) = {
 		[CAER_DEVICE_DVS128] = &dvs128Open,
 		[CAER_DEVICE_DAVIS_FX2] = &davisFX2Open,
@@ -39,7 +27,7 @@ static caerDeviceHandle (*usbConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t de
 #endif
 };
 
-static caerDeviceHandle (*serialConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, const char *serialPortName,
+static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, const char *serialPortName,
 	uint32_t serialBaudRate) = {
 		[CAER_DEVICE_DVS128] = NULL,
 		[CAER_DEVICE_DAVIS_FX2] = NULL,
@@ -54,7 +42,7 @@ static caerDeviceHandle (*serialConstructors[SUPPORTED_DEVICES_NUMBER])(uint16_t
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 };
 
-static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
+static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128Close,
 	[CAER_DEVICE_DAVIS_FX2] = &davisClose,
 	[CAER_DEVICE_DAVIS_FX3] = &davisClose,
@@ -72,7 +60,7 @@ static bool (*destructors[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = 
 #endif
 };
 
-static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
+static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128SendDefaultConfig,
 	[CAER_DEVICE_DAVIS_FX2] = &davisSendDefaultConfig,
 	[CAER_DEVICE_DAVIS_FX3] = &davisSendDefaultConfig,
@@ -90,7 +78,7 @@ static bool (*defaultConfigSenders[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle h
 #endif
 };
 
-static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
+static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
 	uint32_t param) = {
 		[CAER_DEVICE_DVS128] = &dvs128ConfigSet,
 		[CAER_DEVICE_DAVIS_FX2] = &davisConfigSet,
@@ -109,7 +97,7 @@ static bool (*configSetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 #endif
 };
 
-static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
+static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
 	uint32_t *param) = {
 		[CAER_DEVICE_DVS128] = &dvs128ConfigGet,
 		[CAER_DEVICE_DAVIS_FX2] = &davisConfigGet,
@@ -128,7 +116,7 @@ static bool (*configGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, 
 #endif
 };
 
-static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
+static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr) = {
 		[CAER_DEVICE_DVS128] = &dvs128DataStart,
@@ -148,7 +136,7 @@ static bool (*dataStarters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, v
 #endif
 };
 
-static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
+static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128DataStop,
 	[CAER_DEVICE_DAVIS_FX2] = &davisDataStop,
 	[CAER_DEVICE_DAVIS_FX3] = &davisDataStop,
@@ -166,7 +154,7 @@ static bool (*dataStoppers[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) =
 #endif
 };
 
-static caerEventPacketContainer (*dataGetters[SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
+static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
 	[CAER_DEVICE_DVS128] = &dvs128DataGet,
 	[CAER_DEVICE_DAVIS_FX2] = &davisDataGet,
 	[CAER_DEVICE_DAVIS_FX3] = &davisDataGet,
@@ -202,7 +190,7 @@ struct caer_device_handle {
 caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	// Check if device type is supported.
-	if (deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (NULL);
 	}
 
@@ -217,7 +205,7 @@ caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t 
 caerDeviceHandle caerDeviceOpenSerial(uint16_t deviceID, uint16_t deviceType, const char *serialPortName,
 	uint32_t serialBaudRate) {
 	// Check if device type is supported.
-	if (deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (NULL);
 	}
 
@@ -242,7 +230,7 @@ bool caerDeviceClose(caerDeviceHandle *handlePtr) {
 	}
 
 	// Check if device type is supported.
-	if ((*handlePtr)->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if ((*handlePtr)->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -268,7 +256,7 @@ bool caerDeviceSendDefaultConfig(caerDeviceHandle handle) {
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -287,7 +275,7 @@ bool caerDeviceConfigSet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -306,7 +294,7 @@ bool caerDeviceConfigGet(caerDeviceHandle handle, int8_t modAddr, uint8_t paramA
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -330,7 +318,7 @@ bool caerDeviceDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(voi
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -350,7 +338,7 @@ bool caerDeviceDataStop(caerDeviceHandle handle) {
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (false);
 	}
 
@@ -369,7 +357,7 @@ caerEventPacketContainer caerDeviceDataGet(caerDeviceHandle handle) {
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType >= SUPPORTED_DEVICES_NUMBER) {
+	if (handle->deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (NULL);
 	}
 

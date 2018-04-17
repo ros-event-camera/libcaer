@@ -42,7 +42,7 @@ extern "C" {
  * further usage. Various means can be employed to limit the selection of the device.
  *
  * @param deviceID a unique ID to identify the device from others. Will be used as the
- *                 source for EventPackets being generate from its data.
+ *                 source for EventPackets being generated from its data.
  * @param deviceType type of the device to open. Currently supported are: CAER_DEVICE_EDVS
  * @param serialPortName name of the serial port device to open.
  * @param serialBaudRate baud-rate for serial port communication.

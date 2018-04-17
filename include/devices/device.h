@@ -17,6 +17,18 @@ extern "C" {
 #endif
 
 /**
+ * Number of devices supported by this library.
+ * 0 - CAER_DEVICE_DVS128
+ * 1 - CAER_DEVICE_DAVIS_FX2
+ * 2 - CAER_DEVICE_DAVIS_FX3
+ * 3 - CAER_DEVICE_DYNAPSE
+ * 4 - CAER_DEVICE_DAVIS
+ * 5 - CAER_DEVICE_EDVS
+ * 6 - CAER_DEVICE_DAVIS_RPI
+ */
+#define CAER_SUPPORTED_DEVICES_NUMBER 7
+
+/**
  * Pointer to an open device on which to operate.
  */
 typedef struct caer_device_handle *caerDeviceHandle;
