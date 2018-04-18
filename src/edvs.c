@@ -205,6 +205,9 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	handle->info.deviceIsMaster = true;
 	handle->info.dvsSizeX = EDVS_ARRAY_SIZE_X;
 	handle->info.dvsSizeY = EDVS_ARRAY_SIZE_Y;
+	strncpy(handle->info.serialPortName, serialPortName, 63);
+	handle->info.serialPortName[63] = '\0';
+	handle->info.serialBaudRate = serialBaudRate;
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Initialized device successfully on port '%s'.",
 		sp_get_port_name(state->serialState.serialPort));
@@ -581,8 +584,8 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 		return (false);
 	}
 
-	state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
-		0);
+	state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
+		I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
@@ -792,8 +795,8 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
-					handle->info.deviceString, &handle->state.deviceLogLevel);
+				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
+					&handle->state.deviceLogLevel);
 
 				uint8_t x = (xByte & LOW_BITS_MASK);
 				uint8_t y = (yByte & LOW_BITS_MASK);

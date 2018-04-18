@@ -130,6 +130,10 @@ struct caer_edvs_info {
 	int16_t dvsSizeX;
 	/// DVS Y axis resolution.
 	int16_t dvsSizeY;
+	/// Connected serial port name (OS-specific).
+	char serialPortName[64];
+	/// Serial connection baud-rate.
+	uint32_t serialBaudRate;
 };
 
  /**
