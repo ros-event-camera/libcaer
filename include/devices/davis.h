@@ -1889,6 +1889,8 @@ struct caer_davis_info {
 	/// Device USB device address.
 	uint8_t deviceUSBDeviceAddress;
 	/// Device information string, for logging purposes.
+	/// If not NULL, pointed-to memory is *only* valid while the corresponding
+	/// device is open! After calling deviceClose() this is invalid memory!
 	char *deviceString;
 	/// Logic (FPGA/CPLD) version.
 	int16_t logicVersion;

@@ -121,6 +121,8 @@ struct caer_edvs_info {
 	/// Unique device identifier. Also 'source' for events.
 	int16_t deviceID;
 	/// Device information string, for logging purposes.
+	/// If not NULL, pointed-to memory is *only* valid while the corresponding
+	/// device is open! After calling deviceClose() this is invalid memory!
 	char *deviceString;
 	/// Whether the device is a time-stamp master or slave.
 	bool deviceIsMaster;
