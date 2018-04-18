@@ -158,12 +158,12 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	}
 
 	// Wait for reset to happen.
-	struct timespec waitResetSleep = { .tv_sec = 0, .tv_nsec = 500000000 };
+	struct timespec waitResetSleep = { .tv_sec = 0, .tv_nsec = 400000000 };
 	thrd_sleep(&waitResetSleep, NULL);
 
 	// Get startup message.
 	char startMessage[1024];
-	int bytesRead = sp_blocking_read(state->serialState.serialPort, startMessage, 1024, 500);
+	int bytesRead = sp_blocking_read(state->serialState.serialPort, startMessage, 1024, 100);
 	if (bytesRead < 0) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to read startup message.");
 		sp_close(state->serialState.serialPort);
