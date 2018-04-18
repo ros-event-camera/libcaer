@@ -1,4 +1,6 @@
 #include "edvs.h"
+#include <ctype.h>
+#include <string.h>
 
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool serialThreadStart(edvsHandle handle);
@@ -166,12 +168,25 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 	for (size_t i = 0; i < (size_t) bytesRead; i++) {
 		// Remove newlines for log printing.
-		if (startMessage[i] == '\r' || startMessage[i] == '\n') {
+		if (!isprint(startMessage[i])) {
 			startMessage[i] = ' ';
 		}
 	}
 
 	edvsLog(CAER_LOG_INFO, handle, "eDVS started, message: '%s' (%d bytes).", startMessage, bytesRead);
+
+	// Extract model from startup message. This tells us if we really connected
+	// to an eDVS device.
+	if (strstr(startMessage, EDVS_DEVICE_NAME) == NULL) {
+		edvsLog(CAER_LOG_ERROR, handle, "This does not appear to be an eDVS device (according to startup message).");
+		sp_close(state->serialState.serialPort);
+		sp_free_port(state->serialState.serialPort);
+		mtx_destroy(&state->serialState.serialWriteLock);
+		free(handle->info.deviceString);
+		free(handle);
+
+		return (NULL);
+	}
 
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
