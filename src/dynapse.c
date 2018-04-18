@@ -679,8 +679,8 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, false);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
 
-	// Essential: wait for chip to be stable.
-	sleep(1);
+	// Essential: wait for chip to be stable. Some seem to need longer...
+	sleep(4);
 
 	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Device initialized.");
 
