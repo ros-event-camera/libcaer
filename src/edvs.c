@@ -133,6 +133,18 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	sp_set_parity(state->serialState.serialPort, SP_PARITY_NONE);
 	sp_set_flowcontrol(state->serialState.serialPort, SP_FLOWCONTROL_RTSCTS);
 
+	// At this point there might be garbage, due to old attempts to open,
+	// for example with a wrong baud-rate, so we first flush the write pipe
+	// by sending a \n and then read out any available garbage data.
+	sp_flush(state->serialState.serialPort, SP_BUF_BOTH);
+
+	serialPortWrite(state, "\n");
+
+	char garbage[256];
+	sp_blocking_read(state->serialState.serialPort, garbage, 256, 50);
+
+	sp_flush(state->serialState.serialPort, SP_BUF_BOTH);
+
 	const char *cmdReset = "R\n";
 	if (!serialPortWrite(state, cmdReset)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send reset command.");
