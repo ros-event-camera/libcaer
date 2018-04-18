@@ -55,7 +55,7 @@ int main(void) {
 	}
 #endif
 
-	// Open an eDVS4337, give it a device ID of 1, on the default Linux USB serial port.
+	// Open an EDVS-4337, give it a device ID of 1, on the default Linux USB serial port.
 	libcaer::devices::edvs edvsHandle = libcaer::devices::edvs(1, "/dev/ttyUSB0",
 		CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
 

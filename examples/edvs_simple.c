@@ -51,7 +51,7 @@ int main(void) {
 	}
 #endif
 
-	// Open an eDVS4337, give it a device ID of 1, on the default Linux USB serial port.
+	// Open an EDVS-4337, give it a device ID of 1, on the default Linux USB serial port.
 	caerDeviceHandle edvs_handle = caerDeviceOpenSerial(1, CAER_DEVICE_EDVS, "/dev/ttyUSB0",
 		CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
 	if (edvs_handle == NULL) {
@@ -107,7 +107,7 @@ int main(void) {
 			printf("Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
 				caerEventPacketHeaderGetEventNumber(packetHeader));
 
-			// Packet 0 is always the special events packet for eDVS4337, while packet is the polarity events packet.
+			// Packet 0 is always the special events packet for EDVS-4337, while packet is the polarity events packet.
 			if (i == POLARITY_EVENT) {
 				caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
 

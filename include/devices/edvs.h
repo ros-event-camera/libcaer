@@ -1,7 +1,7 @@
 /**
  * @file edvs.h
  *
- * eDVS4337 specific configuration defines and information structures.
+ * EDVS-4337 specific configuration defines and information structures.
  */
 
 #ifndef LIBCAER_DEVICES_EDVS_H_
@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /**
- * Device type definition for iniLabs eDVS4337.
+ * Device type definition for iniLabs EDVS-4337.
  */
 #define CAER_DEVICE_EDVS 5
 

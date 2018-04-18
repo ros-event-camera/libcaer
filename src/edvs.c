@@ -105,7 +105,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	// Try to open an eDVS device on a specific serial port.
 	enum sp_return retVal = sp_get_port_by_name(serialPortName, &state->serialState.serialPort);
 	if (retVal != SP_OK) {
-		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to open serial device on '%s'.", serialPortName);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
