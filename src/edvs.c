@@ -2,6 +2,12 @@
 #include <ctype.h>
 #include <string.h>
 
+#if defined(OS_UNIX)
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#endif
+
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool serialThreadStart(edvsHandle handle);
 static void serialThreadStop(edvsHandle handle);
@@ -107,7 +113,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	// Try to open an eDVS device on a specific serial port.
 	enum sp_return retVal = sp_get_port_by_name(serialPortName, &state->serialState.serialPort);
 	if (retVal != SP_OK) {
-		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to open serial device on '%s'.", serialPortName);
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to get serial port on '%s'.", serialPortName);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
@@ -127,6 +133,18 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 		return (NULL);
 	}
 
+#if defined(OS_UNIX)
+	// Set exclusive access to serial port. Only needed on Unix (TIOCEXCL flag).
+	int serialFd = -1;
+
+	retVal = sp_get_port_handle(state->serialState.serialPort, &serialFd);
+
+	if (retVal == SP_OK && serialFd >= 0) {
+		ioctl(serialFd, TIOCEXCL);
+	}
+#endif
+
+	// Set communication configuration.
 	sp_set_baudrate(state->serialState.serialPort, (int) serialBaudRate);
 	sp_set_bits(state->serialState.serialPort, 8);
 	sp_set_stopbits(state->serialState.serialPort, 1);
