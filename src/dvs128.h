@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_DVS128_H_
 
 #include "devices/dvs128.h"
+#include "devices/device_discover.h"
 #include "data_exchange.h"
 #include "container_generation.h"
 #include "usb_utils.h"
@@ -76,6 +77,8 @@ struct dvs128_handle {
 };
 
 typedef struct dvs128_handle *dvs128Handle;
+
+ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices);
 
 caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);

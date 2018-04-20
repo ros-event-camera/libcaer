@@ -6,4 +6,5 @@
 /davis_rpi
 /davis_rpi_benchmark
 /dynapse_simple
+/device_discovery
 /*.exe

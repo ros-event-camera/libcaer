@@ -71,6 +71,178 @@ static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char 
 	va_end(argumentList);
 }
 
+ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info **foundUSBDevices) {
+	// Set to NULL initially (for error return).
+	*foundUSBDevices = NULL;
+
+	// libusb may create its own threads at this stage, so we temporarily set
+	// a different thread name.
+	char originalThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	thrd_get_name(originalThreadName, MAX_THREAD_NAME_LENGTH);
+	originalThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
+
+	thrd_set_name("USBDiscovery");
+
+	int res = libusb_init(NULL);
+
+	thrd_set_name(originalThreadName);
+
+	if (res != LIBUSB_SUCCESS) {
+		return (-1);
+	}
+
+	libusb_device **devicesList;
+
+	ssize_t result = libusb_get_device_list(NULL, &devicesList);
+
+	if (result < 0) {
+		libusb_exit(NULL);
+
+		return (-1);
+	}
+
+	// Cycle thorough all discovered devices and count matches.
+	size_t matches = 0;
+
+	for (size_t i = 0; i < (size_t) result; i++) {
+		struct libusb_device_descriptor devDesc;
+
+		if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
+			continue;
+		}
+
+		// Check if this is the device we want (VID/PID).
+		if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+			matches++;
+		}
+	}
+
+	// No matches?
+	if (matches == 0) {
+		libusb_free_device_list(devicesList, true);
+		libusb_exit(NULL);
+
+		return (0);
+	}
+
+	// Now that we know how many there are, we can allocate the proper
+	// amount of memory to hold the result.
+	*foundUSBDevices = calloc(matches, sizeof(struct usb_info));
+	if (*foundUSBDevices == NULL) {
+		libusb_free_device_list(devicesList, true);
+		libusb_exit(NULL);
+
+		return (-1);
+	}
+
+	matches = 0; // Use as counter again.
+
+	for (size_t i = 0; i < (size_t) result; i++) {
+		struct libusb_device_descriptor devDesc;
+
+		if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
+			continue;
+		}
+
+		// Check if this is the device we want (VID/PID).
+		if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+			// Get USB bus number and device address from descriptors.
+			(*foundUSBDevices)[matches].busNumber = libusb_get_bus_number(devicesList[i]);
+			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
+			(*foundUSBDevices)[matches].deviceString = NULL;
+
+			libusb_device_handle *devHandle = NULL;
+
+			if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			// Get serial number.
+			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
+			int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, 3, (unsigned char *) serialNumber,
+			MAX_SERIAL_NUMBER_LENGTH + 1);
+
+			// Check serial number success and length.
+			if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+				libusb_close(devHandle);
+
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			strncpy((*foundUSBDevices)[matches].serialNumber, serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+			// Check that the active configuration is set to number 1. If not, do so.
+			// Then claim interface 0 (default).
+			if (!checkActiveConfigAndClaim(devHandle)) {
+				libusb_close(devHandle);
+
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			// Verify device firmware version.
+			bool firmwareVersionOK = true;
+
+			if ((requiredFirmwareVersion >= 0) && (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
+				firmwareVersionOK = false;
+			}
+
+			// Verify device logic version.
+			bool logicVersionOK = true;
+
+			if (requiredLogicRevision >= 0) {
+				// Communication with device open, get logic version information.
+				uint32_t param32 = 0;
+
+				// Get logic version from generic SYSINFO module.
+				uint8_t spiConfig[4] = { 0 };
+
+				if (libusb_control_transfer(devHandle,
+					LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+					VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
+					libusb_release_interface(devHandle, 0);
+					libusb_close(devHandle);
+
+					(*foundUSBDevices)[matches].errorVersion = true;
+					matches++;
+					continue;
+				}
+
+				param32 |= U32T(spiConfig[0] << 24);
+				param32 |= U32T(spiConfig[1] << 16);
+				param32 |= U32T(spiConfig[2] << 8);
+				param32 |= U32T(spiConfig[3] << 0);
+
+				// Verify device logic version.
+				if (param32 < U32T(requiredLogicRevision)) {
+					logicVersionOK = false;
+				}
+			}
+
+			// If any of the version checks failed, stop.
+			if (!firmwareVersionOK || !logicVersionOK) {
+				(*foundUSBDevices)[matches].errorVersion = true;
+			}
+
+			libusb_release_interface(devHandle, 0);
+			libusb_close(devHandle);
+
+			matches++;
+		}
+	}
+
+	libusb_free_device_list(devicesList, true);
+	libusb_exit(NULL);
+
+	return ((ssize_t) matches);
+}
+
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
 	// Search for device and open it.

@@ -24,6 +24,80 @@ static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char 
 	va_end(argumentList);
 }
 
+ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	struct sp_port **serialPortList = NULL;
+
+	enum sp_return result = sp_list_ports(&serialPortList);
+	if (result != SP_OK) {
+		// Error, return right away.
+		return (-1);
+	}
+
+	size_t i = 0, matches = 0;
+
+	while (serialPortList[i++] != NULL) {
+		// Skip undefined devices.
+		if (sp_get_port_name(serialPortList[i]) == NULL || strlen(sp_get_port_name(serialPortList[i])) == 0) {
+			continue;
+		}
+
+		// Try to open the serial device as an eDVS, with all supported baud-rates.
+		caerDeviceHandle edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
+		if (edvs == NULL) {
+			edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M);
+			if (edvs == NULL) {
+				edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M);
+				if (edvs == NULL) {
+					edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M);
+				}
+			}
+		}
+
+		// Nothing worked, go to next candidate.
+		if (edvs == NULL) {
+			continue;
+		}
+
+		// Successfully opened an eDVS.
+		void *biggerDiscoveredDevices = realloc(*discoveredDevices,
+			(matches + 1) * sizeof(struct caer_device_discovery_result));
+		if (biggerDiscoveredDevices == NULL) {
+			// Memory allocation failure!
+			free(*discoveredDevices);
+			*discoveredDevices = NULL;
+
+			sp_free_port_list(serialPortList);
+
+			return (-1);
+		}
+
+		// Memory allocation successful, get info.
+		*discoveredDevices = biggerDiscoveredDevices;
+
+		(*discoveredDevices)[matches].deviceType = CAER_DEVICE_EDVS;
+		(*discoveredDevices)[matches].deviceErrorOpen = false; // Must have worked to get here!
+		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
+		struct caer_edvs_info *edvsInfoPtr = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
+
+		*edvsInfoPtr = caerEDVSInfoGet(edvs);
+
+		// Set/Reset to invalid values, not part of discovery.
+		edvsInfoPtr->deviceID = -1;
+		edvsInfoPtr->deviceString = NULL;
+
+		edvsClose(edvs);
+
+		matches++;
+	}
+
+	sp_free_port_list(serialPortList);
+
+	return ((ssize_t) matches);
+}
+
 static inline bool serialPortWrite(edvsState state, const char *cmd) {
 	size_t cmdLength = strlen(cmd);
 

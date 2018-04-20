@@ -56,7 +56,12 @@ struct usb_info {
 	uint8_t devAddress;
 	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1];
 	char *deviceString;
+	bool errorOpen;
+	bool errorVersion;
 };
+
+ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info **foundUSBDevices);
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion);

@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_DAVIS_RPI_H_
 
 #include "devices/davis.h"
+#include "devices/device_discover.h"
 #include "data_exchange.h"
 #include "container_generation.h"
 #include "autoexposure.h"
@@ -186,6 +187,8 @@ struct davis_rpi_handle {
 };
 
 typedef struct davis_rpi_handle *davisRPiHandle;
+
+ssize_t davisRPiFind(caerDeviceDiscoveryResult *discoveredDevices);
 
 // busNumberRestrict, devAddressRestrict and serialNumberRestrict are ignored, only one device connected.
 caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,

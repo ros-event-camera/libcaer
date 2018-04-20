@@ -177,6 +177,59 @@ static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const
 	va_end(argumentList);
 }
 
+ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	struct usb_info *foundDynapse = NULL;
+
+	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, DYNAPSE_REQUIRED_LOGIC_REVISION,
+	DYNAPSE_REQUIRED_FIRMWARE_VERSION, &foundDynapse);
+
+	if (result <= 0) {
+		// Error or nothing found, return right away.
+		return (result);
+	}
+
+	// Allocate memory for discovered devices in expected format.
+	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
+	if (*discoveredDevices == NULL) {
+		free(foundDynapse);
+		return (-1);
+	}
+
+	// Transform from generic USB format into device discovery one.
+	for (size_t i = 0; i < (size_t) result; i++) {
+		// This is a Dynap-SE neuromorphic processor.
+		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DYNAPSE;
+		(*discoveredDevices)[i].deviceErrorOpen = foundDynapse[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion = foundDynapse[i].errorVersion;
+		struct caer_dynapse_info *dynapseInfoPtr = &((*discoveredDevices)[i].deviceInfo.dynapseInfo);
+
+		dynapseInfoPtr->deviceUSBBusNumber = foundDynapse[i].busNumber;
+		dynapseInfoPtr->deviceUSBDeviceAddress = foundDynapse[i].devAddress;
+		strncpy(dynapseInfoPtr->deviceSerialNumber, foundDynapse[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		// Reopen Dynap-SE device to get additional info, if possible at all.
+		if (!foundDynapse[i].errorOpen && !foundDynapse[i].errorVersion) {
+			caerDeviceHandle dynapse = dynapseOpen(0, dynapseInfoPtr->deviceUSBBusNumber,
+				dynapseInfoPtr->deviceUSBDeviceAddress, NULL);
+			if (dynapse != NULL) {
+				*dynapseInfoPtr = caerDynapseInfoGet(dynapse);
+
+				dynapseClose(dynapse);
+			}
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		dynapseInfoPtr->deviceID = -1;
+		dynapseInfoPtr->deviceString = NULL;
+	}
+
+	free(foundDynapse);
+	return (result);
+}
+
 static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, size_t configNum) {
 	dynapseState state = &handle->state;
 

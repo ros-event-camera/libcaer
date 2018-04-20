@@ -7,6 +7,14 @@
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
+enum caer_error_code {
+	CAER_ERROR_MEMORY_ALLOCATION = -1,
+	CAER_ERROR_OPEN_ACCESS = -2,
+	CAER_ERROR_COMMUNICATION = -3,
+	CAER_ERROR_FW_VERSION = -4,
+	CAER_ERROR_LOGIC_VERSION = -5,
+};
+
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
 #define GPIO_REG_LEN  0xB4
@@ -54,8 +62,57 @@ static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode);
 static void shutdownGPIOTest(davisRPiHandle handle);
 #endif
 
+ssize_t davisRPiFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	// Try to open device to see if we are on a valid RPi.
+	caerDeviceHandle rpi = davisRPiOpen(0, 0, 0, NULL);
+
+	if (rpi == NULL && errno == CAER_ERROR_MEMORY_ALLOCATION) {
+		// Memory allocation failure.
+		return (-1);
+	}
+
+	if (rpi == NULL && errno == CAER_ERROR_OPEN_ACCESS) {
+		// Cannot open, assume none present.
+		return (0);
+	}
+
+	// Could open device, there can only ever be one, so allocate memory
+	// and get all needed information into it.
+	*discoveredDevices = calloc(1, sizeof(struct caer_device_discovery_result));
+	if (*discoveredDevices == NULL) {
+		if (rpi != NULL) {
+			davisRPiClose(rpi);
+		}
+		return (-1);
+	}
+
+	// Transform from generic USB format into device discovery one.
+	(*discoveredDevices)[0].deviceType = CAER_DEVICE_DAVIS_RPI;
+	(*discoveredDevices)[0].deviceErrorOpen = (errno == CAER_ERROR_COMMUNICATION); // SPI open failure.
+	(*discoveredDevices)[0].deviceErrorVersion = (errno == CAER_ERROR_LOGIC_VERSION); // Version check failure.
+	struct caer_davis_info *davisInfoPtr = &((*discoveredDevices)[0].deviceInfo.davisInfo);
+
+	if (rpi != NULL) {
+		*davisInfoPtr = caerDavisInfoGet(rpi);
+	}
+
+	// Set/Reset to invalid values, not part of discovery.
+	davisInfoPtr->deviceID = -1;
+	davisInfoPtr->deviceString = NULL;
+
+	if (rpi != NULL) {
+		davisRPiClose(rpi);
+	}
+	return (1);
+}
+
 static bool initRPi(davisRPiHandle handle) {
 	davisRPiState state = &handle->state;
+
+	errno = 0;
 
 	// Ensure global FDs are always uninitialized.
 	state->gpio.spiFd = -1;
@@ -63,6 +120,7 @@ static bool initRPi(davisRPiHandle handle) {
 	int devGpioMemFd = open("/dev/gpiomem", O_RDWR | O_SYNC);
 	if (devGpioMemFd < 0) {
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open '/dev/gpiomem'.");
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (false);
 	}
 
@@ -73,21 +131,26 @@ static bool initRPi(davisRPiHandle handle) {
 
 	if (state->gpio.gpioReg == MAP_FAILED) {
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to map GPIO memory region.");
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (false);
 	}
 
 	// Setup SPI. Upload done by separate tool, at boot.
 	if (!spiInit(state)) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI.");
 		closeRPi(handle);
+
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI.");
+		errno = CAER_ERROR_COMMUNICATION;
 		return (false);
 	}
 
 	// Initialize SPI lock last! This avoids having to track its initialization status
 	// separately. We also don't have to destroy it in closeRPi(), but only later in exit.
 	if (mtx_init(&state->gpio.spiLock, mtx_plain) != thrd_success) {
-		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI lock.");
 		closeRPi(handle);
+
+		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to initialize SPI lock.");
+		errno = CAER_ERROR_COMMUNICATION;
 		return (false);
 	}
 
@@ -97,12 +160,13 @@ static bool initRPi(davisRPiHandle handle) {
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param);
 
 	if (param < DAVIS_RPI_REQUIRED_LOGIC_REVISION) {
+		closeRPi(handle);
+		mtx_destroy(&state->gpio.spiLock);
+
 		davisRPiLog(CAER_LOG_CRITICAL, handle,
 			"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 			param, DAVIS_RPI_REQUIRED_LOGIC_REVISION);
-
-		closeRPi(handle);
-		mtx_destroy(&state->gpio.spiLock);
+		errno = CAER_ERROR_LOGIC_VERSION;
 		return (false);
 	}
 #endif
@@ -1025,12 +1089,16 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	(void) (devAddressRestrict);
 	(void) (serialNumberRestrict);
 
+	errno = 0;
+
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DAVIS_RPI_DEVICE_NAME);
 
 	davisRPiHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
+
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -1055,8 +1123,10 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	char *fullLogString = malloc(fullLogStringLength + 1);
 	if (fullLogString == NULL) {
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device string.");
+
 		free(handle);
 
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -1067,9 +1137,11 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	// Open the DAVIS device on the Raspberry Pi.
 	if (!initRPi(handle)) {
 		davisRPiLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+
 		free(handle->info.deviceString);
 		free(handle);
 
+		// errno set by initRPi().
 		return (NULL);
 	}
 

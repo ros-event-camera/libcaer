@@ -1,6 +1,11 @@
 #include "davis.h"
 #include <math.h>
 
+static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices);
+
+static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
+	uint8_t devAddressRestrict, const char *serialNumberRestrict);
+
 static void davisLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh);
 static bool davisSendDefaultChipConfig(caerDeviceHandle cdh);
@@ -20,6 +25,120 @@ static void davisLog(enum caer_log_level logLevel, davisHandle handle, const cha
 		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
 		format, argumentList);
 	va_end(argumentList);
+}
+
+ssize_t davisFindAll(caerDeviceDiscoveryResult *discoveredDevices) {
+	return (davisFindInternal(CAER_DEVICE_DAVIS, discoveredDevices));
+}
+
+ssize_t davisFindFX2(caerDeviceDiscoveryResult *discoveredDevices) {
+	return (davisFindInternal(CAER_DEVICE_DAVIS_FX2, discoveredDevices));
+}
+
+ssize_t davisFindFX3(caerDeviceDiscoveryResult *discoveredDevices) {
+	return (davisFindInternal(CAER_DEVICE_DAVIS_FX3, discoveredDevices));
+}
+
+static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	ssize_t resultFX2 = 0;
+	struct usb_info *foundDavisFX2 = NULL;
+
+	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
+		resultFX2 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
+		DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &foundDavisFX2);
+	}
+
+	ssize_t resultFX3 = 0;
+	struct usb_info *foundDavisFX3 = NULL;
+
+	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3)) {
+		resultFX3 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
+		DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &foundDavisFX3);
+	}
+
+	if ((resultFX2 < 0) || (resultFX3 < 0)) {
+		// Error code, return right away.
+		return (-1);
+	}
+
+	size_t resultAll = (size_t) (resultFX2 + resultFX3);
+
+	if (resultAll == 0) {
+		// Nothing found.
+		return (0);
+	}
+
+	// Allocate memory for discovered devices in expected format.
+	*discoveredDevices = calloc(resultAll, sizeof(struct caer_device_discovery_result));
+	if (*discoveredDevices == NULL) {
+		free(foundDavisFX2);
+		free(foundDavisFX3);
+		return (-1);
+	}
+
+	// Transform from generic USB format into device discovery one.
+	size_t j = 0;
+
+	for (size_t i = 0; i < (size_t) resultFX2; i++, j++) {
+		// This is a DAVIS FX2.
+		(*discoveredDevices)[j].deviceType = CAER_DEVICE_DAVIS_FX2;
+		(*discoveredDevices)[j].deviceErrorOpen = foundDavisFX2[i].errorOpen;
+		(*discoveredDevices)[j].deviceErrorVersion = foundDavisFX2[i].errorVersion;
+		struct caer_davis_info *davisInfoPtr = &((*discoveredDevices)[j].deviceInfo.davisInfo);
+
+		davisInfoPtr->deviceUSBBusNumber = foundDavisFX2[i].busNumber;
+		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX2[i].devAddress;
+		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX2[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		// Reopen DAVIS device to get additional info, if possible at all.
+		if (!foundDavisFX2[i].errorOpen && !foundDavisFX2[i].errorVersion) {
+			caerDeviceHandle davis = davisOpenFX2(0, davisInfoPtr->deviceUSBBusNumber,
+				davisInfoPtr->deviceUSBDeviceAddress, NULL);
+			if (davis != NULL) {
+				*davisInfoPtr = caerDavisInfoGet(davis);
+
+				davisClose(davis);
+			}
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		davisInfoPtr->deviceID = -1;
+		davisInfoPtr->deviceString = NULL;
+	}
+
+	for (size_t i = 0; i < (size_t) resultFX3; i++, j++) {
+		// This is a DAVIS FX3.
+		(*discoveredDevices)[j].deviceType = CAER_DEVICE_DAVIS_FX3;
+		(*discoveredDevices)[j].deviceErrorOpen = foundDavisFX3[i].errorOpen;
+		(*discoveredDevices)[j].deviceErrorVersion = foundDavisFX3[i].errorVersion;
+		struct caer_davis_info *davisInfoPtr = &((*discoveredDevices)[j].deviceInfo.davisInfo);
+
+		davisInfoPtr->deviceUSBBusNumber = foundDavisFX3[i].busNumber;
+		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX3[i].devAddress;
+		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX3[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		// Reopen DAVIS device to get additional info, if possible at all.
+		if (!foundDavisFX3[i].errorOpen && !foundDavisFX3[i].errorVersion) {
+			caerDeviceHandle davis = davisOpenFX3(0, davisInfoPtr->deviceUSBBusNumber,
+				davisInfoPtr->deviceUSBDeviceAddress, NULL);
+			if (davis != NULL) {
+				*davisInfoPtr = caerDavisInfoGet(davis);
+
+				davisClose(davis);
+			}
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		davisInfoPtr->deviceID = -1;
+		davisInfoPtr->deviceString = NULL;
+	}
+
+	free(foundDavisFX2);
+	free(foundDavisFX3);
+	return ((ssize_t) resultAll);
 }
 
 static inline float clockFreqCorrect(davisState state, int16_t pureClock) {
@@ -434,24 +553,24 @@ static inline void freeAllDataMemory(davisState state) {
 	}
 }
 
-caerDeviceHandle davisOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpenAll(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
 	return (davisOpenInternal(CAER_DEVICE_DAVIS, deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
 }
 
-caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpenFX2(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
 	return (davisOpenInternal(CAER_DEVICE_DAVIS_FX2, deviceID, busNumberRestrict, devAddressRestrict,
 		serialNumberRestrict));
 }
 
-caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpenFX3(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
 	return (davisOpenInternal(CAER_DEVICE_DAVIS_FX3, deviceID, busNumberRestrict, devAddressRestrict,
 		serialNumberRestrict));
 }
 
-caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
+static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DAVIS_DEVICE_NAME);
 

@@ -13,6 +13,59 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 	va_end(argumentList);
 }
 
+ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	struct usb_info *foundDVS128 = NULL;
+
+	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, DVS_REQUIRED_FIRMWARE_VERSION,
+		&foundDVS128);
+
+	if (result <= 0) {
+		// Error or nothing found, return right away.
+		return (result);
+	}
+
+	// Allocate memory for discovered devices in expected format.
+	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
+	if (*discoveredDevices == NULL) {
+		free(foundDVS128);
+		return (-1);
+	}
+
+	// Transform from generic USB format into device discovery one.
+	for (size_t i = 0; i < (size_t) result; i++) {
+		// This is a DVS128.
+		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DVS128;
+		(*discoveredDevices)[i].deviceErrorOpen = foundDVS128[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion = foundDVS128[i].errorVersion;
+		struct caer_dvs128_info *dvs128InfoPtr = &((*discoveredDevices)[i].deviceInfo.dvs128Info);
+
+		dvs128InfoPtr->deviceUSBBusNumber = foundDVS128[i].busNumber;
+		dvs128InfoPtr->deviceUSBDeviceAddress = foundDVS128[i].devAddress;
+		strncpy(dvs128InfoPtr->deviceSerialNumber, foundDVS128[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		// Reopen DVS128 device to get additional info, if possible at all.
+		if (!foundDVS128[i].errorOpen && !foundDVS128[i].errorVersion) {
+			caerDeviceHandle dvs = dvs128Open(0, dvs128InfoPtr->deviceUSBBusNumber,
+				dvs128InfoPtr->deviceUSBDeviceAddress, NULL);
+			if (dvs != NULL) {
+				*dvs128InfoPtr = caerDVS128InfoGet(dvs);
+
+				dvs128Close(dvs);
+			}
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		dvs128InfoPtr->deviceID = -1;
+		dvs128InfoPtr->deviceString = NULL;
+	}
+
+	free(foundDVS128);
+	return (result);
+}
+
 static inline void freeAllDataMemory(dvs128State state) {
 	dataExchangeDestroy(&state->dataExchange);
 

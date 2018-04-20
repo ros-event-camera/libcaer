@@ -15,10 +15,10 @@
 static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) = {
 		[CAER_DEVICE_DVS128] = &dvs128Open,
-		[CAER_DEVICE_DAVIS_FX2] = &davisFX2Open,
-		[CAER_DEVICE_DAVIS_FX3] = &davisFX3Open,
+		[CAER_DEVICE_DAVIS_FX2] = &davisOpenFX2,
+		[CAER_DEVICE_DAVIS_FX3] = &davisOpenFX3,
 		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
-		[CAER_DEVICE_DAVIS] = &davisOpen,
+		[CAER_DEVICE_DAVIS] = &davisOpenAll,
 		[CAER_DEVICE_EDVS] = NULL,
 #if defined(OS_LINUX)
 		[CAER_DEVICE_DAVIS_RPI] = &davisRPiOpen,
