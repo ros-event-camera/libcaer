@@ -1077,7 +1077,7 @@ caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint
 	uint32_t param32 = 0;
 
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, "0001", 8 + 1);
+	strncpy(handle->info.deviceSerialNumber, "0001", 4 + 1);
 	handle->info.deviceUSBBusNumber = 0;
 	handle->info.deviceUSBDeviceAddress = 0;
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
