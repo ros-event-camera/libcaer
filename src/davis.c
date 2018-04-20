@@ -540,10 +540,11 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	uint32_t param32 = 0;
 
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, 8 + 1);
+	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString = usbInfo.deviceString;
+
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
@@ -575,7 +576,6 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_INTERNAL_ADC, &param32);
 	handle->info.apsHasInternalADC = param32;
 	handle->info.apsHasExternalADC = !handle->info.apsHasInternalADC;
-
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
@@ -615,8 +615,8 @@ caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8
 	state->aps.flipX = param32 & 0x02;
 	state->aps.flipY = param32 & 0x01;
 
-	davisLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.", state->aps.sizeX,
-		state->aps.sizeY,state->aps.invertXY, state->aps.flipX, state->aps.flipY);
+	davisLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.",
+		state->aps.sizeX, state->aps.sizeY, state->aps.invertXY, state->aps.flipX, state->aps.flipY);
 
 	if (state->aps.invertXY) {
 		handle->info.apsSizeX = state->aps.sizeY;
@@ -2988,7 +2988,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									size_t frameOffset = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
 										+ state->aps.roi.positionX[i];
 
-									for (uint16_t y = 0; y <  state->aps.roi.sizeY[i]; y++) {
+									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
 										memcpy(roiPixels + roiOffset, state->aps.frame.pixels + frameOffset,
 											state->aps.roi.sizeX[i] * sizeof(uint16_t));
 
@@ -4148,7 +4148,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable,
 	}
 
 	// Dispatch to Raspberry Pi version if that is the device.
-	if  (handle->deviceType == CAER_DEVICE_DAVIS_RPI) {
+	if (handle->deviceType == CAER_DEVICE_DAVIS_RPI) {
 		return (davisRPiROIConfigure(cdh, roiRegion, enable, startX, startY, endX, endY));
 	}
 
