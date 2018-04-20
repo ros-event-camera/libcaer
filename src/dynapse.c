@@ -292,7 +292,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	uint32_t param32 = 0;
 
 	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, 8 + 1);
+	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString = usbInfo.deviceString;
@@ -1407,7 +1407,7 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 		bool tsReset = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((const uint16_t *) (&buffer[i])));
+		uint16_t event = le16toh(*((const uint16_t * ) (&buffer[i])));
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
@@ -1428,7 +1428,8 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 							break;
 
 						case 1: { // Timetamp reset
-							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString, &state->deviceLogLevel);
+							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString,
+								&state->deviceLogLevel);
 
 							containerGenerationCommitTimestampReset(&state->container);
 							containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
@@ -1804,7 +1805,8 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 
 	// SSN and SSP are different.
 	if ((dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP) || (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN)
-		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP) || (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
+		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP)
+		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
 		// Special (bit 15) is always enabled for Shifted-Source biases.
 		// For all other bias types we keep it disabled, as it is not useful for users.
 		biasValue |= U32T(0x3F << 10) | U32T((dynapseBias.fineValue & 0x3F) << 4);
@@ -1845,7 +1847,8 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
 
 	// SSN and SSP are different.
 	if ((biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSP) || (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_SSN)
-		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP) || (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
+		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSP)
+		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_SSN)) {
 		// Special (bit 15) is always enabled for Shifted-Source biases.
 		// For all other bias types we keep it disabled, as it is not useful for users.
 		biasValue.fineValue = (dynapseBias >> 4) & 0x3F;
