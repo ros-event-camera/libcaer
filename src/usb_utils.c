@@ -38,7 +38,29 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
 static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer,
+	size_t bufferSize);
+
+static inline bool checkActiveConfigAndClaim(libusb_device_handle *devHandle) {
+	// Check that the active configuration is set to number 1. If not, do so.
+	int activeConfiguration;
+	if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
+		return (false);
+	}
+
+	if (activeConfiguration != 1) {
+		if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
+			return (false);
+		}
+	}
+
+	// Claim interface 0 (default).
+	if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
+		return (false);
+	}
+
+	return (true);
+}
 
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) {
 	va_list argumentList;
@@ -104,17 +126,11 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					continue;
 				}
 
-				// Verify device firmware version (after port restriction).
-				if ((requiredFirmwareVersion >= 0) && (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
-					caerUSBLog(CAER_LOG_CRITICAL, state,
-						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
-						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
-
-					continue;
-				}
-
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
+
+					caerUSBLog(CAER_LOG_CRITICAL, state,
+						"Failed to open USB device. This usually happens due to permission or driver issues.");
 
 					continue;
 				}
@@ -129,6 +145,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
 						libusb_close(devHandle);
 						devHandle = NULL;
+
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
 
 						continue;
 					}
@@ -147,30 +165,31 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Check that the active configuration is set to number 1. If not, do so.
-				int activeConfiguration;
-				if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
+				// Then claim interface 0 (default).
+				if (!checkActiveConfigAndClaim(devHandle)) {
 					libusb_close(devHandle);
 					devHandle = NULL;
+
+					caerUSBLog(CAER_LOG_CRITICAL, state,
+						"Failed to claim USB interface. This usually happens due to the device being already in use.");
 
 					continue;
 				}
 
-				if (activeConfiguration != 1) {
-					if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
-						libusb_close(devHandle);
-						devHandle = NULL;
+				// Verify device firmware version.
+				bool firmwareVersionOK = true;
 
-						continue;
-					}
+				if ((requiredFirmwareVersion >= 0)
+					&& (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
+					caerUSBLog(CAER_LOG_CRITICAL, state,
+						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
+						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
+
+					firmwareVersionOK = false;
 				}
 
-				// Claim interface 0 (default).
-				if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
+				// Verify device logic version.
+				bool logicVersionOK = true;
 
 				if (requiredLogicRevision >= 0) {
 					// Communication with device open, get logic version information.
@@ -186,6 +205,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						libusb_close(devHandle);
 						devHandle = NULL;
 
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic version.");
+
 						continue;
 					}
 
@@ -196,16 +217,21 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					// Verify device logic version.
 					if (param32 < U32T(requiredLogicRevision)) {
-						libusb_release_interface(devHandle, 0);
-						libusb_close(devHandle);
-						devHandle = NULL;
-
 						caerUSBLog(CAER_LOG_CRITICAL, state,
-							"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
+							"Device logic version too old. You have version %" PRIu32 "; but at least version %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 							param32, U32T(requiredLogicRevision));
 
-						continue;
+						logicVersionOK = false;
 					}
+				}
+
+				// If any of the version checks failed, stop.
+				if (!firmwareVersionOK || !logicVersionOK) {
+					libusb_release_interface(devHandle, 0);
+					libusb_close(devHandle);
+					devHandle = NULL;
+
+					continue;
 				}
 
 				// Initialize transfers mutex.
@@ -213,6 +239,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 					devHandle = NULL;
+
+					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize USB transfer mutex.");
 
 					continue;
 				}
@@ -254,7 +282,8 @@ void usbSetThreadName(usbState state, const char *threadName) {
 }
 
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr) {
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent),
+	void *usbDataCallbackPtr) {
 	state->usbDataCallback = usbDataCallback;
 	state->usbDataCallbackPtr = usbDataCallbackPtr;
 }
@@ -346,6 +375,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 		deviceID, serialNumber, busNumber, devAddress);
 
 	struct usb_info usbInfo;
+	memset(&usbInfo, 0, sizeof(struct usb_info));
 
 	usbInfo.busNumber = busNumber;
 	usbInfo.devAddress = devAddress;
@@ -396,8 +426,8 @@ static int usbThreadRun(void *usbStatePtr) {
 
 	caerUSBLog(CAER_LOG_DEBUG, state, "USB thread running.");
 
-	// Handle USB events (1 second timeout).
-	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
+	// Handle USB events (10 millisecond timeout).
+	struct timeval te = { .tv_sec = 0, .tv_usec = 10000 };
 
 	while (atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
 		libusb_handle_events_timeout(state->deviceContext, &te);
@@ -861,7 +891,8 @@ bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr
 	return (true);
 }
 
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
+static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer,
+	size_t bufferSize) {
 	usbConfigReceive config = configReceiveCallbackPtr;
 
 	uint32_t param = 0;
