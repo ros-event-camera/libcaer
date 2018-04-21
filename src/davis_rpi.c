@@ -59,7 +59,9 @@ ssize_t davisRPiFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	*discoveredDevices = NULL;
 
 	// Try to open device to see if we are on a valid RPi.
+	caerLogDisable(true);
 	caerDeviceHandle rpi = davisRPiOpen(0, 0, 0, NULL);
+	caerLogDisable(false);
 
 	if (rpi == NULL && errno == CAER_ERROR_MEMORY_ALLOCATION) {
 		// Memory allocation failure.

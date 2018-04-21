@@ -7,6 +7,7 @@
 static atomic_uint_fast8_t caerLogLevel = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
 static atomic_int caerLogFileDescriptor1 = ATOMIC_VAR_INIT(STDERR_FILENO);
 static atomic_int caerLogFileDescriptor2 = ATOMIC_VAR_INIT(-1);
+static _Thread_local bool caerLogDisabledTL = false;
 
 void caerLogLevelSet(enum caer_log_level logLevel) {
 	atomic_store_explicit(&caerLogLevel, logLevel, memory_order_relaxed);
@@ -34,6 +35,14 @@ int caerLogFileDescriptorsGetSecond(void) {
 	return (atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed));
 }
 
+void caerLogDisable(bool disableLogging) {
+	caerLogDisabledTL = disableLogging;
+}
+
+bool caerLogDisabled(void) {
+	return (caerLogDisabledTL);
+}
+
 void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
@@ -55,13 +64,19 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 		return;
 	}
 
-	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0)) {
-		// Logging is disabled.
+	// Logging must be enabled. This is thread-local to create
+	// regions of disabled logging.
+	if (caerLogDisabledTL) {
 		return;
 	}
 
 	// Only log messages above the specified severity level.
 	if (logLevel > systemLogLevel) {
+		return;
+	}
+
+	// At least one output must be enabled!
+	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0)) {
 		return;
 	}
 
