@@ -7,14 +7,6 @@
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
-enum caer_error_code {
-	CAER_ERROR_MEMORY_ALLOCATION = -1,
-	CAER_ERROR_OPEN_ACCESS = -2,
-	CAER_ERROR_COMMUNICATION = -3,
-	CAER_ERROR_FW_VERSION = -4,
-	CAER_ERROR_LOGIC_VERSION = -5,
-};
-
 #define PIZERO_PERI_BASE 0x20000000
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
 #define GPIO_REG_LEN  0xB4

@@ -48,7 +48,8 @@ extern "C" {
  * @param serialBaudRate baud-rate for serial port communication.
  *
  * @return a valid device handle that can be used with the other libcaer functions,
- *         or NULL on error. Always check for this!
+ *         or NULL on error. Always check for this! On error, errno is also set to
+ *         provide more precise information about the failure cause.
  */
 caerDeviceHandle caerDeviceOpenSerial(uint16_t deviceID, uint16_t deviceType, const char *serialPortName,
 	uint32_t serialBaudRate);
