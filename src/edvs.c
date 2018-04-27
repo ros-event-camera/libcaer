@@ -45,6 +45,7 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		}
 
 		// Try to open the serial device as an eDVS, with all supported baud-rates.
+		caerLogDisable(true);
 		caerDeviceHandle edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
 		if (edvs == NULL) {
 			edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M);
@@ -55,9 +56,10 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 				}
 			}
 		}
+		caerLogDisable(false);
 
 		// Nothing worked, go to next candidate.
-		if (edvs == NULL) {
+		if (edvs == NULL && errno != CAER_ERROR_COMMUNICATION) {
 			continue;
 		}
 
@@ -78,17 +80,21 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		*discoveredDevices = biggerDiscoveredDevices;
 
 		(*discoveredDevices)[matches].deviceType = CAER_DEVICE_EDVS;
-		(*discoveredDevices)[matches].deviceErrorOpen = false; // Must have worked to get here!
+		(*discoveredDevices)[matches].deviceErrorOpen = (errno == CAER_ERROR_COMMUNICATION);
 		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
 		struct caer_edvs_info *edvsInfoPtr = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
 
-		*edvsInfoPtr = caerEDVSInfoGet(edvs);
+		if (edvs != NULL) {
+			*edvsInfoPtr = caerEDVSInfoGet(edvs);
+		}
 
 		// Set/Reset to invalid values, not part of discovery.
 		edvsInfoPtr->deviceID = -1;
 		edvsInfoPtr->deviceString = NULL;
 
-		edvsClose(edvs);
+		if (edvs != NULL) {
+			edvsClose(edvs);
+		}
 
 		matches++;
 	}
