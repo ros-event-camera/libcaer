@@ -275,12 +275,15 @@ static inline void freeAllDataMemory(dynapseState state) {
 
 caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
+	errno = 0;
+
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DYNAPSE_DEVICE_NAME);
 
 	dynapseHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -312,16 +315,21 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
 		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+
 		free(handle);
 
+		// errno set by usbDeviceOpen().
 		return (NULL);
 	}
 
 	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DYNAPSE_DEVICE_NAME, deviceID);
 	if (usbInfo.deviceString == NULL) {
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to get USB information.");
+
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
+		// errno set by usbGenerateInfo().
 		return (NULL);
 	}
 
@@ -334,10 +342,10 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-
 		free(usbInfo.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		return (NULL);
 	}
 

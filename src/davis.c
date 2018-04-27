@@ -572,12 +572,15 @@ caerDeviceHandle davisOpenFX3(uint16_t deviceID, uint8_t busNumberRestrict, uint
 
 static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict) {
+	errno = 0;
+
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DAVIS_DEVICE_NAME);
 
 	davisHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -626,16 +629,21 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 
 	if (!deviceFound) {
 		davisLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+
 		free(handle);
 
+		// errno set by usbDeviceOpen().
 		return (NULL);
 	}
 
 	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DAVIS_DEVICE_NAME, deviceID);
 	if (usbInfo.deviceString == NULL) {
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to get USB information.");
+
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
+		// errno set by usbGenerateInfo().
 		return (NULL);
 	}
 
@@ -648,10 +656,10 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-
 		free(usbInfo.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		return (NULL);
 	}
 

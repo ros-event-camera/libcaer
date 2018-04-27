@@ -245,6 +245,8 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
+	errno = 0;
+
 	// Search for device and open it.
 	// Initialize libusb using a separate context for each device.
 	// This is to correctly support one thread per device.
@@ -262,6 +264,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 	if (res != LIBUSB_SUCCESS) {
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize libusb context. Error: %d.", res);
+		errno = CAER_ERROR_RESOURCE_ALLOCATION;
 		return (false);
 	}
 
@@ -358,6 +361,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
 
 					firmwareVersionOK = false;
+					errno = CAER_ERROR_FW_VERSION;
 				}
 
 				// Verify device logic version.
@@ -379,6 +383,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic version.");
 
+						errno = CAER_ERROR_COMMUNICATION;
 						continue;
 					}
 
@@ -394,6 +399,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 							param32, U32T(requiredLogicRevision));
 
 						logicVersionOK = false;
+						errno = CAER_ERROR_LOGIC_VERSION;
 					}
 				}
 
@@ -414,6 +420,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize USB transfer mutex.");
 
+					errno = CAER_ERROR_RESOURCE_ALLOCATION;
 					continue;
 				}
 
@@ -427,12 +434,19 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	// Found and configured it!
 	if (devHandle != NULL) {
 		state->deviceHandle = devHandle;
+		errno = 0; // Ensure reset on success.
 		return (true);
 	}
 
 	// Didn't find anything.
 	libusb_exit(state->deviceContext);
 	state->deviceContext = NULL;
+
+	// If not set previously to a more precise error,
+	// set here to the generic open error.
+	if (errno == 0) {
+		errno = CAER_ERROR_OPEN_ACCESS;
+	}
 
 	return (false);
 }
@@ -515,6 +529,8 @@ uint32_t usbGetTransfersSize(usbState state) {
 }
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID) {
+	errno = 0;
+
 	// At this point we can get some more precise data on the device and update
 	// the logging string to reflect that and be more informative.
 	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
@@ -528,6 +544,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 	if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to get serial number for %s device.", deviceName);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		struct usb_info emptyInfo = { 0, .deviceString = NULL };
 		return (emptyInfo);
 	}
@@ -539,6 +556,7 @@ struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t
 	if (fullLogString == NULL) {
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate memory for %s device info string.", deviceName);
 
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		struct usb_info emptyInfo = { 0, .deviceString = NULL };
 		return (emptyInfo);
 	}
