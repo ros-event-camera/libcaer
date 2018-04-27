@@ -55,7 +55,6 @@ struct usb_info {
 	uint8_t busNumber;
 	uint8_t devAddress;
 	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1];
-	char *deviceString;
 	bool errorOpen;
 	bool errorVersion;
 };
@@ -64,7 +63,8 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 	struct usb_info **foundUSBDevices);
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
-	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion);
+	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info *deviceUSBInfo);
 void usbDeviceClose(usbState state);
 
 void usbSetThreadName(usbState state, const char *threadName);
@@ -114,7 +114,7 @@ static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *par
 	return (true);
 }
 
-struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
+char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID);
 
 bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);

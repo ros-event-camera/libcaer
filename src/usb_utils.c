@@ -150,7 +150,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			// Get USB bus number and device address from descriptors.
 			(*foundUSBDevices)[matches].busNumber = libusb_get_bus_number(devicesList[i]);
 			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
-			(*foundUSBDevices)[matches].deviceString = NULL;
 
 			libusb_device_handle *devHandle = NULL;
 
@@ -244,8 +243,12 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 }
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
-	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
+	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info *deviceUSBInfo) {
 	errno = 0;
+
+	// Ensure no content.
+	memset(deviceUSBInfo, 0, sizeof(struct usb_info));
 
 	// Search for device and open it.
 	// Initialize libusb using a separate context for each device.
@@ -285,21 +288,25 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 			// Check if this is the device we want (VID/PID).
 			if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
 				// If a USB port restriction is given, honor it first.
-				if ((busNumber > 0) && (libusb_get_bus_number(devicesList[i]) != busNumber)) {
+				uint8_t devBusNumber = libusb_get_bus_number(devicesList[i]);
+				if ((busNumber > 0) && (devBusNumber != busNumber)) {
 					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						busNumber, libusb_get_bus_number(devicesList[i]));
+						busNumber, devBusNumber);
 
 					continue;
 				}
+				deviceUSBInfo->busNumber = devBusNumber;
 
-				if ((devAddress > 0) && (libusb_get_device_address(devicesList[i]) != devAddress)) {
+				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
+				if ((devAddress > 0) && (devDevAddress != devAddress)) {
 					caerUSBLog(CAER_LOG_ERROR, state,
 						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						devAddress, libusb_get_device_address(devicesList[i]));
+						devAddress, devDevAddress);
 
 					continue;
 				}
+				deviceUSBInfo->devAddress = devDevAddress;
 
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
@@ -310,34 +317,36 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					continue;
 				}
 
-				// Check the serial number restriction, if any is present.
-				if ((serialNumber != NULL) && (!caerStrEquals(serialNumber, ""))) {
-					char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
-					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
-						(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+				// Get the device's serial number.
+				char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
+				int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
+					(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
-					// Check serial number success and length.
-					if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
+				// Check serial number success and length.
+				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+					libusb_close(devHandle);
+					devHandle = NULL;
 
-						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
+					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
 
-						continue;
-					}
-
-					// Now check if the Serial Number matches.
-					if (!caerStrEquals(serialNumber, deviceSerialNumber)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						caerUSBLog(CAER_LOG_ERROR, state,
-							"USB serial number restriction is present (%s), this device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						continue;
-					}
+					continue;
 				}
+
+				// Check the serial number restriction, if any is present.
+				if ((serialNumber != NULL) && !caerStrEquals(serialNumber, "")
+					&& !caerStrEquals(serialNumber, deviceSerialNumber)) {
+					libusb_close(devHandle);
+					devHandle = NULL;
+
+					caerUSBLog(CAER_LOG_ERROR, state,
+						"USB serial number restriction is present (%s), this device didn't match it (%s).",
+						serialNumber, deviceSerialNumber);
+
+					continue;
+				}
+
+				// Copy serial number over.
+				strncpy((char *) &deviceUSBInfo->serialNumber, deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 				// Check that the active configuration is set to number 1. If not, do so.
 				// Then claim interface 0 (default).
@@ -528,51 +537,21 @@ uint32_t usbGetTransfersSize(usbState state) {
 	return (U32T(atomic_load(&state->usbBufferSize)));
 }
 
-struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID) {
-	errno = 0;
-
+char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID) {
 	// At this point we can get some more precise data on the device and update
 	// the logging string to reflect that and be more informative.
-	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
-	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
-
-	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
-	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
-	MAX_SERIAL_NUMBER_LENGTH + 1);
-
-	// Check serial number success and length.
-	if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
-		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to get serial number for %s device.", deviceName);
-
-		errno = CAER_ERROR_COMMUNICATION;
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
-	}
-
 	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-		deviceName, deviceID, serialNumber, busNumber, devAddress);
+		deviceName, deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
 
 	char *fullLogString = malloc(fullLogStringLength + 1);
 	if (fullLogString == NULL) {
-		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate memory for %s device info string.", deviceName);
-
-		errno = CAER_ERROR_MEMORY_ALLOCATION;
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
+		return (NULL);
 	}
 
 	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
-		deviceID, serialNumber, busNumber, devAddress);
+		deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
 
-	struct usb_info usbInfo;
-	memset(&usbInfo, 0, sizeof(struct usb_info));
-
-	usbInfo.busNumber = busNumber;
-	usbInfo.devAddress = devAddress;
-	strncpy(usbInfo.serialNumber, serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	usbInfo.deviceString = fullLogString;
-
-	return (usbInfo);
+	return (fullLogString);
 }
 
 bool usbThreadStart(usbState state) {

@@ -312,8 +312,11 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a Dynap-se device on a specific USB port.
+	struct usb_info usbInfo;
+
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
-		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION)) {
+		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION,
+		&usbInfo)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 
 		free(handle);
@@ -322,14 +325,14 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 		return (NULL);
 	}
 
-	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DYNAPSE_DEVICE_NAME, deviceID);
-	if (usbInfo.deviceString == NULL) {
-		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to get USB information.");
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, DYNAPSE_DEVICE_NAME, deviceID);
+	if (usbInfoString == NULL) {
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
-		// errno set by usbGenerateInfo().
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -342,7 +345,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-		free(usbInfo.deviceString);
+		free(usbInfoString);
 		free(handle);
 
 		errno = CAER_ERROR_COMMUNICATION;
@@ -356,7 +359,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfo.deviceString;
+	handle->info.deviceString = usbInfoString;
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);

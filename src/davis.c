@@ -610,17 +610,18 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 
 	// Try to open a DAVIS device on a specific USB port.
 	bool deviceFound = false;
+	struct usb_info usbInfo;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION);
+			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &usbInfo);
 	}
 
 	if ((!deviceFound) && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION);
+			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &usbInfo);
 
 		if (deviceFound) {
 			state->fx3Support.enabled = true;
@@ -636,14 +637,14 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 		return (NULL);
 	}
 
-	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DAVIS_DEVICE_NAME, deviceID);
-	if (usbInfo.deviceString == NULL) {
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to get USB information.");
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, DAVIS_DEVICE_NAME, deviceID);
+	if (usbInfoString == NULL) {
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
-		// errno set by usbGenerateInfo().
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -656,7 +657,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-		free(usbInfo.deviceString);
+		free(usbInfoString);
 		free(handle);
 
 		errno = CAER_ERROR_COMMUNICATION;
@@ -670,7 +671,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfo.deviceString;
+	handle->info.deviceString = usbInfoString;
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);

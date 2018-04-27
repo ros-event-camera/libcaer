@@ -131,8 +131,10 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DVS128 device on a specific USB port.
+	struct usb_info usbInfo;
+
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
-		serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION)) {
+		serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device.");
 
 		free(handle);
@@ -141,14 +143,14 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 		return (NULL);
 	}
 
-	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DVS_DEVICE_NAME, deviceID);
-	if (usbInfo.deviceString == NULL) {
-		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to get USB information.");
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, DVS_DEVICE_NAME, deviceID);
+	if (usbInfoString == NULL) {
+		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
-		// errno set by usbGenerateInfo().
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -161,7 +163,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-		free(usbInfo.deviceString);
+		free(usbInfoString);
 		free(handle);
 
 		errno = CAER_ERROR_COMMUNICATION;
@@ -173,7 +175,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfo.deviceString;
+	handle->info.deviceString = usbInfoString;
 	handle->info.logicVersion = 1;
 	handle->info.deviceIsMaster = true;
 	handle->info.dvsSizeX = DVS_ARRAY_SIZE_X;
