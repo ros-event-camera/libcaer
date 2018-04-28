@@ -50,13 +50,14 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
 
 		for (size_t i = 0; i < CAER_SUPPORTED_DEVICES_NUMBER; i++) {
 			// Skip CAER_DEVICE_DAVIS: already considered by the specific
-			// FX2 and FX3 DAVIS device searche cases.
+			// FX2 and FX3 DAVIS device search cases.
 			if (i == CAER_DEVICE_DAVIS) {
 				continue;
 			}
 
+			// Device type not supported on this system, due to disabled
+			// feature such as serial support. Skip it.
 			if (deviceFinders[i] == NULL) {
-				// Device type not supported on this system, skip it.
 				continue;
 			}
 
@@ -65,7 +66,7 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
 
 			// Search error!
 			if (result < 0) {
-				caerLog(CAER_LOG_CRITICAL, "DeviceDiscovery", "All-device-discovery failed for device type %zu.", i);
+				caerLog(CAER_LOG_CRITICAL, "DeviceDiscover", "Device discovery failed for device type %zu.", i);
 
 				continue;
 			}
@@ -83,6 +84,7 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
 				free(*discoveredDevices);
 				*discoveredDevices = NULL;
 
+				free(discovered);
 				return (-1);
 			}
 
