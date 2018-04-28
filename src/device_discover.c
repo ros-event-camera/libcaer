@@ -112,5 +112,48 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
 }
 
 caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryResult discoveredDevice) {
-	return (NULL );
+	// Cannot pass a NULL pointer, no device!
+	if (discoveredDevice == NULL) {
+		return (NULL);
+	}
+
+	switch (discoveredDevice->deviceType) {
+		case CAER_DEVICE_DVS128: {
+			struct caer_dvs128_info *info = &discoveredDevice->deviceInfo.dvs128Info;
+			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
+				info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_DAVIS_FX2:
+		case CAER_DEVICE_DAVIS_FX3:
+		case CAER_DEVICE_DAVIS: {
+			struct caer_davis_info *info = &discoveredDevice->deviceInfo.davisInfo;
+			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
+				info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_DYNAPSE: {
+			struct caer_dynapse_info *info = &discoveredDevice->deviceInfo.dynapseInfo;
+			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
+				info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_EDVS: {
+			struct caer_edvs_info *info = &discoveredDevice->deviceInfo.edvsInfo;
+			return (caerDeviceOpenSerial(deviceID, discoveredDevice->deviceType, info->serialPortName,
+				info->serialBaudRate));
+			break;
+		}
+
+		case CAER_DEVICE_DAVIS_RPI:
+			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, 0, 0, NULL));
+			break;
+
+		default:
+			return (NULL);
+			break;
+	}
 }
