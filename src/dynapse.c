@@ -199,6 +199,7 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	}
 
 	// Transform from generic USB format into device discovery one.
+	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
 		// This is a Dynap-SE neuromorphic processor.
 		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DYNAPSE;
@@ -225,6 +226,7 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		dynapseInfoPtr->deviceID = -1;
 		dynapseInfoPtr->deviceString = NULL;
 	}
+	caerLogDisable(false);
 
 	free(foundDynapse);
 	return (result);

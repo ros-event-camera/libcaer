@@ -87,6 +87,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	// Transform from generic USB format into device discovery one.
 	size_t j = 0;
 
+	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) resultFX2; i++, j++) {
 		// This is a DAVIS FX2.
 		(*discoveredDevices)[j].deviceType = CAER_DEVICE_DAVIS_FX2;
@@ -140,6 +141,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		davisInfoPtr->deviceID = -1;
 		davisInfoPtr->deviceString = NULL;
 	}
+	caerLogDisable(false);
 
 	free(foundDavisFX2);
 	free(foundDavisFX3);

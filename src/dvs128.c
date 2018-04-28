@@ -35,6 +35,7 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 	}
 
 	// Transform from generic USB format into device discovery one.
+	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
 		// This is a DVS128.
 		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DVS128;
@@ -61,6 +62,7 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 		dvs128InfoPtr->deviceID = -1;
 		dvs128InfoPtr->deviceString = NULL;
 	}
+	caerLogDisable(false);
 
 	free(foundDVS128);
 	return (result);
