@@ -60,6 +60,10 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	}
 
 	if ((resultFX2 < 0) || (resultFX3 < 0)) {
+		// Free any possible found devices.
+		free(foundDavisFX2);
+		free(foundDavisFX3);
+
 		// Error code, return right away.
 		return (-1);
 	}
@@ -67,7 +71,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	size_t resultAll = (size_t) (resultFX2 + resultFX3);
 
 	if (resultAll == 0) {
-		// Nothing found.
+		// Nothing found. No devices to free.
 		return (0);
 	}
 
@@ -76,6 +80,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	if (*discoveredDevices == NULL) {
 		free(foundDavisFX2);
 		free(foundDavisFX3);
+
 		return (-1);
 	}
 
