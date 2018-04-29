@@ -60,6 +60,14 @@ inline int fileDescriptorsGetSecond() noexcept {
 	return (caerLogFileDescriptorsGetSecond());
 }
 
+inline void disable(bool disableLogging) noexcept {
+	caerLogDisable(disableLogging);
+}
+
+inline bool disabled() noexcept {
+	return (caerLogDisabled());
+}
+
 inline void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
 	va_list argumentList;
 	va_start(argumentList, format);
