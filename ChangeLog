@@ -1,13 +1,48 @@
-Release 2.4.X - XX.XX.2018
+Release 2.5.X - XX.05.2018
 NEW FEATURES
+- Device Discovery: added capability of finding any accessible supported
+  devices on a system, getting information on them, and then opening them.
+  New header 'devices/device_discover.h' with functions caerDeviceDiscover()
+  and caerDeviceDiscoverOpen(), example provided in 'examples/device_discovery.c'.
+  C++ interface available in 'devices/device_discover.hpp', namespace is
+  'libcaer::devices::discover'.
+- Error reporting: both caerDeviceOpen() and caerDeviceOpenSerial() now
+  set 'errno' on failure to provide more precise reasons for the failure,
+  error codes are available in the enum 'caer_error_codes'.
+- log.h: new functions caerLogDisable(true/false) to turn off all logging
+  for a region of code (per-thread), and caerLogDisabled() to check current
+  status of logging. C++ interface available in 'libcaer::log'.
 - C++ packetContainer.hpp: support construction of a new packet container
   based on a C-style caerEventPacketContainer, with optional memory
   ownership takeover for the contained packets.
 - C++ utils.hpp: libcaer::events::utils::makeShared/Unique now support the
   Matrix 4x4 event type too.
+- Examples: added 'davis_simple_2cam.c' example for a two camera setup.
+- device.h: CAER_SUPPORTED_DEVICES_NUMBER define is now public.
+- eDVS: added 'serialPortName' and 'serialBaudRate' members to its info
+  structure, contents are OS-specific.
+- eDVS: analyze startup message to confirm the presence of an eDVS device.
+- eDSV: flush buffers on open to avoid possible garbage data from previous
+  open attempts to interfere with eDVS detection.
+- USB: check both firmware and logic version always and notify users of
+  needed upgrades for both at the same time; this avoids multiple notify
+  and upgrade cycles if both change quickly or the user hasn't upgraded
+  in a long time.
 
 BUG FIXES
 - C++: add header inclusions for possibly missing types.
+- C++ devices/serial.hpp: fix warning about shadowed variable.
+- Devices: documentation updates, fix typos and precise usage of
+  'deviceString' member in device info structures; it is only valid
+  during the life-time of the device!
+- eDVS: name case changed to 'EDVS-4337' to follow firmware.
+- eDVS: faster startup due to shorter delays.
+- eDVS: request exclusive access to serial device on Unix (Linux/MacOSX),
+  this was already the default on Windows.
+- Dynap-SE: delay after initial configuration extended from 1s to 4s,
+  some devices seem to need longer delays to start up properly.
+- USB: better log messages on failure, reduce event handling timeout to
+  10ms from 1s for quicker response to shutdown requests.
 
 
 Release 2.4.2 - 23.03.2018
