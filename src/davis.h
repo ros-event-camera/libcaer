@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_DAVIS_H_
 
 #include "devices/davis.h"
+#include "devices/device_discover.h"
 #include "data_exchange.h"
 #include "container_generation.h"
 #include "usb_utils.h"
@@ -180,15 +181,17 @@ struct davis_handle {
 
 typedef struct davis_handle *davisHandle;
 
-caerDeviceHandle davisOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+ssize_t davisFindAll(caerDeviceDiscoveryResult *discoveredDevices);
+ssize_t davisFindFX2(caerDeviceDiscoveryResult *discoveredDevices);
+ssize_t davisFindFX3(caerDeviceDiscoveryResult *discoveredDevices);
+
+caerDeviceHandle davisOpenAll(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
-caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpenFX2(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
-caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+caerDeviceHandle davisOpenFX3(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
 
-caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict);
 bool davisClose(caerDeviceHandle cdh);
 
 bool davisSendDefaultConfig(caerDeviceHandle cdh);

@@ -102,6 +102,23 @@ int caerLogFileDescriptorsGetFirst(void);
 int caerLogFileDescriptorsGetSecond(void);
 
 /**
+ * Disable all logging for this thread only.
+ * Call again with different argument to re-enable.
+ *
+ * @param disableLogging true to disable logging for this thread,
+ *                       false to enable it again.
+ */
+void caerLogDisable(bool disableLogging);
+
+/**
+ * Status of logging for this thread.
+ *
+ * @return true if logging is disabled for this thread,
+ *         false if it is enabled.
+ */
+bool caerLogDisabled(void);
+
+/**
  * Main logging function.
  * This function takes messages, formats them and sends them out to a file descriptor,
  * respecting the system-wide log level setting and prepending the current time, the

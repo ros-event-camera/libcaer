@@ -5,6 +5,7 @@ SET(LIBCAER_SRC_FILES
 	frame_utils.c
 	usb_utils.c
 	autoexposure.c
+	device_discover.c
 	device.c
 	dvs128.c
 	davis.c

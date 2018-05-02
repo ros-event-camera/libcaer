@@ -49,7 +49,8 @@ extern "C" {
  *                             possess the given Serial Number in their USB SerialNumber descriptor.
  *
  * @return a valid device handle that can be used with the other libcaer functions,
- *         or NULL on error. Always check for this!
+ *         or NULL on error. Always check for this! On error, errno is also set to
+ *         provide more precise information about the failure cause.
  */
 caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict,
 	uint8_t devAddressRestrict, const char *serialNumberRestrict);

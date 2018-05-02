@@ -177,6 +177,61 @@ static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const
 	va_end(argumentList);
 }
 
+ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	struct usb_info *foundDynapse = NULL;
+
+	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, DYNAPSE_REQUIRED_LOGIC_REVISION,
+	DYNAPSE_REQUIRED_FIRMWARE_VERSION, &foundDynapse);
+
+	if (result <= 0) {
+		// Error or nothing found, return right away.
+		return (result);
+	}
+
+	// Allocate memory for discovered devices in expected format.
+	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
+	if (*discoveredDevices == NULL) {
+		free(foundDynapse);
+		return (-1);
+	}
+
+	// Transform from generic USB format into device discovery one.
+	caerLogDisable(true);
+	for (size_t i = 0; i < (size_t) result; i++) {
+		// This is a Dynap-SE neuromorphic processor.
+		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DYNAPSE;
+		(*discoveredDevices)[i].deviceErrorOpen = foundDynapse[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion = foundDynapse[i].errorVersion;
+		struct caer_dynapse_info *dynapseInfoPtr = &((*discoveredDevices)[i].deviceInfo.dynapseInfo);
+
+		dynapseInfoPtr->deviceUSBBusNumber = foundDynapse[i].busNumber;
+		dynapseInfoPtr->deviceUSBDeviceAddress = foundDynapse[i].devAddress;
+		strncpy(dynapseInfoPtr->deviceSerialNumber, foundDynapse[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		// Reopen Dynap-SE device to get additional info, if possible at all.
+		if (!foundDynapse[i].errorOpen && !foundDynapse[i].errorVersion) {
+			caerDeviceHandle dynapse = dynapseOpen(0, dynapseInfoPtr->deviceUSBBusNumber,
+				dynapseInfoPtr->deviceUSBDeviceAddress, NULL);
+			if (dynapse != NULL) {
+				*dynapseInfoPtr = caerDynapseInfoGet(dynapse);
+
+				dynapseClose(dynapse);
+			}
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		dynapseInfoPtr->deviceID = -1;
+		dynapseInfoPtr->deviceString = NULL;
+	}
+	caerLogDisable(false);
+
+	free(foundDynapse);
+	return (result);
+}
+
 static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, size_t configNum) {
 	dynapseState state = &handle->state;
 
@@ -222,12 +277,15 @@ static inline void freeAllDataMemory(dynapseState state) {
 
 caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict) {
+	errno = 0;
+
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DYNAPSE_DEVICE_NAME);
 
 	dynapseHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -256,19 +314,27 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a Dynap-se device on a specific USB port.
+	struct usb_info usbInfo;
+
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
-		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION)) {
+		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION,
+		&usbInfo)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+
 		free(handle);
 
+		// errno set by usbDeviceOpen().
 		return (NULL);
 	}
 
-	struct usb_info usbInfo = usbGenerateInfo(&state->usbState, DYNAPSE_DEVICE_NAME, deviceID);
-	if (usbInfo.deviceString == NULL) {
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, DYNAPSE_DEVICE_NAME, deviceID);
+	if (usbInfoString == NULL) {
+		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
+
 		usbDeviceClose(&state->usbState);
 		free(handle);
 
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -281,10 +347,10 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
 		usbDeviceClose(&state->usbState);
-
-		free(usbInfo.deviceString);
+		free(usbInfoString);
 		free(handle);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		return (NULL);
 	}
 
@@ -295,7 +361,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfo.deviceString;
+	handle->info.deviceString = usbInfoString;
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);

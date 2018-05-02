@@ -24,6 +24,86 @@ static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char 
 	va_end(argumentList);
 }
 
+ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	// Set to NULL initially (for error return).
+	*discoveredDevices = NULL;
+
+	struct sp_port **serialPortList = NULL;
+
+	enum sp_return result = sp_list_ports(&serialPortList);
+	if (result != SP_OK) {
+		// Error, return right away.
+		return (-1);
+	}
+
+	size_t i = 0, matches = 0;
+
+	while (serialPortList[i++] != NULL) {
+		// Skip undefined devices.
+		if (sp_get_port_name(serialPortList[i]) == NULL || strlen(sp_get_port_name(serialPortList[i])) == 0) {
+			continue;
+		}
+
+		// Try to open the serial device as an eDVS, with all supported baud-rates.
+		caerLogDisable(true);
+		caerDeviceHandle edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
+		if (edvs == NULL) {
+			edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M);
+			if (edvs == NULL) {
+				edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M);
+				if (edvs == NULL) {
+					edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M);
+				}
+			}
+		}
+		caerLogDisable(false);
+
+		// Nothing worked, go to next candidate.
+		if (edvs == NULL && errno != CAER_ERROR_COMMUNICATION) {
+			continue;
+		}
+
+		// Successfully opened an eDVS.
+		void *biggerDiscoveredDevices = realloc(*discoveredDevices,
+			(matches + 1) * sizeof(struct caer_device_discovery_result));
+		if (biggerDiscoveredDevices == NULL) {
+			// Memory allocation failure!
+			free(*discoveredDevices);
+			*discoveredDevices = NULL;
+
+			sp_free_port_list(serialPortList);
+
+			return (-1);
+		}
+
+		// Memory allocation successful, get info.
+		*discoveredDevices = biggerDiscoveredDevices;
+
+		(*discoveredDevices)[matches].deviceType = CAER_DEVICE_EDVS;
+		(*discoveredDevices)[matches].deviceErrorOpen = (errno == CAER_ERROR_COMMUNICATION);
+		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
+		struct caer_edvs_info *edvsInfoPtr = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
+
+		if (edvs != NULL) {
+			*edvsInfoPtr = caerEDVSInfoGet(edvs);
+		}
+
+		// Set/Reset to invalid values, not part of discovery.
+		edvsInfoPtr->deviceID = -1;
+		edvsInfoPtr->deviceString = NULL;
+
+		if (edvs != NULL) {
+			edvsClose(edvs);
+		}
+
+		matches++;
+	}
+
+	sp_free_port_list(serialPortList);
+
+	return ((ssize_t) matches);
+}
+
 static inline bool serialPortWrite(edvsState state, const char *cmd) {
 	size_t cmdLength = strlen(cmd);
 
@@ -61,12 +141,15 @@ static inline void freeAllDataMemory(edvsState state) {
 }
 
 caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_t serialBaudRate) {
+	errno = 0;
+
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", EDVS_DEVICE_NAME);
 
 	edvsHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -90,9 +173,10 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 	char *fullLogString = malloc(fullLogStringLength + 1);
 	if (fullLogString == NULL) {
-		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device string.");
 		free(handle);
 
+		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device string.");
+		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
 
@@ -104,9 +188,11 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	// and only on one thread).
 	if (mtx_init(&state->serialState.serialWriteLock, mtx_plain) != thrd_success) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to initialize serial write lock.");
+
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_RESOURCE_ALLOCATION;
 		return (NULL);
 	}
 
@@ -114,10 +200,12 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	enum sp_return retVal = sp_get_port_by_name(serialPortName, &state->serialState.serialPort);
 	if (retVal != SP_OK) {
 		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to get serial port on '%s'.", serialPortName);
+
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (NULL);
 	}
 
@@ -125,11 +213,13 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	retVal = sp_open(state->serialState.serialPort, SP_MODE_READ_WRITE);
 	if (retVal != SP_OK) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to open serial port, error: %d.", retVal);
+
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (NULL);
 	}
 
@@ -166,12 +256,14 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	const char *cmdReset = "R\n";
 	if (!serialPortWrite(state, cmdReset)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send reset command.");
+
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (NULL);
 	}
 
@@ -184,12 +276,14 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	int bytesRead = sp_blocking_read(state->serialState.serialPort, startMessage, 1024, 100);
 	if (bytesRead < 0) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to read startup message.");
+
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (NULL);
 	}
 
@@ -203,42 +297,48 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 		}
 	}
 
-	edvsLog(CAER_LOG_INFO, handle, "eDVS started, message: '%s' (%d bytes).", startMessage, bytesRead);
+	edvsLog(CAER_LOG_INFO, handle, "Startup message: '%s' (%d bytes).", startMessage, bytesRead);
 
 	// Extract model from startup message. This tells us if we really connected
 	// to an eDVS device.
 	if (strstr(startMessage, EDVS_DEVICE_NAME) == NULL) {
 		edvsLog(CAER_LOG_ERROR, handle, "This does not appear to be an eDVS device (according to startup message).");
+
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_OPEN_ACCESS;
 		return (NULL);
 	}
 
 	const char *cmdNoEcho = "!U0\n";
 	if (!serialPortWrite(state, cmdNoEcho)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send echo disable command.");
+
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		return (NULL);
 	}
 
 	const char *cmdEventFormat = "!E2\n";
 	if (!serialPortWrite(state, cmdEventFormat)) {
 		edvsLog(CAER_LOG_ERROR, handle, "Failed to send event format command.");
+
 		sp_close(state->serialState.serialPort);
 		sp_free_port(state->serialState.serialPort);
 		mtx_destroy(&state->serialState.serialWriteLock);
 		free(handle->info.deviceString);
 		free(handle);
 
+		errno = CAER_ERROR_COMMUNICATION;
 		return (NULL);
 	}
 

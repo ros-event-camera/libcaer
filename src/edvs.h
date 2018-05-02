@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_EDVS_H_
 
 #include "devices/edvs.h"
+#include "devices/device_discover.h"
 #include "data_exchange.h"
 #include "container_generation.h"
 #include <libserialport.h>
@@ -83,6 +84,8 @@ struct edvs_handle {
 };
 
 typedef struct edvs_handle *edvsHandle;
+
+ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices);
 
 caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_t serialBaudRate);
 bool edvsClose(caerDeviceHandle handle);

@@ -2,6 +2,7 @@
 #define LIBCAER_SRC_DYNAPSE_H_
 
 #include "devices/dynapse.h"
+#include "devices/device_discover.h"
 #include "data_exchange.h"
 #include "container_generation.h"
 #include "usb_utils.h"
@@ -63,6 +64,8 @@ struct dynapse_handle {
 };
 
 typedef struct dynapse_handle *dynapseHandle;
+
+ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices);
 
 caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
 	const char *serialNumberRestrict);
