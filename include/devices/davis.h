@@ -8,6 +8,7 @@
 #define LIBCAER_DEVICES_DAVIS_H_
 
 #include "usb.h"
+#include "filter_dvs.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
 #include "../events/frame.h"

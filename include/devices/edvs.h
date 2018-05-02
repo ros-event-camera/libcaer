@@ -8,6 +8,7 @@
 #define LIBCAER_DEVICES_EDVS_H_
 
 #include "serial.h"
+#include "filter_dvs.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
 

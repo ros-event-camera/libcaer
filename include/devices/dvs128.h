@@ -8,6 +8,7 @@
 #define LIBCAER_DEVICES_DVS128_H_
 
 #include "usb.h"
+#include "filter_dvs.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
 
