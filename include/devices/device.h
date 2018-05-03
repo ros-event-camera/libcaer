@@ -45,10 +45,6 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * Module address: host-side logging configuration.
  */
 #define CAER_HOST_CONFIG_LOG -4
-/**
- * Module address: host-side filtering configuration.
- */
-#define CAER_HOST_CONFIG_FILTER -5
 
 /**
  * Parameter address for module CAER_HOST_CONFIG_DATAEXCHANGE:
