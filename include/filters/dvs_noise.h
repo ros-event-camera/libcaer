@@ -35,10 +35,17 @@ typedef struct caer_filter_dvs_noise *caerFilterDVSNoise;
  * map for both.
  * At initialization, all filters are disabled. You must configure
  * and enable them using caerFilterDVSNoiseConfigSet().
+ * You must specify the maximum resolution and the sub-sample
+ * factor at initialization, as they are used to set up efficient
+ * lookup tables.
+ *
+ * @param sizeX maximum X axis resolution.
+ * @param sizeY maximum Y axis resolution.
+ * @param subSampleFactor sub-sampling factor for X/Y resolution.
  *
  * @return DVS noise filter instance, NULL on error.
  */
-caerFilterDVSNoise caerFilterDVSNoiseInitialize(void);
+caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY, uint8_t subSampleFactor);
 
 /**
  * Destroy a DVS noise filter instance and free its memory.
