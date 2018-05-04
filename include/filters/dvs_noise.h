@@ -52,36 +52,49 @@ void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter);
  * This will filter out events by marking them as invalid, depending
  * on the given filter configuration.
  *
- * @param noiseFilter
- * @param polarity
+ * @param noiseFilter a valid DVS noise filter instance.
+ * @param polarity a valid polarity event packet. If NULL, no operation
+ *                 is performed.
  */
 void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarity);
 
 /**
+ * Set DVS noise filter configuration parameters.
  *
- * @param noiseFilter
- * @param paramAddr
- * @param param
- * @return
+ * @param noiseFilter a valid DVS noise filter instance.
+ * @param paramAddr a configuration parameter address, see defines CAER_FILTER_DVS_*.
+ * @param param a configuration parameter value integer.
+ *
+ * @return true if operation successful, false otherwise.
  */
 bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t param);
 
 /**
+ * Get DVS noise filter configuration parameters.
  *
- * @param noiseFilter
- * @param paramAddr
- * @param param
- * @return
+ * @param noiseFilter a valid DVS noise filter instance.
+ * @param paramAddr a configuration parameter address, see defines CAER_FILTER_DVS_*.
+ * @param param a pointer to a configuration parameter value integer,
+ *              in which to store the current value.
+ *
+ * @return true if operation successful, false otherwise.
  */
 bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t *param);
 
 /**
+ * Get a list of the currently learned hot pixels, in order of activity
+ * (most active first, least active last).
+ * Useful for working with hardware-based pixel filtering (FPGA/CPLD).
  *
- * @param noiseFilter
- * @param hotPixels
- * @return
+ * @param noiseFilter a valid DVS noise filter instance.
+ * @param hotPixels array of DVS pixel addresses, sorted by activity (most active first).
+ *                  Memory will be allocated for it automatically. On error, the pointer
+ *                  is set to NULL. Remember to free() the memory once done!
+ *
+ * @return number of hot pixels in array, 0 if no hot pixels could be found;
+ *         or -1 if an error occurred.
  */
-size_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
+ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
 
 /**
  * DVS HotPixel Filter:
