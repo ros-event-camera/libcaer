@@ -103,7 +103,7 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t *param);
 
 /**
- * Get a list of the currently learned hot pixels, in order of activity
+ * Get an array of currently learned hot pixels, in order of activity
  * (most active first, least active last).
  * Useful for working with hardware-based pixel filtering (FPGA/CPLD).
  *
@@ -112,16 +112,19 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
  *                  Memory will be allocated for it automatically. On error, the pointer
  *                  is set to NULL. Remember to free() the memory once done!
  *
- * @return number of hot pixels in array, 0 if no hot pixels could be found;
+ * @return number of hot pixels in array, 0 if no hot pixels were found;
  *         or -1 if an error occurred.
  */
 ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
 
 /**
  * DVS HotPixel Filter:
- * Turn on learning to determine which pixels are hot, meaning very active
- * within a certain time period. In the absence of external stimuli, the
- * only pixels behaving as such must be noise.
+ * Turn on learning to determine which pixels are hot, meaning abnormally
+ * active within a certain time period. In the absence of external stimuli,
+ * the only pixels behaving as such must be noise.
+ * Once learning is enabled, do not disable it until completed. To verify
+ * completion, query this parameter and wait for it to switch from 'true'
+ * back to 'false'.
  */
 #define CAER_FILTER_DVS_HOTPIXEL_LEARN 0
 /**
