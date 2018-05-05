@@ -169,13 +169,6 @@ extern "C" {
  */
 #define DAVIS_CONFIG_SYSINFO  6
 /**
- * Module address: device-side microphone configuration.
- * The Microphone module enables the use of InvenSense stereo
- * microphones to capture samples of sound from devices that
- * support is, such as the miniDAVIS346.
- */
-#define DAVIS_CONFIG_MICROPHONE 7
-/**
  * Module address: device-side USB output configuration.
  * The USB output module forwards the data from the device and the FPGA/CPLD to
  * the USB chip, usually a Cypress FX2 or FX3.
@@ -248,12 +241,6 @@ extern "C" {
 #define DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL 7
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
- * drop Microphone sample events if the USB output FIFO is full, instead of having
- * them pile up at the input FIFOs.
- */
-#define DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL      8
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
  * read-only parameter, information about the presence of the
  * statistics feature.
  * This is reserved for internal use and should not be used by
@@ -293,14 +280,6 @@ extern "C" {
  * function: caerDeviceConfigGet64().
  */
 #define DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED 17
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
- * read-only parameter, representing the number of dropped
- * Microphone sample events on the device due to full USB buffers.
- * This is a 64bit value, and should always be read using the
- * function: caerDeviceConfigGet64().
- */
-#define DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED      19
 
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
@@ -1400,24 +1379,6 @@ extern "C" {
  * documentation to get this information.
  */
 #define DAVIS_CONFIG_SYSINFO_ADC_CLOCK        4
-
-/**
- * Parameter address for module DAVIS_CONFIG_MICROPHONE:
- * enable the Microphone module, which provides stereo samples
- * of sound recorded by on-board InvenSense microphones.
- */
-#define DAVIS_CONFIG_MICROPHONE_RUN              0
-/**
- * Parameter address for module DAVIS_CONFIG_MICROPHONE:
- * allows setting the sample frequency of the stereo microphones,
- * by specifying the length of an SCK clock cycle in LogicClock cycles.
- * Value can be between 30 and 219 inclusive.
- * The desired value can be calculated in the following way:
- * floor((100.8 * 1000)/(64 * <desired frequency in KHz>))
- * For example for 48 KHz sampling frequency, this would be 32.
- * For 44.1 KHz it would be 35, and for 16 KHz it would be 98.
- */
-#define DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY 1
 
 /**
  * Parameter address for module DAVIS_CONFIG_USB:

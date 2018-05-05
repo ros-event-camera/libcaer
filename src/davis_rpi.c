@@ -1284,7 +1284,6 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL, false);
 
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4); // in cycles @ LogicClock
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0); // in cycles @ LogicClock
@@ -1385,9 +1384,6 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY, true);
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH,
 		U32T(handle->info.logicClock)); // in cycles @ LogicClock
-
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false); // Microphones disabled by default.
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32); // 48 KHz sampling frequency.
 
 	if (handle->info.extInputHasGenerator) {
 		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
@@ -1572,7 +1568,6 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigSend(state, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1995,7 +1990,6 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigReceive(state, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -2012,8 +2006,6 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED + 1:
-				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED + 1:
 					if (handle->info.muxHasStatistics) {
 						return (spiConfigReceive(state, DAVIS_CONFIG_MUX, paramAddr, param));
 					}

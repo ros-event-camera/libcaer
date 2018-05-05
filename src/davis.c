@@ -530,13 +530,6 @@ static inline void freeAllDataMemory(davisState state) {
 		containerGenerationSetPacket(&state->container, IMU6_EVENT, NULL);
 	}
 
-	if (state->currentPackets.sample != NULL) {
-		free(&state->currentPackets.sample->packetHeader);
-		state->currentPackets.sample = NULL;
-
-		containerGenerationSetPacket(&state->container, DAVIS_SAMPLE_POSITION, NULL);
-	}
-
 	containerGenerationDestroy(&state->container);
 
 	if (state->aps.frame.pixels != NULL) {
@@ -850,7 +843,6 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL, false);
 
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4); // in cycles @ LogicClock
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0); // in cycles @ LogicClock
@@ -967,9 +959,6 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY, true);
 	davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH,
 		U32T(handle->info.logicClock)); // in cycles @ LogicClock
-
-	davisConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false); // Microphones disabled by default.
-	davisConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY, 32); // 48 KHz sampling frequency.
 
 	if (handle->info.extInputHasGenerator) {
 		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
@@ -1334,7 +1323,6 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1678,19 +1666,6 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			}
 			break;
 
-		case DAVIS_CONFIG_MICROPHONE:
-			switch (paramAddr) {
-				case DAVIS_CONFIG_MICROPHONE_RUN:
-				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
-					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
-					break;
-
-				default:
-					return (false);
-					break;
-			}
-			break;
-
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -1958,7 +1933,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1975,8 +1949,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED + 1:
-				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED + 1:
 					if (handle->info.muxHasStatistics) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					}
@@ -2321,19 +2293,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			}
 			break;
 
-		case DAVIS_CONFIG_MICROPHONE:
-			switch (paramAddr) {
-				case DAVIS_CONFIG_MICROPHONE_RUN:
-				case DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY:
-					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MICROPHONE, paramAddr, param));
-					break;
-
-				default:
-					return (false);
-					break;
-			}
-			break;
-
 		case DAVIS_CONFIG_BIAS: // Also DAVIS_CONFIG_CHIP (starts at address 128).
 			if (paramAddr < 128) {
 				// BIASING (DAVIS_CONFIG_BIAS).
@@ -2635,15 +2594,6 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		return (false);
 	}
 
-	state->currentPackets.sample = caerSampleEventPacketAllocate(DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID),
-		0);
-	if (state->currentPackets.sample == NULL) {
-		freeAllDataMemory(state);
-
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
-		return (false);
-	}
-
 	state->aps.frame.pixels = calloc((size_t) (state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS),
 		sizeof(uint16_t));
 	if (state->aps.frame.pixels == NULL) {
@@ -2721,7 +2671,6 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, true);
 		// Do NOT enable additional ExtInput detectors, those are always user controlled.
-		// Do NOT enable microphones by default.
 
 		// Enable data transfer only after enabling the data producers, so that the chip
 		// has time to start up and we avoid the initial data flood.
@@ -2742,7 +2691,6 @@ bool davisDataStop(caerDeviceHandle cdh) {
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
-		davisConfigSet(cdh, DAVIS_CONFIG_MICROPHONE, DAVIS_CONFIG_MICROPHONE_RUN, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
@@ -2767,7 +2715,6 @@ bool davisDataStop(caerDeviceHandle cdh) {
 	state->currentPackets.specialPosition = 0;
 	state->currentPackets.framePosition = 0;
 	state->currentPackets.imu6Position = 0;
-	state->currentPackets.samplePosition = 0;
 
 	// Reset private composite events. 'aps.currentEvent' is taken care of in freeAllDataMemory().
 	memset(&state->imu.currentEvent, 0, sizeof(struct caer_imu6_event));
@@ -2900,29 +2847,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 			}
 
 			state->currentPackets.imu6 = grownPacket;
-		}
-
-		if (state->currentPackets.sample == NULL) {
-			state->currentPackets.sample = caerSampleEventPacketAllocate(
-			DAVIS_SAMPLE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
-			if (state->currentPackets.sample == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate Sample event packet.");
-				return;
-			}
-		}
-		else if (state->currentPackets.samplePosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.sample)) {
-			// If not committed, let's check if any of the packets has reached its maximum
-			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSampleEventPacket grownPacket = (caerSampleEventPacket) caerEventPacketGrow(
-				(caerEventPacketHeader) state->currentPackets.sample,
-				caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.sample) * 2);
-			if (grownPacket == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow Sample event packet.");
-				return;
-			}
-
-			state->currentPackets.sample = grownPacket;
 		}
 
 		bool tsReset = false;
@@ -3811,54 +3735,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							break;
 						}
 
-						case 4: {
-							// Microphone FIRST RIGHT.
-							state->mic.isRight = true;
-							state->mic.count = 1;
-							state->mic.tmpData = misc8Data;
-							break;
-						}
-
-						case 5: {
-							// Microphone FIRST LEFT.
-							state->mic.isRight = false;
-							state->mic.count = 1;
-							state->mic.tmpData = misc8Data;
-							break;
-						}
-
-						case 6: {
-							// Microphone SECOND.
-							if (state->mic.count != 1) {
-								// Ignore incomplete samples.
-								break;
-							}
-
-							state->mic.count = 2;
-							state->mic.tmpData = U16T(U32T(state->mic.tmpData << 8) | misc8Data);
-							break;
-						}
-
-						case 7: {
-							// Microphone THIRD.
-							if (state->mic.count != 2) {
-								// Ignore incomplete samples.
-								break;
-							}
-
-							state->mic.count = 0;
-							uint32_t micData = U32T(U32T(state->mic.tmpData << 8) | misc8Data);
-
-							caerSampleEvent micSample = caerSampleEventPacketGetEvent(state->currentPackets.sample,
-								state->currentPackets.samplePosition);
-							caerSampleEventSetType(micSample, state->mic.isRight);
-							caerSampleEventSetSample(micSample, micData);
-							caerSampleEventSetTimestamp(micSample, state->timestamps.current);
-							caerSampleEventValidate(micSample, state->currentPackets.sample);
-							state->currentPackets.samplePosition++;
-							break;
-						}
-
 						default:
 							davisLog(CAER_LOG_ERROR, handle, "Caught Misc8 event that can't be handled.");
 							break;
@@ -3920,8 +3796,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
 				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
 				|| (state->currentPackets.framePosition >= currentPacketContainerCommitSize)
-				|| (state->currentPackets.imu6Position >= currentPacketContainerCommitSize)
-				|| (state->currentPackets.samplePosition >= currentPacketContainerCommitSize));
+				|| (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
 			state->timestamps.wrapOverflow, state->timestamps.current);
@@ -3966,15 +3841,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 				state->currentPackets.imu6 = NULL;
 				state->currentPackets.imu6Position = 0;
-				emptyContainerCommit = false;
-			}
-
-			if (state->currentPackets.samplePosition > 0) {
-				containerGenerationSetPacket(&state->container, DAVIS_SAMPLE_POSITION,
-					(caerEventPacketHeader) state->currentPackets.sample);
-
-				state->currentPackets.sample = NULL;
-				state->currentPackets.samplePosition = 0;
 				emptyContainerCommit = false;
 			}
 

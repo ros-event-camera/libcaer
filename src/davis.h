@@ -32,14 +32,12 @@
 
 #define SPI_CONFIG_MSG_SIZE 6
 
-#define DAVIS_EVENT_TYPES 5
-#define DAVIS_SAMPLE_POSITION 4
+#define DAVIS_EVENT_TYPES 4
 
 #define DAVIS_POLARITY_DEFAULT_SIZE 4096
 #define DAVIS_SPECIAL_DEFAULT_SIZE 128
 #define DAVIS_FRAME_DEFAULT_SIZE 8
 #define DAVIS_IMU_DEFAULT_SIZE 64
-#define DAVIS_SAMPLE_DEFAULT_SIZE 512
 
 #define DAVIS_DEVICE_NAME "DAVIS"
 
@@ -136,12 +134,6 @@ struct davis_state {
 		// Current composite events, for later copy, to not loose them on commits.
 		struct caer_imu6_event currentEvent;
 	} imu;
-	struct {
-		// Microphone specific fields
-		bool isRight;
-		uint8_t count;
-		uint16_t tmpData;
-	} mic;
 	// Packet Container state
 	struct container_generation container;
 	struct {
@@ -157,9 +149,6 @@ struct davis_state {
 		// Special Packet state
 		caerSpecialEventPacket special;
 		int32_t specialPosition;
-		// Microphone Sample Packet state
-		caerSampleEventPacket sample;
-		int32_t samplePosition;
 	} currentPackets;
 	struct {
 		// Debug transfer support (FX3 only).
