@@ -22,37 +22,27 @@ struct caer_filter_dvs_noise {
 	// Maps and their sizes.
 	uint16_t sizeX;
 	uint16_t sizeY;
-	uint8_t subSampleFactor;
-	uint16_t sizeXSubSampled;
-	uint16_t sizeYSubSampled;
 	int64_t *timestampsMap[];
 };
 
-caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY, uint8_t subSampleFactor) {
-	uint16_t sizeXSubSampled = (sizeX >> subSampleFactor);
-	uint16_t sizeYSubSampled = (sizeY >> subSampleFactor);
-
-	caerFilterDVSNoise noiseFilter = malloc(
-		sizeof(struct caer_filter_dvs_noise) + (sizeXSubSampled * sizeof(int64_t *)));
+caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) {
+	caerFilterDVSNoise noiseFilter = malloc(sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeof(int64_t *)));
 	if (noiseFilter == NULL) {
 		return (NULL);
 	}
 
-	noiseFilter->timestampsMap[0] = calloc(sizeXSubSampled * sizeYSubSampled, sizeof(int64_t));
+	noiseFilter->timestampsMap[0] = calloc(sizeX * sizeY, sizeof(int64_t));
 	if (noiseFilter->timestampsMap[0] == NULL) {
 		free(noiseFilter);
 		return (NULL);
 	}
 
-	for (size_t i = 1; i < sizeXSubSampled; i++) {
-		noiseFilter->timestampsMap[i] = noiseFilter->timestampsMap[0] + (i * sizeYSubSampled);
+	for (size_t i = 1; i < sizeX; i++) {
+		noiseFilter->timestampsMap[i] = noiseFilter->timestampsMap[0] + (i * sizeY);
 	}
 
 	noiseFilter->sizeX = sizeX;
 	noiseFilter->sizeY = sizeY;
-	noiseFilter->subSampleFactor = subSampleFactor;
-	noiseFilter->sizeXSubSampled = sizeXSubSampled;
-	noiseFilter->sizeYSubSampled = sizeYSubSampled;
 
 	return (noiseFilter);
 }
@@ -69,15 +59,15 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 	}
 
 	CAER_POLARITY_ITERATOR_ALL_START(polarity)
-		uint16_t x = (caerPolarityEventGetX(caerPolarityIteratorElement) >> noiseFilter->subSampleFactor);
-		uint16_t y = (caerPolarityEventGetY(caerPolarityIteratorElement) >> noiseFilter->subSampleFactor);
+		uint16_t x = caerPolarityEventGetX(caerPolarityIteratorElement);
+		uint16_t y = caerPolarityEventGetY(caerPolarityIteratorElement);
 		int64_t ts = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
 
 		if (noiseFilter->backgroundActivityEnabled) {
 			// Compute map limits.
 			bool borderLeft = (x == 0);
-			bool borderDown = (y == (noiseFilter->sizeYSubSampled - 1));
-			bool borderRight = (x == (noiseFilter->sizeXSubSampled - 1));
+			bool borderDown = (y == (noiseFilter->sizeY - 1));
+			bool borderRight = (x == (noiseFilter->sizeX - 1));
 			bool borderUp = (y == 0);
 
 			// Background Activity filter: if difference between current timestamp
