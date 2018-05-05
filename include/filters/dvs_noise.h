@@ -1,3 +1,19 @@
+/**
+ * @file dvs_noise.h
+ *
+ * The DVS noise filter combines a HotPixel filter (high activity pixels),
+ * a Background-Activity filter (uncorrelated events), and a
+ * Refractory Period filter (limit event rate of a pixel).
+ * The HotPixel and Background-Activity filters reduce noise due
+ * to transistor mismatch, the Refractory Period filter can reduce
+ * the event rate and is efficient to implement together with the
+ * Background-Activity filter, requiring only one pixel memory
+ * map for both.
+ * Please note that the filter is not thread-safe, all function calls
+ * should happen on the same thread, unless you take care that they
+ * never overlap.
+ */
+
 #ifndef LIBCAER_FILTERS_DVS_H_
 #define LIBCAER_FILTERS_DVS_H_
 
@@ -35,17 +51,15 @@ typedef struct caer_filter_dvs_noise *caerFilterDVSNoise;
  * map for both.
  * At initialization, all filters are disabled. You must configure
  * and enable them using caerFilterDVSNoiseConfigSet().
- * You must specify the maximum resolution and the sub-sample
- * factor at initialization, as they are used to set up efficient
- * lookup tables.
+ * You must specify the maximum resolution at initialization,
+ * as it is used to set up efficient lookup tables.
  *
  * @param sizeX maximum X axis resolution.
  * @param sizeY maximum Y axis resolution.
- * @param subSampleFactor sub-sampling factor for X/Y resolution.
  *
  * @return DVS noise filter instance, NULL on error.
  */
-caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY, uint8_t subSampleFactor);
+caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY);
 
 /**
  * Destroy a DVS noise filter instance and free its memory.
