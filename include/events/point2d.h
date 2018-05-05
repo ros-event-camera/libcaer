@@ -1,9 +1,6 @@
 /**
  * @file point2d.h
  *
- * THIS EVENT DEFINITIONS IS STILL TO BE CONSIDERED EXPERIMENTAL
- * AND IS SUBJECT TO FUTURE CHANGES AND REVISIONS!
- *
  * Point2D Events format definition and handling functions.
  * This contains two dimensional data points as floats,
  * together with support for distinguishing type and scale.

@@ -1,9 +1,6 @@
 /**
  * @file point3d.h
  *
- * THIS EVENT DEFINITIONS IS STILL TO BE CONSIDERED EXPERIMENTAL
- * AND IS SUBJECT TO FUTURE CHANGES AND REVISIONS!
- *
  * Point3D Events format definition and handling functions.
  * This contains three dimensional data points as floats,
  * together with support for distinguishing type and scale.

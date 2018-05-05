@@ -1,9 +1,6 @@
 /**
  * @file point4d.h
  *
- * THIS EVENT DEFINITION IS STILL TO BE CONSIDERED EXPERIMENTAL
- * AND IS SUBJECT TO FUTURE CHANGES AND REVISIONS!
- *
  * Point4D Events format definition and handling functions.
  * This contains four dimensional data points as floats,
  * together with support for distinguishing type and scale.
