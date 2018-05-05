@@ -1,3 +1,10 @@
+/**
+ * @file device_discover.h
+ *
+ * Functions to discover supported devices attached to the
+ * current host system, and then open them.
+ */
+
 #ifndef LIBCAER_DEVICES_DEVICE_DISCOVER_H_
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_H_
 
