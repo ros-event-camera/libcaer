@@ -26,7 +26,7 @@ struct caer_filter_dvs_noise {
 };
 
 caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) {
-	caerFilterDVSNoise noiseFilter = malloc(sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeof(int64_t *)));
+	caerFilterDVSNoise noiseFilter = calloc(1, sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeof(int64_t *)));
 	if (noiseFilter == NULL) {
 		return (NULL);
 	}
@@ -48,6 +48,12 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 }
 
 void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter) {
+	// Ensure hot pixel map is also destroyed if still present,
+	// for example if learning never terminated.
+	if (noiseFilter->hotPixelMap != NULL) {
+		free(noiseFilter->hotPixelMap);
+	}
+
 	free(noiseFilter->timestampsMap[0]);
 	free(noiseFilter);
 }
@@ -131,21 +137,115 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 		}
 
 		BAInvalidatedEvent:
-		// Update pixel timestamp (one write).
-		if (noiseFilter->backgroundActivityEnabled || noiseFilter->refractoryPeriodEnabled) {
-			noiseFilter->timestampsMap[x][y] = ts;
-		}
+		// Update pixel timestamp (one write). Always update so filters are
+		// ready at enable-time right away.
+		noiseFilter->timestampsMap[x][y] = ts;
 	}
 }
 
 bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t param) {
+	switch (paramAddr) {
+		case CAER_FILTER_DVS_HOTPIXEL_LEARN:
 
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_TIME:
+
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_COUNT:
+
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_ENABLE:
+
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE:
+			noiseFilter->backgroundActivityEnabled = param;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
+			noiseFilter->backgroundActivityTime = U32T(param);
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE:
+			noiseFilter->refractoryPeriodEnabled = param;
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_TIME:
+			noiseFilter->refractoryPeriodTime = U32T(param);
+			break;
+
+		default:
+			// Unrecognized or invalid parameter address.
+			return (false);
+			break;
+	}
+
+	// Done!
+	return (true);
 }
 
 bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t *param) {
+	// Ensure param is zeroed out.
+	*param = 0;
 
+	switch (paramAddr) {
+		case CAER_FILTER_DVS_HOTPIXEL_LEARN:
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_TIME:
+
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_COUNT:
+
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_ENABLE:
+
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_STATISTICS:
+			*param = noiseFilter->hotPixelStat;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE:
+			*param = noiseFilter->backgroundActivityEnabled;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
+			*param = noiseFilter->backgroundActivityTime;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS:
+			*param = noiseFilter->backgroundActivityStat;
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE:
+			*param = noiseFilter->refractoryPeriodEnabled;
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_TIME:
+			*param = noiseFilter->refractoryPeriodTime;
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS:
+			*param = noiseFilter->refractoryPeriodStat;
+			break;
+
+		default:
+			// Unrecognized or invalid parameter address.
+			return (false);
+			break;
+	}
+
+	// Done!
+	return (true);
 }
 
 ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels) {
-
+	*hotPixels = NULL;
+	return (0);
 }
