@@ -610,7 +610,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 
 	// Try to open a DAVIS device on a specific USB port.
 	bool deviceFound = false;
-	struct usb_info usbInfo;
+	struct usb_info usbInfo = { 0, 0, "", false, false };
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
