@@ -187,4 +187,10 @@ ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, cae
  */
 #define CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS 10
 
+/**
+ * DVS Noise Filter:
+ * set a custom log-level for an instance of the DVS Noise filter.
+ */
+#define CAER_FILTER_DVS_LOG_LEVEL 11
+
 #endif /* LIBCAER_FILTERS_DVS_H_ */

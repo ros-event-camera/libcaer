@@ -1,6 +1,8 @@
 #include "filters/dvs_noise.h"
 
 struct caer_filter_dvs_noise {
+	// Logging support.
+	uint8_t logLevel;
 	// Hot Pixel filter (learning).
 	bool hotPixelLearn;
 	uint32_t hotPixelTime;
@@ -32,8 +34,17 @@ struct dvs_pixel_with_count {
 	uint32_t count;
 };
 
+static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static int hotPixelArrayCountCompare(const void *a, const void *b);
 static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter);
+
+static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) {
+	va_list argumentList;
+	va_start(argumentList, format);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), handle->logLevel, logLevel,
+		"DVS Noise Filter", format, argumentList);
+	va_end(argumentList);
+}
 
 caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) {
 	caerFilterDVSNoise noiseFilter = calloc(1,
@@ -44,6 +55,9 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 
 	noiseFilter->sizeX = sizeX;
 	noiseFilter->sizeY = sizeY;
+
+	// Default to global log-level.
+	noiseFilter->logLevel = caerLogLevelGet();
 
 	// Default values for filters.
 	noiseFilter->hotPixelTime = 1000000; // 1 second.
@@ -80,7 +94,7 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 		// Initialize hot pixel learning.
 		noiseFilter->hotPixelLearningMap = calloc(noiseFilter->sizeX * noiseFilter->sizeY, sizeof(uint32_t));
 		if (noiseFilter->hotPixelLearningMap == NULL) {
-			caerLog(CAER_LOG_ERROR, "DVS Noise Filter",
+			filterDVSNoiseLog(CAER_LOG_ERROR, noiseFilter,
 				"HotPixel Learning: failed to allocate memory for learning map.");
 			noiseFilter->hotPixelLearn = false; // Disable learning on failure.
 		}
@@ -90,6 +104,9 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 			// Store start timestamp.
 			caerPolarityEventConst firstEvent = caerPolarityEventPacketGetEventConst(polarity, 0);
 			noiseFilter->hotPixelLearningStartTime = caerPolarityEventGetTimestamp64(firstEvent, polarity);
+
+			filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: started on ts=%" PRIi64 ".",
+				noiseFilter->hotPixelLearningStartTime);
 		}
 	}
 
@@ -117,6 +134,8 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 
 				noiseFilter->hotPixelLearningStarted = false;
 				noiseFilter->hotPixelLearn = false;
+
+				filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: completed on ts=%" PRIi64 ".", ts);
 			}
 		}
 
@@ -261,6 +280,10 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 			noiseFilter->refractoryPeriodTime = U32T(param);
 			break;
 
+		case CAER_FILTER_DVS_LOG_LEVEL:
+			noiseFilter->logLevel = U8T(param);
+			break;
+
 		default:
 			// Unrecognized or invalid parameter address.
 			return (false);
@@ -318,6 +341,10 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 
 		case CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS:
 			*param = noiseFilter->refractoryPeriodStat;
+			break;
+
+		case CAER_FILTER_DVS_LOG_LEVEL:
+			*param = noiseFilter->logLevel;
 			break;
 
 		default:
@@ -399,10 +426,16 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 
 	qsort(hotPixels, hotPixelsNumber, sizeof(struct dvs_pixel_with_count), &hotPixelArrayCountCompare);
 
+	// Print list of hot pixels for debugging.
+	for (size_t i = 0; i < hotPixelsNumber; i++) {
+		filterDVSNoiseLog(CAER_LOG_INFO, noiseFilter, "HotPixel %zu: X=%" PRIu16 ", Y=%" PRIu16 ", count=%" PRIu32 ".",
+			i, hotPixels[i].address.x, hotPixels[i].address.y, hotPixels[i].count);
+	}
+
 	// Allocate dynamic memory for new array.
 	noiseFilter->hotPixelArray = malloc(hotPixelsNumber * sizeof(struct caer_filter_dvs_pixel));
 	if (noiseFilter->hotPixelArray == NULL) {
-		caerLog(CAER_LOG_ERROR, "DVS Noise Filter",
+		filterDVSNoiseLog(CAER_LOG_ERROR, noiseFilter,
 			"HotPixel Learning: failed to allocate memory for hot pixels array.");
 		return;
 	}
