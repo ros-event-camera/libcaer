@@ -30,6 +30,6 @@ typedef struct auto_exposure_state *autoExposureState;
 // Returns next exposure value in µs, or -1 if currently set is optimal/no change is desired.
 // Careful: frames can all be NULL!
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frames[DAVIS_APS_ROI_REGIONS_MAX],
-	uint32_t exposureFrameValue, uint32_t exposureLastSetValue);
+	uint32_t exposureFrameValue, uint32_t exposureLastSetValue, uint8_t deviceLogLevel, const char *deviceLogString);
 
 #endif /* LIBCAER_SRC_AUTOEXPOSURE_H_ */

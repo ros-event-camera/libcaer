@@ -1,4 +1,5 @@
 #include "autoexposure.h"
+#include "timestamps.h"
 #include <math.h>
 
 static inline int32_t upAndClip(int32_t newExposure, int32_t lastExposure) {
@@ -30,10 +31,12 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 }
 
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frames[DAVIS_APS_ROI_REGIONS_MAX],
-	uint32_t exposureFrameValue, uint32_t exposureLastSetValue) {
+	uint32_t exposureFrameValue, uint32_t exposureLastSetValue, uint8_t deviceLogLevel, const char *deviceLogString) {
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	caerLog(CAER_LOG_INFO, "AutoExposure", "Last set exposure value was: %d.", exposureLastSetValue);
-	caerLog(CAER_LOG_INFO, "AutoExposure", "Frame exposure value was: %d.", exposureFrameValue);
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Last set exposure value was: %d.",
+		exposureLastSetValue);
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Frame exposure value was: %d.",
+		exposureFrameValue);
 #endif
 
 	// Only run if the frame corresponds to the last set value.
@@ -97,9 +100,10 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		float pixelsFracHigh = (float) pixelsSumHigh / (float) pixelsSum;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-		caerLog(CAER_LOG_INFO, "AutoExposure",
-			"BinLow: %zu, BinHigh: %zu, Sum: %zu, SumLow: %zu, SumHigh: %zu, FracLow: %f, FracHigh: %f.", pixelsBinLow,
-			pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow, (double) pixelsFracHigh);
+		commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel,
+			"AutoExposure: BinLow: %zu, BinHigh: %zu, Sum: %zu, SumLow: %zu, SumHigh: %zu, FracLow: %f, FracHigh: %f.",
+			pixelsBinLow, pixelsBinHigh, pixelsSum, pixelsSumLow, pixelsSumHigh, (double) pixelsFracLow,
+			(double) pixelsFracHigh);
 #endif
 
 		float fracLowError = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
@@ -141,7 +145,8 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 			float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0F) - meanSampleValue;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-			caerLog(CAER_LOG_INFO, "AutoExposure", "Mean sample value error is: %f.", (double) meanSampleValueError);
+			commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Mean sample value error is: %f.",
+				(double) meanSampleValueError);
 #endif
 
 			// If we're close to the under/over limits, we make the magnitude of changes smaller
@@ -184,7 +189,8 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	newExposureTotal /= activeRoiRegions;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-		caerLog(CAER_LOG_INFO, "AutoExposure", "New exposure value is: %" PRIi64 ".", newExposureTotal);
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: New exposure value is: %" PRIi64 ".",
+		newExposureTotal);
 #endif
 
 	return ((I32T(newExposureTotal) == I32T(exposureLastSetValue)) ? (-1) : I32T(newExposureTotal));

@@ -3098,7 +3098,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									float exposureFrameCC = roundf((float) state->aps.autoExposure.currentFrameExposure / clockCorrect);
 
 									int32_t newExposureValue = autoExposureCalculate(&state->aps.autoExposure.state,
-										newFrameEvents, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure);
+										newFrameEvents, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure,
+										atomic_load_explicit(&state->deviceLogLevel, memory_order_relaxed), handle->info.deviceString);
 
 									if (newExposureValue >= 0) {
 										// Update exposure value. Done in main thread to avoid deadlock inside callback.
