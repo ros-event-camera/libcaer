@@ -1,4 +1,8 @@
 Release 2.5.X - XX.05.2018
+INCOMPATIBLE CHANGES
+- davis.h: removed support for stereo microphones, this was never used in any
+  released devices, only for internal experiments on a limited prototype run.
+
 NEW FEATURES
 - Device Discovery: added capability of finding any accessible supported
   devices on a system, getting information on them, and then opening them.
@@ -28,6 +32,9 @@ NEW FEATURES
   needed upgrades for both at the same time; this avoids multiple notify
   and upgrade cycles if both change quickly or the user hasn't upgraded
   in a long time.
+- filters/dvs_noise.h: new filter module to reduce noise from the DVS
+  output, integrates a hot pixel filter (with learning), a background-
+  activity filter and a refractory period filter. C++ interface available.
 
 BUG FIXES
 - C++: add header inclusions for possibly missing types.
@@ -43,6 +50,8 @@ BUG FIXES
   some devices seem to need longer delays to start up properly.
 - USB: better log messages on failure, reduce event handling timeout to
   10ms from 1s for quicker response to shutdown requests.
+- AutoExposure: debug log messages from the autoexposure module now
+  respect the per-device log-level settings.
 
 
 Release 2.4.2 - 23.03.2018
