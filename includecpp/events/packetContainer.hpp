@@ -204,7 +204,7 @@ public:
 		}
 
 		// Initialize and fill vector after having checked size value.
-		eventPackets = std::vector<std::shared_ptr<EventPacket>>(static_cast<size_t>(eventPacketsNumber));
+		eventPackets.reserve(static_cast<size_t>(eventPacketsNumber));
 
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
@@ -235,7 +235,7 @@ public:
 		// Initialize and fill vector.
 		int32_t eventPacketsNumber = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
 
-		eventPackets = std::vector<std::shared_ptr<EventPacket>>(static_cast<size_t>(eventPacketsNumber));
+		eventPackets.reserve(static_cast<size_t>(eventPacketsNumber));
 
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(packetContainer, i);

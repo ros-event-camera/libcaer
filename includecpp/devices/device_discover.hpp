@@ -24,7 +24,8 @@ public:
 			throw std::runtime_error("Device Discovery: failed discovery operation.");
 		}
 
-		std::vector<struct caer_device_discovery_result> devices(result);
+		std::vector<struct caer_device_discovery_result> devices;
+		devices.reserve(result);
 
 		for (size_t i = 0; i < (size_t) result; i++) {
 			devices.push_back(discoveredDevices[i]);
