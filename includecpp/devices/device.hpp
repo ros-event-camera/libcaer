@@ -80,20 +80,7 @@ public:
 		}
 
 		std::unique_ptr<libcaer::events::EventPacketContainer> cppContainer = std::unique_ptr<
-			libcaer::events::EventPacketContainer>(new libcaer::events::EventPacketContainer());
-
-		for (int32_t i = 0; i < caerEventPacketContainerGetEventPacketsNumber(cContainer); i++) {
-			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(cContainer, i);
-
-			// NULL packets just get added directly.
-			if (packet == nullptr) {
-				cppContainer->addEventPacket(nullptr);
-			}
-			else {
-				// Make sure the proper constructors are called when building the shared_ptr.
-				cppContainer->addEventPacket(libcaer::events::utils::makeSharedFromCStruct(packet));
-			}
-		}
+			libcaer::events::EventPacketContainer>(new libcaer::events::EventPacketContainer(cContainer));
 
 		// Free original C container. The event packet memory is now managed by
 		// the EventPacket classes inside the new C++ EventPacketContainer.
