@@ -38,7 +38,8 @@ NEW FEATURES
 
 BUG FIXES
 - C++: add header inclusions for possibly missing types.
-- C++ devices/serial.hpp: fix warning about shadowed variable.
+- C++ devices/serial.hpp: fix warning about shadowed variable, improve
+  error message on failure to open by adding serial baud-rate to message.
 - Devices: documentation updates, fix typos and precise usage of
   'deviceString' member in device info structures; it is only valid
   during the life-time of the device!

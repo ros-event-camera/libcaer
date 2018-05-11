@@ -15,7 +15,8 @@ protected:
 		// Handle constructor failure.
 		if (h == nullptr) {
 			std::string exc = "Failed to open serial port device, id=" + std::to_string(deviceID) + ", type="
-				+ std::to_string(deviceType) + ", portName=" + serialPortName + ".";
+				+ std::to_string(deviceType) + ", portName=" + serialPortName + ", baudRate="
+				+ std::to_string(serialBaudRate) + ".";
 			throw std::runtime_error(exc);
 		}
 
