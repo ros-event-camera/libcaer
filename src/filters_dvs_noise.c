@@ -284,6 +284,24 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 			noiseFilter->logLevel = U8T(param);
 			break;
 
+		case CAER_FILTER_DVS_RESET:
+			if (param) {
+				// Reset hot pixel list and timestamp map.
+				noiseFilter->hotPixelArraySize = 0;
+				if (noiseFilter->hotPixelArray != NULL) {
+					free(noiseFilter->hotPixelArray);
+					noiseFilter->hotPixelArray = NULL;
+				}
+
+				memset(noiseFilter->timestampsMap, 0, noiseFilter->sizeX * noiseFilter->sizeY * sizeof(int64_t));
+
+				// Reset statistics to zero
+				noiseFilter->hotPixelStat = 0;
+				noiseFilter->backgroundActivityStat = 0;
+				noiseFilter->refractoryPeriodStat = 0;
+			}
+			break;
+
 		default:
 			// Unrecognized or invalid parameter address.
 			return (false);

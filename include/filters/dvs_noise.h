@@ -193,4 +193,12 @@ ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, cae
  */
 #define CAER_FILTER_DVS_LOG_LEVEL 11
 
+/**
+ * DVS Noise Filter:
+ * reset this instance of the filter to its initial state, forgetting
+ * any learned hot pixels and clearing the timestamp map and the
+ * statistics. This does not change or reset the configuration.
+ */
+#define CAER_FILTER_DVS_RESET 12
+
 #endif /* LIBCAER_FILTERS_DVS_H_ */
