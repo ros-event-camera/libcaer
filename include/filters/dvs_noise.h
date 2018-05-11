@@ -14,8 +14,8 @@
  * never overlap.
  */
 
-#ifndef LIBCAER_FILTERS_DVS_H_
-#define LIBCAER_FILTERS_DVS_H_
+#ifndef LIBCAER_FILTERS_DVS_NOISE_H_
+#define LIBCAER_FILTERS_DVS_NOISE_H_
 
 #include "../events/polarity.h"
 
@@ -115,7 +115,7 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
  * @return number of hot pixels in array, 0 if no hot pixels were found;
  *         or -1 if an error occurred.
  */
-ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
+ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
 
 /**
  * DVS HotPixel Filter:
@@ -201,4 +201,4 @@ ssize_t caerFilterDVSNoiseConfigGetHotPixels(caerFilterDVSNoise noiseFilter, cae
  */
 #define CAER_FILTER_DVS_RESET 12
 
-#endif /* LIBCAER_FILTERS_DVS_H_ */
+#endif /* LIBCAER_FILTERS_DVS_NOISE_H_ */
