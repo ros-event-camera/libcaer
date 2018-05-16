@@ -7,7 +7,6 @@
 #include "../events/special.hpp"
 #include "../events/frame.hpp"
 #include "../events/imu6.hpp"
-#include "../events/sample.hpp"
 
 namespace libcaer {
 namespace devices {

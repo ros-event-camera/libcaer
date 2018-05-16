@@ -12,7 +12,6 @@
 #include "../events/special.h"
 #include "../events/frame.h"
 #include "../events/imu6.h"
-#include "../events/sample.h"
 
 #ifdef __cplusplus
 extern "C" {
