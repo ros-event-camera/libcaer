@@ -19,6 +19,10 @@
 
 #include "../events/polarity.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Structure representing a single DVS pixel address,
  * with X and Y components.
@@ -200,5 +204,9 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  * statistics. This does not change or reset the configuration.
  */
 #define CAER_FILTER_DVS_RESET 12
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LIBCAER_FILTERS_DVS_NOISE_H_ */
