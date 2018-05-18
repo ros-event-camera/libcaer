@@ -205,6 +205,28 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  */
 #define CAER_FILTER_DVS_RESET 12
 
+/**
+ * DVS Background-Activity Filter:
+ * repeat the background-activity check, that at least one neighbor pixel
+ * supports this pixel, on each pixel that supported the current pixel in
+ * turn, basically repeating the check for a second level of pixels.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TWO_LEVELS 13
+
+/**
+ * DVS Background-Activity Filter:
+ * minimum number of pixels in the immediate neighborhood that must support
+ * the current pixel for it to be considered valid.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MIN 14
+
+/**
+ * DVS Background-Activity Filter:
+ * maximum number of pixels in the immediate neighborhood that can support
+ * the current pixel for it to be considered valid.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MAX 15
+
 #ifdef __cplusplus
 }
 #endif

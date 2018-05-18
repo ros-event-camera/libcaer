@@ -17,6 +17,9 @@ struct caer_filter_dvs_noise {
 	uint64_t hotPixelStat;
 	// Background Activity filter.
 	bool backgroundActivityEnabled;
+	bool backgroundActivityTwoLevels;
+	uint8_t backgroundActivitySupportMin;
+	uint8_t backgroundActivitySupportMax;
 	uint32_t backgroundActivityTime;
 	uint64_t backgroundActivityStat;
 	// Refractory Period filter.
@@ -62,10 +65,100 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 	// Default values for filters.
 	noiseFilter->hotPixelTime = 1000000; // 1 second.
 	noiseFilter->hotPixelCount = 10000; // 10 KEvt in 1 second => 10 KHz.
+	noiseFilter->backgroundActivityTwoLevels = false; // Disable two-level lookup for performance reasons.
+	noiseFilter->backgroundActivitySupportMin = 1; // At least one pixel must support.
+	noiseFilter->backgroundActivitySupportMax = 8; // At most eight pixels can support.
 	noiseFilter->backgroundActivityTime = 20000; // 20 milliseconds within neighborhood.
 	noiseFilter->refractoryPeriodTime = 100; // 100 microseconds, max. pixel firing rate 10 KHz.
 
 	return (noiseFilter);
+}
+
+static inline size_t doBackgroundActivityLookup(caerFilterDVSNoise noiseFilter, size_t pixelIndex, int64_t ts,
+	size_t *supportIndexes) {
+	size_t x = pixelIndex % noiseFilter->sizeX;
+	size_t y = pixelIndex / noiseFilter->sizeX;
+
+	// Compute map limits.
+	bool borderLeft = (x == 0);
+	bool borderDown = (y == (noiseFilter->sizeY - 1));
+	bool borderRight = (x == (noiseFilter->sizeX - 1));
+	bool borderUp = (y == 0);
+
+	// Background Activity filter: if difference between current timestamp
+	// and stored neighbor timestamp is smaller than given time limit, it
+	// means the event is supported by a neighbor and thus valid. If it is
+	// bigger, then the event is not supported, and we need to check the
+	// next neighbor. If all are bigger, the event is invalid.
+	size_t index = pixelIndex - noiseFilter->sizeX;
+	size_t result = 0;
+
+	if (!borderUp) {
+		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index - 1;
+			}
+			result++;
+		}
+
+		if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index;
+			}
+			result++;
+		}
+
+		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index + 1;
+			}
+			result++;
+		}
+	}
+	index += noiseFilter->sizeX; // Next row.
+
+	{
+		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index - 1;
+			}
+			result++;
+		}
+
+		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index + 1;
+			}
+			result++;
+		}
+	}
+	index += noiseFilter->sizeX; // Next row.
+
+	if (!borderDown) {
+		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index - 1;
+			}
+			result++;
+		}
+
+		if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index;
+			}
+			result++;
+		}
+
+		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
+			if (supportIndexes != NULL) {
+				supportIndexes[result] = index + 1;
+			}
+			result++;
+		}
+	}
+	// No index to adjust to next row.
+
+	return (result);
 }
 
 void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter) {
@@ -162,62 +255,29 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 		}
 
 		if (noiseFilter->backgroundActivityEnabled) {
-			// Compute map limits.
-			bool borderLeft = (x == 0);
-			bool borderDown = (y == (noiseFilter->sizeY - 1));
-			bool borderRight = (x == (noiseFilter->sizeX - 1));
-			bool borderUp = (y == 0);
+			size_t supportPixelIndexes[8];
+			size_t supportPixelNum = doBackgroundActivityLookup(noiseFilter, pixelIndex, ts, supportPixelIndexes);
 
-			// Background Activity filter: if difference between current timestamp
-			// and stored neighbor timestamp is smaller than given time limit, it
-			// means the event is supported by a neighbor and thus valid. If it is
-			// bigger, then the event is not supported, and we need to check the
-			// next neighbor. If all are bigger, the event is invalid.
-			size_t index = pixelIndex - noiseFilter->sizeX;
+			if ((supportPixelNum >= noiseFilter->backgroundActivitySupportMin)
+				&& (supportPixelNum <= noiseFilter->backgroundActivitySupportMax)) {
+				if (noiseFilter->backgroundActivityTwoLevels) {
+					// Do the same check again for all previous supporting pixels.
+					size_t result = 0;
 
-			if (!borderUp) {
-				if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
+					for (size_t i = 0; i < supportPixelNum; i++) {
+						if (doBackgroundActivityLookup(noiseFilter, supportPixelIndexes[i], ts, NULL) > 0) {
+							result++;
+						}
+					}
+
+					if (result == supportPixelNum) {
+						goto BAValidEvent;
+					}
 				}
-
-				if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-
-				if (!borderRight
-					&& (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
+				else {
 					goto BAValidEvent;
 				}
 			}
-			index += noiseFilter->sizeX; // Next row.
-
-			{
-				if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-
-				if (!borderRight
-					&& (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-			}
-			index += noiseFilter->sizeX; // Next row.
-
-			if (!borderDown) {
-				if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-
-				if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-
-				if (!borderRight
-					&& (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
-					goto BAValidEvent;
-				}
-			}
-			// No index to adjust to next row.
 
 			// Event is not supported by any neighbor if we get here, invalidate it.
 			// Then jump over the Refractory Period filter, as it's useless to
@@ -226,7 +286,6 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 			noiseFilter->backgroundActivityStat++;
 
 			goto BAInvalidatedEvent;
-
 		}
 
 		// If we're sent here, the event was valid due to neighbor support.
@@ -270,6 +329,18 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
 			noiseFilter->backgroundActivityTime = U32T(param);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TWO_LEVELS:
+			noiseFilter->backgroundActivityTwoLevels = param;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MIN:
+			noiseFilter->backgroundActivitySupportMin = U8T(param);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MAX:
+			noiseFilter->backgroundActivitySupportMax = U8T(param);
 			break;
 
 		case CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE:
@@ -343,6 +414,18 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
 			*param = noiseFilter->backgroundActivityTime;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TWO_LEVELS:
+			*param = noiseFilter->backgroundActivityTwoLevels;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MIN:
+			*param = noiseFilter->backgroundActivitySupportMin;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MAX:
+			*param = noiseFilter->backgroundActivitySupportMax;
 			break;
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS:
