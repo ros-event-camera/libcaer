@@ -434,6 +434,14 @@ public:
 		return (caerEventPacketGetSize(header));
 	}
 
+	int64_t getDataSizeEvents() const noexcept {
+		return (caerEventPacketGetDataSizeEvents(header));
+	}
+
+	int64_t getSizeEvents() const noexcept {
+		return (caerEventPacketGetSizeEvents(header));
+	}
+
 	void clear() noexcept {
 		caerEventPacketClear(header);
 	}

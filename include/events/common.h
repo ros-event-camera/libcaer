@@ -537,6 +537,32 @@ static inline int64_t caerEventPacketGetSize(caerEventPacketHeaderConst header) 
 }
 
 /**
+ * Get the data size of an event packet, in bytes, up to its last actual
+ * event. This means only up to EventNumber, not up to EventCapacity.
+ * This is only the size of the data portion, excluding the header.
+ *
+ * @param header a valid EventPacket header pointer. Cannot be NULL.
+ *
+ * @return the event packet data size in bytes (up to event number).
+ */
+static inline int64_t caerEventPacketGetDataSizeEvents(caerEventPacketHeaderConst header) {
+	return (I64T(caerEventPacketHeaderGetEventSize(header)) * I64T(caerEventPacketHeaderGetEventNumber(header)));
+}
+
+/**
+ * Get the full size of an event packet, in bytes, up to its last actual
+ * event. This means only up to EventNumber, not up to EventCapacity.
+ * This includes both the header and the data portion.
+ *
+ * @param header a valid EventPacket header pointer. Cannot be NULL.
+ *
+ * @return the event packet size in bytes (up to event number).
+ */
+static inline int64_t caerEventPacketGetSizeEvents(caerEventPacketHeaderConst header) {
+	return (CAER_EVENT_PACKET_HEADER_SIZE + caerEventPacketGetDataSizeEvents(header));
+}
+
+/**
  * Verify if two event packets are equal. This means that the
  * header and all events are equal.
  *
