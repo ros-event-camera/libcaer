@@ -323,7 +323,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information.");
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
 		free(handle);

@@ -141,7 +141,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information.");
+			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
 		free(handle);
