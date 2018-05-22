@@ -629,7 +629,12 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	}
 
 	if (!deviceFound) {
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		if (errno == CAER_ERROR_OPEN_ACCESS) {
+			davisLog(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
+		}
+		else {
+			davisLog(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information.");
+		}
 
 		free(handle);
 

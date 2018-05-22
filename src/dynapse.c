@@ -319,7 +319,12 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
 		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION,
 		&usbInfo)) {
-		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		if (errno == CAER_ERROR_OPEN_ACCESS) {
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
+		}
+		else {
+			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information.");
+		}
 
 		free(handle);
 

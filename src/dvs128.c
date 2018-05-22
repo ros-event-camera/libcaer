@@ -137,7 +137,12 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
 		serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
-		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device.");
+		if (errno == CAER_ERROR_OPEN_ACCESS) {
+			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
+		}
+		else {
+			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information.");
+		}
 
 		free(handle);
 

@@ -271,6 +271,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 		return (false);
 	}
 
+	bool openingSpecificUSBAddr = ((busNumber > 0) && (devAddress > 0));
+	bool openingSpecificSerial = ((serialNumber != NULL) && !caerStrEquals(serialNumber, ""));
+
 	libusb_device_handle *devHandle = NULL;
 	libusb_device **devicesList;
 
@@ -290,7 +293,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				// If a USB port restriction is given, honor it first.
 				uint8_t devBusNumber = libusb_get_bus_number(devicesList[i]);
 				if ((busNumber > 0) && (devBusNumber != busNumber)) {
-					caerUSBLog(CAER_LOG_ERROR, state,
+					caerUSBLog(CAER_LOG_DEBUG, state,
 						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						busNumber, devBusNumber);
 
@@ -300,7 +303,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
 				if ((devAddress > 0) && (devDevAddress != devAddress)) {
-					caerUSBLog(CAER_LOG_ERROR, state,
+					caerUSBLog(CAER_LOG_DEBUG, state,
 						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
 						devAddress, devDevAddress);
 
@@ -311,8 +314,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_CRITICAL, state,
-						"Failed to open USB device. This usually happens due to permission or driver issues.");
+					caerUSBLog((openingSpecificUSBAddr) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO), state,
+						"Failed to open USB device. This usually happens due to permission or driver issues, or because the device is already in use.");
 
 					continue;
 				}
@@ -333,12 +336,11 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Check the serial number restriction, if any is present.
-				if ((serialNumber != NULL) && !caerStrEquals(serialNumber, "")
-					&& !caerStrEquals(serialNumber, deviceSerialNumber)) {
+				if (openingSpecificSerial && !caerStrEquals(serialNumber, deviceSerialNumber)) {
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_ERROR, state,
+					caerUSBLog(CAER_LOG_INFO, state,
 						"USB serial number restriction is present (%s), this device didn't match it (%s).",
 						serialNumber, deviceSerialNumber);
 
@@ -354,8 +356,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_CRITICAL, state,
-						"Failed to claim USB interface. This usually happens due to the device being already in use.");
+					caerUSBLog((openingSpecificUSBAddr || openingSpecificSerial) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO), state,
+						"Failed to claim USB interface. This usually happens because the device is already in use.");
 
 					continue;
 				}
@@ -365,7 +367,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				if ((requiredFirmwareVersion >= 0)
 					&& (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
-					caerUSBLog(CAER_LOG_CRITICAL, state,
+					caerUSBLog(CAER_LOG_ERROR, state,
 						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
 
@@ -403,7 +405,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					// Verify device logic version.
 					if (param32 < U32T(requiredLogicRevision)) {
-						caerUSBLog(CAER_LOG_CRITICAL, state,
+						caerUSBLog(CAER_LOG_ERROR, state,
 							"Device logic version too old. You have version %" PRIu32 "; but at least version %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
 							param32, U32T(requiredLogicRevision));
 
