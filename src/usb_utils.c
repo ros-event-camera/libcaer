@@ -453,6 +453,13 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	libusb_exit(state->deviceContext);
 	state->deviceContext = NULL;
 
+	// Filter errno due to libusb setting it to other values even if everything
+	// above returns no errors (like EAGAIN(11)). All errnos we want to set
+	// and track are negative, so any positive errnos are wrong.
+	if (errno > 0) {
+		errno = 0;
+	}
+
 	// If not set previously to a more precise error,
 	// set here to the generic open error.
 	if (errno == 0) {
