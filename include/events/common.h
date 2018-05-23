@@ -17,6 +17,24 @@
 extern "C" {
 #endif
 
+#ifndef CAER_EVENTS_HEADER_ONLY
+#define caerLogEHO caerLog
+#else
+static inline void caerLogEHO(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
+	// Ignore logLevel, all event packet messages are critical.
+	(void) (logLevel);
+
+	printf("%s: ", subSystem);
+
+	va_list argumentList;
+	va_start(argumentList, format);
+	vprintf(format, argumentList);
+	va_end(argumentList);
+
+	printf("\n");
+}
+#endif
+
 /**
  * Generic validity mark:
  * this bit is used to mark whether an event is still
@@ -140,7 +158,7 @@ static inline int16_t caerEventPacketHeaderGetEventType(caerEventPacketHeaderCon
 static inline void caerEventPacketHeaderSetEventType(caerEventPacketHeader header, int16_t eventType) {
 	if (eventType < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventType() with negative value!");
 		return;
 	}
@@ -173,7 +191,7 @@ static inline int16_t caerEventPacketHeaderGetEventSource(caerEventPacketHeaderC
 static inline void caerEventPacketHeaderSetEventSource(caerEventPacketHeader header, int16_t eventSource) {
 	if (eventSource < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventSource() with negative value!");
 		return;
 	}
@@ -203,7 +221,7 @@ static inline int32_t caerEventPacketHeaderGetEventSize(caerEventPacketHeaderCon
 static inline void caerEventPacketHeaderSetEventSize(caerEventPacketHeader header, int32_t eventSize) {
 	if (eventSize < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventSize() with negative value!");
 		return;
 	}
@@ -241,7 +259,7 @@ static inline int32_t caerEventPacketHeaderGetEventTSOffset(caerEventPacketHeade
 static inline void caerEventPacketHeaderSetEventTSOffset(caerEventPacketHeader header, int32_t eventTSOffset) {
 	if (eventTSOffset < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventTSOffset() with negative value!");
 		return;
 	}
@@ -279,7 +297,7 @@ static inline int32_t caerEventPacketHeaderGetEventTSOverflow(caerEventPacketHea
 static inline void caerEventPacketHeaderSetEventTSOverflow(caerEventPacketHeader header, int32_t eventTSOverflow) {
 	if (eventTSOverflow < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventTSOverflow() with negative value!");
 		return;
 	}
@@ -309,7 +327,7 @@ static inline int32_t caerEventPacketHeaderGetEventCapacity(caerEventPacketHeade
 static inline void caerEventPacketHeaderSetEventCapacity(caerEventPacketHeader header, int32_t eventsCapacity) {
 	if (eventsCapacity < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventCapacity() with negative value!");
 		return;
 	}
@@ -339,7 +357,7 @@ static inline int32_t caerEventPacketHeaderGetEventNumber(caerEventPacketHeaderC
 static inline void caerEventPacketHeaderSetEventNumber(caerEventPacketHeader header, int32_t eventsNumber) {
 	if (eventsNumber < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventNumber() with negative value!");
 		return;
 	}
@@ -369,7 +387,7 @@ static inline int32_t caerEventPacketHeaderGetEventValid(caerEventPacketHeaderCo
 static inline void caerEventPacketHeaderSetEventValid(caerEventPacketHeader header, int32_t eventsValid) {
 	if (eventsValid < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Header",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Header",
 			"Called caerEventPacketHeaderSetEventValid() with negative value!");
 		return;
 	}
@@ -397,7 +415,7 @@ static inline const void *caerGenericEventGetEvent(caerEventPacketHeaderConst he
 	// reading/querying data from those events, and that would always fail for
 	// those empty events, as they are all zeroed out.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventNumber(headerPtr)) {
-		caerLog(CAER_LOG_CRITICAL, "Generic Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Generic Event",
 			"Called caerGenericEventGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketHeaderGetEventNumber(headerPtr) - 1);
 		return (NULL);
@@ -709,7 +727,7 @@ static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader 
 	// Reallocate memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
 	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
 			"Failed to reallocate %zu bytes of memory for resizing Event Packet of capacity %"
 			PRIi32 " to new capacity of %" PRIi32 ". Error: %d.", newEventPacketSize, oldEventCapacity,
 			newEventCapacity, errno);
@@ -764,7 +782,7 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
 
 	if (newEventCapacity <= oldEventCapacity) {
-		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
 			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32 ") that is equal or smaller than the old one (%" PRIi32 "). "
 			"Only strictly growing an event packet is supported!", newEventCapacity, oldEventCapacity);
 		return (NULL);
@@ -776,7 +794,7 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	// Grow memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
 	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
 			"Failed to reallocate %zu bytes of memory for growing Event Packet of capacity %"
 			PRIi32 " to new capacity of %" PRIi32 ". Error: %d.", newEventPacketSize, oldEventCapacity,
 			newEventCapacity, errno);
@@ -841,7 +859,7 @@ static inline caerEventPacketHeader caerEventPacketAppend(caerEventPacketHeader 
 	// Grow memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
 	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Generic Event Packet",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
 			"Failed to reallocate %zu bytes of memory for appending Event Packet of capacity %"
 			PRIi32 " to Event Packet of capacity %" PRIi32 ". Error: %d.", newEventPacketSize,
 			appendPacketEventCapacity, packetEventCapacity, errno);
@@ -1017,7 +1035,7 @@ static inline caerEventPacketHeader caerEventPacketAllocate(int32_t eventCapacit
 	// Zero out event memory (all events invalid).
 	caerEventPacketHeader packet = (caerEventPacketHeader) calloc(1, eventPacketSize);
 	if (packet == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
 			"Failed to allocate %zu bytes of memory for Event Packet of type %" PRIi16 ", capacity %"
 			PRIi32 " from source %" PRIi16 ". Error: %d.", eventPacketSize, eventType, eventCapacity, eventSource,
 			errno);

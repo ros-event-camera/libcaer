@@ -133,7 +133,7 @@ static inline caerPoint1DEventPacketConst caerPoint1DEventPacketFromPacketHeader
 static inline caerPoint1DEvent caerPoint1DEventPacketGetEvent(caerPoint1DEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event",
 			"Called caerPoint1DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -155,7 +155,7 @@ static inline caerPoint1DEvent caerPoint1DEventPacketGetEvent(caerPoint1DEventPa
 static inline caerPoint1DEventConst caerPoint1DEventPacketGetEventConst(caerPoint1DEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event",
 			"Called caerPoint1DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -205,7 +205,7 @@ static inline int64_t caerPoint1DEventGetTimestamp64(caerPoint1DEventConst event
 static inline void caerPoint1DEventSetTimestamp(caerPoint1DEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -245,7 +245,7 @@ static inline void caerPoint1DEventValidate(caerPoint1DEvent event, caerPoint1DE
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventValidate() on already valid event.");
 	}
 }
 
@@ -268,7 +268,7 @@ static inline void caerPoint1DEventInvalidate(caerPoint1DEvent event, caerPoint1
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventInvalidate() on already invalid event.");
 	}
 }
 

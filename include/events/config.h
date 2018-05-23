@@ -140,7 +140,7 @@ static inline caerConfigurationEvent caerConfigurationEventPacketGetEvent(caerCo
 	int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -163,7 +163,7 @@ static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventCo
 	int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -214,7 +214,7 @@ static inline int64_t caerConfigurationEventGetTimestamp64(caerConfigurationEven
 static inline void caerConfigurationEventSetTimestamp(caerConfigurationEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventSetTimestamp() with negative value!");
 		return;
 	}
@@ -255,7 +255,7 @@ static inline void caerConfigurationEventValidate(caerConfigurationEvent event, 
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventValidate() on already valid event.");
 	}
 }
@@ -279,7 +279,7 @@ static inline void caerConfigurationEventInvalidate(caerConfigurationEvent event
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventInvalidate() on already invalid event.");
 	}
 }

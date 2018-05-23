@@ -143,7 +143,7 @@ static inline caerIMU9EventPacketConst caerIMU9EventPacketFromPacketHeaderConst(
 static inline caerIMU9Event caerIMU9EventPacketGetEvent(caerIMU9EventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event",
 			"Called caerIMU9EventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -165,7 +165,7 @@ static inline caerIMU9Event caerIMU9EventPacketGetEvent(caerIMU9EventPacket pack
 static inline caerIMU9EventConst caerIMU9EventPacketGetEventConst(caerIMU9EventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event",
 			"Called caerIMU9EventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -215,7 +215,7 @@ static inline int64_t caerIMU9EventGetTimestamp64(caerIMU9EventConst event, caer
 static inline void caerIMU9EventSetTimestamp(caerIMU9Event event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -255,7 +255,7 @@ static inline void caerIMU9EventValidate(caerIMU9Event event, caerIMU9EventPacke
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventValidate() on already valid event.");
 	}
 }
 
@@ -278,7 +278,7 @@ static inline void caerIMU9EventInvalidate(caerIMU9Event event, caerIMU9EventPac
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventInvalidate() on already invalid event.");
 	}
 }
 

@@ -101,7 +101,7 @@ static inline caerEventPacketContainer caerEventPacketContainerAllocate(int32_t 
 
 	caerEventPacketContainer packetContainer = (caerEventPacketContainer) calloc(1, eventPacketContainerSize);
 	if (packetContainer == NULL) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Failed to allocate %zu bytes of memory for Event Packet Container, containing %"
 			PRIi32 " packets. Error: %d.", eventPacketContainerSize, eventPacketsNumber, errno);
 		return (NULL);
@@ -153,7 +153,7 @@ static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacket
 
 	if (eventPacketsNumber < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Called caerEventPacketContainerSetEventPacketsNumber() with negative value!");
 		return;
 	}
@@ -182,7 +182,7 @@ static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerE
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Called caerEventPacketContainerGetEventPacket() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return (NULL);
@@ -210,7 +210,7 @@ static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketC
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Called caerEventPacketContainerGetEventPacketConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return (NULL);
@@ -237,7 +237,7 @@ static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContain
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Called caerEventPacketContainerSetEventPacket() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return;

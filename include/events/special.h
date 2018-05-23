@@ -152,7 +152,7 @@ static inline caerSpecialEventPacketConst caerSpecialEventPacketFromPacketHeader
 static inline caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Special Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event",
 			"Called caerSpecialEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -174,7 +174,7 @@ static inline caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPa
 static inline caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Special Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event",
 			"Called caerSpecialEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -224,7 +224,7 @@ static inline int64_t caerSpecialEventGetTimestamp64(caerSpecialEventConst event
 static inline void caerSpecialEventSetTimestamp(caerSpecialEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -264,7 +264,7 @@ static inline void caerSpecialEventValidate(caerSpecialEvent event, caerSpecialE
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventValidate() on already valid event.");
 	}
 }
 
@@ -287,7 +287,7 @@ static inline void caerSpecialEventInvalidate(caerSpecialEvent event, caerSpecia
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventInvalidate() on already invalid event.");
 	}
 }
 

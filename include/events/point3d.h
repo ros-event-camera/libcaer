@@ -137,7 +137,7 @@ static inline caerPoint3DEventPacketConst caerPoint3DEventPacketFromPacketHeader
 static inline caerPoint3DEvent caerPoint3DEventPacketGetEvent(caerPoint3DEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point3D Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event",
 			"Called caerPoint3DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -159,7 +159,7 @@ static inline caerPoint3DEvent caerPoint3DEventPacketGetEvent(caerPoint3DEventPa
 static inline caerPoint3DEventConst caerPoint3DEventPacketGetEventConst(caerPoint3DEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point3D Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event",
 			"Called caerPoint3DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -209,7 +209,7 @@ static inline int64_t caerPoint3DEventGetTimestamp64(caerPoint3DEventConst event
 static inline void caerPoint3DEventSetTimestamp(caerPoint3DEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -249,7 +249,7 @@ static inline void caerPoint3DEventValidate(caerPoint3DEvent event, caerPoint3DE
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventValidate() on already valid event.");
 	}
 }
 
@@ -272,7 +272,7 @@ static inline void caerPoint3DEventInvalidate(caerPoint3DEvent event, caerPoint3
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventInvalidate() on already invalid event.");
 	}
 }
 

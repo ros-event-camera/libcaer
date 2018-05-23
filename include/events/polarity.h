@@ -134,7 +134,7 @@ static inline caerPolarityEventPacketConst caerPolarityEventPacketFromPacketHead
 static inline caerPolarityEvent caerPolarityEventPacketGetEvent(caerPolarityEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Polarity Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Polarity Event",
 			"Called caerPolarityEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -156,7 +156,7 @@ static inline caerPolarityEvent caerPolarityEventPacketGetEvent(caerPolarityEven
 static inline caerPolarityEventConst caerPolarityEventPacketGetEventConst(caerPolarityEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Polarity Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Polarity Event",
 			"Called caerPolarityEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -206,7 +206,7 @@ static inline int64_t caerPolarityEventGetTimestamp64(caerPolarityEventConst eve
 static inline void caerPolarityEventSetTimestamp(caerPolarityEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -246,7 +246,7 @@ static inline void caerPolarityEventValidate(caerPolarityEvent event, caerPolari
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventValidate() on already valid event.");
 	}
 }
 
@@ -269,7 +269,7 @@ static inline void caerPolarityEventInvalidate(caerPolarityEvent event, caerPola
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Polarity Event", "Called caerPolarityEventInvalidate() on already invalid event.");
 	}
 }
 

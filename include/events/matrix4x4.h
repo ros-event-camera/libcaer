@@ -148,7 +148,7 @@ static inline caerMatrix4x4EventPacketConst caerMatrix4x4EventPacketFromPacketHe
 static inline caerMatrix4x4Event caerMatrix4x4EventPacketGetEvent(caerMatrix4x4EventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event",
 			"Called caerMatrix4x4EventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -170,7 +170,7 @@ static inline caerMatrix4x4Event caerMatrix4x4EventPacketGetEvent(caerMatrix4x4E
 static inline caerMatrix4x4EventConst caerMatrix4x4EventPacketGetEventConst(caerMatrix4x4EventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event",
 			"Called caerMatrix4x4EventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
@@ -220,7 +220,7 @@ static inline int64_t caerMatrix4x4EventGetTimestamp64(caerMatrix4x4EventConst e
 static inline void caerMatrix4x4EventSetTimestamp(caerMatrix4x4Event event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventSetTimestamp() with negative value!");
 		return;
 	}
 
@@ -260,7 +260,7 @@ static inline void caerMatrix4x4EventValidate(caerMatrix4x4Event event, caerMatr
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventValidate() on already valid event.");
 	}
 }
 
@@ -283,7 +283,7 @@ static inline void caerMatrix4x4EventInvalidate(caerMatrix4x4Event event, caerMa
 			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventInvalidate() on already invalid event.");
 	}
 }
 
