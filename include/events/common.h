@@ -73,7 +73,7 @@ enum caer_default_event_types {
  * Corresponds to the count of definitions inside the
  * 'enum caer_default_event_types' enumeration.
  */
-#define CAER_DEFAULT_EVENT_TYPES_COUNT 13
+#define CAER_DEFAULT_EVENT_TYPES_COUNT 14
 
 /**
  * Size of the EventPacket header.
