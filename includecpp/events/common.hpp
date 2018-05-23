@@ -465,7 +465,14 @@ public:
 	}
 
 	void shrink_to_fit() {
-		resize(getEventValid());
+		size_type shrunkSize = getEventValid();
+
+		// Zero resize not allowed, must be at least one.
+		if (shrunkSize == 0) {
+			shrunkSize = 1;
+		}
+
+		resize(shrunkSize);
 	}
 
 	void grow(size_type newEventCapacity) {
