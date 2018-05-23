@@ -264,7 +264,7 @@ static inline caerFrameEventConst caerFrameEventPacketGetEventConst(caerFrameEve
  * @return this event's 32bit microsecond start of frame timestamp.
  */
 static inline int32_t caerFrameEventGetTSStartOfFrame(caerFrameEventConst event) {
-	return (le32toh(event->ts_startframe));
+	return (I32T(le32toh(event->ts_startframe)));
 }
 
 /**
@@ -297,7 +297,7 @@ static inline void caerFrameEventSetTSStartOfFrame(caerFrameEvent event, int32_t
 		return;
 	}
 
-	event->ts_startframe = htole32(startFrame);
+	event->ts_startframe = I32T(htole32(startFrame));
 }
 
 /**
@@ -313,7 +313,7 @@ static inline void caerFrameEventSetTSStartOfFrame(caerFrameEvent event, int32_t
  * @return this event's 32bit microsecond end of frame timestamp.
  */
 static inline int32_t caerFrameEventGetTSEndOfFrame(caerFrameEventConst event) {
-	return (le32toh(event->ts_endframe));
+	return (I32T(le32toh(event->ts_endframe)));
 }
 
 /**
@@ -346,7 +346,7 @@ static inline void caerFrameEventSetTSEndOfFrame(caerFrameEvent event, int32_t e
 		return;
 	}
 
-	event->ts_endframe = htole32(endFrame);
+	event->ts_endframe = I32T(htole32(endFrame));
 }
 
 /**
@@ -362,7 +362,7 @@ static inline void caerFrameEventSetTSEndOfFrame(caerFrameEvent event, int32_t e
  * @return this event's 32bit microsecond start of exposure timestamp.
  */
 static inline int32_t caerFrameEventGetTSStartOfExposure(caerFrameEventConst event) {
-	return (le32toh(event->ts_startexposure));
+	return (I32T(le32toh(event->ts_startexposure)));
 }
 
 /**
@@ -395,7 +395,7 @@ static inline void caerFrameEventSetTSStartOfExposure(caerFrameEvent event, int3
 		return;
 	}
 
-	event->ts_startexposure = htole32(startExposure);
+	event->ts_startexposure = I32T(htole32(startExposure));
 }
 
 /**
@@ -411,7 +411,7 @@ static inline void caerFrameEventSetTSStartOfExposure(caerFrameEvent event, int3
  * @return this event's 32bit microsecond end of exposure timestamp.
  */
 static inline int32_t caerFrameEventGetTSEndOfExposure(caerFrameEventConst event) {
-	return (le32toh(event->ts_endexposure));
+	return (I32T(le32toh(event->ts_endexposure)));
 }
 
 /**
@@ -444,7 +444,7 @@ static inline void caerFrameEventSetTSEndOfExposure(caerFrameEvent event, int32_
 		return;
 	}
 
-	event->ts_endexposure = htole32(endExposure);
+	event->ts_endexposure = I32T(htole32(endExposure));
 }
 
 /**
@@ -633,7 +633,7 @@ static inline void caerFrameEventSetColorFilter(caerFrameEvent event, enum caer_
  * @return frame X axis length.
  */
 static inline int32_t caerFrameEventGetLengthX(caerFrameEventConst event) {
-	return (le32toh(event->lengthX));
+	return (I32T(le32toh(event->lengthX)));
 }
 
 /**
@@ -644,7 +644,7 @@ static inline int32_t caerFrameEventGetLengthX(caerFrameEventConst event) {
  * @return frame Y axis length.
  */
 static inline int32_t caerFrameEventGetLengthY(caerFrameEventConst event) {
-	return (le32toh(event->lengthY));
+	return (I32T(le32toh(event->lengthY)));
 }
 
 /**
@@ -690,8 +690,8 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
 		return;
 	}
 
-	event->lengthX = htole32(lengthX);
-	event->lengthY = htole32(lengthY);
+	event->lengthX = I32T(htole32(lengthX));
+	event->lengthY = I32T(htole32(lengthY));
 	CLEAR_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK);
 	SET_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK, channelNumber);
 }
@@ -731,7 +731,7 @@ static inline size_t caerFrameEventGetPixelsSize(caerFrameEventConst event) {
  * @return X axis position offset.
  */
 static inline int32_t caerFrameEventGetPositionX(caerFrameEventConst event) {
-	return (le32toh(event->positionX));
+	return (I32T(le32toh(event->positionX)));
 }
 
 /**
@@ -743,7 +743,7 @@ static inline int32_t caerFrameEventGetPositionX(caerFrameEventConst event) {
  * @param positionX X axis position offset.
  */
 static inline void caerFrameEventSetPositionX(caerFrameEvent event, int32_t positionX) {
-	event->positionX = htole32(positionX);
+	event->positionX = I32T(htole32(positionX));
 }
 
 /**
@@ -756,7 +756,7 @@ static inline void caerFrameEventSetPositionX(caerFrameEvent event, int32_t posi
  * @return Y axis position offset.
  */
 static inline int32_t caerFrameEventGetPositionY(caerFrameEventConst event) {
-	return (le32toh(event->positionY));
+	return (I32T(le32toh(event->positionY)));
 }
 
 /**
@@ -768,7 +768,7 @@ static inline int32_t caerFrameEventGetPositionY(caerFrameEventConst event) {
  * @param positionY Y axis position offset.
  */
 static inline void caerFrameEventSetPositionY(caerFrameEvent event, int32_t positionY) {
-	event->positionY = htole32(positionY);
+	event->positionY = I32T(htole32(positionY));
 }
 
 /**

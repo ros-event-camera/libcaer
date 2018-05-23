@@ -197,7 +197,7 @@ static inline caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpec
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerSpecialEventGetTimestamp(caerSpecialEventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(event->timestamp)));
 }
 
 /**
@@ -228,7 +228,7 @@ static inline void caerSpecialEventSetTimestamp(caerSpecialEvent event, int32_t 
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(timestamp));
 }
 
 /**
