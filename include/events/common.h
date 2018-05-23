@@ -997,6 +997,44 @@ static inline caerEventPacketHeader caerEventPacketCopyOnlyValidEvents(caerEvent
 	return (packetCopy);
 }
 
+/**
+ * Allocate memory for an event packet and fill its header with the
+ * proper information.
+ * THIS FUNCTION IS INTENDED FOR INTERNAL USE ONLY BY THE VARIOUS
+ * EVENT PACKET TYPES FOR MEMORY ALLOCATION.
+ *
+ * @return memory for an event packet, NULL on error.
+ */
+static inline caerEventPacketHeader caerEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
+	int16_t eventType, int32_t eventSize, int32_t eventTSOffset) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0) || (eventType < 0) || (eventSize <= 0)
+		|| (eventTSOffset < 0)) {
+		return (NULL);
+	}
+
+	size_t eventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + ((size_t) eventCapacity * (size_t) eventSize);
+
+	// Zero out event memory (all events invalid).
+	caerEventPacketHeader packet = (caerEventPacketHeader) calloc(1, eventPacketSize);
+	if (packet == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "Event Packet",
+			"Failed to allocate %zu bytes of memory for Event Packet of type %" PRIi16 ", capacity %"
+			PRIi32 " from source %" PRIi16 ". Error: %d.", eventPacketSize, eventType, eventCapacity, eventSource,
+			errno);
+		return (NULL);
+	}
+
+	// Fill in header fields.
+	caerEventPacketHeaderSetEventType(packet, eventType);
+	caerEventPacketHeaderSetEventSource(packet, eventSource);
+	caerEventPacketHeaderSetEventSize(packet, eventSize);
+	caerEventPacketHeaderSetEventTSOffset(packet, eventTSOffset);
+	caerEventPacketHeaderSetEventTSOverflow(packet, tsOverflow);
+	caerEventPacketHeaderSetEventCapacity(packet, eventCapacity);
+
+	return (packet);
+}
+
 #ifdef __cplusplus
 }
 #endif

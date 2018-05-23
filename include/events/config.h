@@ -90,8 +90,11 @@ typedef const struct caer_configuration_event_packet *caerConfigurationEventPack
  *
  * @return a valid ConfigurationEventPacket handle or NULL on error.
  */
-caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
-	int32_t tsOverflow);
+static inline caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
+	int32_t tsOverflow) {
+	return ((caerConfigurationEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, CONFIG_EVENT,
+		sizeof(struct caer_configuration_event), offsetof(struct caer_configuration_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Configuration event packet.

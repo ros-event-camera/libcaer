@@ -91,17 +91,30 @@ typedef const struct caer_event_packet_container *caerEventPacketContainerConst;
  *
  * @return a valid EventPacketContainer handle or NULL on error.
  */
-caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNumber);
+static inline caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNumber) {
+	if (eventPacketsNumber <= 0) {
+		return (NULL);
+	}
 
-/**
- * Free the memory occupied by an EventPacketContainer, as well as
- * freeing all of its contained EventPackets and their memory.
- * If you don't want the contained EventPackets to be freed, make
- * sure that you set their pointers to NULL before calling this.
+	size_t eventPacketContainerSize = sizeof(struct caer_event_packet_container)
+		+ ((size_t) eventPacketsNumber * sizeof(caerEventPacketHeader));
 
- * @param container the container to be freed.
- */
-void caerEventPacketContainerFree(caerEventPacketContainer container);
+	caerEventPacketContainer packetContainer = (caerEventPacketContainer) calloc(1, eventPacketContainerSize);
+	if (packetContainer == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+			"Failed to allocate %zu bytes of memory for Event Packet Container, containing %"
+			PRIi32 " packets. Error: %d.", eventPacketContainerSize, eventPacketsNumber, errno);
+		return (NULL);
+	}
+
+	// Fill in header fields. Don't care about endianness here, purely internal
+	// memory construct, never meant for inter-system exchange.
+	packetContainer->eventPacketsNumber = eventPacketsNumber;
+	packetContainer->lowestEventTimestamp = -1;
+	packetContainer->highestEventTimestamp = -1;
+
+	return (packetContainer);
+}
 
 // Forward declaration for use in set operations.
 static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketContainer container);
@@ -235,6 +248,33 @@ static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContain
 
 	// Always update all the statics on set operation.
 	caerEventPacketContainerUpdateStatistics(container);
+}
+
+/**
+ * Free the memory occupied by an EventPacketContainer, as well as
+ * freeing all of its contained EventPackets and their memory.
+ * If you don't want the contained EventPackets to be freed, make
+ * sure that you set their pointers to NULL before calling this.
+
+ * @param container the container to be freed.
+ */
+static inline void caerEventPacketContainerFree(caerEventPacketContainer container) {
+	if (container == NULL) {
+		return;
+	}
+
+	// Free packet container and ensure all subordinate memory is also freed.
+	int32_t eventPacketsNum = caerEventPacketContainerGetEventPacketsNumber(container);
+
+	for (int32_t i = 0; i < eventPacketsNum; i++) {
+		caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(container, i);
+
+		if (packetHeader != NULL) {
+			free(packetHeader);
+		}
+	}
+
+	free(container);
 }
 
 /**

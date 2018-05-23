@@ -99,7 +99,11 @@ typedef const struct caer_matrix4x4_event_packet *caerMatrix4x4EventPacketConst;
  *
  * @return a valid Matrix4x4EventPacket handle or NULL on error.
  */
-caerMatrix4x4EventPacket caerMatrix4x4EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerMatrix4x4EventPacket caerMatrix4x4EventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
+	int32_t tsOverflow) {
+	return ((caerMatrix4x4EventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, MATRIX4x4_EVENT,
+		sizeof(struct caer_matrix4x4_event), offsetof(struct caer_matrix4x4_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Matrix4x4 event packet.

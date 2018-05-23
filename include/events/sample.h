@@ -82,7 +82,10 @@ typedef const struct caer_sample_event_packet *caerSampleEventPacketConst;
  *
  * @return a valid SampleEventPacket handle or NULL on error.
  */
-caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerSampleEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, SAMPLE_EVENT,
+		sizeof(struct caer_sample_event), offsetof(struct caer_sample_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Sample event packet.

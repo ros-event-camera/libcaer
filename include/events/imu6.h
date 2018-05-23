@@ -87,7 +87,10 @@ typedef const struct caer_imu6_event_packet *caerIMU6EventPacketConst;
  *
  * @return a valid IMU6EventPacket handle or NULL on error.
  */
-caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerIMU6EventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, IMU6_EVENT,
+		sizeof(struct caer_imu6_event), offsetof(struct caer_imu6_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into an IMU 6-axes event packet.

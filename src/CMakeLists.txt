@@ -1,7 +1,6 @@
 SET(LIBCAER_SRC_FILES
 	ringbuffer.c
 	log.c
-	events.c
 	frame_utils.c
 	filters_dvs_noise.c
 	usb_utils.c

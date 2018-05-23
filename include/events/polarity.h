@@ -86,7 +86,10 @@ typedef const struct caer_polarity_event_packet *caerPolarityEventPacketConst;
  *
  * @return a valid PolarityEventPacket handle or NULL on error.
  */
-caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerPolarityEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, POLARITY_EVENT,
+		sizeof(struct caer_polarity_event), offsetof(struct caer_polarity_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Polarity event packet.

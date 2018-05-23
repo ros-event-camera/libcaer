@@ -82,7 +82,10 @@ typedef const struct caer_spike_event_packet *caerSpikeEventPacketConst;
  *
  * @return a valid SpikeEventPacket handle or NULL on error.
  */
-caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerSpikeEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, SPIKE_EVENT,
+		sizeof(struct caer_spike_event), offsetof(struct caer_spike_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Spike event packet.

@@ -87,7 +87,10 @@ typedef const struct caer_point2d_event_packet *caerPoint2DEventPacketConst;
  *
  * @return a valid Point2DEventPacket handle or NULL on error.
  */
-caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerPoint2DEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, POINT2D_EVENT,
+		sizeof(struct caer_point2d_event), offsetof(struct caer_point2d_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Point2D event packet.

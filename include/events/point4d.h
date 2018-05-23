@@ -92,7 +92,10 @@ typedef const struct caer_point4d_event_packet *caerPoint4DEventPacketConst;
  *
  * @return a valid Point4DEventPacket handle or NULL on error.
  */
-caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerPoint4DEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, POINT4D_EVENT,
+		sizeof(struct caer_point4d_event), offsetof(struct caer_point4d_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Point4D event packet.

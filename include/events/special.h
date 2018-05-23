@@ -104,7 +104,10 @@ typedef const struct caer_special_event_packet *caerSpecialEventPacketConst;
  *
  * @return a valid SpecialEventPacket handle or NULL on error.
  */
-caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerSpecialEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, SPECIAL_EVENT,
+		sizeof(struct caer_special_event), offsetof(struct caer_special_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Special event packet.

@@ -86,7 +86,10 @@ typedef const struct caer_ear_event_packet *caerEarEventPacketConst;
  *
  * @return a valid EarEventPacket handle or NULL on error.
  */
-caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerEarEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, EAR_EVENT,
+		sizeof(struct caer_ear_event), offsetof(struct caer_ear_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into an Ear event packet.

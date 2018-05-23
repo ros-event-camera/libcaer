@@ -156,8 +156,19 @@ typedef const struct caer_frame_event_packet *caerFrameEventPacketConst;
  *
  * @return a valid FrameEventPacket handle or NULL on error.
  */
-caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
-	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber);
+static inline caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
+	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber) {
+	if ((maxLengthX <= 0) || (maxLengthY <= 0) || (maxChannelNumber <= 0)) {
+		return (NULL);
+	}
+
+	size_t pixelSize = sizeof(uint16_t) * (size_t) maxLengthX * (size_t) maxLengthY * (size_t) maxChannelNumber;
+	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
+	size_t eventSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t)) + pixelSize;
+
+	return ((caerFrameEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, FRAME_EVENT,
+		I32T(eventSize), offsetof(struct caer_frame_event, ts_endframe)));
+}
 
 /**
  * Transform a generic event packet header into a Frame event packet.
