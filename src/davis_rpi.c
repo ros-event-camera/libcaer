@@ -11,7 +11,7 @@
 #define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
 #define GPIO_REG_LEN  0xB4
 
-// GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x) or SET_GPIO_ALT(x,y)
+// GPIO setup macros. Always use GPIO_INP(x) before using GPIO_OUT(x) or GPIO_ALT(x, y).
 #define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId)/10] &= U32T(~(7 << (((gpioId)%10)*3)))
 #define GPIO_OUT(gpioReg, gpioId) gpioReg[(gpioId)/10] |= U32T(1 << (((gpioId)%10)*3))
 #define GPIO_ALT(gpioReg, gpioId, altFunc) gpioReg[(gpioId)/10] |= U32T(((altFunc)<=3?(altFunc)+4:(altFunc)==4?3:2) << (((gpioId)%10)*3))
@@ -1431,9 +1431,11 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = true, .sexN = false, \
 	.typeNormal = true, .currentLevelNormal = true }
 
-#define CF_N_TYPE_CAS(COARSE, FINE) (struct caer_bias_coarsefine) \
-	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = true, .sexN = true, \
-	.typeNormal = false, .currentLevelNormal = true }
+/*
+ * #define CF_N_TYPE_CAS(COARSE, FINE) (struct caer_bias_coarsefine) \
+ *	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = true, .sexN = true, \
+ *	.typeNormal = false, .currentLevelNormal = true }
+ */
 
 /*
  * #define CF_P_TYPE_CAS(COARSE, FINE) (struct caer_bias_coarsefine) \
@@ -1445,9 +1447,11 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = false, .sexN = true, \
 	.typeNormal = true, .currentLevelNormal = true }
 
-#define CF_P_TYPE_OFF(COARSE, FINE) (struct caer_bias_coarsefine) \
-	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = false, .sexN = false, \
-	.typeNormal = true, .currentLevelNormal = true }
+/**
+ * #define CF_P_TYPE_OFF(COARSE, FINE) (struct caer_bias_coarsefine) \
+ *	{ .coarseValue = COARSE, .fineValue = FINE, .enabled = false, .sexN = false, \
+ *	.typeNormal = true, .currentLevelNormal = true }
+ */
 
 #define SHIFTSOURCE(REF, REG, OPMODE) (struct caer_bias_shiftedsource) \
 	{ .refValue = REF, .regValue = REG, .operatingMode = OPMODE, .voltageLevel = SPLIT_GATE }
