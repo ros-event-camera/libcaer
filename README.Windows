@@ -2,9 +2,13 @@ WINDOWS BUILD INSTRUCTIONS
 ==========================
 We support building libcaer on the Windows platform by using the MinGW32/64 compilers
 and the MSYS2 environment. The result is a static and a dynamic DLL, as well as the
-appropriate header files, so that libcaer can be used again in MinGW or also together
-with Visual Studio C/C++. Following are detailed step-by-step instructions to install
-the required components and get everything building, we use MinGW64 here for the
+appropriate header files, so that libcaer can be used in MinGW itself.
+
+Visual Studio and the MSVC compiler are not supported out-of-the-box right now, to use
+a DLL compiled by MinGW additional steps are necessary: http://www.mingw.org/wiki/MSVC_and_MinGW_DLLs
+
+Following are detailed step-by-step instructions to install the required
+components and get everything building, we use MinGW64 here for the
 64-bit Windows platform, if you want to build for 32-bit Windows, just replace all
 mentions of 'x86_64' with 'i686'. Whenever you want to install a package, use
 the MSYS2 shell, while to build code, use the MinGW32/64 shells!
