@@ -211,10 +211,10 @@ ENDIF()
 # Linker settings
 IF (OS_UNIX AND NOT OS_MACOSX)
 	# Add --as-needed to linker flags for executables.
-	SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed" PARENT_SCOPE)
+	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed" PARENT_SCOPE)
 
-	# Add --as-needed to linker flags for libraries.
-	SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed" PARENT_SCOPE)
+	# Add --as-needed to linker flags for shared libraries.
+	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--as-needed" PARENT_SCOPE)
 ENDIF()
 
 # Print info summary for debug purposes
