@@ -6,6 +6,10 @@ IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
 ENDIF()
 
+IF (NOT ENABLE_STATIC)
+	SET(ENABLE_STATIC 0 CACHE BOOL "Build and install static library in addition to default shared library")
+ENDIF()
+
 IF (NOT ENABLE_SERIALDEV)
 	SET(ENABLE_SERIALDEV 0 CACHE BOOL "Enable support for serial port devices using libserialport")
 ENDIF()
