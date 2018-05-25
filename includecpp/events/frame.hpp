@@ -5,7 +5,16 @@
 #include <libcaer/frame_utils.h>
 #include "common.hpp"
 
-#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+// Separate define for getOpenCVMat() from main LIBCAER_HAVE_OPENCV,
+// which is for the frame utils support. LIBCAER_HAVE_OPENCV_FRAME is
+// only for this one header here and the getOpenCVMat() functions, in
+// which case you need to have OpenCV installed for the application
+// using this only, not necessarily for libcaer.
+#ifndef LIBCAER_FRAMECPP_OPENCV_INSTALLED
+#define LIBCAER_FRAMECPP_OPENCV_INSTALLED LIBCAER_HAVE_OPENCV
+#endif
+
+#if defined(LIBCAER_FRAMECPP_OPENCV_INSTALLED) && LIBCAER_FRAMECPP_OPENCV_INSTALLED == 1
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
@@ -322,7 +331,7 @@ struct FrameEvent: public caer_frame_event {
 		return (this->pixels);
 	}
 
-#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+#if defined(LIBCAER_FRAMECPP_OPENCV_INSTALLED) && LIBCAER_FRAMECPP_OPENCV_INSTALLED == 1
 
 	cv::Mat getOpenCVMat() noexcept {
 		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
