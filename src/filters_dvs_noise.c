@@ -254,6 +254,18 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 			}
 		}
 
+		// Refractory Period filter.
+		// Execute before BAFilter, as this is a much simpler check, so if we
+		// can we try to eliminate the event early in a less costly manner.
+		if (noiseFilter->refractoryPeriodEnabled) {
+			if ((ts - noiseFilter->timestampsMap[pixelIndex]) < noiseFilter->refractoryPeriodTime) {
+				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
+				noiseFilter->refractoryPeriodStat++;
+
+				goto WriteTimestamp;
+			}
+		}
+
 		if (noiseFilter->backgroundActivityEnabled) {
 			size_t supportPixelIndexes[8];
 			size_t supportPixelNum = doBackgroundActivityLookup(noiseFilter, pixelIndex, ts, supportPixelIndexes);
@@ -271,11 +283,11 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 					}
 
 					if (result == supportPixelNum) {
-						goto BAValidEvent;
+						goto WriteTimestamp;
 					}
 				}
 				else {
-					goto BAValidEvent;
+					goto WriteTimestamp;
 				}
 			}
 
@@ -284,21 +296,9 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 			// execute it (and would cause a double-invalidate error).
 			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
 			noiseFilter->backgroundActivityStat++;
-
-			goto BAInvalidatedEvent;
 		}
 
-		// If we're sent here, the event was valid due to neighbor support.
-		BAValidEvent:
-		// Refractory Period filter.
-		if (noiseFilter->refractoryPeriodEnabled) {
-			if ((ts - noiseFilter->timestampsMap[pixelIndex]) < noiseFilter->refractoryPeriodTime) {
-				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-				noiseFilter->refractoryPeriodStat++;
-			}
-		}
-
-		BAInvalidatedEvent:
+		WriteTimestamp:
 		// Update pixel timestamp (one write). Always update so filters are
 		// ready at enable-time right away.
 		noiseFilter->timestampsMap[pixelIndex] = ts;
