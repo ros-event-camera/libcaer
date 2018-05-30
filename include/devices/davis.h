@@ -508,7 +508,7 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * specify the time difference constant for the background-activity
- * filter in microseconds. Events that do correlated within this
+ * filter in 250µs units. Events that are correlated within this
  * time-frame are let through, while others are filtered out.
  */
 #define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 30
@@ -540,7 +540,8 @@ extern "C" {
 #define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD        33
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
- * specify the time constant for the refractory period filter.
+ * specify the time constant for the refractory period filter,
+ * in 250µs units.
  * Pixels will be inhibited from generating new events during this
  * time after the last even has fired.
  */
@@ -639,6 +640,20 @@ extern "C" {
  * function: caerDeviceConfigGet64().
  */
 #define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * set the minimum number of neighboring pixels that must
+ * support an event for it to be considered valid by the
+ * background activity filter.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_SUPPORT_MIN 53
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * set the maximum number of neighboring pixels that can
+ * support an event for it to be considered valid by the
+ * background activity filter.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_SUPPORT_MAX 54
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
