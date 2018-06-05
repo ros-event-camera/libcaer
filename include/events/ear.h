@@ -179,7 +179,7 @@ static inline caerEarEventConst caerEarEventPacketGetEventConst(caerEarEventPack
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerEarEventGetTimestamp(caerEarEventConst event) {
-	return (I32T(le32toh(event->timestamp)));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -210,7 +210,7 @@ static inline void caerEarEventSetTimestamp(caerEarEvent event, int32_t timestam
 		return;
 	}
 
-	event->timestamp = I32T(htole32(timestamp));
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**

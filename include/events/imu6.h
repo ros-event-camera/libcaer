@@ -180,7 +180,7 @@ static inline caerIMU6EventConst caerIMU6EventPacketGetEventConst(caerIMU6EventP
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerIMU6EventGetTimestamp(caerIMU6EventConst event) {
-	return (I32T(le32toh(event->timestamp)));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -211,7 +211,7 @@ static inline void caerIMU6EventSetTimestamp(caerIMU6Event event, int32_t timest
 		return;
 	}
 
-	event->timestamp = I32T(htole32(timestamp));
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**

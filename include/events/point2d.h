@@ -180,7 +180,7 @@ static inline caerPoint2DEventConst caerPoint2DEventPacketGetEventConst(caerPoin
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerPoint2DEventGetTimestamp(caerPoint2DEventConst event) {
-	return (I32T(le32toh(event->timestamp)));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -211,7 +211,7 @@ static inline void caerPoint2DEventSetTimestamp(caerPoint2DEvent event, int32_t 
 		return;
 	}
 
-	event->timestamp = I32T(htole32(timestamp));
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**

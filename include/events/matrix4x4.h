@@ -193,7 +193,7 @@ static inline caerMatrix4x4EventConst caerMatrix4x4EventPacketGetEventConst(caer
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerMatrix4x4EventGetTimestamp(caerMatrix4x4EventConst event) {
-	return (I32T(le32toh(event->timestamp)));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -224,7 +224,7 @@ static inline void caerMatrix4x4EventSetTimestamp(caerMatrix4x4Event event, int3
 		return;
 	}
 
-	event->timestamp = I32T(htole32(timestamp));
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
