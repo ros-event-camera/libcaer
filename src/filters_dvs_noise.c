@@ -1,5 +1,15 @@
 #include "filters/dvs_noise.h"
 
+struct dvs_pixel_with_count {
+	struct caer_filter_dvs_pixel address;
+	uint32_t count;
+};
+
+struct dvs_ts_pol {
+	int64_t timestamp;
+	bool polarity;
+};
+
 struct caer_filter_dvs_noise {
 	// Logging support.
 	uint8_t logLevel;
@@ -18,9 +28,11 @@ struct caer_filter_dvs_noise {
 	// Background Activity filter.
 	bool backgroundActivityEnabled;
 	bool backgroundActivityTwoLevels;
+	bool backgroundActivityIgnorePolarity;
 	uint8_t backgroundActivitySupportMin;
 	uint8_t backgroundActivitySupportMax;
 	uint32_t backgroundActivityTime;
+	int32_t backgroundActivityForwardTime;
 	uint64_t backgroundActivityStat;
 	// Refractory Period filter.
 	bool refractoryPeriodEnabled;
@@ -29,12 +41,7 @@ struct caer_filter_dvs_noise {
 	// Maps and their sizes.
 	uint16_t sizeX;
 	uint16_t sizeY;
-	int64_t timestampsMap[];
-};
-
-struct dvs_pixel_with_count {
-	struct caer_filter_dvs_pixel address;
-	uint32_t count;
+	struct dvs_ts_pol timestampsMap[];
 };
 
 static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
@@ -51,7 +58,7 @@ static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise h
 
 caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) {
 	caerFilterDVSNoise noiseFilter = calloc(1,
-		sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeY * sizeof(int64_t)));
+		sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeY * sizeof(struct dvs_ts_pol)));
 	if (noiseFilter == NULL) {
 		return (NULL);
 	}
@@ -65,98 +72,105 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 	// Default values for filters.
 	noiseFilter->hotPixelTime = 1000000; // 1 second.
 	noiseFilter->hotPixelCount = 10000; // 10 KEvt in 1 second => 10 KHz.
+	noiseFilter->refractoryPeriodTime = 100; // 100 microseconds, max. pixel firing rate 10 KHz.
+	noiseFilter->backgroundActivityIgnorePolarity = false; // Do not ignore polarity.
 	noiseFilter->backgroundActivityTwoLevels = false; // Disable two-level lookup for performance reasons.
 	noiseFilter->backgroundActivitySupportMin = 1; // At least one pixel must support.
 	noiseFilter->backgroundActivitySupportMax = 8; // At most eight pixels can support.
-	noiseFilter->backgroundActivityTime = 20000; // 20 milliseconds within neighborhood.
-	noiseFilter->refractoryPeriodTime = 100; // 100 microseconds, max. pixel firing rate 10 KHz.
+	noiseFilter->backgroundActivityTime = 2000; // 2 milliseconds within neighborhood.
+	noiseFilter->backgroundActivityForwardTime = -500; // 500µs within neighborhood.
 
 	return (noiseFilter);
 }
 
-static inline size_t doBackgroundActivityLookup(caerFilterDVSNoise noiseFilter, size_t pixelIndex, int64_t ts,
-	size_t *supportIndexes) {
-	size_t x = pixelIndex % noiseFilter->sizeX;
-	size_t y = pixelIndex / noiseFilter->sizeX;
+static inline void doBackgroundActivityCalculation(caerFilterDVSNoise noiseFilter, size_t idx, size_t *result,
+	int64_t ts, bool pol, uint16_t x, uint16_t y, struct caer_filter_dvs_pixel *prevPixel,
+	struct caer_filter_dvs_pixel *supportPixels) {
+	if ((prevPixel != NULL) && (prevPixel->x == x) && (prevPixel->y == y)) {
+		return;
+	}
 
+	if (!noiseFilter->backgroundActivityIgnorePolarity && pol != noiseFilter->timestampsMap[idx].polarity) {
+		return;
+	}
+
+	int64_t timeDifference = (ts - noiseFilter->timestampsMap[idx].timestamp);
+
+	if ((timeDifference <= noiseFilter->backgroundActivityTime)
+		&& (timeDifference >= noiseFilter->backgroundActivityForwardTime)) {
+		if (supportPixels != NULL) {
+			supportPixels[*result].x = x;
+			supportPixels[*result].y = y;
+		}
+
+		(*result)++;
+	}
+}
+
+static inline size_t doBackgroundActivityLookup(caerFilterDVSNoise noiseFilter, int64_t ts, bool pol,
+	struct caer_filter_dvs_pixel *currPixel, struct caer_filter_dvs_pixel *prevPixel,
+	struct caer_filter_dvs_pixel *supportPixels) {
 	// Compute map limits.
-	bool borderLeft = (x == 0);
-	bool borderDown = (y == (noiseFilter->sizeY - 1));
-	bool borderRight = (x == (noiseFilter->sizeX - 1));
-	bool borderUp = (y == 0);
+	bool borderLeft = (currPixel->x == 0);
+	bool borderDown = (currPixel->y == (noiseFilter->sizeY - 1));
+	bool borderRight = (currPixel->x == (noiseFilter->sizeX - 1));
+	bool borderUp = (currPixel->y == 0);
 
 	// Background Activity filter: if difference between current timestamp
 	// and stored neighbor timestamp is smaller than given time limit, it
 	// means the event is supported by a neighbor and thus valid. If it is
 	// bigger, then the event is not supported, and we need to check the
 	// next neighbor. If all are bigger, the event is invalid.
-	size_t index = pixelIndex - noiseFilter->sizeX;
+	size_t index = (currPixel->y * noiseFilter->sizeX) + currPixel->x;
 	size_t result = 0;
 
-	if (!borderUp) {
-		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index - 1;
-			}
-			result++;
-		}
-
-		if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index;
-			}
-			result++;
-		}
-
-		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index + 1;
-			}
-			result++;
-		}
-	}
-	index += noiseFilter->sizeX; // Next row.
-
 	{
-		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index - 1;
-			}
-			result++;
+		if (!borderLeft) {
+			doBackgroundActivityCalculation(noiseFilter, index - 1, &result, ts, pol, currPixel->x - 1, currPixel->y,
+				prevPixel, supportPixels);
 		}
 
-		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index + 1;
-			}
-			result++;
+		if (!borderRight) {
+			doBackgroundActivityCalculation(noiseFilter, index + 1, &result, ts, pol, currPixel->x + 1, currPixel->y,
+				prevPixel, supportPixels);
 		}
 	}
-	index += noiseFilter->sizeX; // Next row.
+
+	if (!borderUp) {
+		index -= noiseFilter->sizeX; // Prev row.
+
+		if (!borderLeft) {
+			doBackgroundActivityCalculation(noiseFilter, index - 1, &result, ts, pol, currPixel->x - 1,
+				currPixel->y - 1, prevPixel, supportPixels);
+		}
+
+		doBackgroundActivityCalculation(noiseFilter, index, &result, ts, pol, currPixel->x, currPixel->y - 1, prevPixel,
+			supportPixels);
+
+		if (!borderRight) {
+			doBackgroundActivityCalculation(noiseFilter, index + 1, &result, ts, pol, currPixel->x + 1,
+				currPixel->y - 1, prevPixel, supportPixels);
+		}
+
+		index += noiseFilter->sizeX; // Back to center row.
+	}
 
 	if (!borderDown) {
-		if (!borderLeft && (ts - noiseFilter->timestampsMap[index - 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index - 1;
-			}
-			result++;
+		index += noiseFilter->sizeX; // Next row.
+
+		if (!borderLeft) {
+			doBackgroundActivityCalculation(noiseFilter, index - 1, &result, ts, pol, currPixel->x - 1,
+				currPixel->y + 1, prevPixel, supportPixels);
 		}
 
-		if ((ts - noiseFilter->timestampsMap[index]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index;
-			}
-			result++;
-		}
+		doBackgroundActivityCalculation(noiseFilter, index, &result, ts, pol, currPixel->x, currPixel->y + 1, prevPixel,
+			supportPixels);
 
-		if (!borderRight && (ts - noiseFilter->timestampsMap[index + 1]) < noiseFilter->backgroundActivityTime) {
-			if (supportIndexes != NULL) {
-				supportIndexes[result] = index + 1;
-			}
-			result++;
+		if (!borderRight) {
+			doBackgroundActivityCalculation(noiseFilter, index + 1, &result, ts, pol, currPixel->x + 1,
+				currPixel->y + 1, prevPixel, supportPixels);
 		}
 	}
-	// No index to adjust to next row.
 
 	return (result);
 }
@@ -206,6 +220,7 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 	CAER_POLARITY_ITERATOR_VALID_START(polarity)
 		uint16_t x = caerPolarityEventGetX(caerPolarityIteratorElement);
 		uint16_t y = caerPolarityEventGetY(caerPolarityIteratorElement);
+		bool pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
 		int64_t ts = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
 		size_t pixelIndex = (y * noiseFilter->sizeX) + x; // Target pixel.
 
@@ -258,50 +273,56 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 		// Execute before BAFilter, as this is a much simpler check, so if we
 		// can we try to eliminate the event early in a less costly manner.
 		if (noiseFilter->refractoryPeriodEnabled) {
-			if ((ts - noiseFilter->timestampsMap[pixelIndex]) < noiseFilter->refractoryPeriodTime) {
+			int64_t timeDifference = (ts - noiseFilter->timestampsMap[pixelIndex].timestamp);
+
+			if (timeDifference < noiseFilter->refractoryPeriodTime) {
 				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
 				noiseFilter->refractoryPeriodStat++;
-
-				goto WriteTimestamp;
 			}
 		}
 
-		if (noiseFilter->backgroundActivityEnabled) {
-			size_t supportPixelIndexes[8];
-			size_t supportPixelNum = doBackgroundActivityLookup(noiseFilter, pixelIndex, ts, supportPixelIndexes);
+		// Update pixel timestamp (one write). Always update so filters are
+		// ready at enable-time right away.
+		noiseFilter->timestampsMap[pixelIndex].timestamp = ts;
+		noiseFilter->timestampsMap[pixelIndex].polarity = pol;;
+	}
+
+	if (noiseFilter->backgroundActivityEnabled) {
+		CAER_POLARITY_ITERATOR_VALID_START(polarity)
+			struct caer_filter_dvs_pixel pixel = { .x = caerPolarityEventGetX(caerPolarityIteratorElement), .y =
+				caerPolarityEventGetY(caerPolarityIteratorElement) };
+			bool pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
+			int64_t ts = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
+
+			struct caer_filter_dvs_pixel supportPixels[8];
+			size_t supportPixelNum = doBackgroundActivityLookup(noiseFilter, ts, pol, &pixel, NULL, supportPixels);
 
 			if ((supportPixelNum >= noiseFilter->backgroundActivitySupportMin)
 				&& (supportPixelNum <= noiseFilter->backgroundActivitySupportMax)) {
 				if (noiseFilter->backgroundActivityTwoLevels) {
 					// Do the same check again for all previous supporting pixels.
-					size_t result = 0;
+					bool result = false;
 
 					for (size_t i = 0; i < supportPixelNum; i++) {
-						if (doBackgroundActivityLookup(noiseFilter, supportPixelIndexes[i], ts, NULL) > 0) {
-							result++;
+						if (doBackgroundActivityLookup(noiseFilter, ts, pol, &supportPixels[i], &pixel, NULL) > 0) {
+							result = true;
+							break;
 						}
 					}
 
-					if (result == supportPixelNum) {
-						goto WriteTimestamp;
+					if (result) {
+						continue;
 					}
 				}
 				else {
-					goto WriteTimestamp;
+					continue;
 				}
 			}
 
 			// Event is not supported by any neighbor if we get here, invalidate it.
-			// Then jump over the Refractory Period filter, as it's useless to
-			// execute it (and would cause a double-invalidate error).
 			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
 			noiseFilter->backgroundActivityStat++;
 		}
-
-		WriteTimestamp:
-		// Update pixel timestamp (one write). Always update so filters are
-		// ready at enable-time right away.
-		noiseFilter->timestampsMap[pixelIndex] = ts;
 	}
 }
 
@@ -329,6 +350,14 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
 			noiseFilter->backgroundActivityTime = U32T(param);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_FORWARD_TIME:
+			noiseFilter->backgroundActivityForwardTime = -I32T(param);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_IGNORE_POLARITY:
+			noiseFilter->backgroundActivityIgnorePolarity = param;
 			break;
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TWO_LEVELS:
@@ -364,7 +393,7 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 					noiseFilter->hotPixelArray = NULL;
 				}
 
-				memset(noiseFilter->timestampsMap, 0, noiseFilter->sizeX * noiseFilter->sizeY * sizeof(int64_t));
+				memset(noiseFilter->timestampsMap, 0, noiseFilter->sizeX * noiseFilter->sizeY * sizeof(struct dvs_ts_pol));
 
 				// Reset statistics to zero
 				noiseFilter->hotPixelStat = 0;
@@ -414,6 +443,14 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TIME:
 			*param = noiseFilter->backgroundActivityTime;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_FORWARD_TIME:
+			*param = U32T(-noiseFilter->backgroundActivityForwardTime);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_IGNORE_POLARITY:
+			*param = noiseFilter->backgroundActivityIgnorePolarity;
 			break;
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_TWO_LEVELS:
