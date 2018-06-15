@@ -1312,9 +1312,9 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	}
 	if (handle->info.dvsHasBackgroundActivityFilter) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY, true);
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME, 80); // in 250µs blocks (so 20ms)
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME, 8); // in 250µs blocks (so 2ms)
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD, false);
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME, 2); // in 250µs blocks (so 500µs)
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME, 1); // in 250µs blocks (so 250µs)
 	}
 	if (handle->info.dvsHasTestEventGenerator) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE, false);

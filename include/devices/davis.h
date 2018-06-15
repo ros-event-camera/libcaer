@@ -640,20 +640,6 @@ extern "C" {
  * function: caerDeviceConfigGet64().
  */
 #define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * set the minimum number of neighboring pixels that must
- * support an event for it to be considered valid by the
- * background activity filter.
- */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_SUPPORT_MIN 53
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * set the maximum number of neighboring pixels that can
- * support an event for it to be considered valid by the
- * background activity filter.
- */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_SUPPORT_MAX 54
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
