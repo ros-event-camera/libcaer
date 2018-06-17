@@ -227,6 +227,13 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  */
 #define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_SUPPORT_MAX 15
 
+/**
+ * DVS Background-Activity Filter:
+ * whether polarity is considered when searching the neighbors for
+ * supporting activity.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_CHECK_POLARITY 16
+
 #ifdef __cplusplus
 }
 #endif

@@ -7,6 +7,7 @@
 #include "container_generation.h"
 #include "usb_utils.h"
 #include "autoexposure.h"
+#include "filters/dvs_noise.h"
 
 #define APS_READOUT_TYPES_NUM 2
 #define APS_READOUT_RESET  0
@@ -29,6 +30,8 @@
 #define APS_ROI_REGIONS DAVIS_APS_ROI_REGIONS_MAX
 
 #define IMU6_COUNT 15
+
+#define DVS_HOTPIXEL_HW_MAX 8
 
 #define SPI_CONFIG_MSG_SIZE 6
 
@@ -72,6 +75,10 @@ struct davis_state {
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
+		struct {
+			atomic_bool autoTrainRunning;
+			caerFilterDVSNoise noiseFilter;
+		} pixelFilterAutoTrain;
 	} dvs;
 	struct {
 		// APS specific fields
