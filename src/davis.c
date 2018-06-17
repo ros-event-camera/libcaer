@@ -1433,6 +1433,15 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
+				case DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN:
+					if (handle->info.dvsHasPixelFilter) {
+						atomic_store(&handle->state.dvs.pixelFilterAutoTrain.autoTrainRunning, param);
+					}
+					else {
+						return (false);
+					}
+					break;
+
 				default:
 					return (false);
 					break;
@@ -2074,6 +2083,15 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD + 1:
 					if (handle->info.dvsHasStatistics && handle->info.dvsHasBackgroundActivityFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN:
+					if (handle->info.dvsHasPixelFilter) {
+						*param = atomic_load(&handle->state.dvs.pixelFilterAutoTrain.autoTrainRunning);
 					}
 					else {
 						return (false);
@@ -3817,6 +3835,86 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 			if (state->currentPackets.polarityPosition > 0) {
 				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
 					(caerEventPacketHeader) state->currentPackets.polarity);
+
+				// Run pixel filter auto-train. Can only be enabled if hw-filter present.
+				if (atomic_load_explicit(&state->dvs.pixelFilterAutoTrain.autoTrainRunning, memory_order_relaxed)) {
+					if (state->dvs.pixelFilterAutoTrain.noiseFilter == NULL) {
+
+						state->dvs.pixelFilterAutoTrain.noiseFilter = caerFilterDVSNoiseInitialize(
+							U16T(handle->info.dvsSizeX), U16T(handle->info.dvsSizeY));
+						if (state->dvs.pixelFilterAutoTrain.noiseFilter == NULL) {
+							// Failed to initialize, auto-training not possible.
+							atomic_store(&state->dvs.pixelFilterAutoTrain.autoTrainRunning, false);
+							goto out;
+						}
+
+						// Allocate+init success, configure it for hot-pixel learning.
+						caerFilterDVSNoiseConfigSet(state->dvs.pixelFilterAutoTrain.noiseFilter,
+						CAER_FILTER_DVS_HOTPIXEL_COUNT, 10000);
+						caerFilterDVSNoiseConfigSet(state->dvs.pixelFilterAutoTrain.noiseFilter,
+						CAER_FILTER_DVS_HOTPIXEL_TIME, 2000000);
+						caerFilterDVSNoiseConfigSet(state->dvs.pixelFilterAutoTrain.noiseFilter,
+						CAER_FILTER_DVS_HOTPIXEL_LEARN, true);
+					}
+
+					// NoiseFilter must be allocated and initialized if we get here.
+					caerFilterDVSNoiseApply(state->dvs.pixelFilterAutoTrain.noiseFilter,
+						state->currentPackets.polarity);
+
+					uint64_t stillLearning = 1;
+					caerFilterDVSNoiseConfigGet(state->dvs.pixelFilterAutoTrain.noiseFilter,
+					CAER_FILTER_DVS_HOTPIXEL_LEARN, &stillLearning);
+
+					if (!stillLearning) {
+						// Learning done, we can grab the list of hot pixels, and hardware-filter them.
+						caerFilterDVSPixel hotPixels;
+						ssize_t hotPixelsSize = caerFilterDVSNoiseGetHotPixels(
+							state->dvs.pixelFilterAutoTrain.noiseFilter, &hotPixels);
+						if (hotPixelsSize < 0) {
+							// Failed to get list.
+							atomic_store(&state->dvs.pixelFilterAutoTrain.autoTrainRunning, false);
+							goto out;
+						}
+
+						// Limit to maximum hardware size.
+						if (hotPixelsSize > DVS_HOTPIXEL_HW_MAX) {
+							hotPixelsSize = DVS_HOTPIXEL_HW_MAX;
+						}
+
+						// Go through the found pixels and filter them. Disable not used slots.
+						size_t i = 0;
+
+						for (; i < (size_t) hotPixelsSize; i++) {
+							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + i),
+								(state->dvs.invertXY) ? (hotPixels[i].y) : (hotPixels[i].x));
+							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + i),
+								(state->dvs.invertXY) ? (hotPixels[i].x) : (hotPixels[i].y));
+						}
+
+						for (; i < DVS_HOTPIXEL_HW_MAX; i++) {
+							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + i), U32T(state->dvs.sizeX));
+							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + i), U32T(state->dvs.sizeY));
+						}
+
+						// We're done!
+						free(hotPixels);
+
+						atomic_store(&state->dvs.pixelFilterAutoTrain.autoTrainRunning, false);
+						goto out;
+					}
+				}
+				else {
+					out:
+					// Deallocate when turned off, either by user or by having completed.
+					if (state->dvs.pixelFilterAutoTrain.noiseFilter != NULL) {
+						caerFilterDVSNoiseDestroy(state->dvs.pixelFilterAutoTrain.noiseFilter);
+						state->dvs.pixelFilterAutoTrain.noiseFilter = NULL;
+					}
+				}
 
 				state->currentPackets.polarity = NULL;
 				state->currentPackets.polarityPosition = 0;

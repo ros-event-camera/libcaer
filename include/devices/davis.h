@@ -640,6 +640,12 @@ extern "C" {
  * function: caerDeviceConfigGet64().
  */
 #define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * automatically discover the eight most active pixels (above ~5KHz)
+ * and set up the hardware pixel filter to remove them from the output.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN 80
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
