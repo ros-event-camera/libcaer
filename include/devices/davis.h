@@ -18,22 +18,22 @@ extern "C" {
 #endif
 
 /**
- * Device type definition for iniLabs DAVIS FX2-based boards, like DAVIS240a/b/c.
+ * Device type definition for iniVation DAVIS FX2-based boards, like DAVIS240a/b/c.
  * Deprecated in favor of CAER_DEVICE_DAVIS.
  */
 #define CAER_DEVICE_DAVIS_FX2 1
 /**
- * Device type definition for iniLabs DAVIS FX3-based boards, like DAVIS640.
+ * Device type definition for iniVation DAVIS FX3-based boards, like DAVIS640.
  * Deprecated in favor of CAER_DEVICE_DAVIS.
  */
 #define CAER_DEVICE_DAVIS_FX3 2
 /**
- * Device type definition for iniLabs DAVIS boards, supporting both FX2 and FX3
+ * Device type definition for iniVation DAVIS boards, supporting both FX2 and FX3
  * generation devices. This is the preferred way to access cameras now.
  */
 #define CAER_DEVICE_DAVIS     4
 /**
- * Device type definition for iniLabs Raspberry Pi-based DAVIS boards.
+ * Device type definition for iniVation Raspberry Pi-based DAVIS boards.
  */
 #define CAER_DEVICE_DAVIS_RPI 6
 
@@ -1430,7 +1430,7 @@ extern "C" {
  * - caerBiasVDACGenerate() for VDAC (voltage) biases.
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVIS128_CONFIG_BIAS_APSOVERFLOWLEVEL 0
 #define DAVIS128_CONFIG_BIAS_APSCAS           1
@@ -1496,7 +1496,7 @@ extern "C" {
  * - caerBiasVDACGenerate() for VDAC (voltage) biases.
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVIS208_CONFIG_BIAS_APSOVERFLOWLEVEL 0
 #define DAVIS208_CONFIG_BIAS_APSCAS           1
@@ -1570,7 +1570,7 @@ extern "C" {
  * functions, which are:
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVIS240_CONFIG_BIAS_DIFFBN             0
 #define DAVIS240_CONFIG_BIAS_ONBN               1
@@ -1633,7 +1633,7 @@ extern "C" {
  * - caerBiasVDACGenerate() for VDAC (voltage) biases.
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVIS346_CONFIG_BIAS_APSOVERFLOWLEVEL 0
 #define DAVIS346_CONFIG_BIAS_APSCAS           1
@@ -1701,7 +1701,7 @@ extern "C" {
  * - caerBiasVDACGenerate() for VDAC (voltage) biases.
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVIS640_CONFIG_BIAS_APSOVERFLOWLEVEL 0
 #define DAVIS640_CONFIG_BIAS_APSCAS           1
@@ -1769,7 +1769,7 @@ extern "C" {
  * - caerBiasVDACGenerate() for VDAC (voltage) biases.
  * - caerBiasCoarseFineGenerate() for coarse-fine (current) biases.
  * - caerBiasShiftedSourceGenerate() for shifted-source biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DAVISRGB_CONFIG_BIAS_APSCAS             0
 #define DAVISRGB_CONFIG_BIAS_OVG1LO             1
@@ -1919,7 +1919,7 @@ struct caer_davis_info caerDavisInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip voltage digital-to-analog converter configuration.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 struct caer_bias_vdac {
 	/// Voltage, between 0 and 63, as a fraction of 1/64th of VDD=3.3V.
@@ -1950,7 +1950,7 @@ struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias);
 
 /**
  * On-chip coarse-fine bias current configuration.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 struct caer_bias_coarsefine {
 	/// Coarse current, from 0 to 7, creates big variations in output current.
@@ -2013,7 +2013,7 @@ enum caer_bias_shiftedsource_voltage_level {
 
 /**
  * On-chip shifted-source bias current configuration.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 struct caer_bias_shiftedsource {
 	/// Shifted-source bias level, from 0 to 63.

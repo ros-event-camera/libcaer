@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /**
- * Device type definition for iniLabs Dynap-se FX2-based boards.
+ * Device type definition for aiCTX Dynap-se FX2-based boards.
  */
 #define CAER_DEVICE_DYNAPSE 3
 
@@ -592,7 +592,7 @@ extern "C" {
  * Bias configuration values must be generated using the proper
  * functions, which are:
  * - caerBiasDynapseGenerate() for Dynap-se coarse-fine (current) biases.
- * See 'https://inilabs.com/support/hardware/user-guide-dynap-se/'
+ * See 'https://ai-ctx.com/support/'
  * section 'Neuron’s behaviors and parameters tuning'.
  */
 #define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P             	0
@@ -751,7 +751,7 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip coarse-fine bias current configuration for Dynap-se.
- * See 'https://inilabs.com/support/hardware/user-guide-dynap-se/'
+ * See 'https://ai-ctx.com/support/'
  * section 'Neuron’s behaviors and parameters tuning'.
  */
 struct caer_bias_dynapse {

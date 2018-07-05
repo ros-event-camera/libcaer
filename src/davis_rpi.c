@@ -158,7 +158,7 @@ static bool initRPi(davisRPiHandle handle) {
 		mtx_destroy(&state->gpio.spiLock);
 
 		davisRPiLog(CAER_LOG_CRITICAL, handle,
-			"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
+			"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'https://inivation.com/support/software/reflashing/'.",
 			param, DAVIS_RPI_REQUIRED_LOGIC_REVISION);
 		errno = CAER_ERROR_LOGIC_VERSION;
 		return (false);

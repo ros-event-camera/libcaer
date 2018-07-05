@@ -7,8 +7,8 @@ PKG_NAME=libcaer
 PKG_VERSION=2.4.2
 PKG_RELEASE=1
 DISTRO=xenial
-SRC_URI="https://github.com/inilabs/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
-PPA_REPO="llongi/inilabs"
+SRC_URI="https://github.com/inivation/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
+PPA_REPO="llongi/inivation"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"

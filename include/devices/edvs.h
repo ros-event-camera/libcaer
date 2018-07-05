@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /**
- * Device type definition for iniLabs EDVS-4337.
+ * Device type definition for iniVation EDVS-4337.
  */
 #define CAER_DEVICE_EDVS 5
 
@@ -44,73 +44,73 @@ extern "C" {
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * First stage amplifier cascode bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_CAS     0
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Injected ground bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_INJGND  1
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull down on chip request (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_REQPD   2
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull up on request from X arbiter (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_PUX     3
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Off events threshold bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_DIFFOFF 4
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull down for passive load inverters in digital AER pixel circuitry.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_REQ     5
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Refractory period bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_REFR    6
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull up on request from Y arbiter (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_PUY     7
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * On events threshold bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_DIFFON  8
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Differential (second stage amplifier) bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_DIFF    9
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Source follower bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_FOLL    10
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Photoreceptor bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define EDVS_CONFIG_BIAS_PR      11
 

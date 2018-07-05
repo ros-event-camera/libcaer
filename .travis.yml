@@ -91,7 +91,7 @@ matrix:
             - libusb-1.0-0-dev
             - libopencv-dev
         sonarcloud:
-          organization: "inilabs-github"
+          organization: "inivation-github"
           token: $SONAR_TOKEN
       env:
          - BUILD_NAME="linux-sonar-analysis"

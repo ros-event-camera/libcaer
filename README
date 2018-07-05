@@ -43,8 +43,8 @@ $ sudo make install
 DOCUMENTATION:
 
 The API documentation for a release can be found at docs/libcaer_api_manual.pdf.
-Online documentation is available at https://inilabs.github.io/libcaer/
-Also check the examples/ directory and the iniLabs Support website.
+Online documentation is available at https://inivation.github.io/libcaer/
+Also check the examples/ directory and the iniVation Support website.
 
 For the development tree, you can generate the documentation using:
 
@@ -78,8 +78,8 @@ HELP:
 Please use our GitHub bug tracker to report issues and bugs, or
 our Google Groups mailing list for discussions and announcements.
 
-BUG TRACKER: https://github.com/inilabs/libcaer/issues/
+BUG TRACKER: https://github.com/inivation/libcaer/issues/
 MAILING LIST: https://groups.google.com/d/forum/caer-users/
 
-BUILD STATUS: https://travis-ci.org/inilabs/libcaer/
-CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inilabs.libcaer
+BUILD STATUS: https://travis-ci.org/inivation/libcaer/
+CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inivation.libcaer

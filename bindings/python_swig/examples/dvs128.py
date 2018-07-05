@@ -1,7 +1,5 @@
 # Python example for interfacing with DVS128
-# Authors: federico.corradi@inilabs.com, luca.longinotti@inivation.com
 # basic example for python and libcaer
-# doc is here: https://inilabs.github.io/libcaer/
 
 import _libcaer_wrap as libcaer
 import numpy

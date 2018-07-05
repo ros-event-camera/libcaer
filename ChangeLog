@@ -112,7 +112,7 @@ NEW FEATURES
 - Packaging: packages for Fedora, Debian and Gentoo Linux, as well as
   MacOS X via Homebrew are now available for each new libcaer release.
   For more information please visit:
-  https://inilabs.com/support/software/libcaer/#h.qp4tgs7gb5k
+  https://inivation.com/support/software/libcaer/#automated-installation
 - Python bindings: added bindings for Python 2/3 using SWIG. See
   bindings/python_swig/ and bindings/python_swig/examples/ for examples.
   NOTE: this needs a patched Swig, see 'https://github.com/swig/swig/pull/1166'.
@@ -381,7 +381,7 @@ INCOMPATIBLE CHANGES
   - caerEventPacketCopyOnlyValidEvents()
 
 NEW FEATURES
-- Support for the iniLabs DYNAP-SE neuromorphic chip was added.
+- Support for the aiCTX DYNAP-SE neuromorphic chip was added.
 - Added new event type Spike Event for spiking neurons.
 - Added new event types Point1D, Point2D, Point3D and Point4D to
   hold floating point data in multiple dimensions.
@@ -425,7 +425,7 @@ INCOMPATIBLE CHANGES
 - davis_fx2.c: removed specific FX2 code, now uses same backend as FX3
   for sending all configuration values, due to new firmware version 3
   for FX2 DAVIS small-board cameras. A firmware update is required,
-  please follow the instructions at http://inilabs.com/support/reflashing/.
+  please follow the instructions at https://inivation.com/support/software/reflashing/.
 
 NEW FEATURES
 - frame.h: add function caerFrameEventGetPixelArrayCGFormat() to

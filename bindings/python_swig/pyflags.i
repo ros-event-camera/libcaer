@@ -1,8 +1,6 @@
-/* pyflags.i - Python libcaer interface file
-* Authors:
-	Federico Corradi - federico.corradi@inilabs.com
-	Luca Longinotti - luca.longinotti@inilabs.com
-*/
+/**
+ * pyflags.i - Python libcaer interface file
+ */
 %module libcaer_wrap
 %{
 #include <libcaer/libcaer.h>

@@ -1,7 +1,5 @@
 # Python example for interfacing with Dynap-se
-# Author: federico.corradi@inilabs.com
 # basic example for python and libcaer
-# doc is here: https://inilabs.github.io/libcaer/
 
 import _libcaer_wrap as libcaer
 
