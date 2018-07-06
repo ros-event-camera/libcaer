@@ -3886,18 +3886,18 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 						for (; i < (size_t) hotPixelsSize; i++) {
 							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
-								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + i),
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + 2*i),
 								(state->dvs.invertXY) ? (hotPixels[i].y) : (hotPixels[i].x));
 							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
-								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + i),
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + 2*i),
 								(state->dvs.invertXY) ? (hotPixels[i].x) : (hotPixels[i].y));
 						}
 
 						for (; i < DVS_HOTPIXEL_HW_MAX; i++) {
 							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
-								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + i), U32T(state->dvs.sizeX));
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + 2*i), U32T(state->dvs.sizeX));
 							davisConfigSet((caerDeviceHandle) handle, DAVIS_CONFIG_DVS,
-								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + i), U32T(state->dvs.sizeY));
+								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + 2*i), U32T(state->dvs.sizeY));
 						}
 
 						// We're done!
