@@ -1,17 +1,17 @@
 #ifndef C11THREADS_POSIX_H_
 #define C11THREADS_POSIX_H_
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <pthread.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sched.h>
 #include <errno.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
 
 #if defined(__linux__)
-	#include <sys/prctl.h>
-	#include <sys/resource.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
 #endif
 
 typedef pthread_t thrd_t;
@@ -20,11 +20,17 @@ typedef pthread_mutex_t mtx_t;
 typedef int (*thrd_start_t)(void *);
 
 enum {
-	thrd_success = 0, thrd_error = 1, thrd_nomem = 2, thrd_timedout = 3, thrd_busy = 4,
+	thrd_success  = 0,
+	thrd_error    = 1,
+	thrd_nomem    = 2,
+	thrd_timedout = 3,
+	thrd_busy     = 4,
 };
 
 enum {
-	mtx_plain = 0, mtx_timed = 1, mtx_recursive = 2,
+	mtx_plain     = 0,
+	mtx_timed     = 1,
+	mtx_recursive = 2,
 };
 
 #define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
@@ -32,7 +38,7 @@ enum {
 #define MAX_THREAD_NAME_LENGTH 15
 
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
-	int ret = pthread_create(thr, NULL, (void *(*)(void *)) func, arg);
+	int ret = pthread_create(thr, NULL, (void *(*) (void *) ) func, arg);
 
 	switch (ret) {
 		case 0:
@@ -47,7 +53,7 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 }
 
 static inline _Noreturn void thrd_exit(int res) {
-	pthread_exit((void*) (intptr_t) res);
+	pthread_exit((void *) (intptr_t) res);
 }
 
 static inline int thrd_detach(thrd_t thr) {
@@ -153,7 +159,7 @@ static inline int mtx_trylock(mtx_t *mutex) {
 static inline int mtx_timedlock(mtx_t *restrict mutex, const struct timespec *restrict time_point) {
 #if defined(__APPLE__)
 	// Emulate on MacOS X.
-	struct timespec sleepTime = { .tv_sec = 0, .tv_nsec = 1000000 /* 1ms */ };
+	struct timespec sleepTime = {.tv_sec = 0, .tv_nsec = 1000000 /* 1ms */};
 	struct timeval currentTime;
 	int ret;
 
@@ -207,7 +213,7 @@ static inline int thrd_set_name(const char *name) {
 
 	return (thrd_success);
 #else
-	(void)(name); // UNUSED.
+	(void) (name); // UNUSED.
 
 	return (thrd_error);
 #endif
@@ -216,7 +222,7 @@ static inline int thrd_set_name(const char *name) {
 // NON STANDARD!
 static inline int thrd_get_name(char *name, size_t maxNameLength) {
 #if defined(__linux__)
-	(void)(maxNameLength); // UNUSED ON LINUX.
+	(void) (maxNameLength); // UNUSED ON LINUX.
 
 	if (prctl(PR_GET_NAME, name) != 0) {
 		return (thrd_error);
@@ -230,11 +236,11 @@ static inline int thrd_get_name(char *name, size_t maxNameLength) {
 
 	return (thrd_success);
 #else
-	(void)(name); // UNUSED.
-	(void)(maxNameLength); // UNUSED.
+	(void) (name);          // UNUSED.
+	(void) (maxNameLength); // UNUSED.
 
 	return (thrd_error);
 #endif
 }
 
-#endif	/* C11THREADS_POSIX_H_ */
+#endif /* C11THREADS_POSIX_H_ */

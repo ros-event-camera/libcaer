@@ -3,14 +3,14 @@
 
 #include "devices/davis.h"
 #include "devices/device_discover.h"
-#include "data_exchange.h"
-#include "container_generation.h"
-#include "usb_utils.h"
-#include "autoexposure.h"
 #include "filters/dvs_noise.h"
+#include "autoexposure.h"
+#include "container_generation.h"
+#include "data_exchange.h"
+#include "usb_utils.h"
 
 #define APS_READOUT_TYPES_NUM 2
-#define APS_READOUT_RESET  0
+#define APS_READOUT_RESET 0
 #define APS_READOUT_SIGNAL 1
 
 /**
@@ -181,12 +181,12 @@ ssize_t davisFindAll(caerDeviceDiscoveryResult *discoveredDevices);
 ssize_t davisFindFX2(caerDeviceDiscoveryResult *discoveredDevices);
 ssize_t davisFindFX3(caerDeviceDiscoveryResult *discoveredDevices);
 
-caerDeviceHandle davisOpenAll(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
-caerDeviceHandle davisOpenFX2(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
-caerDeviceHandle davisOpenFX3(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
+caerDeviceHandle davisOpenAll(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
+caerDeviceHandle davisOpenFX2(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
+caerDeviceHandle davisOpenFX3(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
 
 bool davisClose(caerDeviceHandle cdh);
 

@@ -5,9 +5,9 @@
 
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/dynapse.h>
-#include <stdio.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 static atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
 
@@ -19,13 +19,13 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void usbShutdownHandler(void *ptr) {
-	(void)(ptr); // UNUSED.
+	(void) (ptr); // UNUSED.
 
 	atomic_store(&globalShutdown, true);
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
@@ -40,7 +40,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -65,8 +65,8 @@ int main(void) {
 	// Let's take a look at the information we have on the device.
 	struct caer_dynapse_info dynapse_info = caerDynapseInfoGet(dynapse_handle);
 
-	printf("%s --- ID: %d, Master: %d,  Logic: %d.\n", dynapse_info.deviceString,
-		dynapse_info.deviceID, dynapse_info.deviceIsMaster, dynapse_info.logicVersion);
+	printf("%s --- ID: %d, Master: %d,  Logic: %d.\n", dynapse_info.deviceString, dynapse_info.deviceID,
+		dynapse_info.deviceIsMaster, dynapse_info.logicVersion);
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!
@@ -106,15 +106,14 @@ int main(void) {
 				caerSpikeEventPacket spike = (caerSpikeEventPacket) packetHeader;
 
 				// Get full timestamp and addresses of first event.
-				caerSpikeEventConst firstEvent = caerSpikeEventPacketGetEventConst(spike,0);
+				caerSpikeEventConst firstEvent = caerSpikeEventPacketGetEventConst(spike, 0);
 
-				int32_t ts = caerSpikeEventGetTimestamp(firstEvent);
-				uint16_t neuid = caerSpikeEventGetNeuronID(firstEvent);
+				int32_t ts      = caerSpikeEventGetTimestamp(firstEvent);
+				uint16_t neuid  = caerSpikeEventGetNeuronID(firstEvent);
 				uint16_t coreid = caerSpikeEventGetSourceCoreID(firstEvent);
 
 				printf("First spike event - ts: %d, neu: %d, core: %d\n", ts, neuid, coreid);
 			}
-
 		}
 
 		caerEventPacketContainerFree(packetContainer);

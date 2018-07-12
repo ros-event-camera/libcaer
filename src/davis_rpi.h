@@ -3,12 +3,12 @@
 
 #include "devices/davis.h"
 #include "devices/device_discover.h"
-#include "data_exchange.h"
-#include "container_generation.h"
 #include "autoexposure.h"
+#include "container_generation.h"
+#include "data_exchange.h"
 
 #define APS_READOUT_TYPES_NUM 2
-#define APS_READOUT_RESET  0
+#define APS_READOUT_RESET 0
 #define APS_READOUT_SIGNAL 1
 
 /**
@@ -43,7 +43,7 @@
 #define DAVIS_RPI_REQUIRED_LOGIC_REVISION 9912
 
 #define DAVIS_RPI_MAX_TRANSACTION_NUM 4096
-#define DAVIS_RPI_MAX_WAIT_REQ_COUNT   100
+#define DAVIS_RPI_MAX_WAIT_REQ_COUNT 100
 
 /**
  * Support benchmarking the GPIO data exchange performance on RPi,
@@ -191,8 +191,8 @@ typedef struct davis_rpi_handle *davisRPiHandle;
 ssize_t davisRPiFind(caerDeviceDiscoveryResult *discoveredDevices);
 
 // busNumberRestrict, devAddressRestrict and serialNumberRestrict are ignored, only one device connected.
-caerDeviceHandle davisRPiOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
+caerDeviceHandle davisRPiOpen(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
 bool davisRPiClose(caerDeviceHandle cdh);
 
 bool davisRPiSendDefaultConfig(caerDeviceHandle cdh);

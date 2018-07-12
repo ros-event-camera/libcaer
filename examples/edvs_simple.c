@@ -1,8 +1,8 @@
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/edvs.h>
-#include <stdio.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 static atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
 
@@ -14,13 +14,13 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void serialShutdownHandler(void *ptr) {
-	(void)(ptr); // UNUSED.
+	(void) (ptr); // UNUSED.
 
 	atomic_store(&globalShutdown, true);
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
@@ -35,7 +35,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -52,8 +52,8 @@ int main(void) {
 #endif
 
 	// Open an EDVS-4337, give it a device ID of 1, on the default Linux USB serial port.
-	caerDeviceHandle edvs_handle = caerDeviceOpenSerial(1, CAER_DEVICE_EDVS, "/dev/ttyUSB0",
-		CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
+	caerDeviceHandle edvs_handle
+		= caerDeviceOpenSerial(1, CAER_DEVICE_EDVS, "/dev/ttyUSB0", CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
 	if (edvs_handle == NULL) {
 		return (EXIT_FAILURE);
 	}
@@ -117,7 +117,7 @@ int main(void) {
 				int32_t ts = caerPolarityEventGetTimestamp(firstEvent);
 				uint16_t x = caerPolarityEventGetX(firstEvent);
 				uint16_t y = caerPolarityEventGetY(firstEvent);
-				bool pol = caerPolarityEventGetPolarity(firstEvent);
+				bool pol   = caerPolarityEventGetPolarity(firstEvent);
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
 			}

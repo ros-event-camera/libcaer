@@ -1,10 +1,10 @@
 #ifndef LIBCAER_SRC_EDVS_H_
 #define LIBCAER_SRC_EDVS_H_
 
-#include "devices/edvs.h"
 #include "devices/device_discover.h"
-#include "data_exchange.h"
+#include "devices/edvs.h"
 #include "container_generation.h"
+#include "data_exchange.h"
 #include <libserialport.h>
 #include <stdatomic.h>
 
@@ -18,7 +18,7 @@
 #define EDVS_ARRAY_SIZE_Y 128
 
 #define EDVS_EVENT_TYPES 2
-#define EDVS_EVENT_SIZE  4
+#define EDVS_EVENT_SIZE 4
 
 #define EDVS_POLARITY_DEFAULT_SIZE 4096
 #define EDVS_SPECIAL_DEFAULT_SIZE 128

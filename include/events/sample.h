@@ -38,8 +38,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_sample_event {
+PACKED_STRUCT(struct caer_sample_event {
 	/// Event data. First because of valid mark.
 	uint32_t data;
 	/// Event timestamp.
@@ -58,8 +57,7 @@ typedef const struct caer_sample_event *caerSampleEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_sample_event_packet {
+PACKED_STRUCT(struct caer_sample_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -82,7 +80,8 @@ typedef const struct caer_sample_event_packet *caerSampleEventPacketConst;
  *
  * @return a valid SampleEventPacket handle or NULL on error.
  */
-static inline caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+static inline caerSampleEventPacket caerSampleEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
 	return ((caerSampleEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, SAMPLE_EVENT,
 		sizeof(struct caer_sample_event), offsetof(struct caer_sample_event, timestamp)));
 }
@@ -131,7 +130,8 @@ static inline caerSampleEvent caerSampleEventPacketGetEvent(caerSampleEventPacke
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLogEHO(CAER_LOG_CRITICAL, "Sample Event",
-			"Called caerSampleEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			"Called caerSampleEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -153,7 +153,8 @@ static inline caerSampleEventConst caerSampleEventPacketGetEventConst(caerSample
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLogEHO(CAER_LOG_CRITICAL, "Sample Event",
-			"Called caerSampleEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			"Called caerSampleEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -189,8 +190,8 @@ static inline int32_t caerSampleEventGetTimestamp(caerSampleEventConst event) {
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerSampleEventGetTimestamp64(caerSampleEventConst event, caerSampleEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerSampleEventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerSampleEventGetTimestamp(event))));
 }
 
 /**
@@ -236,10 +237,10 @@ static inline void caerSampleEventValidate(caerSampleEvent event, caerSampleEven
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
 		caerLogEHO(CAER_LOG_CRITICAL, "Sample Event", "Called caerSampleEventValidate() on already valid event.");
@@ -261,8 +262,8 @@ static inline void caerSampleEventInvalidate(caerSampleEvent event, caerSampleEv
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
 		caerLogEHO(CAER_LOG_CRITICAL, "Sample Event", "Called caerSampleEventInvalidate() on already invalid event.");
@@ -327,11 +328,12 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_ITERATOR_ALL_START(SAMPLE_PACKET) \
-	for (int32_t caerSampleIteratorCounter = 0; \
-		caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
-		caerSampleIteratorCounter++) { \
-		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);
+#define CAER_SAMPLE_ITERATOR_ALL_START(SAMPLE_PACKET)                                                     \
+	for (int32_t caerSampleIteratorCounter = 0;                                                           \
+		 caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
+		 caerSampleIteratorCounter++) {                                                                   \
+		caerSampleEvent caerSampleIteratorElement                                                         \
+			= caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);
 
 /**
  * Const-Iterator over all sample events in a packet.
@@ -341,11 +343,12 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_CONST_ITERATOR_ALL_START(SAMPLE_PACKET) \
-	for (int32_t caerSampleIteratorCounter = 0; \
-		caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
-		caerSampleIteratorCounter++) { \
-		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);
+#define CAER_SAMPLE_CONST_ITERATOR_ALL_START(SAMPLE_PACKET)                                               \
+	for (int32_t caerSampleIteratorCounter = 0;                                                           \
+		 caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
+		 caerSampleIteratorCounter++) {                                                                   \
+		caerSampleEventConst caerSampleIteratorElement                                                    \
+			= caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -360,12 +363,15 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_ITERATOR_VALID_START(SAMPLE_PACKET) \
-	for (int32_t caerSampleIteratorCounter = 0; \
-		caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
-		caerSampleIteratorCounter++) { \
-		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter); \
-		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+#define CAER_SAMPLE_ITERATOR_VALID_START(SAMPLE_PACKET)                                                   \
+	for (int32_t caerSampleIteratorCounter = 0;                                                           \
+		 caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
+		 caerSampleIteratorCounter++) {                                                                   \
+		caerSampleEvent caerSampleIteratorElement                                                         \
+			= caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);                    \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) {                                         \
+			continue;                                                                                     \
+		} // Skip invalid sample events.
 
 /**
  * Const-Iterator over only the valid sample events in a packet.
@@ -375,12 +381,15 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_CONST_ITERATOR_VALID_START(SAMPLE_PACKET) \
-	for (int32_t caerSampleIteratorCounter = 0; \
-		caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
-		caerSampleIteratorCounter++) { \
-		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter); \
-		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+#define CAER_SAMPLE_CONST_ITERATOR_VALID_START(SAMPLE_PACKET)                                             \
+	for (int32_t caerSampleIteratorCounter = 0;                                                           \
+		 caerSampleIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader); \
+		 caerSampleIteratorCounter++) {                                                                   \
+		caerSampleEventConst caerSampleIteratorElement                                                    \
+			= caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);               \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) {                                         \
+			continue;                                                                                     \
+		} // Skip invalid sample events.
 
 /**
  * Iterator close statement.
@@ -395,11 +404,11 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET) \
+#define CAER_SAMPLE_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET)                                                         \
 	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
-		caerSampleIteratorCounter >= 0; \
-		caerSampleIteratorCounter--) { \
-		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);
+		 caerSampleIteratorCounter >= 0; caerSampleIteratorCounter--) {                                               \
+		caerSampleEvent caerSampleIteratorElement                                                                     \
+			= caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);
 /**
  * Const-Reverse iterator over all sample events in a packet.
  * Returns the current index in the 'caerSampleIteratorCounter' variable of type
@@ -408,11 +417,11 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET) \
+#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_ALL_START(SAMPLE_PACKET)                                                   \
 	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
-		caerSampleIteratorCounter >= 0; \
-		caerSampleIteratorCounter--) { \
-		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);
+		 caerSampleIteratorCounter >= 0; caerSampleIteratorCounter--) {                                               \
+		caerSampleEventConst caerSampleIteratorElement                                                                \
+			= caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -427,12 +436,14 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET) \
+#define CAER_SAMPLE_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET)                                                       \
 	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
-		caerSampleIteratorCounter >= 0; \
-		caerSampleIteratorCounter--) { \
-		caerSampleEvent caerSampleIteratorElement = caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter); \
-		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+		 caerSampleIteratorCounter >= 0; caerSampleIteratorCounter--) {                                               \
+		caerSampleEvent caerSampleIteratorElement                                                                     \
+			= caerSampleEventPacketGetEvent(SAMPLE_PACKET, caerSampleIteratorCounter);                                \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) {                                                     \
+			continue;                                                                                                 \
+		} // Skip invalid sample events.
 
 /**
  * Const-Reverse iterator over only the valid sample events in a packet.
@@ -442,12 +453,14 @@ static inline void caerSampleEventSetSample(caerSampleEvent event, uint32_t samp
  *
  * SAMPLE_PACKET: a valid SampleEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET) \
+#define CAER_SAMPLE_CONST_REVERSE_ITERATOR_VALID_START(SAMPLE_PACKET)                                                 \
 	for (int32_t caerSampleIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SAMPLE_PACKET)->packetHeader) - 1; \
-		caerSampleIteratorCounter >= 0; \
-		caerSampleIteratorCounter--) { \
-		caerSampleEventConst caerSampleIteratorElement = caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter); \
-		if (!caerSampleEventIsValid(caerSampleIteratorElement)) { continue; } // Skip invalid sample events.
+		 caerSampleIteratorCounter >= 0; caerSampleIteratorCounter--) {                                               \
+		caerSampleEventConst caerSampleIteratorElement                                                                \
+			= caerSampleEventPacketGetEventConst(SAMPLE_PACKET, caerSampleIteratorCounter);                           \
+		if (!caerSampleEventIsValid(caerSampleIteratorElement)) {                                                     \
+			continue;                                                                                                 \
+		} // Skip invalid sample events.
 
 /**
  * Reverse iterator close statement.

@@ -39,10 +39,11 @@ struct dvs_pixel_with_count {
 };
 
 #define GET_TS(X) ((X) >> 1)
-#define GET_POL(X) ((X) & 0x01)
+#define GET_POL(X) ((X) &0x01)
 #define SET_TSPOL(TS, POL) (((TS) << 1) | (pol & 0x01))
 
-static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
+static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...)
+	ATTRIBUTE_FORMAT(3);
 static int hotPixelArrayCountCompare(const void *a, const void *b);
 static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter);
 
@@ -55,8 +56,8 @@ static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise h
 }
 
 caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) {
-	caerFilterDVSNoise noiseFilter = calloc(1,
-		sizeof(struct caer_filter_dvs_noise) + (sizeX * sizeY * sizeof(int64_t)));
+	caerFilterDVSNoise noiseFilter
+		= calloc(1, sizeof(struct caer_filter_dvs_noise) + ((size_t) sizeX * (size_t) sizeY * sizeof(int64_t)));
 	if (noiseFilter == NULL) {
 		return (NULL);
 	}
@@ -68,14 +69,14 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 	noiseFilter->logLevel = caerLogLevelGet();
 
 	// Default values for filters.
-	noiseFilter->hotPixelTime = 1000000; // 1 second.
-	noiseFilter->hotPixelCount = 10000; // 10 KEvt in 1 second => 10 KHz.
-	noiseFilter->refractoryPeriodTime = 100; // 100 microseconds, max. pixel firing rate 10 KHz.
-	noiseFilter->backgroundActivityCheckPolarity = false; // Ignore polarity.
-	noiseFilter->backgroundActivityTwoLevels = false; // Disable two-level lookup for performance reasons.
-	noiseFilter->backgroundActivitySupportMin = 1; // At least one pixel must support.
-	noiseFilter->backgroundActivitySupportMax = 8; // At most eight pixels can support.
-	noiseFilter->backgroundActivityTime = 2000; // 2 milliseconds within neighborhood.
+	noiseFilter->hotPixelTime                    = 1000000; // 1 second.
+	noiseFilter->hotPixelCount                   = 10000;   // 10 KEvt in 1 second => 10 KHz.
+	noiseFilter->refractoryPeriodTime            = 100;     // 100 microseconds, max. pixel firing rate 10 KHz.
+	noiseFilter->backgroundActivityCheckPolarity = false;   // Ignore polarity.
+	noiseFilter->backgroundActivityTwoLevels     = false;   // Disable two-level lookup for performance reasons.
+	noiseFilter->backgroundActivitySupportMin    = 1;       // At least one pixel must support.
+	noiseFilter->backgroundActivitySupportMax    = 8;       // At most eight pixels can support.
+	noiseFilter->backgroundActivityTime          = 2000;    // 2 milliseconds within neighborhood.
 
 	return (noiseFilter);
 }
@@ -83,10 +84,10 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 static inline size_t doBackgroundActivityLookup(caerFilterDVSNoise noiseFilter, size_t x, size_t y, size_t pixelIndex,
 	int64_t timestamp, bool polarity, size_t *supportIndexes) {
 	// Compute map limits.
-	bool notBorderLeft = (x != 0);
-	bool notBorderDown = (y != (noiseFilter->sizeY - 1));
-	bool notBorderRight = (x != (noiseFilter->sizeX - 1));
-	bool notBorderUp = (y != 0);
+	bool notBorderLeft  = (x != 0);
+	bool notBorderDown  = (y != (size_t)(noiseFilter->sizeY - 1));
+	bool notBorderRight = (x != (size_t)(noiseFilter->sizeX - 1));
+	bool notBorderUp    = (y != 0);
 
 	// Background Activity filter: if difference between current timestamp
 	// and stored neighbor timestamp is smaller than given time limit, it
@@ -248,17 +249,18 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 	// Hot Pixel learning: initialize and store packet-level timestamp.
 	if (noiseFilter->hotPixelLearn && !noiseFilter->hotPixelLearningStarted) {
 		// Initialize hot pixel learning.
-		noiseFilter->hotPixelLearningMap = calloc(noiseFilter->sizeX * noiseFilter->sizeY, sizeof(uint32_t));
+		noiseFilter->hotPixelLearningMap
+			= calloc((size_t) noiseFilter->sizeX * (size_t) noiseFilter->sizeY, sizeof(uint32_t));
 		if (noiseFilter->hotPixelLearningMap == NULL) {
-			filterDVSNoiseLog(CAER_LOG_ERROR, noiseFilter,
-				"HotPixel Learning: failed to allocate memory for learning map.");
+			filterDVSNoiseLog(
+				CAER_LOG_ERROR, noiseFilter, "HotPixel Learning: failed to allocate memory for learning map.");
 			noiseFilter->hotPixelLearn = false; // Disable learning on failure.
 		}
 		else {
 			noiseFilter->hotPixelLearningStarted = true;
 
 			// Store start timestamp.
-			caerPolarityEventConst firstEvent = caerPolarityEventPacketGetEventConst(polarity, 0);
+			caerPolarityEventConst firstEvent      = caerPolarityEventPacketGetEventConst(polarity, 0);
 			noiseFilter->hotPixelLearningStartTime = caerPolarityEventGetTimestamp64(firstEvent, polarity);
 
 			filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: started on ts=%" PRIi64 ".",
@@ -267,106 +269,107 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 	}
 
 	CAER_POLARITY_ITERATOR_VALID_START(polarity)
-		uint16_t x = caerPolarityEventGetX(caerPolarityIteratorElement);
-		uint16_t y = caerPolarityEventGetY(caerPolarityIteratorElement);
-		bool pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
-		int64_t ts = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
-		size_t pixelIndex = (y * noiseFilter->sizeX) + x; // Target pixel.
+	uint16_t x        = caerPolarityEventGetX(caerPolarityIteratorElement);
+	uint16_t y        = caerPolarityEventGetY(caerPolarityIteratorElement);
+	bool pol          = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
+	int64_t ts        = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
+	size_t pixelIndex = (y * (size_t) noiseFilter->sizeX) + x; // Target pixel.
 
-		// Hot Pixel learning: determine which pixels are abnormally active,
-		// by counting how many times they spike in a given time period. The
-		// ones above a given threshold will be considered "hot".
-		// This is done first, so that other filters (including the Hot Pixel
-		// filter itself) don't influence the learning operation.
-		if (noiseFilter->hotPixelLearningStarted) {
-			noiseFilter->hotPixelLearningMap[pixelIndex]++;
+	// Hot Pixel learning: determine which pixels are abnormally active,
+	// by counting how many times they spike in a given time period. The
+	// ones above a given threshold will be considered "hot".
+	// This is done first, so that other filters (including the Hot Pixel
+	// filter itself) don't influence the learning operation.
+	if (noiseFilter->hotPixelLearningStarted) {
+		noiseFilter->hotPixelLearningMap[pixelIndex]++;
 
-			if (ts > (noiseFilter->hotPixelLearningStartTime + noiseFilter->hotPixelTime)) {
-				// Enough time has passed, we can proceed with data evaluation.
-				hotPixelGenerateArray(noiseFilter);
+		if (ts > (noiseFilter->hotPixelLearningStartTime + noiseFilter->hotPixelTime)) {
+			// Enough time has passed, we can proceed with data evaluation.
+			hotPixelGenerateArray(noiseFilter);
 
-				// Done, reset and notify end of learning.
-				free(noiseFilter->hotPixelLearningMap);
-				noiseFilter->hotPixelLearningMap = NULL;
+			// Done, reset and notify end of learning.
+			free(noiseFilter->hotPixelLearningMap);
+			noiseFilter->hotPixelLearningMap = NULL;
 
-				noiseFilter->hotPixelLearningStarted = false;
-				noiseFilter->hotPixelLearn = false;
+			noiseFilter->hotPixelLearningStarted = false;
+			noiseFilter->hotPixelLearn           = false;
 
-				filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: completed on ts=%" PRIi64 ".", ts);
+			filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: completed on ts=%" PRIi64 ".", ts);
+		}
+	}
+
+	// Hot Pixel filter: filter out abnormally active pixels by their address.
+	if (noiseFilter->hotPixelEnabled) {
+		bool filteredOut = false;
+
+		for (size_t i = 0; i < noiseFilter->hotPixelArraySize; i++) {
+			if ((x == noiseFilter->hotPixelArray[i].x) && (y == noiseFilter->hotPixelArray[i].y)) {
+				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
+				noiseFilter->hotPixelStat++;
+
+				filteredOut = true;
+				break;
 			}
 		}
 
-		// Hot Pixel filter: filter out abnormally active pixels by their address.
-		if (noiseFilter->hotPixelEnabled) {
-			bool filteredOut = false;
+		if (filteredOut) {
+			// Go to next event, don't execute other filters and don't
+			// update timestamps map. Hot pixels don't provide any useful
+			// timing information, as they are repeating noise.
+			continue;
+		}
+	}
 
-			for (size_t i = 0; i < noiseFilter->hotPixelArraySize; i++) {
-				if ((x == noiseFilter->hotPixelArray[i].x) && (y == noiseFilter->hotPixelArray[i].y)) {
-					caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-					noiseFilter->hotPixelStat++;
+	// Refractory Period filter.
+	// Execute before BAFilter, as this is a much simpler check, so if we
+	// can we try to eliminate the event early in a less costly manner.
+	if (noiseFilter->refractoryPeriodEnabled) {
+		if ((ts - GET_TS(noiseFilter->timestampsMap[pixelIndex])) < noiseFilter->refractoryPeriodTime) {
+			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
+			noiseFilter->refractoryPeriodStat++;
 
-					filteredOut = true;
-					break;
+			goto WriteTimestamp;
+		}
+	}
+
+	if (noiseFilter->backgroundActivityEnabled) {
+		size_t supportPixelIndexes[8];
+		size_t supportPixelNum
+			= doBackgroundActivityLookup(noiseFilter, x, y, pixelIndex, ts, pol, supportPixelIndexes);
+
+		if ((supportPixelNum >= noiseFilter->backgroundActivitySupportMin)
+			&& (supportPixelNum <= noiseFilter->backgroundActivitySupportMax)) {
+			if (noiseFilter->backgroundActivityTwoLevels) {
+				// Do the check again for all previously discovered supporting pixels.
+				for (size_t i = 0; i < supportPixelNum; i++) {
+					size_t supportPixelIndex = supportPixelIndexes[i];
+					size_t supportPixelX     = supportPixelIndex % noiseFilter->sizeX;
+					size_t supportPixelY     = supportPixelIndex / noiseFilter->sizeX;
+
+					if (doBackgroundActivityLookup(
+							noiseFilter, supportPixelX, supportPixelY, supportPixelIndex, ts, pol, NULL)
+						> 0) {
+						goto WriteTimestamp;
+					}
 				}
 			}
-
-			if (filteredOut) {
-				// Go to next event, don't execute other filters and don't
-				// update timestamps map. Hot pixels don't provide any useful
-				// timing information, as they are repeating noise.
-				continue;
-			}
-		}
-
-		// Refractory Period filter.
-		// Execute before BAFilter, as this is a much simpler check, so if we
-		// can we try to eliminate the event early in a less costly manner.
-		if (noiseFilter->refractoryPeriodEnabled) {
-			if ((ts - GET_TS(noiseFilter->timestampsMap[pixelIndex])) < noiseFilter->refractoryPeriodTime) {
-				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-				noiseFilter->refractoryPeriodStat++;
-
+			else {
 				goto WriteTimestamp;
 			}
 		}
 
-		if (noiseFilter->backgroundActivityEnabled) {
-			size_t supportPixelIndexes[8];
-			size_t supportPixelNum = doBackgroundActivityLookup(noiseFilter, x, y, pixelIndex, ts, pol,
-				supportPixelIndexes);
-
-			if ((supportPixelNum >= noiseFilter->backgroundActivitySupportMin)
-				&& (supportPixelNum <= noiseFilter->backgroundActivitySupportMax)) {
-				if (noiseFilter->backgroundActivityTwoLevels) {
-					// Do the check again for all previously discovered supporting pixels.
-					for (size_t i = 0; i < supportPixelNum; i++) {
-						size_t supportPixelIndex = supportPixelIndexes[i];
-						size_t supportPixelX = supportPixelIndex % noiseFilter->sizeX;
-						size_t supportPixelY = supportPixelIndex / noiseFilter->sizeX;
-
-						if (doBackgroundActivityLookup(noiseFilter, supportPixelX, supportPixelY, supportPixelIndex, ts,
-							pol, NULL) > 0) {
-							goto WriteTimestamp;
-						}
-					}
-				}
-				else {
-					goto WriteTimestamp;
-				}
-			}
-
-			// Event is not supported by any neighbor if we get here, invalidate it.
-			// Then jump over the Refractory Period filter, as it's useless to
-			// execute it (and would cause a double-invalidate error).
-			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-			noiseFilter->backgroundActivityStat++;
-		}
-
-		WriteTimestamp:
-		// Update pixel timestamp (one write). Always update so filters are
-		// ready at enable-time right away.
-		noiseFilter->timestampsMap[pixelIndex] = SET_TSPOL(ts, pol);
+		// Event is not supported by any neighbor if we get here, invalidate it.
+		// Then jump over the Refractory Period filter, as it's useless to
+		// execute it (and would cause a double-invalidate error).
+		caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
+		noiseFilter->backgroundActivityStat++;
 	}
+
+WriteTimestamp:
+	// Update pixel timestamp (one write). Always update so filters are
+	// ready at enable-time right away.
+	noiseFilter->timestampsMap[pixelIndex] = SET_TSPOL(ts, pol);
+	CAER_POLARITY_ITERATOR_VALID_END
 }
 
 bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t param) {
@@ -432,12 +435,13 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 					noiseFilter->hotPixelArray = NULL;
 				}
 
-				memset(noiseFilter->timestampsMap, 0, noiseFilter->sizeX * noiseFilter->sizeY * sizeof(int64_t));
+				memset(noiseFilter->timestampsMap, 0,
+					(size_t) noiseFilter->sizeX * (size_t) noiseFilter->sizeY * sizeof(int64_t));
 
 				// Reset statistics to zero
-				noiseFilter->hotPixelStat = 0;
+				noiseFilter->hotPixelStat           = 0;
 				noiseFilter->backgroundActivityStat = 0;
-				noiseFilter->refractoryPeriodStat = 0;
+				noiseFilter->refractoryPeriodStat   = 0;
 			}
 			break;
 
@@ -546,8 +550,8 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
 	}
 
 	// Copy pixel array over.
-	memcpy(*hotPixels, noiseFilter->hotPixelArray,
-		noiseFilter->hotPixelArraySize * sizeof(struct caer_filter_dvs_pixel));
+	memcpy(
+		*hotPixels, noiseFilter->hotPixelArray, noiseFilter->hotPixelArraySize * sizeof(struct caer_filter_dvs_pixel));
 
 	return ((ssize_t) noiseFilter->hotPixelArraySize);
 }
@@ -571,7 +575,7 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 	// Remove old array, if present.
 	if (noiseFilter->hotPixelArray != NULL) {
 		free(noiseFilter->hotPixelArray);
-		noiseFilter->hotPixelArray = NULL;
+		noiseFilter->hotPixelArray     = NULL;
 		noiseFilter->hotPixelArraySize = 0;
 	}
 
@@ -592,7 +596,7 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 		if (noiseFilter->hotPixelLearningMap[i] >= noiseFilter->hotPixelCount) {
 			hotPixels[idx].address.x = U16T(i % noiseFilter->sizeX);
 			hotPixels[idx].address.y = U16T(i / noiseFilter->sizeX);
-			hotPixels[idx].count = noiseFilter->hotPixelLearningMap[i];
+			hotPixels[idx].count     = noiseFilter->hotPixelLearningMap[i];
 			idx++;
 		}
 	}
@@ -608,8 +612,8 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 	// Allocate dynamic memory for new array.
 	noiseFilter->hotPixelArray = malloc(hotPixelsNumber * sizeof(struct caer_filter_dvs_pixel));
 	if (noiseFilter->hotPixelArray == NULL) {
-		filterDVSNoiseLog(CAER_LOG_ERROR, noiseFilter,
-			"HotPixel Learning: failed to allocate memory for hot pixels array.");
+		filterDVSNoiseLog(
+			CAER_LOG_ERROR, noiseFilter, "HotPixel Learning: failed to allocate memory for hot pixels array.");
 		return;
 	}
 

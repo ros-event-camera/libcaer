@@ -7,9 +7,9 @@
 #ifndef LIBCAER_DEVICES_EDVS_H_
 #define LIBCAER_DEVICES_EDVS_H_
 
-#include "serial.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
+#include "serial.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +23,7 @@ extern "C" {
 /**
  * Module address: device-side DVS configuration.
  */
-#define EDVS_CONFIG_DVS  0
+#define EDVS_CONFIG_DVS 0
 /**
  * Module address: device-side chip bias generator configuration.
  */
@@ -33,7 +33,7 @@ extern "C" {
  * Parameter address for module EDVS_CONFIG_DVS:
  * run the DVS chip and generate polarity event data.
  */
-#define EDVS_CONFIG_DVS_RUN             0
+#define EDVS_CONFIG_DVS_RUN 0
 /**
  * Parameter address for module EDVS_CONFIG_DVS:
  * reset the time-stamp counter of the device. This is a temporary
@@ -46,25 +46,25 @@ extern "C" {
  * First stage amplifier cascode bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_CAS     0
+#define EDVS_CONFIG_BIAS_CAS 0
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Injected ground bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_INJGND  1
+#define EDVS_CONFIG_BIAS_INJGND 1
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull down on chip request (AER).
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_REQPD   2
+#define EDVS_CONFIG_BIAS_REQPD 2
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull up on request from X arbiter (AER).
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_PUX     3
+#define EDVS_CONFIG_BIAS_PUX 3
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Off events threshold bias.
@@ -76,43 +76,43 @@ extern "C" {
  * Pull down for passive load inverters in digital AER pixel circuitry.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_REQ     5
+#define EDVS_CONFIG_BIAS_REQ 5
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Refractory period bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_REFR    6
+#define EDVS_CONFIG_BIAS_REFR 6
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Pull up on request from Y arbiter (AER).
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_PUY     7
+#define EDVS_CONFIG_BIAS_PUY 7
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * On events threshold bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_DIFFON  8
+#define EDVS_CONFIG_BIAS_DIFFON 8
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Differential (second stage amplifier) bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_DIFF    9
+#define EDVS_CONFIG_BIAS_DIFF 9
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Source follower bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_FOLL    10
+#define EDVS_CONFIG_BIAS_FOLL 10
 /**
  * Parameter address for module EDVS_CONFIG_BIAS:
  * Photoreceptor bias.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define EDVS_CONFIG_BIAS_PR      11
+#define EDVS_CONFIG_BIAS_PR 11
 
 /**
  * EDVS device-related information.
@@ -136,16 +136,16 @@ struct caer_edvs_info {
 	uint32_t serialBaudRate;
 };
 
- /**
-  * Return basic information on the device, such as its ID, its
-  * resolution, the logic version, and so on. See the 'struct
-  * caer_edvs_info' documentation for more details.
-  *
-  * @param handle a valid device handle.
-  *
-  * @return a copy of the device information structure if successful,
-  *         an empty structure (all zeros) on failure.
-  */
+/**
+ * Return basic information on the device, such as its ID, its
+ * resolution, the logic version, and so on. See the 'struct
+ * caer_edvs_info' documentation for more details.
+ *
+ * @param handle a valid device handle.
+ *
+ * @return a copy of the device information structure if successful,
+ *         an empty structure (all zeros) on failure.
+ */
 struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus

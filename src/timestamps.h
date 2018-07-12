@@ -31,8 +31,8 @@ typedef struct timestamps_state_new_logic *timestampsStateNewLogic;
 static inline void commonLog(enum caer_log_level logLevel, const char *deviceString, uint8_t deviceLogLevel,
 	const char *format, ...) ATTRIBUTE_FORMAT(4);
 
-static inline void commonLog(enum caer_log_level logLevel, const char *deviceString, uint8_t deviceLogLevel,
-	const char *format, ...) {
+static inline void commonLog(
+	enum caer_log_level logLevel, const char *deviceString, uint8_t deviceLogLevel, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
 	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), deviceLogLevel, logLevel,
@@ -44,20 +44,22 @@ static inline int64_t generateFullTimestamp(int32_t tsOverflow, int32_t timestam
 	return (I64T(U64T(U64T(tsOverflow) << TS_OVERFLOW_SHIFT) | U64T(timestamp)));
 }
 
-static inline void checkStrictMonotonicTimestamp(int32_t tsCurrent, int32_t tsLast, const char *deviceString,
-	atomic_uint_fast8_t *deviceLogLevelAtomic) {
+static inline void checkStrictMonotonicTimestamp(
+	int32_t tsCurrent, int32_t tsLast, const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	if (tsCurrent <= tsLast) {
 		commonLog(CAER_LOG_ALERT, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
-			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
+			"Timestamps: non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi32
+			", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
 			tsLast, tsCurrent, (tsLast - tsCurrent));
 	}
 }
 
-static inline void checkMonotonicTimestamp(int32_t tsCurrent, int32_t tsLast, const char *deviceString,
-	atomic_uint_fast8_t *deviceLogLevelAtomic) {
+static inline void checkMonotonicTimestamp(
+	int32_t tsCurrent, int32_t tsLast, const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	if (tsCurrent < tsLast) {
 		commonLog(CAER_LOG_ALERT, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
-			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32 ", difference=%" PRIi32 ".",
+			"Timestamps: non monotonic timestamp detected: lastTimestamp=%" PRIi32 ", currentTimestamp=%" PRIi32
+			", difference=%" PRIi32 ".",
 			tsLast, tsCurrent, (tsLast - tsCurrent));
 	}
 }
@@ -78,8 +80,8 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 	const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	// Detect big timestamp wrap-around.
 	int64_t wrapJump = (wrapAdd * wrapData);
-	int64_t wrapSum = I64T(timestamps->wrapAdd) + wrapJump;
-	bool bigWrap = false;
+	int64_t wrapSum  = I64T(timestamps->wrapAdd) + wrapJump;
+	bool bigWrap     = false;
 
 	if (wrapSum > I64T(INT32_MAX)) {
 		// Reset wrapAdd at this point, so we can again
@@ -87,9 +89,9 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 		// We reset not to zero, but to the remaining value after
 		// multiple wrap-jumps are taken into account.
 		int64_t wrapRemainder = wrapSum - I64T(INT32_MAX) - 1LL;
-		timestamps->wrapAdd = I32T(wrapRemainder);
+		timestamps->wrapAdd   = I32T(wrapRemainder);
 
-		timestamps->last = 0;
+		timestamps->last    = 0;
 		timestamps->current = timestamps->wrapAdd;
 
 		// Increment TSOverflow counter.
@@ -105,7 +107,7 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 		// event.
 		timestamps->wrapAdd = I32T(wrapSum);
 
-		timestamps->last = timestamps->current;
+		timestamps->last    = timestamps->current;
 		timestamps->current = timestamps->wrapAdd;
 
 		// Check monotonicity of timestamps.
@@ -127,7 +129,7 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 	int64_t timestampDifferenceMicro = currentTimestamp - timestamps->debugStartTimestamp;
 
 	int64_t timeDifferenceNano = (I64T(currentTime.tv_sec - timestamps->debugStartTime.tv_sec) * 1000000000LL)
-		+ I64T(currentTime.tv_nsec - timestamps->debugStartTime.tv_nsec);
+								 + I64T(currentTime.tv_nsec - timestamps->debugStartTime.tv_nsec);
 	int64_t timeDifferenceMicro = timeDifferenceNano / 1000;
 
 	int64_t tsDrift = llabs(timeDifferenceMicro - timestampDifferenceMicro);
@@ -143,7 +145,7 @@ static inline bool handleTimestampWrapNewLogic(timestampsStateNewLogic timestamp
 static inline void handleTimestampUpdateNewLogic(timestampsStateNewLogic timestamps, uint16_t tsData,
 	const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	// Is a timestamp! Expand to 32 bits. (Tick is 1µs already.)
-	timestamps->last = timestamps->current;
+	timestamps->last    = timestamps->current;
 	timestamps->current = timestamps->wrapAdd + (tsData & 0x7FFF);
 
 	// Check monotonicity of timestamps.
@@ -154,12 +156,12 @@ static inline void handleTimestampUpdateNewLogic(timestampsStateNewLogic timesta
 #endif
 }
 
-static inline void handleTimestampResetNewLogic(timestampsStateNewLogic timestamps, const char *deviceString,
-	atomic_uint_fast8_t *deviceLogLevelAtomic) {
+static inline void handleTimestampResetNewLogic(
+	timestampsStateNewLogic timestamps, const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	timestamps->wrapOverflow = 0;
-	timestamps->wrapAdd = 0;
-	timestamps->last = 0;
-	timestamps->current = 0;
+	timestamps->wrapAdd      = 0;
+	timestamps->last         = 0;
+	timestamps->current      = 0;
 
 	commonLog(CAER_LOG_INFO, deviceString, atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed),
 		"Timestamp reset event received.");

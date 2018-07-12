@@ -1,12 +1,12 @@
 #ifndef LIBCAER_DEVICES_DEVICE_HPP_
 #define LIBCAER_DEVICES_DEVICE_HPP_
 
-#include <libcaer/devices/device.h>
-#include <memory>
-#include <string>
 #include "../libcaer.hpp"
 #include "../events/packetContainer.hpp"
 #include "../events/utils.hpp"
+#include <libcaer/devices/device.h>
+#include <memory>
+#include <string>
 
 namespace libcaer {
 namespace devices {
@@ -34,7 +34,7 @@ public:
 		bool success = caerDeviceConfigSet(handle.get(), modAddr, paramAddr, param);
 		if (!success) {
 			std::string exc = toString() + ": failed to set configuration parameter, modAddr=" + std::to_string(modAddr)
-				+ ", paramAddr=" + std::to_string(paramAddr) + ", param=" + std::to_string(param) + ".";
+							  + ", paramAddr=" + std::to_string(paramAddr) + ", param=" + std::to_string(param) + ".";
 			throw std::runtime_error(exc);
 		}
 	}
@@ -43,7 +43,7 @@ public:
 		bool success = caerDeviceConfigGet(handle.get(), modAddr, paramAddr, param);
 		if (!success) {
 			std::string exc = toString() + ": failed to get configuration parameter, modAddr=" + std::to_string(modAddr)
-				+ ", paramAddr=" + std::to_string(paramAddr) + ".";
+							  + ", paramAddr=" + std::to_string(paramAddr) + ".";
 			throw std::runtime_error(exc);
 		}
 	}
@@ -79,8 +79,9 @@ public:
 			return (nullptr);
 		}
 
-		std::unique_ptr<libcaer::events::EventPacketContainer> cppContainer = std::unique_ptr<
-			libcaer::events::EventPacketContainer>(new libcaer::events::EventPacketContainer(cContainer));
+		std::unique_ptr<libcaer::events::EventPacketContainer> cppContainer
+			= std::unique_ptr<libcaer::events::EventPacketContainer>(
+				new libcaer::events::EventPacketContainer(cContainer));
 
 		// Free original C container. The event packet memory is now managed by
 		// the EventPacket classes inside the new C++ EventPacketContainer.
@@ -89,7 +90,6 @@ public:
 		return (cppContainer);
 	}
 };
-
 }
 }
 

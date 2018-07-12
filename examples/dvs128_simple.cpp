@@ -1,6 +1,6 @@
 #include <libcaercpp/devices/dvs128.hpp>
-#include <csignal>
 #include <atomic>
+#include <csignal>
 
 using namespace std;
 
@@ -14,13 +14,13 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void usbShutdownHandler(void *ptr) {
-	(void)(ptr); // UNUSED.
+	(void) (ptr); // UNUSED.
 
 	globalShutdown.store(true);
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
@@ -37,7 +37,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -74,7 +74,7 @@ int main(void) {
 	dvs128Handle.configSet(DVS128_CONFIG_BIAS, DVS128_CONFIG_BIAS_FOLL, 867);
 
 	// Let's verify they really changed!
-	uint32_t prBias = dvs128Handle.configGet(DVS128_CONFIG_BIAS, DVS128_CONFIG_BIAS_PR);
+	uint32_t prBias   = dvs128Handle.configGet(DVS128_CONFIG_BIAS, DVS128_CONFIG_BIAS_PR);
 	uint32_t follBias = dvs128Handle.configGet(DVS128_CONFIG_BIAS, DVS128_CONFIG_BIAS_FOLL);
 
 	printf("New bias values --- PR: %d, FOLL: %d.\n", prBias, follBias);
@@ -105,8 +105,8 @@ int main(void) {
 				packet->getEventCapacity());
 
 			if (packet->getEventType() == POLARITY_EVENT) {
-				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
-					libcaer::events::PolarityEventPacket>(packet);
+				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity
+					= std::static_pointer_cast<libcaer::events::PolarityEventPacket>(packet);
 
 				// Get full timestamp and addresses of first event.
 				const libcaer::events::PolarityEvent &firstEvent = (*polarity)[0];
@@ -114,7 +114,7 @@ int main(void) {
 				int32_t ts = firstEvent.getTimestamp();
 				uint16_t x = firstEvent.getX();
 				uint16_t y = firstEvent.getY();
-				bool pol = firstEvent.getPolarity();
+				bool pol   = firstEvent.getPolarity();
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
 			}

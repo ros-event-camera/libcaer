@@ -50,7 +50,6 @@ public:
 		return (caerRingBufferLook(ringBuffer.get()));
 	}
 };
-
 }
 }
 

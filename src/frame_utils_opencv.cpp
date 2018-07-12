@@ -10,25 +10,25 @@
 using namespace cv;
 
 extern "C" {
-caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType);
+caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(
+	caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType);
 void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
 }
 
-static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
-	enum caer_frame_utils_demosaic_types demosaicType);
+static void frameUtilsOpenCVDemosaicFrame(
+	caerFrameEvent colorFrame, caerFrameEventConst monoFrame, enum caer_frame_utils_demosaic_types demosaicType);
 static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPercent);
 static void frameUtilsOpenCVContrastEqualize(Mat &intensity);
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize);
 
-static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame,
-	enum caer_frame_utils_demosaic_types demosaicType) {
+static void frameUtilsOpenCVDemosaicFrame(
+	caerFrameEvent colorFrame, caerFrameEventConst monoFrame, enum caer_frame_utils_demosaic_types demosaicType) {
 	// Initialize OpenCV Mat based on caerFrameEvent data directly (no image copy).
 	const Size frameSize(caerFrameEventGetLengthX(monoFrame), caerFrameEventGetLengthY(monoFrame));
 	const Mat monoMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(monoFrame)),
 		const_cast<uint16_t *>(caerFrameEventGetPixelArrayUnsafeConst(monoFrame)));
-	Mat colorMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(colorFrame)),
-		caerFrameEventGetPixelArrayUnsafe(colorFrame));
+	Mat colorMat(
+		frameSize, CV_16UC(caerFrameEventGetChannelNumber(colorFrame)), caerFrameEventGetPixelArrayUnsafe(colorFrame));
 
 	CV_Assert((monoMat.type() == CV_16UC1) && (colorMat.type() == CV_16UC3));
 
@@ -94,8 +94,8 @@ static void frameUtilsOpenCVDemosaicFrame(caerFrameEvent colorFrame, caerFrameEv
 	cvtColor(monoMat, colorMat, code);
 }
 
-caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType) {
+caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(
+	caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType) {
 	if (framePacket == nullptr) {
 		return (nullptr);
 	}
@@ -107,27 +107,27 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
-				countValid++;
+	if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+		&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+		if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
+			countValid++;
 
-				if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
-					maxLengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
-				}
-
-				if (caerFrameEventGetLengthY(caerFrameIteratorElement) > maxLengthY) {
-					maxLengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
-				}
+			if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
+				maxLengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
 			}
-			else {
-				caerLog(CAER_LOG_WARNING, __func__,
-					"OpenCV demosaic types don't support the RGBW color filter, only RGBG. Please use the 'DEMOSAIC_STANDARD' type instead.");
+
+			if (caerFrameEventGetLengthY(caerFrameIteratorElement) > maxLengthY) {
+				maxLengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
 			}
 		}
+		else {
+			caerLog(CAER_LOG_WARNING, __func__, "OpenCV demosaic types don't support the RGBW color filter, only RGBG. "
+												"Please use the 'DEMOSAIC_STANDARD' type instead.");
+		}
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 
 	// Check if any frames did respect the requirements.
@@ -136,9 +136,9 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 	}
 
 	// Allocate new frame with RGB channels to hold resulting color image.
-	caerFrameEventPacket colorFramePacket = caerFrameEventPacketAllocate(countValid,
-		caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
-		caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
+	caerFrameEventPacket colorFramePacket
+		= caerFrameEventPacketAllocate(countValid, caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
+			caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
 	if (colorFramePacket == nullptr) {
 		return (nullptr);
 	}
@@ -147,38 +147,36 @@ caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst fram
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
-				|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
-				// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-				caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
-				colorIndex++;
+	if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+		&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+		if ((caerFrameEventGetColorFilter(caerFrameIteratorElement) == RGBG)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GRGB)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == GBGR)
+			|| (caerFrameEventGetColorFilter(caerFrameIteratorElement) == BGRG)) {
+			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
+			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
+			colorIndex++;
 
-				// First copy all the metadata.
-				caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
-				caerFrameEventSetLengthXLengthYChannelNumber(colorFrame,
-					caerFrameEventGetLengthX(caerFrameIteratorElement),
-					caerFrameEventGetLengthY(caerFrameIteratorElement), RGB, colorFramePacket);
-				caerFrameEventSetPositionX(colorFrame, caerFrameEventGetPositionX(caerFrameIteratorElement));
-				caerFrameEventSetPositionY(colorFrame, caerFrameEventGetPositionY(caerFrameIteratorElement));
-				caerFrameEventSetROIIdentifier(colorFrame, caerFrameEventGetROIIdentifier(caerFrameIteratorElement));
-				caerFrameEventSetTSStartOfFrame(colorFrame, caerFrameEventGetTSStartOfFrame(caerFrameIteratorElement));
-				caerFrameEventSetTSEndOfFrame(colorFrame, caerFrameEventGetTSEndOfFrame(caerFrameIteratorElement));
-				caerFrameEventSetTSStartOfExposure(colorFrame,
-					caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement));
-				caerFrameEventSetTSEndOfExposure(colorFrame,
-					caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement));
+			// First copy all the metadata.
+			caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
+			caerFrameEventSetLengthXLengthYChannelNumber(colorFrame, caerFrameEventGetLengthX(caerFrameIteratorElement),
+				caerFrameEventGetLengthY(caerFrameIteratorElement), RGB, colorFramePacket);
+			caerFrameEventSetPositionX(colorFrame, caerFrameEventGetPositionX(caerFrameIteratorElement));
+			caerFrameEventSetPositionY(colorFrame, caerFrameEventGetPositionY(caerFrameIteratorElement));
+			caerFrameEventSetROIIdentifier(colorFrame, caerFrameEventGetROIIdentifier(caerFrameIteratorElement));
+			caerFrameEventSetTSStartOfFrame(colorFrame, caerFrameEventGetTSStartOfFrame(caerFrameIteratorElement));
+			caerFrameEventSetTSEndOfFrame(colorFrame, caerFrameEventGetTSEndOfFrame(caerFrameIteratorElement));
+			caerFrameEventSetTSStartOfExposure(
+				colorFrame, caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement));
+			caerFrameEventSetTSEndOfExposure(colorFrame, caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement));
 
-				// Then the actual pixels. Only supports RGBG!
-				frameUtilsOpenCVDemosaicFrame(colorFrame, caerFrameIteratorElement, demosaicType);
+			// Then the actual pixels. Only supports RGBG!
+			frameUtilsOpenCVDemosaicFrame(colorFrame, caerFrameIteratorElement, demosaicType);
 
-				// Finally validate the new frame.
-				caerFrameEventValidate(colorFrame, colorFramePacket);
-			}
+			// Finally validate the new frame.
+			caerFrameEventValidate(colorFrame, colorFramePacket);
 		}
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 
 	return (colorFramePacket);
@@ -199,11 +197,11 @@ static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPerc
 	}
 	else {
 		// Calculate histogram.
-		int histSize = UINT16_MAX + 1;
-		float hRange[] = { 0, (float) histSize };
-		const float *histRange = { hRange };
-		bool uniform = true;
-		bool accumulate = false;
+		int histSize           = UINT16_MAX + 1;
+		float hRange[]         = {0, (float) histSize};
+		const float *histRange = {hRange};
+		bool uniform           = true;
+		bool accumulate        = false;
 
 		Mat hist;
 		calcHist(&intensity, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
@@ -216,7 +214,7 @@ static void frameUtilsOpenCVContrastNormalize(Mat &intensity, float clipHistPerc
 		// Locate points that cut at required value.
 		float max = hist.at<float>(histSize - 1);
 		clipHistPercent *= (max / 100.0F); // Calculate absolute value from percent.
-		clipHistPercent /= 2.0F; // Left and right wings, so divide by two.
+		clipHistPercent /= 2.0F;           // Left and right wings, so divide by two.
 
 		// Locate left cut.
 		minValue = 0;
@@ -248,11 +246,11 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 	CV_Assert(intensity.type() == CV_16UC1);
 
 	// Calculate histogram.
-	int histSize = UINT16_MAX + 1;
-	float hRange[] = { 0, (float) histSize };
-	const float *histRange = { hRange };
-	bool uniform = true;
-	bool accumulate = false;
+	int histSize           = UINT16_MAX + 1;
+	float hRange[]         = {0, (float) histSize};
+	const float *histRange = {hRange};
+	bool uniform           = true;
+	bool accumulate        = false;
 
 	Mat hist;
 	calcHist(&intensity, 1, 0, Mat(), hist, 1, &histSize, &histRange, uniform, accumulate);
@@ -281,7 +279,7 @@ static void frameUtilsOpenCVContrastEqualize(Mat &intensity) {
 
 	// Apply lookup table to input image.
 	std::for_each(intensity.begin<uint16_t>(), intensity.end<uint16_t>(),
-		[&hist](uint16_t &elem) {elem = (uint16_t) hist.at<float>(elem);});
+		[&hist](uint16_t &elem) { elem = (uint16_t) hist.at<float>(elem); });
 }
 
 static void frameUtilsOpenCVContrastCLAHE(Mat &intensity, float clipLimit, int tilesGridSize) {
@@ -302,106 +300,106 @@ void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_fr
 	}
 
 	CAER_FRAME_ITERATOR_VALID_START(framePacket)
-		const Size frameSize(caerFrameEventGetLengthX(caerFrameIteratorElement),
-			caerFrameEventGetLengthY(caerFrameIteratorElement));
-		Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
-			caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));
+	const Size frameSize(
+		caerFrameEventGetLengthX(caerFrameIteratorElement), caerFrameEventGetLengthY(caerFrameIteratorElement));
+	Mat orig(frameSize, CV_16UC(caerFrameEventGetChannelNumber(caerFrameIteratorElement)),
+		caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement));
 
-		CV_Assert((orig.type() == CV_16UC1) || (orig.type() == CV_16UC3) || (orig.type() == CV_16UC4));
+	CV_Assert((orig.type() == CV_16UC1) || (orig.type() == CV_16UC3) || (orig.type() == CV_16UC4));
 
-		// This generally only works well on grayscale intensity images.
-		// So, if this is a grayscale image, good, else if its a color
-		// image we convert it to YCrCb and operate on the Y channel only.
-		Mat intensity;
-		std::vector<Mat> yCrCbPlanes(3);
-		Mat rgbaAlpha;
+	// This generally only works well on grayscale intensity images.
+	// So, if this is a grayscale image, good, else if its a color
+	// image we convert it to YCrCb and operate on the Y channel only.
+	Mat intensity;
+	std::vector<Mat> yCrCbPlanes(3);
+	Mat rgbaAlpha;
 
-		// Grayscale, no intensity extraction needed.
-		if (orig.channels() == GRAYSCALE) {
-			intensity = orig;
+	// Grayscale, no intensity extraction needed.
+	if (orig.channels() == GRAYSCALE) {
+		intensity = orig;
+	}
+	else {
+		// Color image, extract RGB and intensity/luminance.
+		Mat rgb;
+
+		if (orig.channels() == RGBA) {
+			// We separate Alpha from RGB first.
+			// We will restore alpha at the end.
+			rgb       = Mat(orig.rows, orig.cols, CV_16UC3);
+			rgbaAlpha = Mat(orig.rows, orig.cols, CV_16UC1);
+
+			Mat out[] = {rgb, rgbaAlpha};
+			// rgba[0] -> rgb[0], rgba[1] -> rgb[1],
+			// rgba[2] -> rgb[2], rgba[3] -> rgbaAlpha[0]
+			int channelTransform[] = {0, 0, 1, 1, 2, 2, 3, 3};
+			mixChannels(&orig, 1, out, 2, channelTransform, 4);
 		}
 		else {
-			// Color image, extract RGB and intensity/luminance.
+			// Already an RGB image.
+			rgb = orig;
+			CV_Assert(rgb.type() == CV_16UC3);
+		}
+
+		// First we convert from RGB to a color space with
+		// separate luminance channel.
+		Mat rgbYCrCb;
+		cvtColor(rgb, rgbYCrCb, COLOR_RGB2YCrCb);
+
+		CV_Assert(rgbYCrCb.type() == CV_16UC3);
+
+		// Then we split it up so that we can access the luminance
+		// channel on its own separately.
+		split(rgbYCrCb, yCrCbPlanes);
+
+		// Now we have the luminance image in yCrCbPlanes[0].
+		intensity = yCrCbPlanes[0];
+	}
+
+	CV_Assert(intensity.type() == CV_16UC1);
+
+	// Apply contrast enhancement algorithm.
+	switch (contrastType) {
+		case CONTRAST_OPENCV_NORMALIZATION:
+			frameUtilsOpenCVContrastNormalize(intensity, 1.0);
+			break;
+
+		case CONTRAST_OPENCV_HISTOGRAM_EQUALIZATION:
+			frameUtilsOpenCVContrastEqualize(intensity);
+			break;
+
+		case CONTRAST_OPENCV_CLAHE:
+			frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
+			break;
+
+		case CONTRAST_STANDARD:
+		default:
+			break;
+	}
+
+	// If original was a color frame, we have to mix the various
+	// components back together into an RGB(A) image.
+	if (orig.channels() != GRAYSCALE) {
+		Mat YCrCbrgb;
+		merge(yCrCbPlanes, YCrCbrgb);
+
+		CV_Assert(YCrCbrgb.type() == CV_16UC3);
+
+		if (orig.channels() == RGBA) {
 			Mat rgb;
+			cvtColor(YCrCbrgb, rgb, COLOR_YCrCb2RGB);
 
-			if (orig.channels() == RGBA) {
-				// We separate Alpha from RGB first.
-				// We will restore alpha at the end.
-				rgb = Mat(orig.rows, orig.cols, CV_16UC3);
-				rgbaAlpha = Mat(orig.rows, orig.cols, CV_16UC1);
+			CV_Assert(rgb.type() == CV_16UC3);
 
-				Mat out[] = { rgb, rgbaAlpha };
-				// rgba[0] -> rgb[0], rgba[1] -> rgb[1],
-				// rgba[2] -> rgb[2], rgba[3] -> rgbaAlpha[0]
-				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
-				mixChannels(&orig, 1, out, 2, channelTransform, 4);
-			}
-			else {
-				// Already an RGB image.
-				rgb = orig;
-				CV_Assert(rgb.type() == CV_16UC3);
-			}
-
-			// First we convert from RGB to a color space with
-			// separate luminance channel.
-			Mat rgbYCrCb;
-			cvtColor(rgb, rgbYCrCb, COLOR_RGB2YCrCb);
-
-			CV_Assert(rgbYCrCb.type() == CV_16UC3);
-
-			// Then we split it up so that we can access the luminance
-			// channel on its own separately.
-			split(rgbYCrCb, yCrCbPlanes);
-
-			// Now we have the luminance image in yCrCbPlanes[0].
-			intensity = yCrCbPlanes[0];
+			// Restore original alpha.
+			Mat in[] = {rgb, rgbaAlpha};
+			// rgb[0] -> rgba[0], rgb[1] -> rgba[1],
+			// rgb[2] -> rgba[2], rgbaAlpha[0] -> rgba[3]
+			int channelTransform[] = {0, 0, 1, 1, 2, 2, 3, 3};
+			mixChannels(in, 2, &orig, 1, channelTransform, 4);
 		}
-
-		CV_Assert(intensity.type() == CV_16UC1);
-
-		// Apply contrast enhancement algorithm.
-		switch (contrastType) {
-			case CONTRAST_OPENCV_NORMALIZATION:
-				frameUtilsOpenCVContrastNormalize(intensity, 1.0);
-				break;
-
-			case CONTRAST_OPENCV_HISTOGRAM_EQUALIZATION:
-				frameUtilsOpenCVContrastEqualize(intensity);
-				break;
-
-			case CONTRAST_OPENCV_CLAHE:
-				frameUtilsOpenCVContrastCLAHE(intensity, 4.0, 8);
-				break;
-
-			case CONTRAST_STANDARD:
-			default:
-				break;
+		else {
+			cvtColor(YCrCbrgb, orig, COLOR_YCrCb2RGB);
 		}
-
-		// If original was a color frame, we have to mix the various
-		// components back together into an RGB(A) image.
-		if (orig.channels() != GRAYSCALE) {
-			Mat YCrCbrgb;
-			merge(yCrCbPlanes, YCrCbrgb);
-
-			CV_Assert(YCrCbrgb.type() == CV_16UC3);
-
-			if (orig.channels() == RGBA) {
-				Mat rgb;
-				cvtColor(YCrCbrgb, rgb, COLOR_YCrCb2RGB);
-
-				CV_Assert(rgb.type() == CV_16UC3);
-
-				// Restore original alpha.
-				Mat in[] = { rgb, rgbaAlpha };
-				// rgb[0] -> rgba[0], rgb[1] -> rgba[1],
-				// rgb[2] -> rgba[2], rgbaAlpha[0] -> rgba[3]
-				int channelTransform[] = { 0, 0, 1, 1, 2, 2, 3, 3 };
-				mixChannels(in, 2, &orig, 1, channelTransform, 4);
-			}
-			else {
-				cvtColor(YCrCbrgb, orig, COLOR_YCrCb2RGB);
-			}
-		}
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 }

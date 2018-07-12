@@ -1,8 +1,8 @@
 #include "devices/device.h"
 
-#include "dvs128.h"
 #include "davis.h"
 #include "davis_rpi.h"
+#include "dvs128.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -12,14 +12,12 @@
 #endif
 
 // Supported devices and their functions.
-static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict) = {
-		[CAER_DEVICE_DVS128] = &dvs128Open,
-		[CAER_DEVICE_DAVIS_FX2] = &davisOpenFX2,
-		[CAER_DEVICE_DAVIS_FX3] = &davisOpenFX3,
-		[CAER_DEVICE_DYNAPSE] = &dynapseOpen,
-		[CAER_DEVICE_DAVIS] = &davisOpenAll,
-		[CAER_DEVICE_EDVS] = NULL,
+static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict)
+	= {
+			[CAER_DEVICE_DVS128] = &dvs128Open, [CAER_DEVICE_DAVIS_FX2] = &davisOpenFX2,
+		[CAER_DEVICE_DAVIS_FX3] = &davisOpenFX3, [CAER_DEVICE_DYNAPSE] = &dynapseOpen,
+		[CAER_DEVICE_DAVIS] = &davisOpenAll, [CAER_DEVICE_EDVS] = NULL,
 #if defined(OS_LINUX)
 		[CAER_DEVICE_DAVIS_RPI] = &davisRPiOpen,
 #else
@@ -27,44 +25,37 @@ static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16
 #endif
 };
 
-static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(uint16_t deviceID, const char *serialPortName,
-	uint32_t serialBaudRate) = {
-		[CAER_DEVICE_DVS128] = NULL,
-		[CAER_DEVICE_DAVIS_FX2] = NULL,
-		[CAER_DEVICE_DAVIS_FX3] = NULL,
-		[CAER_DEVICE_DYNAPSE] = NULL,
-		[CAER_DEVICE_DAVIS] = NULL,
+static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
+	uint16_t deviceID, const char *serialPortName, uint32_t serialBaudRate)
+	= {
+			[CAER_DEVICE_DVS128] = NULL, [CAER_DEVICE_DAVIS_FX2] = NULL, [CAER_DEVICE_DAVIS_FX3] = NULL,
+		[CAER_DEVICE_DYNAPSE] = NULL, [CAER_DEVICE_DAVIS] = NULL,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 		[CAER_DEVICE_EDVS] = &edvsOpen,
 #else
-		[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS]      = NULL,
 #endif
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 };
 
 static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
-	[CAER_DEVICE_DVS128] = &dvs128Close,
-	[CAER_DEVICE_DAVIS_FX2] = &davisClose,
-	[CAER_DEVICE_DAVIS_FX3] = &davisClose,
-	[CAER_DEVICE_DYNAPSE] = &dynapseClose,
-	[CAER_DEVICE_DAVIS] = &davisClose,
+		[CAER_DEVICE_DVS128] = &dvs128Close, [CAER_DEVICE_DAVIS_FX2] = &davisClose,
+	[CAER_DEVICE_DAVIS_FX3] = &davisClose, [CAER_DEVICE_DYNAPSE] = &dynapseClose, [CAER_DEVICE_DAVIS] = &davisClose,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsClose,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+	[CAER_DEVICE_EDVS]          = NULL,
 #endif
 #if defined(OS_LINUX)
 	[CAER_DEVICE_DAVIS_RPI] = &davisRPiClose,
 #else
-	[CAER_DEVICE_DAVIS_RPI] = NULL,
+	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
 };
 
 static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
-	[CAER_DEVICE_DVS128] = &dvs128SendDefaultConfig,
-	[CAER_DEVICE_DAVIS_FX2] = &davisSendDefaultConfig,
-	[CAER_DEVICE_DAVIS_FX3] = &davisSendDefaultConfig,
-	[CAER_DEVICE_DYNAPSE] = &dynapseSendDefaultConfig,
+		[CAER_DEVICE_DVS128] = &dvs128SendDefaultConfig, [CAER_DEVICE_DAVIS_FX2] = &davisSendDefaultConfig,
+	[CAER_DEVICE_DAVIS_FX3] = &davisSendDefaultConfig, [CAER_DEVICE_DYNAPSE] = &dynapseSendDefaultConfig,
 	[CAER_DEVICE_DAVIS] = &davisSendDefaultConfig,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsSendDefaultConfig,
@@ -78,17 +69,16 @@ static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHan
 #endif
 };
 
-static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
-	uint32_t param) = {
-		[CAER_DEVICE_DVS128] = &dvs128ConfigSet,
-		[CAER_DEVICE_DAVIS_FX2] = &davisConfigSet,
-		[CAER_DEVICE_DAVIS_FX3] = &davisConfigSet,
-		[CAER_DEVICE_DYNAPSE] = &dynapseConfigSet,
+static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
+	caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t param)
+	= {
+			[CAER_DEVICE_DVS128] = &dvs128ConfigSet, [CAER_DEVICE_DAVIS_FX2] = &davisConfigSet,
+		[CAER_DEVICE_DAVIS_FX3] = &davisConfigSet, [CAER_DEVICE_DYNAPSE] = &dynapseConfigSet,
 		[CAER_DEVICE_DAVIS] = &davisConfigSet,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 		[CAER_DEVICE_EDVS] = &edvsConfigSet,
 #else
-		[CAER_DEVICE_EDVS] = NULL,
+		[CAER_DEVICE_EDVS]  = NULL,
 #endif
 #if defined(OS_LINUX)
 		[CAER_DEVICE_DAVIS_RPI] = &davisRPiConfigSet,
@@ -97,12 +87,11 @@ static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle han
 #endif
 };
 
-static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr,
-	uint32_t *param) = {
-		[CAER_DEVICE_DVS128] = &dvs128ConfigGet,
-		[CAER_DEVICE_DAVIS_FX2] = &davisConfigGet,
-		[CAER_DEVICE_DAVIS_FX3] = &davisConfigGet,
-		[CAER_DEVICE_DYNAPSE] = &dynapseConfigGet,
+static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
+	caerDeviceHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param)
+	= {
+			[CAER_DEVICE_DVS128] = &dvs128ConfigGet, [CAER_DEVICE_DAVIS_FX2] = &davisConfigGet,
+		[CAER_DEVICE_DAVIS_FX3] = &davisConfigGet, [CAER_DEVICE_DYNAPSE] = &dynapseConfigGet,
 		[CAER_DEVICE_DAVIS] = &davisConfigGet,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 		[CAER_DEVICE_EDVS] = &edvsConfigGet,
@@ -116,13 +105,12 @@ static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle han
 #endif
 };
 
-static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
-	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
-	void *dataShutdownUserPtr) = {
-		[CAER_DEVICE_DVS128] = &dvs128DataStart,
-		[CAER_DEVICE_DAVIS_FX2] = &davisDataStart,
-		[CAER_DEVICE_DAVIS_FX3] = &davisDataStart,
-		[CAER_DEVICE_DYNAPSE] = &dynapseDataStart,
+static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle,
+	void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr,
+	void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr)
+	= {
+			[CAER_DEVICE_DVS128] = &dvs128DataStart, [CAER_DEVICE_DAVIS_FX2] = &davisDataStart,
+		[CAER_DEVICE_DAVIS_FX3] = &davisDataStart, [CAER_DEVICE_DYNAPSE] = &dynapseDataStart,
 		[CAER_DEVICE_DAVIS] = &davisDataStart,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 		[CAER_DEVICE_EDVS] = &edvsDataStart,
@@ -137,46 +125,42 @@ static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 };
 
 static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
-	[CAER_DEVICE_DVS128] = &dvs128DataStop,
-	[CAER_DEVICE_DAVIS_FX2] = &davisDataStop,
-	[CAER_DEVICE_DAVIS_FX3] = &davisDataStop,
-	[CAER_DEVICE_DYNAPSE] = &dynapseDataStop,
+		[CAER_DEVICE_DVS128] = &dvs128DataStop, [CAER_DEVICE_DAVIS_FX2] = &davisDataStop,
+	[CAER_DEVICE_DAVIS_FX3] = &davisDataStop, [CAER_DEVICE_DYNAPSE] = &dynapseDataStop,
 	[CAER_DEVICE_DAVIS] = &davisDataStop,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsDataStop,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+	[CAER_DEVICE_EDVS]          = NULL,
 #endif
 #if defined(OS_LINUX)
 	[CAER_DEVICE_DAVIS_RPI] = &davisRPiDataStop,
 #else
-	[CAER_DEVICE_DAVIS_RPI] = NULL,
+	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
 };
 
 static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
-	[CAER_DEVICE_DVS128] = &dvs128DataGet,
-	[CAER_DEVICE_DAVIS_FX2] = &davisDataGet,
-	[CAER_DEVICE_DAVIS_FX3] = &davisDataGet,
-	[CAER_DEVICE_DYNAPSE] = &dynapseDataGet,
+		[CAER_DEVICE_DVS128] = &dvs128DataGet, [CAER_DEVICE_DAVIS_FX2] = &davisDataGet,
+	[CAER_DEVICE_DAVIS_FX3] = &davisDataGet, [CAER_DEVICE_DYNAPSE] = &dynapseDataGet,
 	[CAER_DEVICE_DAVIS] = &davisDataGet,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsDataGet,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+	[CAER_DEVICE_EDVS]          = NULL,
 #endif
 #if defined(OS_LINUX)
 	[CAER_DEVICE_DAVIS_RPI] = &davisRPiDataGet,
 #else
-	[CAER_DEVICE_DAVIS_RPI] = NULL,
+	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
 };
 
 // Add empty InfoGet for optional devices, such as serial ones.
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 0
 struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle) {
-	(void)(handle);
-	struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
+	(void) (handle);
+	struct caer_edvs_info emptyInfo = {0, .deviceString = NULL};
 	return (emptyInfo);
 }
 #endif
@@ -202,8 +186,8 @@ caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t 
 	return (usbConstructors[deviceType](deviceID, busNumberRestrict, devAddressRestrict, serialNumberRestrict));
 }
 
-caerDeviceHandle caerDeviceOpenSerial(uint16_t deviceID, uint16_t deviceType, const char *serialPortName,
-	uint32_t serialBaudRate) {
+caerDeviceHandle caerDeviceOpenSerial(
+	uint16_t deviceID, uint16_t deviceType, const char *serialPortName, uint32_t serialBaudRate) {
 	// Check if device type is supported.
 	if (deviceType >= CAER_SUPPORTED_DEVICES_NUMBER) {
 		return (NULL);
@@ -327,8 +311,8 @@ bool caerDeviceDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(voi
 		return (false);
 	}
 
-	return (dataStarters[handle->deviceType](handle, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
-		dataShutdownNotify, dataShutdownUserPtr));
+	return (dataStarters[handle->deviceType](
+		handle, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr, dataShutdownNotify, dataShutdownUserPtr));
 }
 
 bool caerDeviceDataStop(caerDeviceHandle handle) {

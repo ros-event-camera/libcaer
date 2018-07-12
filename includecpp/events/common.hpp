@@ -1,8 +1,8 @@
 #ifndef LIBCAER_EVENTS_COMMON_HPP_
 #define LIBCAER_EVENTS_COMMON_HPP_
 
-#include <libcaer/events/common.h>
 #include "../libcaer.hpp"
+#include <libcaer/events/common.h>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -10,8 +10,7 @@
 namespace libcaer {
 namespace events {
 
-template<class T>
-class EventPacketIterator {
+template<class T> class EventPacketIterator {
 private:
 	// Select proper pointer type (const or not) depending on template type.
 	using eventPtrType = typename std::conditional<std::is_const<T>::value, const uint8_t *, uint8_t *>::type;
@@ -22,21 +21,17 @@ private:
 public:
 	// Iterator traits.
 	using iterator_category = std::random_access_iterator_tag;
-	using value_type = typename std::remove_cv<T>::type;
-	using pointer = T *;
-	using reference = T &;
-	using difference_type = ptrdiff_t;
-	using size_type = int32_t;
+	using value_type        = typename std::remove_cv<T>::type;
+	using pointer           = T *;
+	using reference         = T &;
+	using difference_type   = ptrdiff_t;
+	using size_type         = int32_t;
 
 	// Constructors.
-	EventPacketIterator() :
-			eventPtr(nullptr),
-			eventSize(0) {
+	EventPacketIterator() : eventPtr(nullptr), eventSize(0) {
 	}
 
-	EventPacketIterator(eventPtrType _eventPtr, size_t _eventSize) :
-			eventPtr(_eventPtr),
-			eventSize(_eventSize) {
+	EventPacketIterator(eventPtrType _eventPtr, size_t _eventSize) : eventPtr(_eventPtr), eventSize(_eventSize) {
 	}
 
 	// Data access operators.
@@ -78,7 +73,7 @@ public:
 	}
 
 	// Prefix increment.
-	EventPacketIterator& operator++() noexcept {
+	EventPacketIterator &operator++() noexcept {
 		eventPtr += eventSize;
 		return (*this);
 	}
@@ -91,7 +86,7 @@ public:
 	}
 
 	// Prefix decrement.
-	EventPacketIterator& operator--() noexcept {
+	EventPacketIterator &operator--() noexcept {
 		eventPtr -= eventSize;
 		return (*this);
 	}
@@ -104,7 +99,7 @@ public:
 	}
 
 	// Iter += N.
-	EventPacketIterator& operator+=(size_type add) noexcept {
+	EventPacketIterator &operator+=(size_type add) noexcept {
 		eventPtr += (eventSize * add);
 		return (*this);
 	}
@@ -120,7 +115,7 @@ public:
 	}
 
 	// Iter -= N.
-	EventPacketIterator& operator-=(size_type sub) noexcept {
+	EventPacketIterator &operator-=(size_type sub) noexcept {
 		eventPtr -= (eventSize * sub);
 		return (*this);
 	}
@@ -150,9 +145,7 @@ protected:
 	bool isMemoryOwner;
 
 	// Constructors.
-	EventPacket() :
-			header(nullptr),
-			isMemoryOwner(true) {
+	EventPacket() : header(nullptr), isMemoryOwner(true) {
 	}
 
 public:
@@ -160,12 +153,13 @@ public:
 		constructorCheckNullptr(packetHeader);
 
 		if (caerEventPacketHeaderGetEventType(packetHeader) < CAER_DEFAULT_EVENT_TYPES_COUNT) {
-			throw std::runtime_error(
-				"Failed to initialize EventPacketHeader from existing C packet header: default event types are not allowed. "
-					"Always call the proper specialized <Type>EventPacket constructor, to guarantee proper RTTI initialization.");
+			throw std::runtime_error("Failed to initialize EventPacketHeader from existing C packet header: default "
+									 "event types are not allowed. "
+									 "Always call the proper specialized <Type>EventPacket constructor, to guarantee "
+									 "proper RTTI initialization.");
 		}
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -182,7 +176,7 @@ public:
 	// Copy constructor.
 	EventPacket(const EventPacket &rhs) {
 		// Full copy.
-		header = internalCopy(rhs.header, copyTypes::FULL);
+		header        = internalCopy(rhs.header, copyTypes::FULL);
 		isMemoryOwner = true; // Always memory owner on copy!
 	}
 
@@ -204,7 +198,7 @@ public:
 				free(header);
 			}
 
-			header = copy;
+			header        = copy;
 			isMemoryOwner = true; // Always memory owner on copy!
 		}
 
@@ -218,7 +212,7 @@ public:
 		// call, which is what normally happens, and helps us a lot here.
 
 		// Move data here.
-		header = rhs.header;
+		header        = rhs.header;
 		isMemoryOwner = rhs.isMemoryOwner; // Move memory ownership too!
 
 		// Reset old data (ready for destruction).
@@ -244,7 +238,7 @@ public:
 		}
 
 		// Move data here.
-		header = rhs.header;
+		header        = rhs.header;
 		isMemoryOwner = rhs.isMemoryOwner; // Move memory ownership too!
 
 		// Reset old data (ready for destruction).
@@ -405,14 +399,14 @@ public:
 	static_assert(std::is_pod<GenericEvent>::value, "GenericEvent is not POD.");
 
 	// Container traits.
-	using value_type = GenericEvent;
+	using value_type       = GenericEvent;
 	using const_value_type = const GenericEvent;
-	using pointer = GenericEvent *;
-	using const_pointer = const GenericEvent *;
-	using reference = GenericEvent &;
-	using const_reference = const GenericEvent &;
-	using size_type = int32_t;
-	using difference_type = ptrdiff_t;
+	using pointer          = GenericEvent *;
+	using const_pointer    = const GenericEvent *;
+	using reference        = GenericEvent &;
+	using const_reference  = const GenericEvent &;
+	using size_type        = int32_t;
+	using difference_type  = ptrdiff_t;
 
 	// Generic Event access methods.
 	const_value_type genericGetEvent(size_type index) const {
@@ -422,7 +416,7 @@ public:
 		// fail for those empty events.
 		const void *evt = caerGenericEventGetEvent(header, getEventIndex(index, false));
 
-		return (GenericEvent { evt, header });
+		return (GenericEvent{evt, header});
 	}
 
 	// Generic Event Packet methods.
@@ -512,11 +506,7 @@ public:
 		}
 	}
 
-	enum class copyTypes {
-		FULL,
-		EVENTS_ONLY,
-		VALID_EVENTS_ONLY
-	};
+	enum class copyTypes { FULL, EVENTS_ONLY, VALID_EVENTS_ONLY };
 
 	std::unique_ptr<EventPacket> copy(copyTypes ct) const {
 		return (virtualCopy(ct));
@@ -590,8 +580,8 @@ protected:
 	}
 
 	// Constructor checks.
-	static void constructorCheckCapacitySourceTSOverflow(size_type eventCapacity, int16_t eventSource,
-		int32_t tsOverflow) {
+	static void constructorCheckCapacitySourceTSOverflow(
+		size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
 		if (eventCapacity <= 0) {
 			throw std::invalid_argument("Negative or zero event capacity not allowed on construction.");
 		}
@@ -630,18 +620,17 @@ protected:
 	}
 };
 
-template<class PKT, class EVT>
-class EventPacketCommon: public EventPacket {
+template<class PKT, class EVT> class EventPacketCommon : public EventPacket {
 public:
 	// Container traits.
-	using value_type = EVT;
+	using value_type       = EVT;
 	using const_value_type = const EVT;
-	using pointer = EVT *;
-	using const_pointer = const EVT *;
-	using reference = EVT &;
-	using const_reference = const EVT &;
-	using size_type = int32_t;
-	using difference_type = ptrdiff_t;
+	using pointer          = EVT *;
+	using const_pointer    = const EVT *;
+	using reference        = EVT &;
+	using const_reference  = const EVT &;
+	using size_type        = int32_t;
+	using difference_type  = ptrdiff_t;
 
 	// Event access methods.
 	reference getEvent(size_type index) {
@@ -695,9 +684,9 @@ public:
 	}
 
 	// Iterator support.
-	using iterator = EventPacketIterator<value_type>;
-	using const_iterator = EventPacketIterator<const_value_type>;
-	using reverse_iterator = std::reverse_iterator<iterator>;
+	using iterator               = EventPacketIterator<value_type>;
+	using const_iterator         = EventPacketIterator<const_value_type>;
+	using reverse_iterator       = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	iterator begin() noexcept {
@@ -723,8 +712,8 @@ public:
 
 	const_iterator cend() const noexcept {
 		// Pointer must be to element one past the end!
-		return (const_iterator(reinterpret_cast<const uint8_t *>(&back()) + getEventSize(),
-			static_cast<size_t>(getEventSize())));
+		return (const_iterator(
+			reinterpret_cast<const uint8_t *>(&back()) + getEventSize(), static_cast<size_t>(getEventSize())));
 	}
 
 	reverse_iterator rbegin() noexcept {
@@ -760,7 +749,6 @@ protected:
 
 	virtual const_reference virtualGetEvent(size_type index) const noexcept = 0;
 };
-
 }
 }
 

@@ -2,9 +2,9 @@
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_HPP_
 
 #include <libcaer/devices/device_discover.h>
+#include "davis.hpp"
 #include "device.hpp"
 #include "dvs128.hpp"
-#include "davis.hpp"
 #include "dynapse.hpp"
 #include "edvs.hpp"
 #include <memory>
@@ -40,29 +40,27 @@ public:
 		return (device(CAER_DEVICE_DISCOVER_ALL));
 	}
 
-	static std::unique_ptr<libcaer::devices::device> open(uint16_t deviceID,
-		const struct caer_device_discovery_result &discoveredDevice) {
+	static std::unique_ptr<libcaer::devices::device> open(
+		uint16_t deviceID, const struct caer_device_discovery_result &discoveredDevice) {
 		switch (discoveredDevice.deviceType) {
 			case CAER_DEVICE_DVS128: {
 				const struct caer_dvs128_info *info = &discoveredDevice.deviceInfo.dvs128Info;
-				return (std::unique_ptr<libcaer::devices::dvs128>(
-					new libcaer::devices::dvs128(deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
+				return (std::unique_ptr<libcaer::devices::dvs128>(new libcaer::devices::dvs128(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}
 
 			case CAER_DEVICE_DAVIS_FX2: {
 				const struct caer_davis_info *info = &discoveredDevice.deviceInfo.davisInfo;
-				return (std::unique_ptr<libcaer::devices::davisfx2>(
-					new libcaer::devices::davisfx2(deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress,
-						"")));
+				return (std::unique_ptr<libcaer::devices::davisfx2>(new libcaer::devices::davisfx2(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}
 
 			case CAER_DEVICE_DAVIS_FX3: {
 				const struct caer_davis_info *info = &discoveredDevice.deviceInfo.davisInfo;
-				return (std::unique_ptr<libcaer::devices::davisfx3>(
-					new libcaer::devices::davisfx3(deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress,
-						"")));
+				return (std::unique_ptr<libcaer::devices::davisfx3>(new libcaer::devices::davisfx3(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}
 
@@ -75,8 +73,8 @@ public:
 
 			case CAER_DEVICE_DYNAPSE: {
 				const struct caer_dynapse_info *info = &discoveredDevice.deviceInfo.dynapseInfo;
-				return (std::unique_ptr<libcaer::devices::dynapse>(
-					new libcaer::devices::dynapse(deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
+				return (std::unique_ptr<libcaer::devices::dynapse>(new libcaer::devices::dynapse(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}
 
@@ -97,7 +95,6 @@ public:
 		}
 	}
 };
-
 }
 }
 

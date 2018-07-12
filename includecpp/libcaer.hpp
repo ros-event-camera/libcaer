@@ -21,13 +21,13 @@ namespace log {
 
 enum class logLevel {
 	EMERGENCY = 0,
-	ALERT = 1,
-	CRITICAL = 2,
-	ERROR = 3,
-	WARNING = 4,
-	NOTICE = 5,
-	INFO = 6,
-	DEBUG = 7,
+	ALERT     = 1,
+	CRITICAL  = 2,
+	ERROR     = 3,
+	WARNING   = 4,
+	NOTICE    = 5,
+	INFO      = 6,
+	DEBUG     = 7,
 };
 
 inline void logLevelSet(logLevel l) noexcept;
@@ -87,7 +87,6 @@ inline void logVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t sy
 		static_cast<enum caer_log_level>(static_cast<typename std::underlying_type<logLevel>::type>(l)), subSystem,
 		format, args);
 }
-
 }
 }
 

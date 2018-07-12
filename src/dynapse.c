@@ -67,7 +67,7 @@ uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAdd
 }
 
 uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
-bool sy, uint8_t dy, uint8_t destinationCore) {
+	bool sy, uint8_t dy, uint8_t destinationCore) {
 	uint32_t sramBits = 0;
 
 	sramBits |= U32T(virtualCoreId & 0x03) << 28;
@@ -94,12 +94,12 @@ uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore) {
 }
 
 uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint8_t chipId    = caerSpikeEventGetChipID(event);
+	uint8_t coreId    = caerSpikeEventGetSourceCoreID(event);
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
-	uint16_t columnId = (neuronId & 0x0F);
-	bool addColumn = (coreId & 0x01);
+	uint16_t columnId  = (neuronId & 0x0F);
+	bool addColumn     = (coreId & 0x01);
 	bool addColumnChip = (chipId & 0x01);
 	columnId = U16T(columnId + (addColumn * DYNAPSE_CONFIG_NEUCOL) + (addColumnChip * DYNAPSE_CONFIG_XCHIPSIZE));
 
@@ -107,14 +107,14 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event) {
 }
 
 uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
+	uint8_t chipId    = caerSpikeEventGetChipID(event);
+	uint8_t coreId    = caerSpikeEventGetSourceCoreID(event);
 	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
 
-	uint16_t rowId = ((neuronId >> 4) & 0x0F);
-	bool addRow = (coreId & 0x02);
+	uint16_t rowId  = ((neuronId >> 4) & 0x0F);
+	bool addRow     = (coreId & 0x02);
 	bool addRowChip = (chipId & 0x02);
-	rowId = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
+	rowId           = U16T(rowId + (addRow * DYNAPSE_CONFIG_NEUROW) + (addRowChip * DYNAPSE_CONFIG_YCHIPSIZE));
 
 	return (rowId);
 }
@@ -125,16 +125,16 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 
 	if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y < DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U1;
-		x = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
+		x      = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
 	}
 	else if ((x < DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U2;
-		y = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
+		y      = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
 	}
 	else if ((x >= DYNAPSE_CONFIG_XCHIPSIZE) && (y >= DYNAPSE_CONFIG_YCHIPSIZE)) {
 		chipId = DYNAPSE_CONFIG_DYNAPSE_U3;
-		x = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
-		y = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
+		x      = U16T(x - DYNAPSE_CONFIG_XCHIPSIZE);
+		y      = U16T(y - DYNAPSE_CONFIG_YCHIPSIZE);
 	}
 
 	// Select core. Core ID 0 default, doesn't need check.
@@ -142,16 +142,16 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 
 	if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y < DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 1;
-		x = U16T(x - DYNAPSE_CONFIG_NEUCOL);
+		x      = U16T(x - DYNAPSE_CONFIG_NEUCOL);
 	}
 	else if ((x < DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 2;
-		y = U16T(y - DYNAPSE_CONFIG_NEUROW);
+		y      = U16T(y - DYNAPSE_CONFIG_NEUROW);
 	}
 	else if ((x >= DYNAPSE_CONFIG_NEUCOL) && (y >= DYNAPSE_CONFIG_NEUROW)) {
 		coreId = 3;
-		x = U16T(x - DYNAPSE_CONFIG_NEUCOL);
-		y = U16T(y - DYNAPSE_CONFIG_NEUROW);
+		x      = U16T(x - DYNAPSE_CONFIG_NEUCOL);
+		y      = U16T(y - DYNAPSE_CONFIG_NEUROW);
 	}
 
 	// Per-core neuron ID.
@@ -184,7 +184,7 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	struct usb_info *foundDynapse = NULL;
 
 	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, DYNAPSE_REQUIRED_LOGIC_REVISION,
-	DYNAPSE_REQUIRED_FIRMWARE_VERSION, &foundDynapse);
+		DYNAPSE_REQUIRED_FIRMWARE_VERSION, &foundDynapse);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -202,19 +202,19 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
 		// This is a Dynap-SE neuromorphic processor.
-		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DYNAPSE;
-		(*discoveredDevices)[i].deviceErrorOpen = foundDynapse[i].errorOpen;
+		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DYNAPSE;
+		(*discoveredDevices)[i].deviceErrorOpen    = foundDynapse[i].errorOpen;
 		(*discoveredDevices)[i].deviceErrorVersion = foundDynapse[i].errorVersion;
-		struct caer_dynapse_info *dynapseInfoPtr = &((*discoveredDevices)[i].deviceInfo.dynapseInfo);
+		struct caer_dynapse_info *dynapseInfoPtr   = &((*discoveredDevices)[i].deviceInfo.dynapseInfo);
 
-		dynapseInfoPtr->deviceUSBBusNumber = foundDynapse[i].busNumber;
+		dynapseInfoPtr->deviceUSBBusNumber     = foundDynapse[i].busNumber;
 		dynapseInfoPtr->deviceUSBDeviceAddress = foundDynapse[i].devAddress;
 		strncpy(dynapseInfoPtr->deviceSerialNumber, foundDynapse[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 		// Reopen Dynap-SE device to get additional info, if possible at all.
 		if (!foundDynapse[i].errorOpen && !foundDynapse[i].errorVersion) {
-			caerDeviceHandle dynapse = dynapseOpen(0, dynapseInfoPtr->deviceUSBBusNumber,
-				dynapseInfoPtr->deviceUSBDeviceAddress, NULL);
+			caerDeviceHandle dynapse
+				= dynapseOpen(0, dynapseInfoPtr->deviceUSBBusNumber, dynapseInfoPtr->deviceUSBDeviceAddress, NULL);
 			if (dynapse != NULL) {
 				*dynapseInfoPtr = caerDynapseInfoGet(dynapse);
 
@@ -223,7 +223,7 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		}
 
 		// Set/Reset to invalid values, not part of discovery.
-		dynapseInfoPtr->deviceID = -1;
+		dynapseInfoPtr->deviceID     = -1;
 		dynapseInfoPtr->deviceString = NULL;
 	}
 	caerLogDisable(false);
@@ -236,14 +236,14 @@ static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, 
 	dynapseState state = &handle->state;
 
 	if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, U16T(configNum), 0, config,
-		configNum * SPI_CONFIG_MSG_SIZE)) {
+			configNum * SPI_CONFIG_MSG_SIZE)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send chip config, USB transfer failed.");
 		return (false);
 	}
 
-	uint8_t check[2] = { 0 };
-	bool result = usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check,
-		sizeof(check));
+	uint8_t check[2] = {0};
+	bool result
+		= usbControlTransferIn(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE, 0, 0, check, sizeof(check));
 	if ((!result) || (check[0] != VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE) || (check[1] != 0)) {
 		dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send chip config, USB transfer failed on verification.");
 		return (false);
@@ -275,8 +275,8 @@ static inline void freeAllDataMemory(dynapseState state) {
 	containerGenerationDestroy(&state->container);
 }
 
-caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict) {
+caerDeviceHandle dynapseOpen(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	errno = 0;
 
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DYNAPSE_DEVICE_NAME);
@@ -317,13 +317,15 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 	struct usb_info usbInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
-		devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION, DYNAPSE_REQUIRED_FIRMWARE_VERSION,
-		&usbInfo)) {
+			devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION,
+			DYNAPSE_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
-			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
+			dynapseLog(
+				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information (errno=%d).", errno);
+			dynapseLog(CAER_LOG_CRITICAL, handle,
+				"Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
 		free(handle);
@@ -364,9 +366,9 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 
 	handle->info.deviceID = I16T(deviceID);
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
+	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfoString;
+	handle->info.deviceString           = usbInfoString;
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
 	spiConfigReceive(&state->usbState, DYNAPSE_CONFIG_SYSINFO, DYNAPSE_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
@@ -389,7 +391,7 @@ caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8
 
 bool dynapseClose(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	dynapseLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
@@ -413,13 +415,13 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle cdh) {
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_dynapse_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
 	// Check if device type is supported.
 	if (handle->deviceType != CAER_DEVICE_DYNAPSE) {
-		struct caer_dynapse_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_dynapse_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
@@ -428,16 +430,16 @@ struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle cdh) {
 }
 
 static inline void setDynapseBias(caerDeviceHandle cdh, uint8_t biasAddress, uint8_t coarseValue, uint8_t fineValue,
-bool biasHigh, bool typeNormal, bool sexN, bool enabled) {
+	bool biasHigh, bool typeNormal, bool sexN, bool enabled) {
 	struct caer_bias_dynapse biasValue;
 
 	biasValue.biasAddress = biasAddress;
 	biasValue.coarseValue = coarseValue;
-	biasValue.fineValue = fineValue;
-	biasValue.enabled = enabled;
-	biasValue.sexN = sexN;
-	biasValue.typeNormal = typeNormal;
-	biasValue.biasHigh = biasHigh;
+	biasValue.fineValue   = fineValue;
+	biasValue.enabled     = enabled;
+	biasValue.sexN        = sexN;
+	biasValue.typeNormal  = typeNormal;
+	biasValue.biasHigh    = biasHigh;
 
 	uint32_t biasBits = caerBiasDynapseGenerate(biasValue);
 
@@ -697,7 +699,8 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_DELAY, 30);
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_REQ_EXTENSION, 30);
 
-	dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
+	dynapseConfigSet(
+		cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY, 8); // in 125µs time-slices (defaults to 1ms)
 
 	// Turn on chip and AER communication for configuration.
 	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Initializing device ...");
@@ -760,7 +763,7 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 
 bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -803,7 +806,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					// Use multi-command VR for more efficient implementation of reset,
 					// that also guarantees returning to the default state.
 					if (param) {
-						uint8_t spiMultiConfig[2 * SPI_CONFIG_MSG_SIZE] = { 0 };
+						uint8_t spiMultiConfig[2 * SPI_CONFIG_MSG_SIZE] = {0};
 
 						spiMultiConfig[0] = DYNAPSE_CONFIG_MUX;
 						spiMultiConfig[1] = DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET;
@@ -812,10 +815,10 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 						spiMultiConfig[4] = 0x00;
 						spiMultiConfig[5] = 0x01;
 
-						spiMultiConfig[6] = DYNAPSE_CONFIG_MUX;
-						spiMultiConfig[7] = DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET;
-						spiMultiConfig[8] = 0x00;
-						spiMultiConfig[9] = 0x00;
+						spiMultiConfig[6]  = DYNAPSE_CONFIG_MUX;
+						spiMultiConfig[7]  = DYNAPSE_CONFIG_MUX_TIMESTAMP_RESET;
+						spiMultiConfig[8]  = 0x00;
+						spiMultiConfig[9]  = 0x00;
 						spiMultiConfig[10] = 0x00;
 						spiMultiConfig[11] = 0x00;
 
@@ -856,12 +859,12 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 					break;
 
 				case DYNAPSE_CONFIG_CHIP_ID:
-					return (spiConfigSend(&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr,
-						translateChipIdHostToDevice(U8T(param))));
+					return (spiConfigSend(
+						&state->usbState, DYNAPSE_CONFIG_CHIP, paramAddr, translateChipIdHostToDevice(U8T(param))));
 					break;
 
 				case DYNAPSE_CONFIG_CHIP_CONTENT: {
-					uint8_t chipConfig[SPI_CONFIG_MSG_SIZE] = { 0 };
+					uint8_t chipConfig[SPI_CONFIG_MSG_SIZE] = {0};
 
 					chipConfig[0] = DYNAPSE_CONFIG_CHIP;
 					chipConfig[1] = DYNAPSE_CONFIG_CHIP_CONTENT;
@@ -927,7 +930,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				return (false);
 			}
 
-			uint32_t neuronMonitorConfig[2] = { 0 };
+			uint32_t neuronMonitorConfig[2] = {0};
 
 			// Two commands: first reset core monitoring, then set neuron to monitor.
 			neuronMonitorConfig[0] = U32T(0x01 << 11) | U32T(U32T(paramAddr) << 8);
@@ -954,9 +957,9 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 		}
 
 		case DYNAPSE_CONFIG_DEFAULT_SRAM: {
-			bool sx = 0;
+			bool sx    = 0;
 			uint8_t dx = 0;
-			bool sy = 0;
+			bool sy    = 0;
 			uint8_t dy = 0;
 
 			// Route output neurons differently depending on the position of the chip in the board.
@@ -1018,11 +1021,11 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 				for (uint8_t sramId = 0; sramId < DYNAPSE_CONFIG_NUMSRAM_NEU; sramId++) {
 					// use first sram for monitoring
 					if (sramId == 0) {
-						uint8_t virtualCoreId = U8T(neuronId >> 8) & 0x03;
+						uint8_t virtualCoreId   = U8T(neuronId >> 8) & 0x03;
 						uint8_t destinationCore = U8T(paramAddr + DYNAPSE_CHIPID_SHIFT); // (Ab)use chip ID for output.
 
-						sramMonitorConfig[idx++] = caerDynapseGenerateSramBits(neuronId, sramId, virtualCoreId, sx, dx,
-							sy, dy, destinationCore);
+						sramMonitorConfig[idx++] = caerDynapseGenerateSramBits(
+							neuronId, sramId, virtualCoreId, sx, dx, sy, dy, destinationCore);
 					}
 					else {
 						sramMonitorConfig[idx++] = caerDynapseGenerateSramBits(neuronId, sramId, 0, 0, 0, 0, 0, 0);
@@ -1105,7 +1108,7 @@ bool dynapseConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, u
 
 bool dynapseConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -1310,7 +1313,7 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
 	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
@@ -1332,8 +1335,8 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	state->currentPackets.spike = caerSpikeEventPacketAllocate(DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID),
-		0);
+	state->currentPackets.spike
+		= caerSpikeEventPacketAllocate(DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.spike == NULL) {
 		freeAllDataMemory(state);
 
@@ -1341,8 +1344,8 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 		return (false);
 	}
 
-	state->currentPackets.special = caerSpecialEventPacketAllocate(DYNAPSE_SPECIAL_DEFAULT_SIZE,
-		I16T(handle->info.deviceID), 0);
+	state->currentPackets.special
+		= caerSpecialEventPacketAllocate(DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
@@ -1371,14 +1374,16 @@ bool dynapseDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 
 bool dynapseDataStop(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_CHIP, DYNAPSE_CONFIG_CHIP_RUN, false);
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
-		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
+		dynapseConfigSet(
+			cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
+		dynapseConfigSet(
+			cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_MUX, DYNAPSE_CONFIG_MUX_RUN, false);
 		dynapseConfigSet(cdh, DYNAPSE_CONFIG_USB, DYNAPSE_CONFIG_USB_RUN, false);
 	}
@@ -1391,7 +1396,7 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 	freeAllDataMemory(state);
 
 	// Reset packet positions.
-	state->currentPackets.spikePosition = 0;
+	state->currentPackets.spikePosition   = 0;
 	state->currentPackets.specialPosition = 0;
 
 	return (true);
@@ -1399,7 +1404,7 @@ bool dynapseDataStop(caerDeviceHandle cdh) {
 
 caerEventPacketContainer dynapseDataGet(caerDeviceHandle cdh) {
 	dynapseHandle handle = (dynapseHandle) cdh;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
@@ -1408,7 +1413,7 @@ caerEventPacketContainer dynapseDataGet(caerDeviceHandle cdh) {
 
 static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	dynapseHandle handle = vhd;
-	dynapseState state = &handle->state;
+	dynapseState state   = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -1433,14 +1438,14 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 
 		if (state->currentPackets.spike == NULL) {
 			state->currentPackets.spike = caerSpikeEventPacketAllocate(
-			DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				DYNAPSE_SPIKE_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.spike == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate spike event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.spikePosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.spike)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.spike)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpikeEventPacket grownPacket = (caerSpikeEventPacket) caerEventPacketGrow(
@@ -1455,14 +1460,14 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 
 		if (state->currentPackets.special == NULL) {
 			state->currentPackets.special = caerSpecialEventPacketAllocate(
-			DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				DYNAPSE_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.specialPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
@@ -1475,10 +1480,10 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 			state->currentPackets.special = grownPacket;
 		}
 
-		bool tsReset = false;
+		bool tsReset   = false;
 		bool tsBigWrap = false;
 
-		uint16_t event = le16toh(*((const uint16_t * ) (&buffer[i])));
+		uint16_t event = le16toh(*((const uint16_t *) (&buffer[i])));
 
 		// Check if timestamp.
 		if ((event & 0x8000) != 0) {
@@ -1488,7 +1493,7 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 		}
 		else {
 			// Look at the code, to determine event and data type.
-			uint8_t code = U8T((event & 0x7000) >> 12);
+			uint8_t code  = U8T((event & 0x7000) >> 12);
 			uint16_t data = (event & 0x0FFF);
 
 			switch (code) {
@@ -1499,8 +1504,8 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 							break;
 
 						case 1: { // Timetamp reset
-							handleTimestampResetNewLogic(&state->timestamps, handle->info.deviceString,
-								&state->deviceLogLevel);
+							handleTimestampResetNewLogic(
+								&state->timestamps, handle->info.deviceString, &state->deviceLogLevel);
 
 							containerGenerationCommitTimestampReset(&state->container);
 							containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
@@ -1545,8 +1550,8 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 
 					uint32_t neuronID = U16T(data >> 4) & 0x00FF;
 
-					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(state->currentPackets.spike,
-						state->currentPackets.spikePosition);
+					caerSpikeEvent currentSpikeEvent = caerSpikeEventPacketGetEvent(
+						state->currentPackets.spike, state->currentPackets.spikePosition);
 
 					// Timestamp at event-stream insertion point.
 					caerSpikeEventSetTimestamp(currentSpikeEvent, state->timestamps.current);
@@ -1560,8 +1565,8 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 				}
 
 				case 7: { // Timestamp wrap
-					tsBigWrap = handleTimestampWrapNewLogic(&state->timestamps, data, TS_WRAP_ADD,
-						handle->info.deviceString, &state->deviceLogLevel);
+					tsBigWrap = handleTimestampWrapNewLogic(
+						&state->timestamps, data, TS_WRAP_ADD, handle->info.deviceString, &state->deviceLogLevel);
 
 					if (tsBigWrap) {
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
@@ -1588,12 +1593,13 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPackets.spikePosition >= currentPacketContainerCommitSize)
-				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit
+			= (currentPacketContainerCommitSize > 0)
+			  && ((state->currentPackets.spikePosition >= currentPacketContainerCommitSize)
+					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
-			state->timestamps.wrapOverflow, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
 		// main-loop, when any of the required conditions are met.
@@ -1603,21 +1609,21 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 			bool emptyContainerCommit = true;
 
 			if (state->currentPackets.spikePosition > 0) {
-				containerGenerationSetPacket(&state->container, DYNAPSE_SPIKE_EVENT_POS,
-					(caerEventPacketHeader) state->currentPackets.spike);
+				containerGenerationSetPacket(
+					&state->container, DYNAPSE_SPIKE_EVENT_POS, (caerEventPacketHeader) state->currentPackets.spike);
 
-				state->currentPackets.spike = NULL;
+				state->currentPackets.spike         = NULL;
 				state->currentPackets.spikePosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                = false;
 			}
 
 			if (state->currentPackets.specialPosition > 0) {
-				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentPackets.special);
+				containerGenerationSetPacket(
+					&state->container, SPECIAL_EVENT, (caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentPackets.special = NULL;
+				state->currentPackets.special         = NULL;
 				state->currentPackets.specialPosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                  = false;
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
@@ -1658,7 +1664,7 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle cdh, const uint32_t *pointer, siz
 	size_t idxConfig = 0;
 
 	while (numConfig > 0) {
-		size_t configNum = (numConfig > SPI_CONFIG_MAX) ? (SPI_CONFIG_MAX) : (numConfig);
+		size_t configNum  = (numConfig > SPI_CONFIG_MAX) ? (SPI_CONFIG_MAX) : (numConfig);
 		size_t configSize = configNum * SPI_CONFIG_MSG_SIZE;
 
 		if (!sendUSBCommandVerifyMultiple(handle, spiMultiConfig + idxConfig, configNum)) {
@@ -1695,8 +1701,8 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 		// by just writing it manually.
 		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
 		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, data[numWords - 1]);
-		spiConfigSend(&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS,
-			baseAddr + (U32T(numWords) - 1));
+		spiConfigSend(
+			&state->usbState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, baseAddr + (U32T(numWords) - 1));
 
 		// Reduce numWords to the, now even, number of remaining words.
 		// Otherwise the spiMultiConfig array filling loop will be incorrect!
@@ -1738,11 +1744,11 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	size_t idxConfig = 0;
 
 	while (numConfig > 0) {
-		size_t configNum = (numConfig > SPI_CONFIG_MAX) ? (SPI_CONFIG_MAX) : (numConfig);
+		size_t configNum  = (numConfig > SPI_CONFIG_MAX) ? (SPI_CONFIG_MAX) : (numConfig);
 		size_t configSize = configNum * SPI_CONFIG_MSG_SIZE;
 
 		if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, U16T(configNum), 0,
-			spiMultiConfig + idxConfig, configSize)) {
+				spiMultiConfig + idxConfig, configSize)) {
 			dynapseLog(CAER_LOG_CRITICAL, handle, "Failed to send SRAM burst data, USB transfer failed.");
 
 			free(spiMultiConfig);
@@ -1760,8 +1766,8 @@ bool caerDynapseWriteSramWords(caerDeviceHandle cdh, const uint16_t *data, uint3
 	return (true);
 }
 
-bool caerDynapseWriteCam(caerDeviceHandle cdh, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId,
-	uint8_t synapseType) {
+bool caerDynapseWriteCam(
+	caerDeviceHandle cdh, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType) {
 	dynapseHandle handle = (dynapseHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -1823,14 +1829,15 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle cdh, uint16_t neuronAddr,
 	uint16_t deviceRate = U16T(rateHz / 0.06706f);
 
 	// Ready the data for programming (put it in data register).
-	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA,
-		deviceRate) == false) {
+	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA, deviceRate)
+		== false) {
 		return (false);
 	}
 
 	// Trigger the write by writing the address register.
-	if (caerDeviceConfigSet(cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS,
-		neuronAddr) == false) {
+	if (caerDeviceConfigSet(
+			cdh, DYNAPSE_CONFIG_POISSONSPIKEGEN, DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS, neuronAddr)
+		== false) {
 		return (false);
 	}
 
@@ -1884,9 +1891,9 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 	}
 	// So are the Buffer biases.
 	else if ((dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER)
-		|| (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
-		biasValue |= U32T(
-			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+			 || (dynapseBias.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
+		biasValue |= U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12)
+					 | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 	// Standard coarse-fine biases.
 	else {
@@ -1903,15 +1910,15 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias) {
 			biasValue |= 0x08U;
 		}
 
-		biasValue |= U32T(
-			(coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12) | U32T((dynapseBias.fineValue & 0xFF) << 4);
+		biasValue |= U32T((coarseValueReverse(dynapseBias.coarseValue) & 0x07) << 12)
+					 | U32T((dynapseBias.fineValue & 0xFF) << 4);
 	}
 
 	return (biasValue);
 }
 
 struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
-	struct caer_bias_dynapse biasValue = { 0, 0, 0, false, false, false, false };
+	struct caer_bias_dynapse biasValue = {0, 0, 0, false, false, false, false};
 
 	// Decompose bias integer into its parts.
 	biasValue.biasAddress = (dynapseBias >> 18) & 0x7F;
@@ -1926,19 +1933,19 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias) {
 	}
 	// So are the Buffer biases.
 	else if ((biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_U_BUFFER)
-		|| (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
+			 || (biasValue.biasAddress == DYNAPSE_CONFIG_BIAS_D_BUFFER)) {
 		biasValue.coarseValue = coarseValueReverse((dynapseBias >> 12) & 0x07);
-		biasValue.fineValue = (dynapseBias >> 4) & 0xFF;
+		biasValue.fineValue   = (dynapseBias >> 4) & 0xFF;
 	}
 	// Standard coarse-fine biases.
 	else {
-		biasValue.enabled = (dynapseBias & 0x01);
-		biasValue.sexN = (dynapseBias & 0x02);
+		biasValue.enabled    = (dynapseBias & 0x01);
+		biasValue.sexN       = (dynapseBias & 0x02);
 		biasValue.typeNormal = (dynapseBias & 0x04);
-		biasValue.biasHigh = (dynapseBias & 0x08);
+		biasValue.biasHigh   = (dynapseBias & 0x08);
 
 		biasValue.coarseValue = coarseValueReverse((dynapseBias >> 12) & 0x07);
-		biasValue.fineValue = (dynapseBias >> 4) & 0xFF;
+		biasValue.fineValue   = (dynapseBias >> 4) & 0xFF;
 	}
 
 	return (biasValue);

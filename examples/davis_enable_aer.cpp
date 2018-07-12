@@ -5,8 +5,8 @@
 * After operating this routine, the program exits, leaving the DAVIS
 * sensor in external AER mode.
 *
-*  Author: Federico Corradi, 2017
-*  compile with: g++ -std=c++11 -pedantic -Wall -Wextra -O2 -o davis_enable_aer davis_enable_aer.cpp -D_DEFAULT_SOURCE=1 -lcaer
+* Compile with:
+* g++ -std=c++11 -pedantic -Wall -Wextra -O2 -o davis_enable_aer davis_enable_aer.cpp -D_DEFAULT_SOURCE=1 -lcaer
 */
 #include <libcaercpp/devices/davis.hpp>
 

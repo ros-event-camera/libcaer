@@ -32,6 +32,9 @@ static inline int32_t downAndClip(int32_t newExposure, int32_t lastExposure) {
 
 int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frames[DAVIS_APS_ROI_REGIONS_MAX],
 	uint32_t exposureFrameValue, uint32_t exposureLastSetValue, uint8_t deviceLogLevel, const char *deviceLogString) {
+	(void) deviceLogLevel;
+	(void) deviceLogString;
+
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
 	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Last set exposure value was: %d.",
 		exposureLastSetValue);
@@ -56,8 +59,8 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 		// Count enabled APS ROI regions.
 		activeRoiRegions++;
 
-		int32_t frameSizeX = caerFrameEventGetLengthX(frames[idx]);
-		int32_t frameSizeY = caerFrameEventGetLengthY(frames[idx]);
+		int32_t frameSizeX          = caerFrameEventGetLengthX(frames[idx]);
+		int32_t frameSizeY          = caerFrameEventGetLengthY(frames[idx]);
 		const uint16_t *framePixels = caerFrameEventGetPixelArrayUnsafeConst(frames[idx]);
 
 		// Reset histograms.
@@ -80,12 +83,12 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 		// Calculate statistics on pixel histogram. Sum of histogram is always equal
 		// to the number of pixels in the camera.
-		size_t pixelsSum = (size_t) (frameSizeX * frameSizeY);
+		size_t pixelsSum = (size_t)(frameSizeX * frameSizeY);
 
-		size_t pixelsBinLow = (size_t) (AUTOEXPOSURE_LOW_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
-		size_t pixelsBinHigh = (size_t) (AUTOEXPOSURE_HIGH_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
+		size_t pixelsBinLow  = (size_t)(AUTOEXPOSURE_LOW_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
+		size_t pixelsBinHigh = (size_t)(AUTOEXPOSURE_HIGH_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
 
-		size_t pixelsSumLow = 0;
+		size_t pixelsSumLow  = 0;
 		size_t pixelsSumHigh = 0;
 
 		for (size_t i = 0; i < pixelsBinLow; i++) {
@@ -96,7 +99,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 			pixelsSumHigh += state->pixelHistogram[i];
 		}
 
-		float pixelsFracLow = (float) pixelsSumLow / (float) pixelsSum;
+		float pixelsFracLow  = (float) pixelsSumLow / (float) pixelsSum;
 		float pixelsFracHigh = (float) pixelsSumHigh / (float) pixelsSum;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
@@ -106,7 +109,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 			(double) pixelsFracHigh);
 #endif
 
-		float fracLowError = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
+		float fracLowError  = pixelsFracLow - AUTOEXPOSURE_UNDEROVER_FRAC;
 		float fracHighError = pixelsFracHigh - AUTOEXPOSURE_UNDEROVER_FRAC;
 
 		// Exposure okay by default.
@@ -114,21 +117,21 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 		if ((pixelsFracLow >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracHigh < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 			// Underexposed but not overexposed.
-			newExposure = I32T(
-				exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracLowError, 1.65F));
+			newExposure
+				= I32T(exposureLastSetValue) + I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracLowError, 1.65F));
 
 			newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 		}
 		else if ((pixelsFracHigh >= AUTOEXPOSURE_UNDEROVER_FRAC) && (pixelsFracLow < AUTOEXPOSURE_UNDEROVER_FRAC)) {
 			// Overexposed but not underexposed.
-			newExposure = I32T(
-				exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracHighError, 1.65F));
+			newExposure
+				= I32T(exposureLastSetValue) - I32T(AUTOEXPOSURE_UNDEROVER_CORRECTION * powf(fracHighError, 1.65F));
 
 			newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 		}
 		else {
 			// Calculate mean sample value from histogram.
-			float meanSampleValueNum = 0;
+			float meanSampleValueNum   = 0;
 			float meanSampleValueDenom = 0;
 
 			for (size_t i = 0; i < AUTOEXPOSURE_HISTOGRAM_MSV; i++) {
@@ -141,7 +144,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 				meanSampleValueDenom = 1.0F;
 			}
 
-			float meanSampleValue = meanSampleValueNum / meanSampleValueDenom;
+			float meanSampleValue      = meanSampleValueNum / meanSampleValueDenom;
 			float meanSampleValueError = (AUTOEXPOSURE_HISTOGRAM_MSV / 2.0F) - meanSampleValue;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
@@ -163,14 +166,14 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 			if (meanSampleValueError > 0.1F) {
 				// Underexposed.
 				newExposure = I32T(exposureLastSetValue)
-					+ (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
+							  + (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
 
 				newExposure = upAndClip(newExposure, I32T(exposureLastSetValue));
 			}
 			else if (meanSampleValueError < -0.1F) {
 				// Overexposed.
 				newExposure = I32T(exposureLastSetValue)
-					- (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
+							  - (I32T(AUTOEXPOSURE_MSV_CORRECTION * powf(meanSampleValueError, 2.0F)) / divisor);
 
 				newExposure = downAndClip(newExposure, I32T(exposureLastSetValue));
 			}

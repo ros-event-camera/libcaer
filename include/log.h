@@ -9,27 +9,27 @@
 
 #ifdef __cplusplus
 
-#include <cstdint>
 #include <cstdarg>
+#include <cstdint>
 
 #else
 
-#include <stdint.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-	#if defined(__USE_MINGW_ANSI_STDIO)
-		#define ATTRIBUTE_FORMAT(N) __attribute__ ((format (gnu_printf, N, (N+1))))
-		#define ATTRIBUTE_FORMAT_VA(N) __attribute__ ((format (gnu_printf, N, 0)))
-	#else
-		#define ATTRIBUTE_FORMAT(N) __attribute__ ((format (printf, N, (N+1))))
-		#define ATTRIBUTE_FORMAT_VA(N) __attribute__ ((format (printf, N, 0)))
-	#endif
+#if defined(__USE_MINGW_ANSI_STDIO)
+#define ATTRIBUTE_FORMAT(N) __attribute__((format(gnu_printf, N, (N + 1))))
+#define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(gnu_printf, N, 0)))
 #else
-	#define ATTRIBUTE_FORMAT(N)
-	#define ATTRIBUTE_FORMAT_VA(N)
+#define ATTRIBUTE_FORMAT(N) __attribute__((format(printf, N, (N + 1))))
+#define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(printf, N, 0)))
+#endif
+#else
+#define ATTRIBUTE_FORMAT(N)
+#define ATTRIBUTE_FORMAT_VA(N)
 #endif
 
 #ifdef __cplusplus
@@ -149,7 +149,8 @@ void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *fo
  * @param args the parameters to be formatted according to the format string (see printf()).
  *             This is an argument list as returned by va_start().
  */
-void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(3);
+void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args)
+	ATTRIBUTE_FORMAT_VA(3);
 
 /**
  * Tertiary logging function.

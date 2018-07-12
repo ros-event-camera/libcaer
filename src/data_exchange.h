@@ -2,8 +2,8 @@
 #define LIBCAER_SRC_DATA_EXCHANGE_H_
 
 #include "libcaer.h"
-#include "devices/device.h"
 #include "ringbuffer.h"
+#include "devices/device.h"
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
@@ -51,9 +51,10 @@ static inline void dataExchangeDestroy(dataExchange state) {
 
 static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomic_uint_fast32_t *transfersRunning) {
 	caerEventPacketContainer container = NULL;
-	uint32_t sleepCounter = 0;
+	uint32_t sleepCounter              = 0;
 
-	retry: container = caerRingBufferGet(state->buffer);
+retry:
+	container = caerRingBufferGet(state->buffer);
 
 	if (container != NULL) {
 		// Found an event container, return it and signal this piece of data
@@ -72,7 +73,7 @@ static inline caerEventPacketContainer dataExchangeGet(dataExchange state, atomi
 		&& (sleepCounter < 1000)) {
 		// Don't retry right away in a tight loop, back off and wait a little.
 		// If no data is available, sleep for a millisecond to avoid wasting resources.
-		struct timespec noDataSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
+		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 1000000};
 		if (thrd_sleep(&noDataSleep, NULL) == 0) {
 			sleepCounter++;
 			goto retry;
@@ -96,8 +97,8 @@ static inline bool dataExchangePut(dataExchange state, caerEventPacketContainer 
 	}
 }
 
-static inline void dataExchangePutForce(dataExchange state, atomic_uint_fast32_t *transfersRunning,
-	caerEventPacketContainer container) {
+static inline void dataExchangePutForce(
+	dataExchange state, atomic_uint_fast32_t *transfersRunning, caerEventPacketContainer container) {
 	while (!caerRingBufferPut(state->buffer, container)) {
 		// Prevent dead-lock if shutdown is requested and nothing is consuming
 		// data anymore, but the ring-buffer is full (and would thus never empty),
@@ -131,7 +132,7 @@ static inline void dataExchangeSetNotify(dataExchange state, void (*dataNotifyIn
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr) {
 	state->notifyDataIncrease = dataNotifyIncrease;
 	state->notifyDataDecrease = dataNotifyDecrease;
-	state->notifyDataUserPtr = dataNotifyUserPtr;
+	state->notifyDataUserPtr  = dataNotifyUserPtr;
 }
 
 static inline bool dataExchangeStartProducers(dataExchange state) {

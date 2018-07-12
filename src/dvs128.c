@@ -19,8 +19,8 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 
 	struct usb_info *foundDVS128 = NULL;
 
-	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, DVS_REQUIRED_FIRMWARE_VERSION,
-		&foundDVS128);
+	ssize_t result
+		= usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, DVS_REQUIRED_FIRMWARE_VERSION, &foundDVS128);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -38,19 +38,19 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
 		// This is a DVS128.
-		(*discoveredDevices)[i].deviceType = CAER_DEVICE_DVS128;
-		(*discoveredDevices)[i].deviceErrorOpen = foundDVS128[i].errorOpen;
+		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVS128;
+		(*discoveredDevices)[i].deviceErrorOpen    = foundDVS128[i].errorOpen;
 		(*discoveredDevices)[i].deviceErrorVersion = foundDVS128[i].errorVersion;
-		struct caer_dvs128_info *dvs128InfoPtr = &((*discoveredDevices)[i].deviceInfo.dvs128Info);
+		struct caer_dvs128_info *dvs128InfoPtr     = &((*discoveredDevices)[i].deviceInfo.dvs128Info);
 
-		dvs128InfoPtr->deviceUSBBusNumber = foundDVS128[i].busNumber;
+		dvs128InfoPtr->deviceUSBBusNumber     = foundDVS128[i].busNumber;
 		dvs128InfoPtr->deviceUSBDeviceAddress = foundDVS128[i].devAddress;
 		strncpy(dvs128InfoPtr->deviceSerialNumber, foundDVS128[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 		// Reopen DVS128 device to get additional info, if possible at all.
 		if (!foundDVS128[i].errorOpen && !foundDVS128[i].errorVersion) {
-			caerDeviceHandle dvs = dvs128Open(0, dvs128InfoPtr->deviceUSBBusNumber,
-				dvs128InfoPtr->deviceUSBDeviceAddress, NULL);
+			caerDeviceHandle dvs
+				= dvs128Open(0, dvs128InfoPtr->deviceUSBBusNumber, dvs128InfoPtr->deviceUSBDeviceAddress, NULL);
 			if (dvs != NULL) {
 				*dvs128InfoPtr = caerDVS128InfoGet(dvs);
 
@@ -59,7 +59,7 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 		}
 
 		// Set/Reset to invalid values, not part of discovery.
-		dvs128InfoPtr->deviceID = -1;
+		dvs128InfoPtr->deviceID     = -1;
 		dvs128InfoPtr->deviceString = NULL;
 	}
 	caerLogDisable(false);
@@ -91,8 +91,8 @@ static inline void freeAllDataMemory(dvs128State state) {
 	containerGenerationDestroy(&state->container);
 }
 
-caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict) {
+caerDeviceHandle dvs128Open(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	errno = 0;
 
 	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DVS_DEVICE_NAME);
@@ -136,12 +136,13 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	struct usb_info usbInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
-		serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, see above log message for more information (errno=%d).", errno);
+			dvs128Log(CAER_LOG_CRITICAL, handle,
+				"Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
 		free(handle);
@@ -180,13 +181,13 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 	// Populate info variables based on data from device.
 	handle->info.deviceID = I16T(deviceID);
 	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber = usbInfo.busNumber;
+	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString = usbInfoString;
-	handle->info.logicVersion = 1;
-	handle->info.deviceIsMaster = true;
-	handle->info.dvsSizeX = DVS_ARRAY_SIZE_X;
-	handle->info.dvsSizeY = DVS_ARRAY_SIZE_Y;
+	handle->info.deviceString           = usbInfoString;
+	handle->info.logicVersion           = 1;
+	handle->info.deviceIsMaster         = true;
+	handle->info.dvsSizeX               = DVS_ARRAY_SIZE_X;
+	handle->info.dvsSizeY               = DVS_ARRAY_SIZE_Y;
 
 	dvs128Log(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
 		usbInfo.busNumber, usbInfo.devAddress);
@@ -196,7 +197,7 @@ caerDeviceHandle dvs128Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_
 
 bool dvs128Close(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	dvs128Log(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
@@ -220,13 +221,13 @@ struct caer_dvs128_info caerDVS128InfoGet(caerDeviceHandle cdh) {
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		struct caer_dvs128_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_dvs128_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
 	// Check if device type is supported.
 	if (handle->deviceType != CAER_DEVICE_DVS128) {
-		struct caer_dvs128_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_dvs128_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
@@ -236,7 +237,7 @@ struct caer_dvs128_info caerDVS128InfoGet(caerDeviceHandle cdh) {
 
 bool dvs128SendDefaultConfig(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	// Set all biases to default value. Based on DVS128 Fast biases.
 	caerIntegerToByteArray(1992, state->dvs.biases[DVS128_CONFIG_BIAS_CAS], BIAS_LENGTH);
@@ -258,7 +259,7 @@ bool dvs128SendDefaultConfig(caerDeviceHandle cdh) {
 
 bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -324,8 +325,8 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					break;
 
 				case DVS128_CONFIG_DVS_TS_MASTER:
-					if (!usbControlTransferOut(&state->usbState, VENDOR_REQUEST_TS_MASTER, (param & 0x01), 0, NULL,
-						0)) {
+					if (!usbControlTransferOut(
+							&state->usbState, VENDOR_REQUEST_TS_MASTER, (param & 0x01), 0, NULL, 0)) {
 						return (false);
 					}
 					atomic_store(&state->dvs.isMaster, (param & 0x01));
@@ -376,7 +377,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 
 bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -459,7 +460,7 @@ bool dvs128ConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
 	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
@@ -481,8 +482,8 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 		return (false);
 	}
 
-	state->currentPackets.polarity = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
-		I16T(handle->info.deviceID), 0);
+	state->currentPackets.polarity
+		= caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
@@ -490,8 +491,8 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 		return (false);
 	}
 
-	state->currentPackets.special = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID),
-		0);
+	state->currentPackets.special
+		= caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
@@ -516,7 +517,7 @@ bool dvs128DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr)
 
 bool dvs128DataStop(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 6.
@@ -532,7 +533,7 @@ bool dvs128DataStop(caerDeviceHandle cdh) {
 
 	// Reset packet positions.
 	state->currentPackets.polarityPosition = 0;
-	state->currentPackets.specialPosition = 0;
+	state->currentPackets.specialPosition  = 0;
 
 	return (true);
 }
@@ -540,7 +541,7 @@ bool dvs128DataStop(caerDeviceHandle cdh) {
 // Remember to properly free the returned memory after usage!
 caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 	dvs128Handle handle = (dvs128Handle) cdh;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
@@ -558,7 +559,7 @@ caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 
 static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	dvs128Handle handle = vhd;
-	dvs128State state = &handle->state;
+	dvs128State state   = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -582,15 +583,15 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 		}
 
 		if (state->currentPackets.polarity == NULL) {
-			state->currentPackets.polarity = caerPolarityEventPacketAllocate(DVS_POLARITY_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				DVS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.polarityPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
@@ -604,15 +605,15 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 		}
 
 		if (state->currentPackets.special == NULL) {
-			state->currentPackets.special = caerSpecialEventPacketAllocate(DVS_SPECIAL_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				DVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.specialPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
@@ -625,7 +626,7 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 			state->currentPackets.special = grownPacket;
 		}
 
-		bool tsReset = false;
+		bool tsReset   = false;
 		bool tsBigWrap = false;
 
 		if ((buffer[i + 3] & DVS128_TIMESTAMP_WRAP_MASK) == DVS128_TIMESTAMP_WRAP_MASK) {
@@ -635,14 +636,14 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 				// start detecting overruns of the 32bit value.
 				state->timestamps.wrapAdd = 0;
 
-				state->timestamps.last = 0;
+				state->timestamps.last    = 0;
 				state->timestamps.current = 0;
 
 				// Increment TSOverflow counter.
 				state->timestamps.wrapOverflow++;
 
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
-					state->currentPackets.specialPosition);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(
+					state->currentPackets.special, state->currentPackets.specialPosition);
 				state->currentPackets.specialPosition++;
 
 				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
@@ -657,22 +658,22 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 				// the wrapAdd, uses only 14 bit timestamps. Each wrap is 2^14 µs (~16ms).
 				state->timestamps.wrapAdd += TS_WRAP_ADD;
 
-				state->timestamps.last = state->timestamps.current;
+				state->timestamps.last    = state->timestamps.current;
 				state->timestamps.current = state->timestamps.wrapAdd;
 				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
-					handle->info.deviceString, &handle->state.deviceLogLevel);
+				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
+					&handle->state.deviceLogLevel);
 			}
 		}
 		else if ((buffer[i + 3] & DVS128_TIMESTAMP_RESET_MASK) == DVS128_TIMESTAMP_RESET_MASK) {
 			// timestamp bit 14 is one -> wrapAdd reset: this firmware
 			// version uses reset events to reset timestamps
 			state->timestamps.wrapOverflow = 0;
-			state->timestamps.wrapAdd = 0;
-			state->timestamps.last = 0;
-			state->timestamps.current = 0;
+			state->timestamps.wrapAdd      = 0;
+			state->timestamps.last         = 0;
+			state->timestamps.current      = 0;
 			containerGenerationCommitTimestampReset(&state->container);
 			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
@@ -690,18 +691,18 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 			uint16_t timestampUSB = le16toh(*((const uint16_t *) (&buffer[i + 2])));
 
 			// Expand to 32 bits. (Tick is 1µs already.)
-			state->timestamps.last = state->timestamps.current;
+			state->timestamps.last    = state->timestamps.current;
 			state->timestamps.current = state->timestamps.wrapAdd + timestampUSB;
 			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 			// Check monotonicity of timestamps.
-			checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
-				handle->info.deviceString, &handle->state.deviceLogLevel);
+			checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
+				&handle->state.deviceLogLevel);
 
 			if ((addressUSB & DVS128_SYNC_EVENT_MASK) != 0) {
 				// Special Trigger Event (MSB is set)
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
-					state->currentPackets.specialPosition);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(
+					state->currentPackets.special, state->currentPackets.specialPosition);
 				state->currentPackets.specialPosition++;
 
 				caerSpecialEventSetTimestamp(currentEvent, state->timestamps.current);
@@ -710,28 +711,28 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 			}
 			else {
 				// Invert X values (flip along X axis). To correct for flipped camera.
-				uint16_t x = U16T(
-					(DVS_ARRAY_SIZE_X - 1) - U16T((addressUSB >> DVS128_X_ADDR_SHIFT) & DVS128_X_ADDR_MASK));
+				uint16_t x
+					= U16T((DVS_ARRAY_SIZE_X - 1) - U16T((addressUSB >> DVS128_X_ADDR_SHIFT) & DVS128_X_ADDR_MASK));
 				// Invert Y values (flip along Y axis). To convert to CG format.
-				uint16_t y = U16T(
-					(DVS_ARRAY_SIZE_Y - 1) - U16T((addressUSB >> DVS128_Y_ADDR_SHIFT) & DVS128_Y_ADDR_MASK));
+				uint16_t y
+					= U16T((DVS_ARRAY_SIZE_Y - 1) - U16T((addressUSB >> DVS128_Y_ADDR_SHIFT) & DVS128_Y_ADDR_MASK));
 				// Invert polarity bit. Hardware is like this.
 				bool polarity = ((U16T(addressUSB >> DVS128_POLARITY_SHIFT) & DVS128_POLARITY_MASK) == 0) ? (1) : (0);
 
 				// Check range conformity.
 				if (x >= DVS_ARRAY_SIZE_X) {
-					dvs128Log(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
-					DVS_ARRAY_SIZE_X - 1, x);
+					dvs128Log(
+						CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".", DVS_ARRAY_SIZE_X - 1, x);
 					continue; // Skip invalid event.
 				}
 				if (y >= DVS_ARRAY_SIZE_Y) {
-					dvs128Log(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
-					DVS_ARRAY_SIZE_Y - 1, y);
+					dvs128Log(
+						CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".", DVS_ARRAY_SIZE_Y - 1, y);
 					continue; // Skip invalid event.
 				}
 
-				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
-					state->currentPackets.polarityPosition);
+				caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(
+					state->currentPackets.polarity, state->currentPackets.polarityPosition);
 				state->currentPackets.polarityPosition++;
 
 				caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
@@ -746,12 +747,13 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit
+			= (currentPacketContainerCommitSize > 0)
+			  && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
-			state->timestamps.wrapOverflow, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// NOTE: with the current DVS128 architecture, currentTimestamp always comes together
 		// with an event, so the very first event that matches this threshold will be
@@ -765,21 +767,21 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 			bool emptyContainerCommit = true;
 
 			if (state->currentPackets.polarityPosition > 0) {
-				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
-					(caerEventPacketHeader) state->currentPackets.polarity);
+				containerGenerationSetPacket(
+					&state->container, POLARITY_EVENT, (caerEventPacketHeader) state->currentPackets.polarity);
 
-				state->currentPackets.polarity = NULL;
+				state->currentPackets.polarity         = NULL;
 				state->currentPackets.polarityPosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                   = false;
 			}
 
 			if (state->currentPackets.specialPosition > 0) {
-				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentPackets.special);
+				containerGenerationSetPacket(
+					&state->container, SPECIAL_EVENT, (caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentPackets.special = NULL;
+				state->currentPackets.special         = NULL;
 				state->currentPackets.specialPosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                  = false;
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,

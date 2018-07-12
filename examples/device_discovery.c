@@ -79,8 +79,8 @@ int main(void) {
 						printf("  - APS Quad-ROI: %d\n", discovered[i].deviceInfo.davisInfo.apsHasQuadROI);
 						printf("  - APS External ADC: %d\n", discovered[i].deviceInfo.davisInfo.apsHasExternalADC);
 						printf("  - APS Internal ADC: %d\n", discovered[i].deviceInfo.davisInfo.apsHasInternalADC);
-						printf("  - External IO Generator: %d\n",
-							discovered[i].deviceInfo.davisInfo.extInputHasGenerator);
+						printf(
+							"  - External IO Generator: %d\n", discovered[i].deviceInfo.davisInfo.extInputHasGenerator);
 						printf("  - External IO Extra Detectors: %d\n",
 							discovered[i].deviceInfo.davisInfo.extInputHasExtraDetectors);
 						printf("  - Multiplexer Statistics: %d\n", discovered[i].deviceInfo.davisInfo.muxHasStatistics);
@@ -104,8 +104,8 @@ int main(void) {
 						printf("  - Logic Clock Frequency: %d\n", discovered[i].deviceInfo.dynapseInfo.logicClock);
 						printf("  - Chip ID: %d\n", discovered[i].deviceInfo.dynapseInfo.chipID);
 						printf("  - AER Statistics: %d\n", discovered[i].deviceInfo.dynapseInfo.aerHasStatistics);
-						printf("  - Multiplexer Statistics: %d\n",
-							discovered[i].deviceInfo.dynapseInfo.muxHasStatistics);
+						printf(
+							"  - Multiplexer Statistics: %d\n", discovered[i].deviceInfo.dynapseInfo.muxHasStatistics);
 					}
 				}
 				printf("\n");

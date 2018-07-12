@@ -8,10 +8,10 @@
 #ifndef LIBCAER_DEVICES_DEVICE_DISCOVER_H_
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_H_
 
-#include "dvs128.h"
-#include "edvs.h"
 #include "davis.h"
+#include "dvs128.h"
 #include "dynapse.h"
+#include "edvs.h"
 
 /**
  * Result of a device discovery operation.

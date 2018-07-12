@@ -1,12 +1,12 @@
 #include "libcaer.h"
-#include <stdatomic.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <time.h>
 #include <unistd.h>
 
-static atomic_uint_fast8_t caerLogLevel = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
-static atomic_int caerLogFileDescriptor1 = ATOMIC_VAR_INIT(STDERR_FILENO);
-static atomic_int caerLogFileDescriptor2 = ATOMIC_VAR_INIT(-1);
+static atomic_uint_fast8_t caerLogLevel     = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
+static atomic_int caerLogFileDescriptor1    = ATOMIC_VAR_INIT(STDERR_FILENO);
+static atomic_int caerLogFileDescriptor2    = ATOMIC_VAR_INIT(-1);
 static _Thread_local bool caerLogDisabledTL = false;
 
 void caerLogLevelSet(enum caer_log_level logLevel) {
@@ -156,11 +156,11 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 	vsnprintf(logMessageString, 2048, format, args);
 
 	// Copy all strings into one and ensure NUL termination.
-	size_t logLength = (size_t) snprintf(NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,
-		logMessageString);
+	size_t logLength = (size_t) snprintf(
+		NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, logMessageString);
 	char logString[logLength + 1];
-	snprintf(logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem,
-		logMessageString);
+	snprintf(
+		logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, logMessageString);
 
 	if (logFileDescriptor1 >= 0) {
 		write(logFileDescriptor1, logString, logLength);

@@ -16,7 +16,7 @@
 
 #define USB_DEFAULT_DATA_ENDPOINT 0x82
 
-#define VENDOR_REQUEST_FPGA_CONFIG          0xBF
+#define VENDOR_REQUEST_FPGA_CONFIG 0xBF
 #define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
 
 enum { TRANS_STOPPED = 0, TRANS_RUNNING = 1 };
@@ -38,7 +38,7 @@ struct usb_state {
 	atomic_uint_fast32_t dataTransfersRun;
 	mtx_t dataTransfersLock;
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
-	uint32_t dataTransfersLength; // LOCK PROTECTED.
+	uint32_t dataTransfersLength;           // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
 	uint32_t failedDataTransfers;
 	// USB Data Transfers handling callback
@@ -69,9 +69,10 @@ void usbDeviceClose(usbState state);
 
 void usbSetThreadName(usbState state, const char *threadName);
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
-void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
-	void *usbShutdownCallbackPtr);
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent),
+	void *usbDataCallbackPtr);
+void usbSetShutdownCallback(
+	usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr), void *usbShutdownCallbackPtr);
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber);
 void usbSetTransfersSize(usbState state, uint32_t transfersSize);
@@ -130,10 +131,10 @@ bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValu
 bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, size_t dataSize,
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlInCallbackPtr);
-bool usbControlTransferOut(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
-	size_t dataSize);
-bool usbControlTransferIn(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
-	size_t dataSize);
+bool usbControlTransferOut(
+	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
+bool usbControlTransferIn(
+	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
 
 bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,

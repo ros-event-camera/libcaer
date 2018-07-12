@@ -1,7 +1,7 @@
-#include <csignal>
-#include <atomic>
 #include <libcaercpp/devices/davis.hpp>
 #include <libcaercpp/filters/dvs_noise.hpp>
+#include <atomic>
+#include <csignal>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -27,7 +27,7 @@ static void usbShutdownHandler(void *ptr) {
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
@@ -44,7 +44,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -128,23 +128,23 @@ int main(void) {
 			}
 
 			if (packet->getEventType() == POLARITY_EVENT) {
-				std::shared_ptr<libcaer::events::PolarityEventPacket> polarity = std::static_pointer_cast<
-					libcaer::events::PolarityEventPacket>(packet);
+				std::shared_ptr<libcaer::events::PolarityEventPacket> polarity
+					= std::static_pointer_cast<libcaer::events::PolarityEventPacket>(packet);
 
 				dvsNoiseFilter.apply(*polarity);
 
 				printf("Got polarity packet with %d events, after filtering remaining %d events.\n",
 					polarity->getEventNumber(), polarity->getEventValid());
 
-				cv::Mat cvEvents(davis_info.dvsSizeY, davis_info.dvsSizeX, CV_8UC3, cv::Vec3b { 127, 127, 127 });
+				cv::Mat cvEvents(davis_info.dvsSizeY, davis_info.dvsSizeX, CV_8UC3, cv::Vec3b{127, 127, 127});
 				for (const auto &e : *polarity) {
 					// Discard invalid events (filtered out).
 					if (!e.isValid()) {
 						continue;
 					}
 
-					cvEvents.at<cv::Vec3b>(e.getY(), e.getX()) =
-						e.getPolarity() ? cv::Vec3b { 255, 255, 255 } : cv::Vec3b { 0, 0, 0 };
+					cvEvents.at<cv::Vec3b>(e.getY(), e.getX())
+						= e.getPolarity() ? cv::Vec3b{255, 255, 255} : cv::Vec3b{0, 0, 0};
 				}
 
 				cv::imshow("PLOT_EVENTS", cvEvents);

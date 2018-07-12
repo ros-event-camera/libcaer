@@ -39,8 +39,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_point3d_event {
+PACKED_STRUCT(struct caer_point3d_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
 	/// X axis measurement.
@@ -65,8 +64,7 @@ typedef const struct caer_point3d_event *caerPoint3DEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_point3d_event_packet {
+PACKED_STRUCT(struct caer_point3d_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -89,7 +87,8 @@ typedef const struct caer_point3d_event_packet *caerPoint3DEventPacketConst;
  *
  * @return a valid Point3DEventPacket handle or NULL on error.
  */
-static inline caerPoint3DEventPacket caerPoint3DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+static inline caerPoint3DEventPacket caerPoint3DEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
 	return ((caerPoint3DEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, POINT3D_EVENT,
 		sizeof(struct caer_point3d_event), offsetof(struct caer_point3d_event, timestamp)));
 }
@@ -118,7 +117,8 @@ static inline caerPoint3DEventPacket caerPoint3DEventPacketFromPacketHeader(caer
  * @param header a valid read-only event packet header pointer. Cannot be NULL.
  * @return a properly converted, read-only typed event packet pointer.
  */
-static inline caerPoint3DEventPacketConst caerPoint3DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+static inline caerPoint3DEventPacketConst caerPoint3DEventPacketFromPacketHeaderConst(
+	caerEventPacketHeaderConst header) {
 	if (caerEventPacketHeaderGetEventType(header) != POINT3D_EVENT) {
 		return (NULL);
 	}
@@ -138,7 +138,8 @@ static inline caerPoint3DEvent caerPoint3DEventPacketGetEvent(caerPoint3DEventPa
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event",
-			"Called caerPoint3DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			"Called caerPoint3DEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -160,7 +161,8 @@ static inline caerPoint3DEventConst caerPoint3DEventPacketGetEventConst(caerPoin
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
 		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event",
-			"Called caerPoint3DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+			"Called caerPoint3DEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -196,8 +198,8 @@ static inline int32_t caerPoint3DEventGetTimestamp(caerPoint3DEventConst event) 
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerPoint3DEventGetTimestamp64(caerPoint3DEventConst event, caerPoint3DEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPoint3DEventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerPoint3DEventGetTimestamp(event))));
 }
 
 /**
@@ -243,10 +245,10 @@ static inline void caerPoint3DEventValidate(caerPoint3DEvent event, caerPoint3DE
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
 		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventValidate() on already valid event.");
@@ -268,8 +270,8 @@ static inline void caerPoint3DEventInvalidate(caerPoint3DEvent event, caerPoint3
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
 		caerLogEHO(CAER_LOG_CRITICAL, "Point3D Event", "Called caerPoint3DEventInvalidate() on already invalid event.");
@@ -401,11 +403,12 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_ITERATOR_ALL_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = 0; \
-		caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
-		caerPoint3DIteratorCounter++) { \
-		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);
+#define CAER_POINT3D_ITERATOR_ALL_START(POINT3D_PACKET)                                                     \
+	for (int32_t caerPoint3DIteratorCounter = 0;                                                            \
+		 caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
+		 caerPoint3DIteratorCounter++) {                                                                    \
+		caerPoint3DEvent caerPoint3DIteratorElement                                                         \
+			= caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);
 
 /**
  * Const-Iterator over all Point3D events in a packet.
@@ -415,11 +418,12 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_CONST_ITERATOR_ALL_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = 0; \
-		caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
-		caerPoint3DIteratorCounter++) { \
-		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);
+#define CAER_POINT3D_CONST_ITERATOR_ALL_START(POINT3D_PACKET)                                               \
+	for (int32_t caerPoint3DIteratorCounter = 0;                                                            \
+		 caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
+		 caerPoint3DIteratorCounter++) {                                                                    \
+		caerPoint3DEventConst caerPoint3DIteratorElement                                                    \
+			= caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -434,12 +438,15 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_ITERATOR_VALID_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = 0; \
-		caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
-		caerPoint3DIteratorCounter++) { \
-		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter); \
-		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+#define CAER_POINT3D_ITERATOR_VALID_START(POINT3D_PACKET)                                                   \
+	for (int32_t caerPoint3DIteratorCounter = 0;                                                            \
+		 caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
+		 caerPoint3DIteratorCounter++) {                                                                    \
+		caerPoint3DEvent caerPoint3DIteratorElement                                                         \
+			= caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);                   \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid Point3D events.
 
 /**
  * Const-Iterator over only the valid Point3D events in a packet.
@@ -449,12 +456,15 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_CONST_ITERATOR_VALID_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = 0; \
-		caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
-		caerPoint3DIteratorCounter++) { \
-		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter); \
-		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+#define CAER_POINT3D_CONST_ITERATOR_VALID_START(POINT3D_PACKET)                                             \
+	for (int32_t caerPoint3DIteratorCounter = 0;                                                            \
+		 caerPoint3DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader); \
+		 caerPoint3DIteratorCounter++) {                                                                    \
+		caerPoint3DEventConst caerPoint3DIteratorElement                                                    \
+			= caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);              \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid Point3D events.
 
 /**
  * Iterator close statement.
@@ -469,11 +479,12 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
-		caerPoint3DIteratorCounter >= 0; \
-		caerPoint3DIteratorCounter--) { \
-		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);
+#define CAER_POINT3D_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET)                      \
+	for (int32_t caerPoint3DIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		 caerPoint3DIteratorCounter >= 0; caerPoint3DIteratorCounter--) {            \
+		caerPoint3DEvent caerPoint3DIteratorElement                                  \
+			= caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter);
 /**
  * Const-Reverse iterator over all Point3D events in a packet.
  * Returns the current index in the 'caerPoint3DIteratorCounter' variable of type
@@ -482,11 +493,12 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_CONST_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
-		caerPoint3DIteratorCounter >= 0; \
-		caerPoint3DIteratorCounter--) { \
-		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);
+#define CAER_POINT3D_CONST_REVERSE_ITERATOR_ALL_START(POINT3D_PACKET)                \
+	for (int32_t caerPoint3DIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
+		 caerPoint3DIteratorCounter >= 0; caerPoint3DIteratorCounter--) {            \
+		caerPoint3DEventConst caerPoint3DIteratorElement                             \
+			= caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -501,12 +513,15 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
-		caerPoint3DIteratorCounter >= 0; \
-		caerPoint3DIteratorCounter--) { \
-		caerPoint3DEvent caerPoint3DIteratorElement = caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter); \
-		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+#define CAER_POINT3D_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET)                         \
+	for (int32_t caerPoint3DIteratorCounter                                               \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1;      \
+		 caerPoint3DIteratorCounter >= 0; caerPoint3DIteratorCounter--) {                 \
+		caerPoint3DEvent caerPoint3DIteratorElement                                       \
+			= caerPoint3DEventPacketGetEvent(POINT3D_PACKET, caerPoint3DIteratorCounter); \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) {                       \
+			continue;                                                                     \
+		} // Skip invalid Point3D events.
 
 /**
  * Const-Reverse iterator over only the valid Point3D events in a packet.
@@ -516,12 +531,15 @@ static inline void caerPoint3DEventSetZ(caerPoint3DEvent event, float z) {
  *
  * POINT3D_PACKET: a valid Point3DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT3D_CONST_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET) \
-	for (int32_t caerPoint3DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1; \
-		caerPoint3DIteratorCounter >= 0; \
-		caerPoint3DIteratorCounter--) { \
-		caerPoint3DEventConst caerPoint3DIteratorElement = caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter); \
-		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) { continue; } // Skip invalid Point3D events.
+#define CAER_POINT3D_CONST_REVERSE_ITERATOR_VALID_START(POINT3D_PACKET)                        \
+	for (int32_t caerPoint3DIteratorCounter                                                    \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT3D_PACKET)->packetHeader) - 1;           \
+		 caerPoint3DIteratorCounter >= 0; caerPoint3DIteratorCounter--) {                      \
+		caerPoint3DEventConst caerPoint3DIteratorElement                                       \
+			= caerPoint3DEventPacketGetEventConst(POINT3D_PACKET, caerPoint3DIteratorCounter); \
+		if (!caerPoint3DEventIsValid(caerPoint3DIteratorElement)) {                            \
+			continue;                                                                          \
+		} // Skip invalid Point3D events.
 
 /**
  * Reverse iterator close statement.

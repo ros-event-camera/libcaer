@@ -1,8 +1,8 @@
 #include "devices/device_discover.h"
 
-#include "dvs128.h"
 #include "davis.h"
 #include "davis_rpi.h"
+#include "dvs128.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -13,15 +13,12 @@
 
 // Supported devices and their functions.
 static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscoveryResult *discoveredDevices) = {
-	[CAER_DEVICE_DVS128] = &dvs128Find,
-	[CAER_DEVICE_DAVIS_FX2] = &davisFindFX2,
-	[CAER_DEVICE_DAVIS_FX3] = &davisFindFX3,
-	[CAER_DEVICE_DYNAPSE] = &dynapseFind,
-	[CAER_DEVICE_DAVIS] = &davisFindAll,
+		[CAER_DEVICE_DVS128] = &dvs128Find, [CAER_DEVICE_DAVIS_FX2] = &davisFindFX2,
+	[CAER_DEVICE_DAVIS_FX3] = &davisFindFX3, [CAER_DEVICE_DYNAPSE] = &dynapseFind, [CAER_DEVICE_DAVIS] = &davisFindAll,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsFind,
 #else
-	[CAER_DEVICE_EDVS] = NULL,
+	[CAER_DEVICE_EDVS]      = NULL,
 #endif
 #if defined(OS_LINUX)
 	[CAER_DEVICE_DAVIS_RPI] = &davisRPiFind,
@@ -77,8 +74,8 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
 			}
 
 			// Found some devices.
-			void *biggerDiscoveredDevices = realloc(*discoveredDevices,
-				(foundDevices + (size_t) result) * sizeof(struct caer_device_discovery_result));
+			void *biggerDiscoveredDevices = realloc(
+				*discoveredDevices, (foundDevices + (size_t) result) * sizeof(struct caer_device_discovery_result));
 			if (biggerDiscoveredDevices == NULL) {
 				// Memory allocation failure!
 				free(*discoveredDevices);
@@ -120,8 +117,8 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 	switch (discoveredDevice->deviceType) {
 		case CAER_DEVICE_DVS128: {
 			struct caer_dvs128_info *info = &discoveredDevice->deviceInfo.dvs128Info;
-			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
-				info->deviceUSBDeviceAddress, NULL));
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
 		}
 
@@ -129,22 +126,22 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 		case CAER_DEVICE_DAVIS_FX3:
 		case CAER_DEVICE_DAVIS: {
 			struct caer_davis_info *info = &discoveredDevice->deviceInfo.davisInfo;
-			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
-				info->deviceUSBDeviceAddress, NULL));
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
 		}
 
 		case CAER_DEVICE_DYNAPSE: {
 			struct caer_dynapse_info *info = &discoveredDevice->deviceInfo.dynapseInfo;
-			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber,
-				info->deviceUSBDeviceAddress, NULL));
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
 		}
 
 		case CAER_DEVICE_EDVS: {
 			struct caer_edvs_info *info = &discoveredDevice->deviceInfo.edvsInfo;
-			return (caerDeviceOpenSerial(deviceID, discoveredDevice->deviceType, info->serialPortName,
-				info->serialBaudRate));
+			return (caerDeviceOpenSerial(
+				deviceID, discoveredDevice->deviceType, info->serialPortName, info->serialBaudRate));
 			break;
 		}
 

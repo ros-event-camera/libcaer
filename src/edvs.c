@@ -3,9 +3,9 @@
 #include <string.h>
 
 #if defined(OS_UNIX)
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <unistd.h>
 #endif
 
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
@@ -64,8 +64,8 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		}
 
 		// Successfully opened an eDVS.
-		void *biggerDiscoveredDevices = realloc(*discoveredDevices,
-			(matches + 1) * sizeof(struct caer_device_discovery_result));
+		void *biggerDiscoveredDevices
+			= realloc(*discoveredDevices, (matches + 1) * sizeof(struct caer_device_discovery_result));
 		if (biggerDiscoveredDevices == NULL) {
 			// Memory allocation failure!
 			free(*discoveredDevices);
@@ -79,17 +79,17 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		// Memory allocation successful, get info.
 		*discoveredDevices = biggerDiscoveredDevices;
 
-		(*discoveredDevices)[matches].deviceType = CAER_DEVICE_EDVS;
-		(*discoveredDevices)[matches].deviceErrorOpen = (errno == CAER_ERROR_COMMUNICATION);
+		(*discoveredDevices)[matches].deviceType         = CAER_DEVICE_EDVS;
+		(*discoveredDevices)[matches].deviceErrorOpen    = (errno == CAER_ERROR_COMMUNICATION);
 		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
-		struct caer_edvs_info *edvsInfoPtr = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
+		struct caer_edvs_info *edvsInfoPtr               = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
 
 		if (edvs != NULL) {
 			*edvsInfoPtr = caerEDVSInfoGet(edvs);
 		}
 
 		// Set/Reset to invalid values, not part of discovery.
-		edvsInfoPtr->deviceID = -1;
+		edvsInfoPtr->deviceID     = -1;
 		edvsInfoPtr->deviceString = NULL;
 
 		if (edvs != NULL) {
@@ -268,7 +268,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	}
 
 	// Wait for reset to happen.
-	struct timespec waitResetSleep = { .tv_sec = 0, .tv_nsec = 400000000 };
+	struct timespec waitResetSleep = {.tv_sec = 0, .tv_nsec = 400000000};
 	thrd_sleep(&waitResetSleep, NULL);
 
 	// Get startup message.
@@ -346,13 +346,13 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	atomic_store(&state->serialState.serialReadSize, 1024);
 
 	// Populate info variables based on data from device.
-	handle->info.deviceID = I16T(deviceID);
+	handle->info.deviceID       = I16T(deviceID);
 	handle->info.deviceIsMaster = true;
-	handle->info.dvsSizeX = EDVS_ARRAY_SIZE_X;
-	handle->info.dvsSizeY = EDVS_ARRAY_SIZE_Y;
+	handle->info.dvsSizeX       = EDVS_ARRAY_SIZE_X;
+	handle->info.dvsSizeY       = EDVS_ARRAY_SIZE_Y;
 	strncpy(handle->info.serialPortName, serialPortName, 63);
 	handle->info.serialPortName[63] = '\0';
-	handle->info.serialBaudRate = serialBaudRate;
+	handle->info.serialBaudRate     = serialBaudRate;
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Initialized device successfully on port '%s'.",
 		sp_get_port_name(state->serialState.serialPort));
@@ -362,7 +362,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 bool edvsClose(caerDeviceHandle cdh) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
@@ -385,13 +385,13 @@ struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle cdh) {
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_edvs_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
 	// Check if device type is supported.
 	if (handle->deviceType != CAER_DEVICE_EDVS) {
-		struct caer_edvs_info emptyInfo = { 0, .deviceString = NULL };
+		struct caer_edvs_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
@@ -401,7 +401,7 @@ struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle cdh) {
 
 bool edvsSendDefaultConfig(caerDeviceHandle cdh) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	// Set all biases to default value. Based on DSV128 Fast biases.
 	caerIntegerToByteArray(1992, state->dvs.biases[EDVS_CONFIG_BIAS_CAS], BIAS_LENGTH);
@@ -423,7 +423,7 @@ bool edvsSendDefaultConfig(caerDeviceHandle cdh) {
 
 bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_SERIAL:
@@ -525,7 +525,7 @@ bool edvsConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint
 
 bool edvsConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_SERIAL:
@@ -635,7 +635,7 @@ static void serialThreadStop(edvsHandle handle) {
 
 static int serialThreadRun(void *handlePtr) {
 	edvsHandle handle = handlePtr;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	edvsLog(CAER_LOG_DEBUG, handle, "Starting serial communication thread ...");
 
@@ -659,7 +659,7 @@ static int serialThreadRun(void *handlePtr) {
 		int bytesAvailable = 0;
 
 		while ((bytesAvailable < (16 * EDVS_EVENT_SIZE))
-			&& atomic_load_explicit(&state->serialState.serialThreadState, memory_order_relaxed) == THR_RUNNING) {
+			   && atomic_load_explicit(&state->serialState.serialThreadState, memory_order_relaxed) == THR_RUNNING) {
 			bytesAvailable = sp_input_waiting(state->serialState.serialPort);
 		}
 
@@ -697,12 +697,12 @@ static int serialThreadRun(void *handlePtr) {
 bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
 	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
 
-	state->serialState.serialShutdownCallback = dataShutdownNotify;
+	state->serialState.serialShutdownCallback    = dataShutdownNotify;
 	state->serialState.serialShutdownCallbackPtr = dataShutdownUserPtr;
 
 	containerGenerationCommitTimestampReset(&state->container);
@@ -720,8 +720,8 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 		return (false);
 	}
 
-	state->currentPackets.polarity = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
-		I16T(handle->info.deviceID), 0);
+	state->currentPackets.polarity
+		= caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
@@ -729,8 +729,8 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 		return (false);
 	}
 
-	state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
-		I16T(handle->info.deviceID), 0);
+	state->currentPackets.special
+		= caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
@@ -755,7 +755,7 @@ bool edvsDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), 
 
 bool edvsDataStop(caerDeviceHandle cdh) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 6.
@@ -771,7 +771,7 @@ bool edvsDataStop(caerDeviceHandle cdh) {
 
 	// Reset packet positions.
 	state->currentPackets.polarityPosition = 0;
-	state->currentPackets.specialPosition = 0;
+	state->currentPackets.specialPosition  = 0;
 
 	return (true);
 }
@@ -779,7 +779,7 @@ bool edvsDataStop(caerDeviceHandle cdh) {
 // Remember to properly free the returned memory after usage!
 caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 	edvsHandle handle = (edvsHandle) cdh;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &state->serialState.serialThreadState));
 }
@@ -790,7 +790,7 @@ caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 
 static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	edvsHandle handle = vhd;
-	edvsState state = &handle->state;
+	edvsState state   = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -805,8 +805,8 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 		uint8_t yByte = buffer[i];
 
 		if ((yByte & HIGH_BIT_MASK) != HIGH_BIT_MASK) {
-			edvsLog(CAER_LOG_NOTICE, handle, "Data not aligned, skipping to next data byte (%zu of %zu).", i,
-				bytesSent);
+			edvsLog(
+				CAER_LOG_NOTICE, handle, "Data not aligned, skipping to next data byte (%zu of %zu).", i, bytesSent);
 			i++;
 			continue;
 		}
@@ -823,15 +823,15 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 		}
 
 		if (state->currentPackets.polarity == NULL) {
-			state->currentPackets.polarity = caerPolarityEventPacketAllocate(EDVS_POLARITY_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				EDVS_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.polarityPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerPolarityEventPacket grownPacket = (caerPolarityEventPacket) caerEventPacketGrow(
@@ -845,15 +845,15 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 		}
 
 		if (state->currentPackets.special == NULL) {
-			state->currentPackets.special = caerSpecialEventPacketAllocate(EDVS_SPECIAL_DEFAULT_SIZE,
-				I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				EDVS_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				edvsLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
 		else if (state->currentPackets.specialPosition
-			>= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
+				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
 			// If not committed, let's check if any of the packets has reached its maximum
 			// capacity limit. If yes, we grow them to accomodate new events.
 			caerSpecialEventPacket grownPacket = (caerSpecialEventPacket) caerEventPacketGrow(
@@ -866,10 +866,10 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 			state->currentPackets.special = grownPacket;
 		}
 
-		bool tsReset = false;
+		bool tsReset   = false;
 		bool tsBigWrap = false;
 
-		uint8_t xByte = buffer[i + 1];
+		uint8_t xByte   = buffer[i + 1];
 		uint8_t ts1Byte = buffer[i + 2];
 		uint8_t ts2Byte = buffer[i + 3];
 
@@ -884,10 +884,10 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 			serialPortWrite(state, cmdTSReset);
 
 			state->timestamps.wrapOverflow = 0;
-			state->timestamps.wrapAdd = 0;
-			state->timestamps.lastShort = 0;
-			state->timestamps.last = 0;
-			state->timestamps.current = 0;
+			state->timestamps.wrapAdd      = 0;
+			state->timestamps.lastShort    = 0;
+			state->timestamps.last         = 0;
+			state->timestamps.current      = 0;
 			containerGenerationCommitTimestampReset(&state->container);
 			containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
@@ -907,14 +907,14 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 
 				state->timestamps.lastShort = 0;
 
-				state->timestamps.last = 0;
+				state->timestamps.last    = 0;
 				state->timestamps.current = 0;
 
 				// Increment TSOverflow counter.
 				state->timestamps.wrapOverflow++;
 
-				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(state->currentPackets.special,
-					state->currentPackets.specialPosition++);
+				caerSpecialEvent currentEvent = caerSpecialEventPacketGetEvent(
+					state->currentPackets.special, state->currentPackets.specialPosition++);
 				caerSpecialEventSetTimestamp(currentEvent, INT32_MAX);
 				caerSpecialEventSetType(currentEvent, TIMESTAMP_WRAP);
 				caerSpecialEventValidate(currentEvent, state->currentPackets.special);
@@ -935,7 +935,7 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				}
 
 				// Expand to 32 bits. (Tick is 1µs already.)
-				state->timestamps.last = state->timestamps.current;
+				state->timestamps.last    = state->timestamps.current;
 				state->timestamps.current = state->timestamps.wrapAdd + shortTS;
 				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
@@ -943,14 +943,14 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
 					&handle->state.deviceLogLevel);
 
-				uint8_t x = (xByte & LOW_BITS_MASK);
-				uint8_t y = (yByte & LOW_BITS_MASK);
+				uint8_t x     = (xByte & LOW_BITS_MASK);
+				uint8_t y     = (yByte & LOW_BITS_MASK);
 				bool polarity = (xByte & HIGH_BIT_MASK);
 
 				// Check range conformity.
 				if ((x < EDVS_ARRAY_SIZE_X) && (y < EDVS_ARRAY_SIZE_Y)) {
-					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(state->currentPackets.polarity,
-						state->currentPackets.polarityPosition++);
+					caerPolarityEvent currentEvent = caerPolarityEventPacketGetEvent(
+						state->currentPackets.polarity, state->currentPackets.polarityPosition++);
 					caerPolarityEventSetTimestamp(currentEvent, state->timestamps.current);
 					caerPolarityEventSetPolarity(currentEvent, polarity);
 					caerPolarityEventSetY(currentEvent, y);
@@ -960,11 +960,11 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				else {
 					if (x >= EDVS_ARRAY_SIZE_X) {
 						edvsLog(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
-						EDVS_ARRAY_SIZE_X - 1, x);
+							EDVS_ARRAY_SIZE_X - 1, x);
 					}
 					if (y >= EDVS_ARRAY_SIZE_Y) {
 						edvsLog(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
-						EDVS_ARRAY_SIZE_Y - 1, y);
+							EDVS_ARRAY_SIZE_Y - 1, y);
 					}
 				}
 			}
@@ -974,12 +974,13 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit = (currentPacketContainerCommitSize > 0)
-			&& ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-				|| (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit
+			= (currentPacketContainerCommitSize > 0)
+			  && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(&state->container,
-			state->timestamps.wrapOverflow, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// NOTE: with the current EDVS architecture, currentTimestamp always comes together
 		// with an event, so the very first event that matches this threshold will be
@@ -993,21 +994,21 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 			bool emptyContainerCommit = true;
 
 			if (state->currentPackets.polarityPosition > 0) {
-				containerGenerationSetPacket(&state->container, POLARITY_EVENT,
-					(caerEventPacketHeader) state->currentPackets.polarity);
+				containerGenerationSetPacket(
+					&state->container, POLARITY_EVENT, (caerEventPacketHeader) state->currentPackets.polarity);
 
-				state->currentPackets.polarity = NULL;
+				state->currentPackets.polarity         = NULL;
 				state->currentPackets.polarityPosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                   = false;
 			}
 
 			if (state->currentPackets.specialPosition > 0) {
-				containerGenerationSetPacket(&state->container, SPECIAL_EVENT,
-					(caerEventPacketHeader) state->currentPackets.special);
+				containerGenerationSetPacket(
+					&state->container, SPECIAL_EVENT, (caerEventPacketHeader) state->currentPackets.special);
 
-				state->currentPackets.special = NULL;
+				state->currentPackets.special         = NULL;
 				state->currentPackets.specialPosition = 0;
-				emptyContainerCommit = false;
+				emptyContainerCommit                  = false;
 			}
 
 			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
@@ -1024,12 +1025,12 @@ static bool edvsSendBiases(edvsState state, int biasID) {
 	// the device, we can thus send them directly.
 	char cmdSetBias[128];
 	size_t startBias = (size_t) biasID;
-	size_t stopBias = startBias + 1;
+	size_t stopBias  = startBias + 1;
 
 	// With -1 as ID, we program all biases.
 	if (biasID == -1) {
 		startBias = 0;
-		stopBias = BIAS_NUMBER;
+		stopBias  = BIAS_NUMBER;
 	}
 
 	for (size_t i = startBias; i < stopBias; i++) {

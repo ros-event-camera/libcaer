@@ -3,24 +3,18 @@
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 // Use C++ OpenCV demosaic and contrast functions, defined
 // separately in 'frame_utils_opencv.cpp'.
-extern caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType);
-extern void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_contrast_types contrastType);
+extern caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(
+	caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType);
+extern void caerFrameUtilsOpenCVContrast(
+	caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
 #endif
 
-enum pixelColorEnum {
-	PXR,
-	PXB,
-	PXG1,
-	PXG2,
-	PXW
-};
+enum pixelColorEnum { PXR, PXB, PXG1, PXG2, PXW };
 
 static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
 
-static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, uint32_t x,
-	uint32_t y) {
+static inline enum pixelColorEnum determinePixelColor(
+	enum caer_frame_event_color_filter colorFilter, uint32_t x, uint32_t y) {
 	switch (colorFilter) {
 		case RGBG:
 			if (x & 0x01) {
@@ -185,28 +179,28 @@ static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_colo
 }
 
 static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame) {
-	uint16_t *colorPixels = caerFrameEventGetPixelArrayUnsafe(colorFrame);
+	uint16_t *colorPixels      = caerFrameEventGetPixelArrayUnsafe(colorFrame);
 	const uint16_t *monoPixels = caerFrameEventGetPixelArrayUnsafeConst(monoFrame);
 
 	enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(monoFrame);
-	int32_t lengthY = caerFrameEventGetLengthY(monoFrame);
-	int32_t lengthX = caerFrameEventGetLengthX(monoFrame);
-	int32_t idxCENTER = 0;
-	int32_t idxCOLOR = 0;
+	int32_t lengthY                                = caerFrameEventGetLengthY(monoFrame);
+	int32_t lengthX                                = caerFrameEventGetLengthX(monoFrame);
+	int32_t idxCENTER                              = 0;
+	int32_t idxCOLOR                               = 0;
 
 	for (int32_t y = 0; y < lengthY; y++) {
 		for (int32_t x = 0; x < lengthX; x++) {
 			// Calculate all neighbor indexes.
-			int32_t idxLEFT = idxCENTER - 1;
+			int32_t idxLEFT  = idxCENTER - 1;
 			int32_t idxRIGHT = idxCENTER + 1;
 
 			int32_t idxCENTERUP = idxCENTER - lengthX;
-			int32_t idxLEFTUP = idxCENTERUP - 1;
-			int32_t idxRIGHTUP = idxCENTERUP + 1;
+			int32_t idxLEFTUP   = idxCENTERUP - 1;
+			int32_t idxRIGHTUP  = idxCENTERUP + 1;
 
 			int32_t idxCENTERDOWN = idxCENTER + lengthX;
-			int32_t idxLEFTDOWN = idxCENTERDOWN - 1;
-			int32_t idxRIGHTDOWN = idxCENTERDOWN + 1;
+			int32_t idxLEFTDOWN   = idxCENTERDOWN - 1;
+			int32_t idxRIGHTDOWN  = idxCENTERDOWN + 1;
 
 			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, U32T(x), U32T(y));
 			int32_t RComp;
@@ -269,9 +263,11 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 						else {
 							// In-between columns.
 							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]
-								+ monoPixels[idxRIGHT]) / 4;
+										+ monoPixels[idxRIGHT])
+									/ 4;
 							BComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
+										+ monoPixels[idxLEFTDOWN])
+									/ 4;
 						}
 					}
 
@@ -333,9 +329,11 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 						else {
 							// In-between columns.
 							RComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
+										+ monoPixels[idxLEFTDOWN])
+									/ 4;
 							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]
-								+ monoPixels[idxRIGHT]) / 4;
+										+ monoPixels[idxRIGHT])
+									/ 4;
 						}
 					}
 
@@ -461,7 +459,8 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 				}
 
 				case PXW: {
-					// This is a W pixel, modified Bayer pattern instead of G2. It is always surrounded by all of R, G, B.
+					// This is a W pixel, modified Bayer pattern instead of G2. It is always surrounded by all of R, G,
+					// B.
 					// TODO: how can W itself contribute to the three colors?
 					if (y == 0) {
 						// First row.
@@ -520,7 +519,8 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 						else {
 							// In-between columns.
 							GComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
+										+ monoPixels[idxLEFTDOWN])
+									/ 4;
 							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
 						}
 					}
@@ -534,7 +534,7 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 			}
 
 			// Set color frame pixel values for all color channels.
-			colorPixels[idxCOLOR] = U16T(RComp);
+			colorPixels[idxCOLOR]     = U16T(RComp);
 			colorPixels[idxCOLOR + 1] = U16T(GComp);
 			colorPixels[idxCOLOR + 2] = U16T(BComp);
 
@@ -545,8 +545,8 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 	}
 }
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType) {
+caerFrameEventPacket caerFrameUtilsDemosaic(
+	caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType) {
 	if (framePacket == NULL) {
 		return (NULL);
 	}
@@ -555,8 +555,8 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 		return (caerFrameUtilsOpenCVDemosaic(framePacket, demosaicType));
 #else
-		caerLog(CAER_LOG_WARNING, __func__,
-			"Selected OpenCV demosaic type, but OpenCV support is disabled. Either enable it or change to use 'DEMOSAIC_STANDARD'.");
+		caerLog(CAER_LOG_WARNING, __func__, "Selected OpenCV demosaic type, but OpenCV support is disabled. Either "
+											"enable it or change to use 'DEMOSAIC_STANDARD'.");
 #endif
 	}
 
@@ -567,18 +567,18 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			countValid++;
+	if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+		&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+		countValid++;
 
-			if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
-				maxLengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
-			}
-
-			if (caerFrameEventGetLengthY(caerFrameIteratorElement) > maxLengthY) {
-				maxLengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
-			}
+		if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
+			maxLengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
 		}
+
+		if (caerFrameEventGetLengthY(caerFrameIteratorElement) > maxLengthY) {
+			maxLengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
+		}
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 
 	// Check if any frames did respect the requirements.
@@ -587,9 +587,9 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	}
 
 	// Allocate new frame with RGB channels to hold resulting color image.
-	caerFrameEventPacket colorFramePacket = caerFrameEventPacketAllocate(countValid,
-		caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
-		caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
+	caerFrameEventPacket colorFramePacket
+		= caerFrameEventPacketAllocate(countValid, caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
+			caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
 	if (colorFramePacket == NULL) {
 		return (NULL);
 	}
@@ -598,31 +598,30 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
-			colorIndex++;
+	if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+		&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
+		// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
+		caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
+		colorIndex++;
 
-			// First copy all the metadata.
-			caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
-			caerFrameEventSetLengthXLengthYChannelNumber(colorFrame, caerFrameEventGetLengthX(caerFrameIteratorElement),
-				caerFrameEventGetLengthY(caerFrameIteratorElement), RGB, colorFramePacket);
-			caerFrameEventSetPositionX(colorFrame, caerFrameEventGetPositionX(caerFrameIteratorElement));
-			caerFrameEventSetPositionY(colorFrame, caerFrameEventGetPositionY(caerFrameIteratorElement));
-			caerFrameEventSetROIIdentifier(colorFrame, caerFrameEventGetROIIdentifier(caerFrameIteratorElement));
-			caerFrameEventSetTSStartOfFrame(colorFrame, caerFrameEventGetTSStartOfFrame(caerFrameIteratorElement));
-			caerFrameEventSetTSEndOfFrame(colorFrame, caerFrameEventGetTSEndOfFrame(caerFrameIteratorElement));
-			caerFrameEventSetTSStartOfExposure(colorFrame,
-				caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement));
-			caerFrameEventSetTSEndOfExposure(colorFrame, caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement));
+		// First copy all the metadata.
+		caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
+		caerFrameEventSetLengthXLengthYChannelNumber(colorFrame, caerFrameEventGetLengthX(caerFrameIteratorElement),
+			caerFrameEventGetLengthY(caerFrameIteratorElement), RGB, colorFramePacket);
+		caerFrameEventSetPositionX(colorFrame, caerFrameEventGetPositionX(caerFrameIteratorElement));
+		caerFrameEventSetPositionY(colorFrame, caerFrameEventGetPositionY(caerFrameIteratorElement));
+		caerFrameEventSetROIIdentifier(colorFrame, caerFrameEventGetROIIdentifier(caerFrameIteratorElement));
+		caerFrameEventSetTSStartOfFrame(colorFrame, caerFrameEventGetTSStartOfFrame(caerFrameIteratorElement));
+		caerFrameEventSetTSEndOfFrame(colorFrame, caerFrameEventGetTSEndOfFrame(caerFrameIteratorElement));
+		caerFrameEventSetTSStartOfExposure(colorFrame, caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement));
+		caerFrameEventSetTSEndOfExposure(colorFrame, caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement));
 
-			// Then the actual pixels.
-			frameUtilsDemosaicFrame(colorFrame, caerFrameIteratorElement);
+		// Then the actual pixels.
+		frameUtilsDemosaicFrame(colorFrame, caerFrameIteratorElement);
 
-			// Finally validate the new frame.
-			caerFrameEventValidate(colorFrame, colorFramePacket);
-		}
+		// Finally validate the new frame.
+		caerFrameEventValidate(colorFrame, colorFramePacket);
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 
 	return (colorFramePacket);
@@ -638,8 +637,8 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_ut
 		caerFrameUtilsOpenCVContrast(framePacket, contrastType);
 		return;
 #else
-		caerLog(CAER_LOG_WARNING, __func__,
-			"Selected OpenCV contrast enhancement type, but OpenCV support is disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
+		caerLog(CAER_LOG_WARNING, __func__, "Selected OpenCV contrast enhancement type, but OpenCV support is "
+											"disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
 #endif
 	}
 
@@ -649,42 +648,42 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_ut
 	// conversion into another color space that has an intensity channel separate from the color
 	// channels, such as Lab or YCrCb. The same algorithm would then be applied on the intensity only.
 	CAER_FRAME_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE) {
-			uint16_t *pixels = caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement);
-			int32_t lengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
-			int32_t lengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
+	if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE) {
+		uint16_t *pixels = caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement);
+		int32_t lengthY  = caerFrameEventGetLengthY(caerFrameIteratorElement);
+		int32_t lengthX  = caerFrameEventGetLengthX(caerFrameIteratorElement);
 
-			// On first pass, determine minimum and maximum values.
-			int32_t minValue = INT32_MAX;
-			int32_t maxValue = INT32_MIN;
+		// On first pass, determine minimum and maximum values.
+		int32_t minValue = INT32_MAX;
+		int32_t maxValue = INT32_MIN;
 
-			for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
-				if (pixels[idx] < minValue) {
-					minValue = pixels[idx];
-				}
-
-				if (pixels[idx] > maxValue) {
-					maxValue = pixels[idx];
-				}
+		for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
+			if (pixels[idx] < minValue) {
+				minValue = pixels[idx];
 			}
 
-			// Use min/max to calculate input range.
-			int32_t range = maxValue - minValue;
-
-			// Calculate alpha (contrast).
-			float alpha = ((float) UINT16_MAX) / ((float) range);
-
-			// Calculate beta (brightness).
-			float beta = ((float) -minValue) * alpha;
-
-			// Apply alpha and beta to pixels array.
-			for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
-				pixels[idx] = U16T(alpha * ((float ) pixels[idx]) + beta);
+			if (pixels[idx] > maxValue) {
+				maxValue = pixels[idx];
 			}
 		}
-		else {
-			caerLog(CAER_LOG_WARNING, __func__,
-				"Standard contrast enhancement only works with grayscale images. For color images support, please use one of the OpenCV contrast enhancement types.");
+
+		// Use min/max to calculate input range.
+		int32_t range = maxValue - minValue;
+
+		// Calculate alpha (contrast).
+		float alpha = ((float) UINT16_MAX) / ((float) range);
+
+		// Calculate beta (brightness).
+		float beta = ((float) -minValue) * alpha;
+
+		// Apply alpha and beta to pixels array.
+		for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
+			pixels[idx] = U16T(alpha * ((float) pixels[idx]) + beta);
 		}
+	}
+	else {
+		caerLog(CAER_LOG_WARNING, __func__, "Standard contrast enhancement only works with grayscale images. For color "
+											"images support, please use one of the OpenCV contrast enhancement types.");
+	}
 	CAER_FRAME_ITERATOR_VALID_END
 }

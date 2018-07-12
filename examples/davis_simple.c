@@ -1,8 +1,8 @@
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/davis.h>
-#include <stdio.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 static atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
 
@@ -14,13 +14,13 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void usbShutdownHandler(void *ptr) {
-	(void)(ptr); // UNUSED.
+	(void) (ptr); // UNUSED.
 
 	atomic_store(&globalShutdown, true);
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
@@ -35,7 +35,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -71,23 +71,23 @@ int main(void) {
 	// Tweak some biases, to increase bandwidth in this case.
 	struct caer_bias_coarsefine coarseFineBias;
 
-	coarseFineBias.coarseValue = 2;
-	coarseFineBias.fineValue = 116;
-	coarseFineBias.enabled = true;
-	coarseFineBias.sexN = false;
-	coarseFineBias.typeNormal = true;
+	coarseFineBias.coarseValue        = 2;
+	coarseFineBias.fineValue          = 116;
+	coarseFineBias.enabled            = true;
+	coarseFineBias.sexN               = false;
+	coarseFineBias.typeNormal         = true;
 	coarseFineBias.currentLevelNormal = true;
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP,
-		caerBiasCoarseFineGenerate(coarseFineBias));
+	caerDeviceConfigSet(
+		davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(coarseFineBias));
 
-	coarseFineBias.coarseValue = 1;
-	coarseFineBias.fineValue = 33;
-	coarseFineBias.enabled = true;
-	coarseFineBias.sexN = false;
-	coarseFineBias.typeNormal = true;
+	coarseFineBias.coarseValue        = 1;
+	coarseFineBias.fineValue          = 33;
+	coarseFineBias.enabled            = true;
+	coarseFineBias.sexN               = false;
+	coarseFineBias.typeNormal         = true;
 	coarseFineBias.currentLevelNormal = true;
-	caerDeviceConfigSet(davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP,
-		caerBiasCoarseFineGenerate(coarseFineBias));
+	caerDeviceConfigSet(
+		davis_handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP, caerBiasCoarseFineGenerate(coarseFineBias));
 
 	// Let's verify they really changed!
 	uint32_t prBias, prsfBias;
@@ -136,7 +136,7 @@ int main(void) {
 				int32_t ts = caerPolarityEventGetTimestamp(firstEvent);
 				uint16_t x = caerPolarityEventGetX(firstEvent);
 				uint16_t y = caerPolarityEventGetY(firstEvent);
-				bool pol = caerPolarityEventGetPolarity(firstEvent);
+				bool pol   = caerPolarityEventGetPolarity(firstEvent);
 
 				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
 			}
@@ -147,7 +147,7 @@ int main(void) {
 				// Get full timestamp, and sum all pixels of first frame event.
 				caerFrameEventConst firstEvent = caerFrameEventPacketGetEventConst(frame, 0);
 
-				int32_t ts = caerFrameEventGetTimestamp(firstEvent);
+				int32_t ts   = caerFrameEventGetTimestamp(firstEvent);
 				uint64_t sum = 0;
 
 				for (int32_t y = 0; y < caerFrameEventGetLengthY(firstEvent); y++) {

@@ -1,8 +1,8 @@
 #include <libcaer/libcaer.h>
 #include <libcaer/devices/davis.h>
-#include <stdio.h>
 #include <signal.h>
 #include <stdatomic.h>
+#include <stdio.h>
 
 static atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
 
@@ -20,7 +20,7 @@ static void usbShutdownHandler(void *ptr) {
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		caerLog(CAER_LOG_CRITICAL, "ShutdownAction", "Failed to set signal handler for SIGTERM. Error: %d.", errno);
@@ -35,7 +35,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);

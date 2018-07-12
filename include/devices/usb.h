@@ -33,7 +33,7 @@ extern "C" {
  * with the USB device. The default values are usually fine, only change
  * them if you're running into I/O limits.
  */
-#define CAER_HOST_CONFIG_USB_BUFFER_SIZE   1
+#define CAER_HOST_CONFIG_USB_BUFFER_SIZE 1
 
 /**
  * Open a specified USB device, assign an ID to it and return a handle for further usage.

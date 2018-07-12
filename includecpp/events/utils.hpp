@@ -7,6 +7,7 @@
 #include "frame.hpp"
 #include "imu6.hpp"
 #include "imu9.hpp"
+#include "matrix4x4.hpp"
 #include "point1d.hpp"
 #include "point2d.hpp"
 #include "point3d.hpp"
@@ -15,7 +16,6 @@
 #include "sample.hpp"
 #include "special.hpp"
 #include "spike.hpp"
-#include "matrix4x4.hpp"
 #include <memory>
 
 namespace libcaer {
@@ -25,7 +25,8 @@ namespace utils {
 inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 
-inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(
+	caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::unique_ptr<SpecialEventPacket>(new SpecialEventPacket(packet, takeMemoryOwnership)));
@@ -56,7 +57,8 @@ inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader 
 			break;
 
 		case CONFIG_EVENT:
-			return (std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet, takeMemoryOwnership)));
+			return (
+				std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT1D_EVENT:
@@ -89,7 +91,8 @@ inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader 
 	}
 }
 
-inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::shared_ptr<EventPacket> makeSharedFromCStruct(
+	caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::make_shared<SpecialEventPacket>(packet, takeMemoryOwnership));
@@ -152,7 +155,6 @@ inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader 
 			break;
 	}
 }
-
 }
 }
 }

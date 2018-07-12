@@ -1,8 +1,8 @@
 #ifndef LIBCAER_FILTERS_DVS_NOISE_HPP_
 #define LIBCAER_FILTERS_DVS_NOISE_HPP_
 
-#include <libcaer/filters/dvs_noise.h>
 #include "../events/polarity.hpp"
+#include <libcaer/filters/dvs_noise.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,8 +20,8 @@ public:
 
 		// Handle constructor failure.
 		if (h == nullptr) {
-			std::string exc = "Failed to initialize DVS Noise filter, sizeX=" + std::to_string(sizeX) + ", sizeY="
-				+ std::to_string(sizeY) + ".";
+			std::string exc = "Failed to initialize DVS Noise filter, sizeX=" + std::to_string(sizeX)
+							  + ", sizeY=" + std::to_string(sizeY) + ".";
 			throw std::runtime_error(exc);
 		}
 
@@ -45,7 +45,7 @@ public:
 		bool success = caerFilterDVSNoiseConfigSet(handle.get(), paramAddr, param);
 		if (!success) {
 			std::string exc = toString() + ": failed to set configuration parameter, paramAddr="
-				+ std::to_string(paramAddr) + ", param=" + std::to_string(param) + ".";
+							  + std::to_string(paramAddr) + ", param=" + std::to_string(param) + ".";
 			throw std::runtime_error(exc);
 		}
 	}
@@ -53,8 +53,8 @@ public:
 	void configGet(uint8_t paramAddr, uint64_t *param) const {
 		bool success = caerFilterDVSNoiseConfigGet(handle.get(), paramAddr, param);
 		if (!success) {
-			std::string exc = toString() + ": failed to get configuration parameter, paramAddr="
-				+ std::to_string(paramAddr) + ".";
+			std::string exc
+				= toString() + ": failed to get configuration parameter, paramAddr=" + std::to_string(paramAddr) + ".";
 			throw std::runtime_error(exc);
 		}
 	}
@@ -100,7 +100,6 @@ public:
 		}
 	}
 };
-
 }
 }
 

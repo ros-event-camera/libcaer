@@ -7,10 +7,9 @@
 namespace libcaer {
 namespace devices {
 
-class usb: public device {
+class usb : public device {
 protected:
-	usb(uint16_t deviceID, uint16_t deviceType) :
-			usb(deviceID, deviceType, 0, 0, "") {
+	usb(uint16_t deviceID, uint16_t deviceType) : usb(deviceID, deviceType, 0, 0, "") {
 	}
 
 	usb(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
@@ -21,8 +20,9 @@ protected:
 		// Handle constructor failure.
 		if (h == nullptr) {
 			std::string exc = "Failed to open USB device, id=" + std::to_string(deviceID) + ", type="
-				+ std::to_string(deviceType) + ", busNumber=" + std::to_string(busNumberRestrict) + ", devAddress="
-				+ std::to_string(devAddressRestrict) + ", serialNumber=" + serialNumberRestrict + ".";
+							  + std::to_string(deviceType) + ", busNumber=" + std::to_string(busNumberRestrict)
+							  + ", devAddress=" + std::to_string(devAddressRestrict)
+							  + ", serialNumber=" + serialNumberRestrict + ".";
 			throw std::runtime_error(exc);
 		}
 
@@ -36,7 +36,6 @@ protected:
 		handle = std::shared_ptr<struct caer_device_handle>(h, deleteDeviceHandle);
 	}
 };
-
 }
 }
 

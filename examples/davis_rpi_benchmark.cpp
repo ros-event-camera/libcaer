@@ -1,6 +1,6 @@
 #include <libcaercpp/devices/davis.hpp>
-#include <csignal>
 #include <atomic>
+#include <csignal>
 
 using namespace std;
 
@@ -14,13 +14,13 @@ static void globalShutdownSignalHandler(int signal) {
 }
 
 static void usbShutdownHandler(void *ptr) {
-	(void)(ptr); // UNUSED.
+	(void) (ptr); // UNUSED.
 
 	globalShutdown.store(true);
 }
 
 int main(void) {
-	// Install signal handler for global shutdown.
+// Install signal handler for global shutdown.
 #if defined(_WIN32)
 	if (signal(SIGTERM, &globalShutdownSignalHandler) == SIG_ERR) {
 		libcaer::log::log(libcaer::log::logLevel::CRITICAL, "ShutdownAction",
@@ -37,7 +37,7 @@ int main(void) {
 	struct sigaction shutdownAction;
 
 	shutdownAction.sa_handler = &globalShutdownSignalHandler;
-	shutdownAction.sa_flags = 0;
+	shutdownAction.sa_flags   = 0;
 	sigemptyset(&shutdownAction.sa_mask);
 	sigaddset(&shutdownAction.sa_mask, SIGTERM);
 	sigaddset(&shutdownAction.sa_mask, SIGINT);
@@ -84,7 +84,8 @@ int main(void) {
 			continue; // Skip if nothing there.
 		}
 
-		printf("\nTHIS SHOULD NOT HAPPEN IN BENCHMARK MODE!\nGot event container with %d packets (allocated).\n", packetContainer->size());
+		printf("\nTHIS SHOULD NOT HAPPEN IN BENCHMARK MODE!\nGot event container with %d packets (allocated).\n",
+			packetContainer->size());
 	}
 
 	davisHandle.dataStop();
