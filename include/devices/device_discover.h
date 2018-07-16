@@ -13,6 +13,10 @@
 #include "dynapse.h"
 #include "edvs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Result of a device discovery operation.
  * Contains the type of the device and its informational structure; use the
@@ -72,5 +76,9 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
  *         or NULL on error. Always check for this!
  */
 caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryResult discoveredDevice);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LIBCAER_DEVICES_DEVICE_DISCOVER_H_ */
