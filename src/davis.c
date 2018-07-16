@@ -974,9 +974,10 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_LP_CYCLE, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_LP_WAKEUP, 1);
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER, 0);
-	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER, 1);
+	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_DLPF, 1);
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE, 1);
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, 1);
+	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_DLPF, 1);
 
 	davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES, false);
@@ -1650,9 +1651,10 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_IMU_LP_CYCLE:
 				case DAVIS_CONFIG_IMU_LP_WAKEUP:
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
-				case DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER:
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
+				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
@@ -2285,9 +2287,10 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_IMU_LP_CYCLE:
 				case DAVIS_CONFIG_IMU_LP_WAKEUP:
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
-				case DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER:
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
+				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
