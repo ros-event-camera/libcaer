@@ -1,7 +1,19 @@
-Release 2.5.X - XX.05.2018
+Release 2.5.0 - 17.07.2018
 INCOMPATIBLE CHANGES
 - davis.h: removed support for stereo microphones, this was never used in any
   released devices, only for internal experiments on a limited prototype run.
+- Events: event packet allocation functions are now in the various headers,
+  making it possible to create, use and destroy event packets and events by
+  just including the headers, without having to link to the full library.
+  CAER_EVENTS_HEADER_ONLY needs to be set before inclusion for this to fully
+  work, else there is a dependency on caerLog(), which is still in the library.
+  This is very useful for tools or network receivers. A re-compile of any
+  programs using these functions is required to avoid runtime linking errors.
+- CMake: cleanup linked libraries, libm and librt are not part of the
+  default dependencies anymore, they need to be added manually to programs
+  that actually use them. Same goes for thread support, which is now only
+  exported as the 'CAER_C_THREAD_LIBS' CMake variable but not automatically
+  included anywhere.
 
 NEW FEATURES
 - Device Discovery: added capability of finding any accessible supported
@@ -18,9 +30,15 @@ NEW FEATURES
   status of logging. C++ interface available in 'libcaer::log'.
 - C++ packetContainer.hpp: support construction of a new packet container
   based on a C-style caerEventPacketContainer, with optional memory
-  ownership takeover for the contained packets.
+  ownership take-over for the contained packets.
 - C++ utils.hpp: libcaer::events::utils::makeShared/Unique now support the
   Matrix 4x4 event type too.
+- C++ frame.hpp: new define LIBCAER_FRAMECPP_OPENCV_INSTALLED to enable
+  special getOpenCVMat() support independently of libcaer itself having
+  support for OpenCV.
+- events/common.h: add new functions caerEventPacketGetDataSizeEvents()
+  and caerEventPacketGetSizeEvents() to get size of data part of an
+  event packet, disregarding capacity.
 - Examples: added 'davis_simple_2cam.c' example for a two camera setup.
 - device.h: CAER_SUPPORTED_DEVICES_NUMBER define is now public.
 - eDVS: added 'serialPortName' and 'serialBaudRate' members to its info
@@ -35,11 +53,26 @@ NEW FEATURES
 - filters/dvs_noise.h: new filter module to reduce noise from the DVS
   output, integrates a hot pixel filter (with learning), a background-
   activity filter and a refractory period filter. C++ interface available.
+  New example 'davis_cvgui_filters.cpp' shows usage.
+- devices/davis.h: new define DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN to
+  automatically discover abnormally active pixels (hot-pixels) in the camera
+  output and then filter them at the hardware level (FPGA/CPLD). This only
+  works on newer camera that support the hardware pixel filtering, it does
+  nothing on older systems and just returns 'false' on get/set.
+- devices/davis.h: support new DAVIS346 with InvenSense MPU 9250, new IMU
+  options via defines DAVIS_CONFIG_IMU_GYRO_DLPF and DAVIS_CONFIG_IMU_ACCEL_DLPF.
+- CMake: new flag ENABLE_STATIC available to enable static compilation
+  of libcaer in addition to shared library.
+- Code is now formatted using clang-format.
 
 BUG FIXES
 - C++: add header inclusions for possibly missing types.
 - C++ devices/serial.hpp: fix warning about shadowed variable, improve
   error message on failure to open by adding serial baud-rate to message.
+- C++ packetContainer.hpp: fix construction of event packets, resulting
+  size was incorrect due to wrong vector sizing at initialization.
+- C++ events/common.hpp: shrink_to_fit() fails on empty packets, since
+  resize to zero is not allowed. Now correctly detects this case.
 - Devices: documentation updates, fix typos and precise usage of
   'deviceString' member in device info structures; it is only valid
   during the life-time of the device!
@@ -51,7 +84,7 @@ BUG FIXES
   some devices seem to need longer delays to start up properly.
 - USB: better log messages on failure, reduce event handling timeout to
   10ms from 1s for quicker response to shutdown requests.
-- AutoExposure: debug log messages from the autoexposure module now
+- AutoExposure: debug log messages from the auto-exposure module now
   respect the per-device log-level settings.
 
 
