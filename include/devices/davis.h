@@ -2005,6 +2005,7 @@ struct caer_bias_coarsefine {
  * @return internal integer representation for device configuration.
  */
 uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFineBias);
+
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a coarse-fine bias structure, for easier
@@ -2015,6 +2016,26 @@ uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFine
  * @return coarse-fine bias structure.
  */
 struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBias);
+
+/**
+ * Transform current value in pico-Ampere to coarse-fine bias structure.
+ * Limit is 24.8 micro-Ampere.
+ *
+ * @param picoAmps desired current value in pico-Ampere.
+ *
+ * @return coarse-fine bias structure.
+ */
+struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps);
+
+/**
+ * Transform coarse-fine bias structure into corresponding current
+ * value in pico-Ampere.
+ *
+ * @param coarseFineBias coarse-fine bias structure.
+ *
+ * @return corresponding current value in pico-Ampere.
+ */
+uint32_t caerBiasCoarseFineToCurrent(struct caer_bias_coarsefine coarseFineBias);
 
 /**
  * Shifted-source bias operating mode.

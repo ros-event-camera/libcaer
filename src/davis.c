@@ -3667,7 +3667,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 										"IMU data: missing IMU Scale Config event. Parsing of IMU events will still be "
 										"attempted, but be aware that Accel/Gyro scale conversions may be inaccurate.");
 									state->imu.count = 1;
-								// Fall through to next case, as if imu.count was equal to 1.
+									// Fall through to next case, as if imu.count was equal to 1.
 
 								case 1:
 								case 3:
@@ -4078,6 +4078,78 @@ struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBia
 	biasValue.coarseValue        = U8T(coarseFineBias >> 12) & 0x07;
 
 	return (biasValue);
+}
+
+static const uint32_t coarseCurrents[8] = {
+	11,
+	94,
+	756,
+	6054,
+	48437,
+	387500,
+	3100000,
+	24800000,
+};
+
+struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps) {
+	struct caer_bias_coarsefine biasValue;
+
+	// Disable bias.
+	if (picoAmps == 0) {
+		biasValue.coarseValue = 0;
+		biasValue.fineValue   = 0;
+
+		return (biasValue);
+	}
+
+	// We support between 1 pA and 24.8 uA (24.8 mio pA).
+	if (picoAmps > 24800000) {
+		picoAmps = 24800000; // Limit to 24.8 uA.
+	}
+
+	// Select appropriate coarse value from precomputed table.
+	uint8_t coarseValue = 0;
+
+	for (uint8_t i = 0; i < 8; i++) {
+		if (picoAmps <= coarseCurrents[i]) {
+			coarseValue = i;
+			break;
+		}
+	}
+
+	biasValue.coarseValue = U8T(coarseValue);
+
+	// Calculate coarse current value based on value going to device.
+	// This is the maximum for the fine divider.
+	double coarseCurrent = (double) coarseCurrents[coarseValue];
+
+	int32_t fineValue = I32T(round(((255.0 * (double) picoAmps) / coarseCurrent)));
+
+	// Ensure within range.
+	if (fineValue < 1) {
+		fineValue = 1;
+	}
+	else if (fineValue > 255) {
+		fineValue = 255;
+	}
+
+	biasValue.fineValue = U8T(fineValue);
+
+	return (biasValue);
+}
+
+uint32_t caerBiasCoarseFineToCurrent(struct caer_bias_coarsefine coarseFineBias) {
+	// Special base: disabled bias.
+	if (coarseFineBias.fineValue == 0) {
+		return (0);
+	}
+
+	double coarseCurrent = (double) coarseCurrents[coarseFineBias.coarseValue];
+	double fineCurrent   = (coarseCurrent * (double) coarseFineBias.fineValue) / 255.0;
+
+	double biasCurrent = round(fineCurrent);
+
+	return (U32T(biasCurrent));
 }
 
 uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shiftedSourceBias) {
