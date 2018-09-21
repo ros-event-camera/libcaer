@@ -84,6 +84,17 @@ void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter);
 void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarity);
 
 /**
+ * Apply the DVS noise filter to the given polarity events packet.
+ * This will only gather statistics on the noise, without changing the
+ * event packet at all!
+ *
+ * @param noiseFilter a valid DVS noise filter instance.
+ * @param polarity a valid polarity event packet. If NULL, no operation
+ *                 is performed.
+ */
+void caerFilterDVSNoiseStatsApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacketConst polarity);
+
+/**
  * Set DVS noise filter configuration parameters.
  *
  * @param noiseFilter a valid DVS noise filter instance.
@@ -152,6 +163,16 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  * Number of events filtered out by the hot pixel filter.
  */
 #define CAER_FILTER_DVS_HOTPIXEL_STATISTICS 4
+/**
+ * DVS HotPixel Filter:
+ * Number of ON events filtered out by the hot pixel filter.
+ */
+#define CAER_FILTER_DVS_HOTPIXEL_STATISTICS_ON 17
+/**
+ * DVS HotPixel Filter:
+ * Number of OFF events filtered out by the hot pixel filter.
+ */
+#define CAER_FILTER_DVS_HOTPIXEL_STATISTICS_OFF 18
 
 /**
  * DVS Background-Activity Filter:
@@ -171,6 +192,16 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  * number of events filtered out by the background-activity filter.
  */
 #define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS 7
+/**
+ * DVS Background-Activity Filter:
+ * number of ON events filtered out by the background-activity filter.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS_ON 19
+/**
+ * DVS Background-Activity Filter:
+ * number of OFF events filtered out by the background-activity filter.
+ */
+#define CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS_OFF 20
 
 /**
  * DVS Refractory Period Filter:
@@ -190,6 +221,16 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
  * number of events filtered out by the refractory period filter.
  */
 #define CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS 10
+/**
+ * DVS Refractory Period Filter:
+ * number of ON events filtered out by the refractory period filter.
+ */
+#define CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS_ON 21
+/**
+ * DVS Refractory Period Filter:
+ * number of OFF events filtered out by the refractory period filter.
+ */
+#define CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS_OFF 22
 
 /**
  * DVS Noise Filter:

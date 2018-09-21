@@ -99,8 +99,22 @@ public:
 			caerFilterDVSNoiseApply(handle.get(), (caerPolarityEventPacket) polarity->getHeaderPointer());
 		}
 	}
+
+	void apply(caerPolarityEventPacketConst polarity) const noexcept {
+		caerFilterDVSNoiseStatsApply(handle.get(), polarity);
+	}
+
+	void apply(const libcaer::events::PolarityEventPacket &polarity) const noexcept {
+		caerFilterDVSNoiseStatsApply(handle.get(), (caerPolarityEventPacketConst) polarity.getHeaderPointer());
+	}
+
+	void apply(const libcaer::events::PolarityEventPacket *polarity) const noexcept {
+		if (polarity != nullptr) {
+			caerFilterDVSNoiseStatsApply(handle.get(), (caerPolarityEventPacketConst) polarity->getHeaderPointer());
+		}
+	}
 };
-}
-}
+} // namespace filters
+} // namespace libcaer
 
 #endif /* LIBCAER_FILTERS_DVS_NOISE_HPP_ */

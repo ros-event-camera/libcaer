@@ -14,7 +14,8 @@ struct caer_filter_dvs_noise {
 	bool hotPixelEnabled;
 	size_t hotPixelArraySize;
 	struct caer_filter_dvs_pixel *hotPixelArray;
-	uint64_t hotPixelStat;
+	uint64_t hotPixelStatOn;
+	uint64_t hotPixelStatOff;
 	// Background Activity filter.
 	bool backgroundActivityEnabled;
 	bool backgroundActivityTwoLevels;
@@ -22,11 +23,13 @@ struct caer_filter_dvs_noise {
 	uint8_t backgroundActivitySupportMin;
 	uint8_t backgroundActivitySupportMax;
 	uint32_t backgroundActivityTime;
-	uint64_t backgroundActivityStat;
+	uint64_t backgroundActivityStatOn;
+	uint64_t backgroundActivityStatOff;
 	// Refractory Period filter.
 	bool refractoryPeriodEnabled;
 	uint32_t refractoryPeriodTime;
-	uint64_t refractoryPeriodStat;
+	uint64_t refractoryPeriodStatOn;
+	uint64_t refractoryPeriodStatOff;
 	// Maps and their sizes.
 	uint16_t sizeX;
 	uint16_t sizeY;
@@ -46,6 +49,8 @@ static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise h
 	ATTRIBUTE_FORMAT(3);
 static int hotPixelArrayCountCompare(const void *a, const void *b);
 static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter);
+static void caerFilterDVSNoiseApplyInternal(
+	caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarityPacket, bool statisticsOnly);
 
 static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) {
 	va_list argumentList;
@@ -241,8 +246,17 @@ void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter) {
 }
 
 void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarity) {
+	caerFilterDVSNoiseApplyInternal(noiseFilter, polarity, false);
+}
+
+void caerFilterDVSNoiseStatsApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacketConst polarity) {
+	caerFilterDVSNoiseApplyInternal(noiseFilter, (caerPolarityEventPacket) polarity, true);
+}
+
+static void caerFilterDVSNoiseApplyInternal(
+	caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarityPacket, bool statisticsOnly) {
 	// Nothing to process.
-	if ((polarity == NULL) || (caerEventPacketHeaderGetEventValid(&polarity->packetHeader) == 0)) {
+	if ((polarityPacket == NULL) || (caerEventPacketHeaderGetEventValid(&polarityPacket->packetHeader) == 0)) {
 		return;
 	}
 
@@ -260,19 +274,19 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 			noiseFilter->hotPixelLearningStarted = true;
 
 			// Store start timestamp.
-			caerPolarityEventConst firstEvent      = caerPolarityEventPacketGetEventConst(polarity, 0);
-			noiseFilter->hotPixelLearningStartTime = caerPolarityEventGetTimestamp64(firstEvent, polarity);
+			caerPolarityEventConst firstEvent      = caerPolarityEventPacketGetEventConst(polarityPacket, 0);
+			noiseFilter->hotPixelLearningStartTime = caerPolarityEventGetTimestamp64(firstEvent, polarityPacket);
 
 			filterDVSNoiseLog(CAER_LOG_DEBUG, noiseFilter, "HotPixel Learning: started on ts=%" PRIi64 ".",
 				noiseFilter->hotPixelLearningStartTime);
 		}
 	}
 
-	CAER_POLARITY_ITERATOR_VALID_START(polarity)
+	CAER_POLARITY_ITERATOR_VALID_START(polarityPacket)
 	uint16_t x        = caerPolarityEventGetX(caerPolarityIteratorElement);
 	uint16_t y        = caerPolarityEventGetY(caerPolarityIteratorElement);
 	bool pol          = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
-	int64_t ts        = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
+	int64_t ts        = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarityPacket);
 	size_t pixelIndex = (y * (size_t) noiseFilter->sizeX) + x; // Target pixel.
 
 	// Hot Pixel learning: determine which pixels are abnormally active,
@@ -304,8 +318,15 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 
 		for (size_t i = 0; i < noiseFilter->hotPixelArraySize; i++) {
 			if ((x == noiseFilter->hotPixelArray[i].x) && (y == noiseFilter->hotPixelArray[i].y)) {
-				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-				noiseFilter->hotPixelStat++;
+				if (!statisticsOnly) {
+					caerPolarityEventInvalidate(caerPolarityIteratorElement, polarityPacket);
+				}
+				if (pol) {
+					noiseFilter->hotPixelStatOn++;
+				}
+				else {
+					noiseFilter->hotPixelStatOff++;
+				}
 
 				filteredOut = true;
 				break;
@@ -325,8 +346,15 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 	// can we try to eliminate the event early in a less costly manner.
 	if (noiseFilter->refractoryPeriodEnabled) {
 		if ((ts - GET_TS(noiseFilter->timestampsMap[pixelIndex])) < noiseFilter->refractoryPeriodTime) {
-			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-			noiseFilter->refractoryPeriodStat++;
+			if (!statisticsOnly) {
+				caerPolarityEventInvalidate(caerPolarityIteratorElement, polarityPacket);
+			}
+			if (pol) {
+				noiseFilter->refractoryPeriodStatOn++;
+			}
+			else {
+				noiseFilter->refractoryPeriodStatOff++;
+			}
 
 			goto WriteTimestamp;
 		}
@@ -361,8 +389,15 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 		// Event is not supported by any neighbor if we get here, invalidate it.
 		// Then jump over the Refractory Period filter, as it's useless to
 		// execute it (and would cause a double-invalidate error).
-		caerPolarityEventInvalidate(caerPolarityIteratorElement, polarity);
-		noiseFilter->backgroundActivityStat++;
+		if (!statisticsOnly) {
+			caerPolarityEventInvalidate(caerPolarityIteratorElement, polarityPacket);
+		}
+		if (pol) {
+			noiseFilter->backgroundActivityStatOn++;
+		}
+		else {
+			noiseFilter->backgroundActivityStatOff++;
+		}
 	}
 
 WriteTimestamp:
@@ -439,9 +474,12 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 					(size_t) noiseFilter->sizeX * (size_t) noiseFilter->sizeY * sizeof(int64_t));
 
 				// Reset statistics to zero
-				noiseFilter->hotPixelStat           = 0;
-				noiseFilter->backgroundActivityStat = 0;
-				noiseFilter->refractoryPeriodStat   = 0;
+				noiseFilter->hotPixelStatOn            = 0;
+				noiseFilter->hotPixelStatOff           = 0;
+				noiseFilter->backgroundActivityStatOn  = 0;
+				noiseFilter->backgroundActivityStatOff = 0;
+				noiseFilter->refractoryPeriodStatOn    = 0;
+				noiseFilter->refractoryPeriodStatOff   = 0;
 			}
 			break;
 
@@ -477,7 +515,15 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 			break;
 
 		case CAER_FILTER_DVS_HOTPIXEL_STATISTICS:
-			*param = noiseFilter->hotPixelStat;
+			*param = (noiseFilter->hotPixelStatOn + noiseFilter->hotPixelStatOff);
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_STATISTICS_ON:
+			*param = noiseFilter->hotPixelStatOn;
+			break;
+
+		case CAER_FILTER_DVS_HOTPIXEL_STATISTICS_OFF:
+			*param = noiseFilter->hotPixelStatOff;
 			break;
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_ENABLE:
@@ -505,7 +551,15 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 			break;
 
 		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS:
-			*param = noiseFilter->backgroundActivityStat;
+			*param = (noiseFilter->backgroundActivityStatOn + noiseFilter->backgroundActivityStatOff);
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS_ON:
+			*param = noiseFilter->backgroundActivityStatOn;
+			break;
+
+		case CAER_FILTER_DVS_BACKGROUND_ACTIVITY_STATISTICS_OFF:
+			*param = noiseFilter->backgroundActivityStatOff;
 			break;
 
 		case CAER_FILTER_DVS_REFRACTORY_PERIOD_ENABLE:
@@ -517,7 +571,15 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
 			break;
 
 		case CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS:
-			*param = noiseFilter->refractoryPeriodStat;
+			*param = (noiseFilter->refractoryPeriodStatOn + noiseFilter->refractoryPeriodStatOff);
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS_ON:
+			*param = noiseFilter->refractoryPeriodStatOn;
+			break;
+
+		case CAER_FILTER_DVS_REFRACTORY_PERIOD_STATISTICS_OFF:
+			*param = noiseFilter->refractoryPeriodStatOff;
 			break;
 
 		case CAER_FILTER_DVS_LOG_LEVEL:
