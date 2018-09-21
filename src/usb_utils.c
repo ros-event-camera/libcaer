@@ -188,8 +188,12 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			// Verify device firmware version.
 			bool firmwareVersionOK = true;
 
-			if ((requiredFirmwareVersion >= 0) && (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
-				firmwareVersionOK = false;
+			if (requiredFirmwareVersion >= 0) {
+				if (U8T(devDesc.bcdDevice & 0x00FF) < U8T(requiredFirmwareVersion)) {
+					firmwareVersionOK = false;
+				}
+
+				(*foundUSBDevices)[matches].firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
 			}
 
 			// Verify device logic version.
@@ -223,6 +227,8 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 				if (param32 < U32T(requiredLogicRevision)) {
 					logicVersionOK = false;
 				}
+
+				(*foundUSBDevices)[matches].logicVersion = I16T(param32);
 			}
 
 			// If any of the version checks failed, stop.
@@ -368,16 +374,19 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				// Verify device firmware version.
 				bool firmwareVersionOK = true;
 
-				if ((requiredFirmwareVersion >= 0)
-					&& (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
-					caerUSBLog(CAER_LOG_ERROR, state,
-						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16
-						" is required. Please updated by following the Flashy upgrade documentation at "
-						"'https://inivation.com/support/software/reflashing/'.",
-						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
+				if (requiredFirmwareVersion >= 0) {
+					if (U8T(devDesc.bcdDevice & 0x00FF) < U8T(requiredFirmwareVersion)) {
+						caerUSBLog(CAER_LOG_ERROR, state,
+							"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu8
+							" is required. Please updated by following the Flashy upgrade documentation at "
+							"'https://inivation.com/support/software/reflashing/'.",
+							U8T(devDesc.bcdDevice & 0x00FF), U8T(requiredFirmwareVersion));
 
-					firmwareVersionOK = false;
-					errno             = CAER_ERROR_FW_VERSION;
+						firmwareVersionOK = false;
+						errno             = CAER_ERROR_FW_VERSION;
+					}
+
+					deviceUSBInfo->firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
 				}
 
 				// Verify device logic version.
@@ -420,6 +429,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						logicVersionOK = false;
 						errno          = CAER_ERROR_LOGIC_VERSION;
 					}
+
+					deviceUSBInfo->logicVersion = I16T(param32);
 				}
 
 				// If any of the version checks failed, stop.

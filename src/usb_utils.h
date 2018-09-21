@@ -57,6 +57,8 @@ struct usb_info {
 	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1];
 	bool errorOpen;
 	bool errorVersion;
+	int16_t firmwareVersion;
+	int16_t logicVersion;
 };
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
