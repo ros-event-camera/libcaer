@@ -13,8 +13,11 @@
 
 // Supported devices and their functions.
 static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscoveryResult *discoveredDevices) = {
-		[CAER_DEVICE_DVS128] = &dvs128Find, [CAER_DEVICE_DAVIS_FX2] = &davisFindFX2,
-	[CAER_DEVICE_DAVIS_FX3] = &davisFindFX3, [CAER_DEVICE_DYNAPSE] = &dynapseFind, [CAER_DEVICE_DAVIS] = &davisFindAll,
+	[CAER_DEVICE_DVS128]    = &dvs128Find,
+	[CAER_DEVICE_DAVIS_FX2] = &davisFindFX2,
+	[CAER_DEVICE_DAVIS_FX3] = &davisFindFX3,
+	[CAER_DEVICE_DYNAPSE]   = &dynapseFind,
+	[CAER_DEVICE_DAVIS]     = &davisFindAll,
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsFind,
 #else
@@ -145,9 +148,10 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 			break;
 		}
 
-		case CAER_DEVICE_DAVIS_RPI:
+		case CAER_DEVICE_DAVIS_RPI: {
 			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, 0, 0, NULL));
 			break;
+		}
 
 		default:
 			return (NULL);
