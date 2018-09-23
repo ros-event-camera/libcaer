@@ -8,6 +8,7 @@ Makefile
 cmake_install.cmake
 /install_manifest.txt
 /libcaer.pc
+/libcaerConfig*.cmake
 /*.sh
 *~
 *.swp
