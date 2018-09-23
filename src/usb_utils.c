@@ -189,7 +189,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			bool firmwareVersionOK = true;
 
 			if (requiredFirmwareVersion >= 0) {
-				if (U8T(devDesc.bcdDevice & 0x00FF) < U8T(requiredFirmwareVersion)) {
+				if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
 					firmwareVersionOK = false;
 				}
 
@@ -224,7 +224,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic version.
-				if (param32 < U32T(requiredLogicRevision)) {
+				if (param32 != U32T(requiredLogicRevision)) {
 					logicVersionOK = false;
 				}
 
@@ -375,7 +375,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				bool firmwareVersionOK = true;
 
 				if (requiredFirmwareVersion >= 0) {
-					if (U8T(devDesc.bcdDevice & 0x00FF) < U8T(requiredFirmwareVersion)) {
+					if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
 						caerUSBLog(CAER_LOG_ERROR, state,
 							"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu8
 							" is required. Please updated by following the Flashy upgrade documentation at "
@@ -419,7 +419,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic version.
-					if (param32 < U32T(requiredLogicRevision)) {
+					if (param32 != U32T(requiredLogicRevision)) {
 						caerUSBLog(CAER_LOG_ERROR, state,
 							"Device logic version too old. You have version %" PRIu32 "; but at least version %" PRIu32
 							" is required. Please updated by following the Flashy upgrade documentation at "
