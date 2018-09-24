@@ -519,7 +519,7 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyAllEvents(cae
 	}
 
 	caerEventPacketContainer newContainer
-		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventsNumber(container));
+		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventPacketsNumber(container));
 	if (newContainer == NULL) {
 		return (NULL);
 	}
@@ -548,7 +548,7 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyValidEvents(
 	}
 
 	caerEventPacketContainer newContainer
-		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventsNumber(container));
+		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventPacketsNumber(container));
 	if (newContainer == NULL) {
 		return (NULL);
 	}
