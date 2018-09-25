@@ -1,6 +1,6 @@
 Summary: Minimal C library to interact with neuromorphic sensors and processors
 Name:    libcaer
-Version: 2.5.0
+Version: 2.5.2
 Release: 0%{?dist}
 License: BSD
 URL:     https://github.com/inivation/libcaer/
