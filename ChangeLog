@@ -1,3 +1,6 @@
+Release 2.5.3 - XX.XX.2018
+IN PROGRESS
+
 Release 2.5.2 - 25.09.2018
 INCOMPATIBLE CHANGES
 - CMake: raised minimum CMake dependency to version 2.8.12, some
