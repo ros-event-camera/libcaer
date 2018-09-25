@@ -65,6 +65,14 @@ public:
 		return (caerBiasCoarseFineParse(coarseFineBias));
 	}
 
+	static struct caer_bias_coarsefine biasCoarseFineFromCurrent(const uint32_t picoAmps) noexcept {
+		return (caerBiasCoarseFineFromCurrent(picoAmps));
+	}
+
+	static uint32_t biasCoarseFineToCurrent(const struct caer_bias_coarsefine coarseFineBias) noexcept {
+		return (caerBiasCoarseFineToCurrent(coarseFineBias));
+	}
+
 	static uint16_t biasShiftedSourceGenerate(const struct caer_bias_shiftedsource shiftedSourceBias) noexcept {
 		return (caerBiasShiftedSourceGenerate(shiftedSourceBias));
 	}
@@ -101,7 +109,7 @@ public:
 	davisrpi(uint16_t deviceID) : davis(deviceID, CAER_DEVICE_DAVIS_RPI) {
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_DAVIS_HPP_ */
