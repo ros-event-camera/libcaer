@@ -14,3 +14,4 @@
    happen on a properly setup Ubuntu system with GPG keys loaded.
    $ ./packageUbuntu.sh --source --upload --distro $DISTRO
 9) Send announces to appropriate Google Groups.
+10) Increase version to odd number (+1) for next development cycle.

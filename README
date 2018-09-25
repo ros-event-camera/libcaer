@@ -9,7 +9,7 @@ REQUIREMENTS:
 
 Linux, MacOS X or Windows (for Windows build instructions see README.Windows)
 pkg-config
-cmake >= 2.6
+cmake >= 2.8.12
 gcc >= 4.9 or clang >= 3.6
 libusb >= 1.0.17
 Optional: libserialport >= 0.1.1
