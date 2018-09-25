@@ -1,3 +1,30 @@
+Release 2.5.2 - 25.09.2018
+INCOMPATIBLE CHANGES
+- CMake: raised minimum CMake dependency to version 2.8.12, some
+  variables we use are only defined starting with this version.
+  It also corresponds to the version present in the oldest distribution we
+  support: Ubuntu 14.04 Trusty.
+
+NEW FEATURES
+- CMake: added CAER_LOCAL_INCDIRS/CAER_LOCAL_LIBDIRS/CAER_LOCAL_PREFIX
+  variables to enable easier cross-compilation setups.
+- CMake: added CMake configuration files, so that CMake may find the library
+  using its own package detection system, in addition to the existing pkg-config
+  based detection. Thanks to Felix Schwitzer (see issue #72 for more details).
+- devices/davis.h: added caerBiasCoarseFineFromCurrent() and caerBiasCoarseFineToCurrent()
+  functions to convert between coarse-fine bias values and the current they
+  represent (in picoAmpere). Also available in the C++ interface (issue #40).
+- filters/dvs_noise.h: added statistics on number of filtered events separated
+  by ON/OFF polarity. Added caerFilterDVSNoiseStatsApply() function to only
+  gather statistics and not modify the given polarity event packet (read-only
+  mode). Also available in the C++ interface.
+
+BUG FIXES
+- src/usb_utils.c: check for exact firmware and logic versions.
+- events/packetContainer.h: fix sizes used in caerEventPacketContainerCopyAllEvents()
+  and caerEventPacketContainerCopyValidEvents() to allocate new containers.
+
+
 Release 2.5.0 - 17.07.2018
 INCOMPATIBLE CHANGES
 - davis.h: removed support for stereo microphones, this was never used in any
