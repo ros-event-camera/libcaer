@@ -6,7 +6,7 @@ License: BSD
 URL:     https://github.com/inivation/libcaer/
 Vendor:  iniVation AG
 
-BuildRequires: cmake >= 2.8.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.1.0
+BuildRequires: gcc >= 4.9, gcc-c++ >= 4.9, cmake >= 2.8.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.1.0
 Requires: libusbx >= 1.0.17, libserialport >= 0.1.1, opencv >= 3.1.0
 
 Source0: https://github.com/inivation/libcaer/archive/%{version}.tar.gz
