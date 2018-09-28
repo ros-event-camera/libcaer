@@ -377,8 +377,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				if (requiredFirmwareVersion >= 0) {
 					if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
 						caerUSBLog(CAER_LOG_ERROR, state,
-							"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu8
-							" is required. Please updated by following the Flashy upgrade documentation at "
+							"Device firmware version incorrect. You have version %" PRIu8 "; but version %" PRIu8
+							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
 							U8T(devDesc.bcdDevice & 0x00FF), U8T(requiredFirmwareVersion));
 
@@ -421,8 +421,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					// Verify device logic version.
 					if (param32 != U32T(requiredLogicRevision)) {
 						caerUSBLog(CAER_LOG_ERROR, state,
-							"Device logic version too old. You have version %" PRIu32 "; but at least version %" PRIu32
-							" is required. Please updated by following the Flashy upgrade documentation at "
+							"Device logic version incorrect. You have version %" PRIu32 "; but version %" PRIu32
+							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
 							param32, U32T(requiredLogicRevision));
 
