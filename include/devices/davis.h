@@ -11,6 +11,7 @@
 #include "../events/imu6.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
+
 #include "usb.h"
 
 #ifdef __cplusplus

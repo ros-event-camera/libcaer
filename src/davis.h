@@ -3,7 +3,9 @@
 
 #include "devices/davis.h"
 #include "devices/device_discover.h"
+
 #include "filters/dvs_noise.h"
+
 #include "autoexposure.h"
 #include "container_generation.h"
 #include "data_exchange.h"

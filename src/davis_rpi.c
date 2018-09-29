@@ -1,4 +1,5 @@
 #include "davis_rpi.h"
+
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
 #include <linux/types.h>
@@ -17,7 +18,7 @@
 #define GPIO_ALT(gpioReg, gpioId, altFunc) \
 	gpioReg[(gpioId) / 10] |= U32T(((altFunc) <= 3 ? (altFunc) + 4 : (altFunc) == 4 ? 3 : 2) << (((gpioId) % 10) * 3))
 
-#define GPIO_SET(gpioReg, gpioId) gpioReg[7]  = U32T(1 << (gpioId)) // sets   bits which are 1 ignores bits which are 0
+#define GPIO_SET(gpioReg, gpioId) gpioReg[7] = U32T(1 << (gpioId))  // sets   bits which are 1 ignores bits which are 0
 #define GPIO_CLR(gpioReg, gpioId) gpioReg[10] = U32T(1 << (gpioId)) // clears bits which are 1 ignores bits which are 0
 
 #define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
@@ -52,6 +53,7 @@ bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, 
 	uint16_t endX, uint16_t endY);
 
 #if DAVIS_RPI_BENCHMARK == 1
+static void davisRPiBenchmarkDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize);
 static void setupGPIOTest(davisRPiHandle handle, enum benchmarkMode mode);
 static void shutdownGPIOTest(davisRPiHandle handle);
 #endif
@@ -255,7 +257,11 @@ static int gpioThreadRun(void *handlePtr) {
 	// Translate data. Support testing/benchmarking.
 	processData:
 		if (dataSize > 0) {
+#if DAVIS_RPI_BENCHMARK == 0
 			davisRPiDataTranslator(handle, data, dataSize);
+#else
+			davisRPiBenchmarkDataTranslator(handle, data, dataSize);
+#endif
 		}
 
 #if DAVIS_RPI_BENCHMARK == 1
@@ -2689,8 +2695,7 @@ caerEventPacketContainer davisRPiDataGet(caerDeviceHandle cdh) {
 }
 
 #if DAVIS_RPI_BENCHMARK == 1
-
-static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize) {
+static void davisRPiBenchmarkDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize) {
 	davisRPiState state = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
@@ -2820,8 +2825,7 @@ static void shutdownGPIOTest(davisRPiHandle handle) {
 	davisRPiLog(CAER_LOG_ERROR, handle, "Test %d: bandwidth of %g events/second (%zu events in %g seconds).",
 		state->benchmark.testMode, eventsPerSecond, state->benchmark.dataCount, diffSecondTime);
 }
-
-#else
+#endif
 
 #define TS_WRAP_ADD 0x8000
 
@@ -3683,7 +3687,7 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 										"IMU data: missing IMU Scale Config event. Parsing of IMU events will still be "
 										"attempted, but be aware that Accel/Gyro scale conversions may be inaccurate.");
 									state->imu.count = 1;
-								// Fall through to next case, as if imu.count was equal to 1.
+									// Fall through to next case, as if imu.count was equal to 1.
 
 								case 1:
 								case 3:
@@ -3945,8 +3949,6 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 		}
 	}
 }
-
-#endif
 
 bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
 	uint16_t endX, uint16_t endY) {

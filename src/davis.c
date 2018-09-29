@@ -1,4 +1,5 @@
 #include "davis.h"
+
 #include <math.h>
 
 static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices);
