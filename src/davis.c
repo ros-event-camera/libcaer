@@ -847,11 +847,10 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisHandle handle = (davisHandle) cdh;
 
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, false);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL, true);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
+	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL, true);
+	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4);        // in cycles @ LogicClock
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0);     // in cycles @ LogicClock
@@ -1360,11 +1359,11 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			switch (paramAddr) {
 				case DAVIS_CONFIG_MUX_RUN:
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RUN:
-				case DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
-				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_RUN_CHIP:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1981,11 +1980,11 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			switch (paramAddr) {
 				case DAVIS_CONFIG_MUX_RUN:
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RUN:
-				case DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE:
-				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_RUN_CHIP:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -2730,20 +2729,24 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
+		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, true);
+
+		// Wait 200 ms for biases to stabilize.
+		struct timespec biasEnSleep = {.tv_sec = 0, .tv_nsec = 200000000};
+		thrd_sleep(&biasEnSleep, NULL);
+
+		davisConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
+
+		// Wait 50 ms for data transfer to be ready.
+		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
+		thrd_sleep(&noDataSleep, NULL);
+
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, true);
-		// Do NOT enable additional ExtInput detectors, those are always user controlled.
-
-		// Enable data transfer only after enabling the data producers, so that the chip
-		// has time to start up and we avoid the initial data flood.
-		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 500000000};
-		thrd_sleep(&noDataSleep, NULL);
-
-		davisConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
-		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
-		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
 	}
 
 	return (true);
@@ -2755,16 +2758,16 @@ bool davisDataStop(caerDeviceHandle cdh) {
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
-		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, false); // Ensure chip turns off.
-		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, false); // Turn off timestamping too.
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
+
 		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, false);
+
+		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, false);
 	}
 
 	usbDataTransfersStop(&state->usbState);
