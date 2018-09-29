@@ -471,9 +471,10 @@ extern "C" {
 #define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY 31
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
- * specify the time difference constant for the background-activity
- * filter in 250µs units. Events that are correlated within this
- * time-frame are let through, while others are filtered out.
+ * specify the time difference constant for the background-activity filter.
+ * Range: 0 - 4095, in 250µs units.
+ * Events that are correlated within this time-frame are let through,
+ * while others are filtered out.
  */
 #define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 32
 /**
@@ -485,8 +486,8 @@ extern "C" {
 #define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD 33
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
- * specify the time constant for the refractory period filter,
- * in 250µs units.
+ * specify the time constant for the refractory period filter.
+ * Range: 0 - 4095, in 250µs units.
  * Pixels will be inhibited from generating new events during this
  * time after the last even has fired.
  */
@@ -546,6 +547,7 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * number of events to let through before skipping one.
+ * Range: 0 - 255 events.
  */
 #define DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY 52
 /**
