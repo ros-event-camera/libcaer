@@ -319,44 +319,11 @@ extern "C" {
 #define DAVIS_CONFIG_DVS_RUN 3
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
- * delay capturing the data and acknowledging it on the AER bus for
- * the row events (serial AER protocol) by this many LogicClock cycles.
- */
-#define DAVIS_CONFIG_DVS_ACK_DELAY_ROW 4
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * delay capturing the data and acknowledging it on the AER bus for
- * the column events (serial AER protocol) by this many LogicClock cycles.
- */
-#define DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN 5
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * extend the length of the acknowledge on the AER bus for
- * the row events (serial AER protocol) by this many LogicClock cycles.
- */
-#define DAVIS_CONFIG_DVS_ACK_EXTENSION_ROW 6
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * extend the length of the acknowledge on the AER bus for
- * the column events (serial AER protocol) by this many LogicClock cycles.
- */
-#define DAVIS_CONFIG_DVS_ACK_EXTENSION_COLUMN 7
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
  * if the output FIFO for this module is full, stall the AER handshake with
  * the chip and wait until it's free again, instead of just continuing
  * the handshake and dropping the resulting events.
  */
-#define DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL 8
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * enable row-only event filter, to eliminate spurious row events with no
- * following columns events. This can happen on DAVIS240 chips, or
- * following the various pixel and background-activity filtering stages,
- * which drop column events to achieve their effect.
- * This should always be enabled!
- */
-#define DAVIS_CONFIG_DVS_FILTER_ROW_ONLY_EVENTS 9
+#define DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL 4
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable external AER control. This ensures the chip and the DVS pixel
@@ -365,7 +332,7 @@ extern "C" {
  * over the AER communication with the chip.
  * DAVIS_CONFIG_DVS_RUN has to be turned off for this to work.
  */
-#define DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL 10
+#define DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL 5
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
@@ -374,119 +341,119 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER 11
+#define DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER 10
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 0, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW 12
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW 11
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 0, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN 13
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN 12
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 1, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_1_ROW 14
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_1_ROW 13
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 1, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_1_COLUMN 15
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_1_COLUMN 14
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 2, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_2_ROW 16
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_2_ROW 15
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 2, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_2_COLUMN 17
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_2_COLUMN 16
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 3, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_3_ROW 18
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_3_ROW 17
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 3, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_3_COLUMN 19
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_3_COLUMN 18
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 4, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_4_ROW 20
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_4_ROW 19
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 4, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_4_COLUMN 21
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_4_COLUMN 20
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 5, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_5_ROW 22
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_5_ROW 21
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 5, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_5_COLUMN 23
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_5_COLUMN 22
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 6, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_6_ROW 24
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_6_ROW 23
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 6, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN 25
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN 24
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 7, Y axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_7_ROW 26
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_7_ROW 25
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * the pixel filter completely suppresses up to eight pixels in the
  * DVS array, filtering out all events produced by them.
  * This is the pixel 7, X axis setting.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN 27
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN 26
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
@@ -495,39 +462,20 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER 28
+#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER 30
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the background-activity filter, which tries to remove events
  * caused by transistor leakage, by rejecting uncorrelated events.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY 29
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY 31
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * specify the time difference constant for the background-activity
  * filter in 250µs units. Events that are correlated within this
  * time-frame are let through, while others are filtered out.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 30
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * read-only parameter, information about the presence of the
- * test event generator feature.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR 31
-/**
- * Parameter address for module DAVIS_CONFIG_DVS:
- * enable the test event generator for debugging purposes.
- * This generates fake events that appear to originate from all rows
- * sequentially, and for each row going through all its columns,
- * first with an ON polarity and then with an OFF polarity.
- * Both DAVIS_CONFIG_DVS_RUN and DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL
- * have to be turned off for this to work.
- */
-#define DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE 32
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 32
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the refractory period filter, which limits the firing rate
@@ -551,35 +499,55 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_ROI_FILTER 35
+#define DAVIS_CONFIG_DVS_HAS_ROI_FILTER 40
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * start position on the X axis for Region of Interest.
  * Must be between 0 and DVS_SIZE_X-1, and be smaller
  * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN.
  */
-#define DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN 36
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN 41
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * start position on the Y axis for Region of Interest.
  * Must be between 0 and DVS_SIZE_Y-1, and be smaller
  * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW.
  */
-#define DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW 37
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW 42
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * end position on the X axis for Region of Interest.
  * Must be between 0 and DVS_SIZE_X-1, and be greater
  * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN.
  */
-#define DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN 38
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN 43
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * end position on the Y axis for Region of Interest.
  * Must be between 0 and DVS_SIZE_Y-1, and be greater
  * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW.
  */
-#define DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW 39
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW 44
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
+ * event skip filter feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_SKIP_FILTER 50
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * enable the event skip filter, which simply throws away one
+ * event every N events (decimation filter).
+ */
+#define DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS 51
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * number of events to let through before skipping one.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY 52
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
@@ -588,7 +556,7 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_STATISTICS 40
+#define DAVIS_CONFIG_DVS_HAS_STATISTICS 80
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of row event
@@ -596,7 +564,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW 41
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW 81
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of column event
@@ -604,7 +572,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN 43
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN 83
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of dropped
@@ -612,7 +580,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED 45
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED 85
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of dropped
@@ -620,7 +588,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS 47
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS 87
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of dropped
@@ -628,7 +596,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY 49
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY 89
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, representing the number of dropped
@@ -636,13 +604,13 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD 51
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD 91
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * automatically discover the eight most active pixels (above ~5KHz)
  * and set up the hardware pixel filter to remove them from the output.
  */
-#define DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN 80
+#define DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN 100
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
@@ -1863,13 +1831,6 @@ extern "C" {
 //@}
 
 /**
- * DAVIS: maximum number of APS Regions-of-Interest that
- * can be produced by any DAVIS camera. See 'struct caer_davis_info'
- * for actual number: 4 if apsHasQuadROI=true, else 1.
- */
-#define DAVIS_APS_ROI_REGIONS_MAX 4
-
-/**
  * DAVIS device-related information.
  */
 struct caer_davis_info {
@@ -1885,16 +1846,16 @@ struct caer_davis_info {
 	/// If not NULL, pointed-to memory is *only* valid while the corresponding
 	/// device is open! After calling deviceClose() this is invalid memory!
 	char *deviceString;
+	/// USB firmware version.
+	int16_t firmwareVersion;
 	/// Logic (FPGA/CPLD) version.
 	int16_t logicVersion;
-	/// Whether the device is a time-stamp master or slave.
-	bool deviceIsMaster;
-	/// Clock in MHz for main logic (FPGA/CPLD).
-	int16_t logicClock;
-	/// Clock in MHz for ADC/APS logic (FPGA/CPLD).
-	int16_t adcClock;
 	/// Chip identifier/type.
 	int16_t chipID;
+	/// Whether the device is a time-stamp master or slave.
+	bool deviceIsMaster;
+	/// Feature test: Multiplexer statistics support (event drops).
+	bool muxHasStatistics;
 	/// DVS X axis resolution.
 	int16_t dvsSizeX;
 	/// DVS Y axis resolution.
@@ -1903,8 +1864,12 @@ struct caer_davis_info {
 	bool dvsHasPixelFilter;
 	/// Feature test: DVS Background Activity filter (and Refractory Period filter).
 	bool dvsHasBackgroundActivityFilter;
-	/// Feature test: fake event generator (testing/debug).
-	bool dvsHasTestEventGenerator;
+	/// Feature test: DVS ROI filter.
+	bool dvsHasROIFilter;
+	/// Feature test: DVS event skip filter.
+	bool dvsHasSkipFilter;
+	/// Feature test: DVS statistics support.
+	bool dvsHasStatistics;
 	/// APS X axis resolution.
 	int16_t apsSizeX;
 	/// APS Y axis resolution.
@@ -1913,22 +1878,8 @@ struct caer_davis_info {
 	enum caer_frame_event_color_filter apsColorFilter;
 	/// Feature test: APS supports Global Shutter.
 	bool apsHasGlobalShutter;
-	/// Feature test: APS supports Quadruple Region-of-Interest readout.
-	bool apsHasQuadROI;
-	/// Feature test: APS supports External ADC for getting the image.
-	bool apsHasExternalADC;
-	/// Feature test: APS supports Internal (on-chip) ADC for getting the image.
-	bool apsHasInternalADC;
 	/// Feature test: External Input module supports Signal-Generation.
 	bool extInputHasGenerator;
-	/// Feature test: External Input module supports extra detectors (1 & 2).
-	bool extInputHasExtraDetectors;
-	/// Feature test: DVS ROI filter.
-	bool dvsHasROIFilter;
-	/// Feature test: DVS statistics support.
-	bool dvsHasStatistics;
-	/// Feature test: Multiplexer statistics support (event drops).
-	bool muxHasStatistics;
 };
 
 /**
@@ -2094,21 +2045,18 @@ uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shif
 struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
 
 /**
- * Configure an APS ROI region in one step. This function guarantees efficiency and
- * atomicity (no intermediate-sized results possible).
+ * Configure the APS ROI region in one step. This function guarantees efficiency and
+ * atomicity (no partial-sized results possible).
  *
  * @param handle a valid device handle.
- * @param roiRegion which ROI region to configure, 0 or [0,3] if 'apsHasQuadROI' is defined.
- * @param enable whether to enable or disable this ROI region.
  * @param startX start corner X coordinate (0, 0 is upper left of frame).
  * @param startY start corner Y coordinate (0, 0 is upper left of frame).
- * @param endX end corner X coordinate (0, 0 is upper left of frame). Must be bigger than start.
- * @param endY end corner Y coordinate (0, 0 is upper left of frame). Must be bigger than start.
+ * @param endX end corner X coordinate (0, 0 is upper left of frame). Must be bigger than startX.
+ * @param endY end corner Y coordinate (0, 0 is upper left of frame). Must be bigger than startY.
  *
  * @return true on success, false otherwise.
  */
-bool caerDavisROIConfigure(caerDeviceHandle handle, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY);
+bool caerDavisROIConfigure(caerDeviceHandle handle, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY);
 
 #ifdef __cplusplus
 }
