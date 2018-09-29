@@ -19,9 +19,10 @@
  * Enable APS frame debugging by only looking at the reset or signal
  * frames, and not at the resulting correlated frame.
  * Supported values:
- * 0 - normal output, no debug (default)
- * 1 - both reset and signal separately (marked as ROI regions
- *     [0,1,2,3] for signal and [4,5,6,7] for reset respectively)
+ * 0 - normal output (ROI region 0), no debug (default)
+ * 1 - normal output (ROI region 0), and in addition both reset and
+ *     signal separately (marked as ROI regions 1 for reset and 2
+ *     for signal respectively)
  */
 #define APS_DEBUG_FRAME 0
 
@@ -29,7 +30,7 @@
 
 #define APS_ADC_CHANNELS 1
 
-#define APS_ROI_REGIONS DAVIS_APS_ROI_REGIONS_MAX
+#define APS_ROI_REGIONS 1
 
 #define IMU6_COUNT 15
 
@@ -47,15 +48,12 @@
 #define DAVIS_DEVICE_NAME "DAVIS"
 
 #define DAVIS_FX2_DEVICE_PID 0x841B
-#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 9912
+#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 16
 #define DAVIS_FX2_REQUIRED_FIRMWARE_VERSION 4
-#define DAVIS_FX2_USB_CLOCK_FREQ 30
 
 #define DAVIS_FX3_DEVICE_PID 0x841A
-#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 9912
+#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 16
 #define DAVIS_FX3_REQUIRED_FIRMWARE_VERSION 4
-#define DAVIS_FX3_USB_CLOCK_FREQ 80
-#define DAVIS_FX3_CLOCK_FREQ_CORRECTION 1.008f
 
 #define DEBUG_ENDPOINT 0x81
 #define DEBUG_TRANSFER_NUM 4
@@ -73,7 +71,6 @@ struct davis_state {
 	struct {
 		// DVS specific fields
 		uint16_t lastY;
-		bool gotY;
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
@@ -91,12 +88,11 @@ struct davis_state {
 		bool flipY;
 		bool ignoreEvents;
 		bool globalShutter;
-		bool resetRead;
 		uint16_t currentReadoutType;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
 		uint16_t expectedCountX;
-		uint16_t *expectedCountY;
+		uint16_t expectedCountY;
 		struct {
 			int32_t tsStartFrame;
 			int32_t tsStartExposure;
@@ -159,6 +155,16 @@ struct davis_state {
 		caerSpecialEventPacket special;
 		int32_t specialPosition;
 	} currentPackets;
+	// Device timing data.
+	struct {
+		uint16_t logicClock;
+		uint16_t adcClock;
+		uint16_t usbClock;
+		uint16_t clockDeviationFactor;
+		float logicClockActual;
+		float adcClockActual;
+		float usbClockActual;
+	} deviceClocks;
 	struct {
 		// Debug transfer support (FX3 only).
 		bool enabled;
