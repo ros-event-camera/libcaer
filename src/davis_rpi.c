@@ -715,10 +715,6 @@ static inline void apsCalculateIndexes(davisRPiHandle handle) {
 	uint16_t x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
 	uint16_t y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
-	// CDAVIS support.
-	bool cDavisOffsetDirection = false;
-	int16_t cDavisOffset       = 0;
-
 	state->aps.expectedCountX = 0;
 	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
 
@@ -730,29 +726,6 @@ static inline void apsCalculateIndexes(davisRPiHandle handle) {
 		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
 			uint16_t xDest = x;
 			uint16_t yDest = y;
-
-			// CDAVIS support: first 320 pixels are even, then odd.
-			if (IS_DAVISRGB(handle->info.chipID)) {
-				if (state->aps.flipY) {
-					yDest = U16T(yDest - cDavisOffset);
-				}
-				else {
-					yDest = U16T(yDest + cDavisOffset);
-				}
-
-				if (!cDavisOffsetDirection) { // Increasing
-					cDavisOffset++;
-
-					if (cDavisOffset == 320) {
-						// Switch to decreasing after last even pixel.
-						cDavisOffsetDirection = true;
-						cDavisOffset          = 319;
-					}
-				}
-				else { // Decreasing
-					cDavisOffset = I16T(cDavisOffset - 3);
-				}
-			}
 
 			if (state->aps.invertXY) {
 				SWAP_VAR(uint16_t, xDest, yDest);
@@ -780,12 +753,6 @@ static inline void apsCalculateIndexes(davisRPiHandle handle) {
 
 		// Reset Y for next iteration.
 		y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
-
-		// CDAVIS support: reset for next iteration.
-		if (IS_DAVISRGB(handle->info.chipID)) {
-			cDavisOffsetDirection = false;
-			cDavisOffset          = 0;
-		}
 
 		if (state->aps.flipX) {
 			x--;
@@ -918,26 +885,15 @@ static inline void apsUpdateFrame(davisRPiHandle handle, uint16_t data) {
 	}
 #else
 	// Standard CDS support.
-	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
-
-	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
-		|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
+	if (state->aps.currentReadoutType == APS_READOUT_RESET) {
 		state->aps.frame.resetPixels[pixelPosition] = data;
 	}
 	else {
-		uint16_t resetValue  = 0;
+		uint16_t resetValue = 0;
 		uint16_t signalValue = 0;
 
-		if (isCDavisGS) {
-			// DAVIS RGB GS has inverted samples, signal read comes first
-			// and was stored above inside state->aps.currentResetFrame.
-			resetValue  = data;
-			signalValue = state->aps.frame.resetPixels[pixelPosition];
-		}
-		else {
-			resetValue  = state->aps.frame.resetPixels[pixelPosition];
-			signalValue = data;
-		}
+		resetValue = state->aps.frame.resetPixels[pixelPosition];
+		signalValue = data;
 
 		int32_t pixelValue = 0;
 
