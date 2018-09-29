@@ -199,7 +199,7 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 			uint16_t yDest = y;
 
 			// CDAVIS support: first 320 pixels are even, then odd.
-			if (IS_DAVISRGB(handle->info.chipID)) {
+			if (IS_DAVIS640H(handle->info.chipID)) {
 				if (state->aps.flipY) {
 					yDest = U16T(yDest - cDavisOffset);
 				}
@@ -249,7 +249,7 @@ static inline void apsCalculateIndexes(davisHandle handle) {
 		y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
 
 		// CDAVIS support: reset for next iteration.
-		if (IS_DAVISRGB(handle->info.chipID)) {
+		if (IS_DAVIS640H(handle->info.chipID)) {
 			cDavisOffsetDirection = false;
 			cDavisOffset          = 0;
 		}
@@ -385,7 +385,7 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 	}
 #else
 	// Standard CDS support.
-	bool isCDavisGS = (IS_DAVISRGB(handle->info.chipID) && state->aps.globalShutter);
+	bool isCDavisGS = (IS_DAVIS640H(handle->info.chipID) && state->aps.globalShutter);
 
 	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
 		|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
@@ -613,7 +613,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 
 	// Try to open a DAVIS device on a specific USB port.
 	bool deviceFound        = false;
-	struct usb_info usbInfo = {0, 0, "", false, false};
+	struct usb_info usbInfo = {0, 0, "", false, false, 0, 0};
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
@@ -913,7 +913,7 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 		cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ROW_SETTLE, U32T(handle->info.adcClock / 3)); // in cycles @ ADCClock
 
 	// Not supported on DAVIS RGB.
-	if (!IS_DAVISRGB(handle->info.chipID)) {
+	if (!IS_DAVIS640H(handle->info.chipID)) {
 		davisConfigSet(
 			cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_SETTLE, U32T(handle->info.adcClock)); // in cycles @ ADCClock
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_NULL_SETTLE,
@@ -953,18 +953,18 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RAMP_SHORT_RESET, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ADC_TEST_MODE, false);
 	}
-	if (IS_DAVISRGB(handle->info.chipID)) {
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_TRANSFER,
+	if (IS_DAVIS640H(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_TRANSFER,
 			U32T(handle->info.adcClock * 25)); // in cycles @ ADCClock
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_RSFDSETTLE,
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_RSFDSETTLE,
 			U32T(handle->info.adcClock * 15)); // in cycles @ ADCClock
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_GSPDRESET,
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_GSPDRESET,
 			U32T(handle->info.adcClock * 15)); // in cycles @ ADCClock
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_GSRESETFALL,
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_GSRESETFALL,
 			U32T(handle->info.adcClock * 15)); // in cycles @ ADCClock
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_GSTXFALL,
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_GSTXFALL,
 			U32T(handle->info.adcClock * 15)); // in cycles @ ADCClock
-		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVISRGB_CONFIG_APS_GSFDRESET,
+		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_GSFDRESET,
 			U32T(handle->info.adcClock * 15)); // in cycles @ ADCClock
 	}
 
@@ -1210,67 +1210,69 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 		}
 	}
 
-	if (IS_DAVISRGB(handle->info.chipID)) {
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 4)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_OVG1LO, caerBiasVDACGenerate(VDAC(63, 4)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_OVG2LO, caerBiasVDACGenerate(VDAC(0, 0)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_TX2OVG2HI, caerBiasVDACGenerate(VDAC(63, 0)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_GND07, caerBiasVDACGenerate(VDAC(13, 4)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCTESTVOLTAGE, caerBiasVDACGenerate(VDAC(21, 0)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(46, 7)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(3, 7)));
+	if (IS_DAVIS640H(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_APSCAS, caerBiasVDACGenerate(VDAC(21, 4)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_OVG1LO, caerBiasVDACGenerate(VDAC(63, 4)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_OVG2LO, caerBiasVDACGenerate(VDAC(0, 0)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_TX2OVG2HI, caerBiasVDACGenerate(VDAC(63, 0)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_GND07, caerBiasVDACGenerate(VDAC(13, 4)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ADCTESTVOLTAGE, caerBiasVDACGenerate(VDAC(21, 0)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ADCREFHIGH, caerBiasVDACGenerate(VDAC(46, 7)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ADCREFLOW, caerBiasVDACGenerate(VDAC(3, 7)));
 
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_IFREFRBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 255)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_IFREFRBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 255)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_IFTHRBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 255)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_IFTHRBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 255)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_LOCALBUFBN,
+			caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 164)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_LOCALBUFBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(5, 164)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_PADFOLLBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(7, 209)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_PADFOLLBN, caerBiasCoarseFineGenerate(CF_N_TYPE_OFF(7, 209)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 164)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 164)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_DIFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(3, 75)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_DIFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(3, 75)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ONBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 95)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ONBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 95)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(2, 41)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(1, 88)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(2, 41)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_PRSFBP, caerBiasCoarseFineGenerate(CF_P_TYPE(1, 173)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(1, 88)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_REFRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 62)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ARRAYBIASBUFFERBN,
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_PRSFBP, caerBiasCoarseFineGenerate(CF_P_TYPE(1, 173)));
+		davisConfigSet(
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_REFRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 62)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ARRAYBIASBUFFERBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(6, 128)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ARRAYLOGICBUFFERBN,
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ARRAYLOGICBUFFERBN,
 			caerBiasCoarseFineGenerate(CF_N_TYPE(5, 255)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_FALLTIMEBN, caerBiasCoarseFineGenerate(CF_N_TYPE(7, 41)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_FALLTIMEBN, caerBiasCoarseFineGenerate(CF_N_TYPE(7, 41)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_RISETIMEBP, caerBiasCoarseFineGenerate(CF_P_TYPE(6, 162)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_READOUTBUFBP,
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_RISETIMEBP, caerBiasCoarseFineGenerate(CF_P_TYPE(6, 162)));
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_READOUTBUFBP,
 			caerBiasCoarseFineGenerate(CF_P_TYPE_OFF(6, 20)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_APSROSFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(7, 82)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_APSROSFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(7, 82)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_ADCCOMPBP, caerBiasCoarseFineGenerate(CF_P_TYPE(4, 159)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_ADCCOMPBP, caerBiasCoarseFineGenerate(CF_P_TYPE(4, 159)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_DACBUFBP, caerBiasCoarseFineGenerate(CF_P_TYPE(6, 194)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_DACBUFBP, caerBiasCoarseFineGenerate(CF_P_TYPE(6, 194)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_LCOLTIMEOUTBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 49)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_LCOLTIMEOUTBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 49)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_AEPDBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 91)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_AEPDBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 91)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_AEPUXBP, caerBiasCoarseFineGenerate(CF_P_TYPE(4, 80)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_AEPUXBP, caerBiasCoarseFineGenerate(CF_P_TYPE(4, 80)));
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_AEPUYBP, caerBiasCoarseFineGenerate(CF_P_TYPE(7, 152)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_AEPUYBP, caerBiasCoarseFineGenerate(CF_P_TYPE(7, 152)));
 
 		davisConfigSet(
-			cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_BIASBUFFER, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 251)));
+			cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_BIASBUFFER, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 251)));
 
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_SSP,
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_SSP,
 			caerBiasShiftedSourceGenerate(SHIFTSOURCE(1, 33, TIED_TO_RAIL)));
-		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVISRGB_CONFIG_BIAS_SSN,
+		davisConfigSet(cdh, DAVIS_CONFIG_BIAS, DAVIS640H_CONFIG_BIAS_SSN,
 			caerBiasShiftedSourceGenerate(SHIFTSOURCE(2, 33, SHIFTED_SOURCE)));
 	}
 
@@ -1313,10 +1315,10 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVIS208_CONFIG_CHIP_SELECTHIGHPASS, false);
 	}
 
-	if (IS_DAVISRGB(handle->info.chipID)) {
-		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVISRGB_CONFIG_CHIP_ADJUSTOVG1LO, true);
-		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVISRGB_CONFIG_CHIP_ADJUSTOVG2LO, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI, false);
+	if (IS_DAVIS640H(handle->info.chipID)) {
+		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVIS640H_CONFIG_CHIP_ADJUSTOVG1LO, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVIS640H_CONFIG_CHIP_ADJUSTOVG2LO, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_CHIP, DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI, false);
 	}
 
 	return (true);
@@ -1500,7 +1502,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_RESET_SETTLE:
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
-					if (!IS_DAVISRGB(handle->info.chipID)) {
+					if (!IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -1591,14 +1593,14 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVISRGB_CONFIG_APS_TRANSFER:
-				case DAVISRGB_CONFIG_APS_RSFDSETTLE:
-				case DAVISRGB_CONFIG_APS_GSPDRESET:
-				case DAVISRGB_CONFIG_APS_GSRESETFALL:
-				case DAVISRGB_CONFIG_APS_GSTXFALL:
-				case DAVISRGB_CONFIG_APS_GSFDRESET:
+				case DAVIS640H_CONFIG_APS_TRANSFER:
+				case DAVIS640H_CONFIG_APS_RSFDSETTLE:
+				case DAVIS640H_CONFIG_APS_GSPDRESET:
+				case DAVIS640H_CONFIG_APS_GSRESETFALL:
+				case DAVIS640H_CONFIG_APS_GSTXFALL:
+				case DAVIS640H_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
-					if (IS_DAVISRGB(handle->info.chipID)) {
+					if (IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -1782,43 +1784,43 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 							break;
 					}
 				}
-				else if (IS_DAVISRGB(handle->info.chipID)) {
+				else if (IS_DAVIS640H(handle->info.chipID)) {
 					// DAVISRGB also uses the 37 branches bias generator, with different values.
 					switch (paramAddr) {
-						case DAVISRGB_CONFIG_BIAS_APSCAS:
-						case DAVISRGB_CONFIG_BIAS_OVG1LO:
-						case DAVISRGB_CONFIG_BIAS_OVG2LO:
-						case DAVISRGB_CONFIG_BIAS_TX2OVG2HI:
-						case DAVISRGB_CONFIG_BIAS_GND07:
-						case DAVISRGB_CONFIG_BIAS_ADCTESTVOLTAGE:
-						case DAVISRGB_CONFIG_BIAS_ADCREFHIGH:
-						case DAVISRGB_CONFIG_BIAS_ADCREFLOW:
-						case DAVISRGB_CONFIG_BIAS_IFREFRBN:
-						case DAVISRGB_CONFIG_BIAS_IFTHRBN:
-						case DAVISRGB_CONFIG_BIAS_LOCALBUFBN:
-						case DAVISRGB_CONFIG_BIAS_PADFOLLBN:
-						case DAVISRGB_CONFIG_BIAS_PIXINVBN:
-						case DAVISRGB_CONFIG_BIAS_DIFFBN:
-						case DAVISRGB_CONFIG_BIAS_ONBN:
-						case DAVISRGB_CONFIG_BIAS_OFFBN:
-						case DAVISRGB_CONFIG_BIAS_PRBP:
-						case DAVISRGB_CONFIG_BIAS_PRSFBP:
-						case DAVISRGB_CONFIG_BIAS_REFRBP:
-						case DAVISRGB_CONFIG_BIAS_ARRAYBIASBUFFERBN:
-						case DAVISRGB_CONFIG_BIAS_ARRAYLOGICBUFFERBN:
-						case DAVISRGB_CONFIG_BIAS_FALLTIMEBN:
-						case DAVISRGB_CONFIG_BIAS_RISETIMEBP:
-						case DAVISRGB_CONFIG_BIAS_READOUTBUFBP:
-						case DAVISRGB_CONFIG_BIAS_APSROSFBN:
-						case DAVISRGB_CONFIG_BIAS_ADCCOMPBP:
-						case DAVISRGB_CONFIG_BIAS_DACBUFBP:
-						case DAVISRGB_CONFIG_BIAS_LCOLTIMEOUTBN:
-						case DAVISRGB_CONFIG_BIAS_AEPDBN:
-						case DAVISRGB_CONFIG_BIAS_AEPUXBP:
-						case DAVISRGB_CONFIG_BIAS_AEPUYBP:
-						case DAVISRGB_CONFIG_BIAS_BIASBUFFER:
-						case DAVISRGB_CONFIG_BIAS_SSP:
-						case DAVISRGB_CONFIG_BIAS_SSN:
+						case DAVIS640H_CONFIG_BIAS_APSCAS:
+						case DAVIS640H_CONFIG_BIAS_OVG1LO:
+						case DAVIS640H_CONFIG_BIAS_OVG2LO:
+						case DAVIS640H_CONFIG_BIAS_TX2OVG2HI:
+						case DAVIS640H_CONFIG_BIAS_GND07:
+						case DAVIS640H_CONFIG_BIAS_ADCTESTVOLTAGE:
+						case DAVIS640H_CONFIG_BIAS_ADCREFHIGH:
+						case DAVIS640H_CONFIG_BIAS_ADCREFLOW:
+						case DAVIS640H_CONFIG_BIAS_IFREFRBN:
+						case DAVIS640H_CONFIG_BIAS_IFTHRBN:
+						case DAVIS640H_CONFIG_BIAS_LOCALBUFBN:
+						case DAVIS640H_CONFIG_BIAS_PADFOLLBN:
+						case DAVIS640H_CONFIG_BIAS_PIXINVBN:
+						case DAVIS640H_CONFIG_BIAS_DIFFBN:
+						case DAVIS640H_CONFIG_BIAS_ONBN:
+						case DAVIS640H_CONFIG_BIAS_OFFBN:
+						case DAVIS640H_CONFIG_BIAS_PRBP:
+						case DAVIS640H_CONFIG_BIAS_PRSFBP:
+						case DAVIS640H_CONFIG_BIAS_REFRBP:
+						case DAVIS640H_CONFIG_BIAS_ARRAYBIASBUFFERBN:
+						case DAVIS640H_CONFIG_BIAS_ARRAYLOGICBUFFERBN:
+						case DAVIS640H_CONFIG_BIAS_FALLTIMEBN:
+						case DAVIS640H_CONFIG_BIAS_RISETIMEBP:
+						case DAVIS640H_CONFIG_BIAS_READOUTBUFBP:
+						case DAVIS640H_CONFIG_BIAS_APSROSFBN:
+						case DAVIS640H_CONFIG_BIAS_ADCCOMPBP:
+						case DAVIS640H_CONFIG_BIAS_DACBUFBP:
+						case DAVIS640H_CONFIG_BIAS_LCOLTIMEOUTBN:
+						case DAVIS640H_CONFIG_BIAS_AEPDBN:
+						case DAVIS640H_CONFIG_BIAS_AEPUXBP:
+						case DAVIS640H_CONFIG_BIAS_AEPUYBP:
+						case DAVIS640H_CONFIG_BIAS_BIASBUFFER:
+						case DAVIS640H_CONFIG_BIAS_SSP:
+						case DAVIS640H_CONFIG_BIAS_SSN:
 							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
@@ -1872,7 +1874,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						// Only supported by the new DAVIS chips.
 						if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
 							|| IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
-							|| IS_DAVISRGB(handle->info.chipID)) {
+							|| IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
@@ -1880,16 +1882,16 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					case DAVIS346_CONFIG_CHIP_TESTADC:
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
-							|| IS_DAVISRGB(handle->info.chipID)) {
+							|| IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
-					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
-					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
-					case DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
-						if (IS_DAVIS208(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
+						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigSend(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
@@ -2165,7 +2167,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_APS_RESET_SETTLE:
 				case DAVIS_CONFIG_APS_NULL_SETTLE:
 					// Not supported on DAVIS RGB APS state machine.
-					if (!IS_DAVISRGB(handle->info.chipID)) {
+					if (!IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -2248,14 +2250,14 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVISRGB_CONFIG_APS_TRANSFER:
-				case DAVISRGB_CONFIG_APS_RSFDSETTLE:
-				case DAVISRGB_CONFIG_APS_GSPDRESET:
-				case DAVISRGB_CONFIG_APS_GSRESETFALL:
-				case DAVISRGB_CONFIG_APS_GSTXFALL:
-				case DAVISRGB_CONFIG_APS_GSFDRESET:
+				case DAVIS640H_CONFIG_APS_TRANSFER:
+				case DAVIS640H_CONFIG_APS_RSFDSETTLE:
+				case DAVIS640H_CONFIG_APS_GSPDRESET:
+				case DAVIS640H_CONFIG_APS_GSRESETFALL:
+				case DAVIS640H_CONFIG_APS_GSTXFALL:
+				case DAVIS640H_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
-					if (IS_DAVISRGB(handle->info.chipID)) {
+					if (IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -2420,43 +2422,43 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 							break;
 					}
 				}
-				else if (IS_DAVISRGB(handle->info.chipID)) {
+				else if (IS_DAVIS640H(handle->info.chipID)) {
 					// DAVISRGB also uses the 37 branches bias generator, with different values.
 					switch (paramAddr) {
-						case DAVISRGB_CONFIG_BIAS_APSCAS:
-						case DAVISRGB_CONFIG_BIAS_OVG1LO:
-						case DAVISRGB_CONFIG_BIAS_OVG2LO:
-						case DAVISRGB_CONFIG_BIAS_TX2OVG2HI:
-						case DAVISRGB_CONFIG_BIAS_GND07:
-						case DAVISRGB_CONFIG_BIAS_ADCTESTVOLTAGE:
-						case DAVISRGB_CONFIG_BIAS_ADCREFHIGH:
-						case DAVISRGB_CONFIG_BIAS_ADCREFLOW:
-						case DAVISRGB_CONFIG_BIAS_IFREFRBN:
-						case DAVISRGB_CONFIG_BIAS_IFTHRBN:
-						case DAVISRGB_CONFIG_BIAS_LOCALBUFBN:
-						case DAVISRGB_CONFIG_BIAS_PADFOLLBN:
-						case DAVISRGB_CONFIG_BIAS_PIXINVBN:
-						case DAVISRGB_CONFIG_BIAS_DIFFBN:
-						case DAVISRGB_CONFIG_BIAS_ONBN:
-						case DAVISRGB_CONFIG_BIAS_OFFBN:
-						case DAVISRGB_CONFIG_BIAS_PRBP:
-						case DAVISRGB_CONFIG_BIAS_PRSFBP:
-						case DAVISRGB_CONFIG_BIAS_REFRBP:
-						case DAVISRGB_CONFIG_BIAS_ARRAYBIASBUFFERBN:
-						case DAVISRGB_CONFIG_BIAS_ARRAYLOGICBUFFERBN:
-						case DAVISRGB_CONFIG_BIAS_FALLTIMEBN:
-						case DAVISRGB_CONFIG_BIAS_RISETIMEBP:
-						case DAVISRGB_CONFIG_BIAS_READOUTBUFBP:
-						case DAVISRGB_CONFIG_BIAS_APSROSFBN:
-						case DAVISRGB_CONFIG_BIAS_ADCCOMPBP:
-						case DAVISRGB_CONFIG_BIAS_DACBUFBP:
-						case DAVISRGB_CONFIG_BIAS_LCOLTIMEOUTBN:
-						case DAVISRGB_CONFIG_BIAS_AEPDBN:
-						case DAVISRGB_CONFIG_BIAS_AEPUXBP:
-						case DAVISRGB_CONFIG_BIAS_AEPUYBP:
-						case DAVISRGB_CONFIG_BIAS_BIASBUFFER:
-						case DAVISRGB_CONFIG_BIAS_SSP:
-						case DAVISRGB_CONFIG_BIAS_SSN:
+						case DAVIS640H_CONFIG_BIAS_APSCAS:
+						case DAVIS640H_CONFIG_BIAS_OVG1LO:
+						case DAVIS640H_CONFIG_BIAS_OVG2LO:
+						case DAVIS640H_CONFIG_BIAS_TX2OVG2HI:
+						case DAVIS640H_CONFIG_BIAS_GND07:
+						case DAVIS640H_CONFIG_BIAS_ADCTESTVOLTAGE:
+						case DAVIS640H_CONFIG_BIAS_ADCREFHIGH:
+						case DAVIS640H_CONFIG_BIAS_ADCREFLOW:
+						case DAVIS640H_CONFIG_BIAS_IFREFRBN:
+						case DAVIS640H_CONFIG_BIAS_IFTHRBN:
+						case DAVIS640H_CONFIG_BIAS_LOCALBUFBN:
+						case DAVIS640H_CONFIG_BIAS_PADFOLLBN:
+						case DAVIS640H_CONFIG_BIAS_PIXINVBN:
+						case DAVIS640H_CONFIG_BIAS_DIFFBN:
+						case DAVIS640H_CONFIG_BIAS_ONBN:
+						case DAVIS640H_CONFIG_BIAS_OFFBN:
+						case DAVIS640H_CONFIG_BIAS_PRBP:
+						case DAVIS640H_CONFIG_BIAS_PRSFBP:
+						case DAVIS640H_CONFIG_BIAS_REFRBP:
+						case DAVIS640H_CONFIG_BIAS_ARRAYBIASBUFFERBN:
+						case DAVIS640H_CONFIG_BIAS_ARRAYLOGICBUFFERBN:
+						case DAVIS640H_CONFIG_BIAS_FALLTIMEBN:
+						case DAVIS640H_CONFIG_BIAS_RISETIMEBP:
+						case DAVIS640H_CONFIG_BIAS_READOUTBUFBP:
+						case DAVIS640H_CONFIG_BIAS_APSROSFBN:
+						case DAVIS640H_CONFIG_BIAS_ADCCOMPBP:
+						case DAVIS640H_CONFIG_BIAS_DACBUFBP:
+						case DAVIS640H_CONFIG_BIAS_LCOLTIMEOUTBN:
+						case DAVIS640H_CONFIG_BIAS_AEPDBN:
+						case DAVIS640H_CONFIG_BIAS_AEPUXBP:
+						case DAVIS640H_CONFIG_BIAS_AEPUYBP:
+						case DAVIS640H_CONFIG_BIAS_BIASBUFFER:
+						case DAVIS640H_CONFIG_BIAS_SSP:
+						case DAVIS640H_CONFIG_BIAS_SSN:
 							return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
@@ -2504,7 +2506,7 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 						// Only supported by the new DAVIS chips.
 						if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
 							|| IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
-							|| IS_DAVISRGB(handle->info.chipID)) {
+							|| IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
@@ -2512,16 +2514,16 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					case DAVIS346_CONFIG_CHIP_TESTADC:
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
-							|| IS_DAVISRGB(handle->info.chipID)) {
+							|| IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
-					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
-					case DAVISRGB_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
-					case DAVISRGB_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
+					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
-						if (IS_DAVIS208(handle->info.chipID) || IS_DAVISRGB(handle->info.chipID)) {
+						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
