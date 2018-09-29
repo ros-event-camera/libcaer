@@ -1113,25 +1113,44 @@ caerDeviceHandle davisRPiOpen(
 	strncpy(handle->info.deviceSerialNumber, "0001", 4 + 1);
 	handle->info.deviceUSBBusNumber     = 0;
 	handle->info.deviceUSBDeviceAddress = 0;
+
+	handle->info.firmwareVersion = 1;
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_VERSION, &param32);
 	handle->info.logicVersion = I16T(param32);
+
+	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+	handle->info.chipID = I16T(param32);
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
 	handle->info.deviceIsMaster = param32;
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
-	handle->info.logicClock = I16T(param32);
+	state->deviceClocks.logicClock = U16T(param32);
 	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
-	handle->info.adcClock = I16T(param32);
-	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
-	handle->info.chipID = I16T(param32);
+	state->deviceClocks.adcClock = U16T(param32);
+	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_USB_CLOCK, &param32);
+	state->deviceClocks.usbClock = U16T(param32);
+	spiConfigReceive(state, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CLOCK_DEVIATION, &param32);
+	state->deviceClocks.clockDeviationFactor = U16T(param32);
+
+	// Calculate actual clock frequencies.
+	state->deviceClocks.logicClockActual = (float) ((double) state->deviceClocks.logicClock
+													* ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
+	state->deviceClocks.adcClockActual   = (float) ((double) state->deviceClocks.adcClock
+                                                  * ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
+	state->deviceClocks.usbClockActual   = (float) ((double) state->deviceClocks.usbClock
+                                                  * ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
+
+	davisRPiLog(CAER_LOG_DEBUG, handle, "Clock frequencies: LOGIC %f, ADC %f, USB %f.",
+		(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.adcClockActual,
+		(double) state->deviceClocks.usbClockActual);
 
 	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
 	handle->info.dvsHasPixelFilter = param32;
 	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
 	handle->info.dvsHasBackgroundActivityFilter = param32;
-	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR, &param32);
-	handle->info.dvsHasTestEventGenerator = param32;
 	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
 	handle->info.dvsHasROIFilter = param32;
+	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
+	handle->info.dvsHasSkipFilter = param32;
 	spiConfigReceive(state, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
 	handle->info.dvsHasStatistics = param32;
 
@@ -1139,16 +1158,9 @@ caerDeviceHandle davisRPiOpen(
 	handle->info.apsColorFilter = U8T(param32);
 	spiConfigReceive(state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
 	handle->info.apsHasGlobalShutter = param32;
-	spiConfigReceive(state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_QUAD_ROI, &param32);
-	handle->info.apsHasQuadROI = param32;
-	spiConfigReceive(state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_INTERNAL_ADC, &param32);
-	handle->info.apsHasInternalADC = param32;
-	handle->info.apsHasExternalADC = !handle->info.apsHasInternalADC;
 
 	spiConfigReceive(state, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
-	spiConfigReceive(state, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS, &param32);
-	handle->info.extInputHasExtraDetectors = param32;
 
 	spiConfigReceive(state, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
 	handle->info.muxHasStatistics = param32;
@@ -1251,12 +1263,7 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL, true);
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_ROW, 4);        // in cycles @ LogicClock
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN, 0);     // in cycles @ LogicClock
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_EXTENSION_ROW, 1);    // in cycles @ LogicClock
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ACK_EXTENSION_COLUMN, 0); // in cycles @ LogicClock
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL, false);
-	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROW_ONLY_EVENTS, true);
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL, false);
 	if (handle->info.dvsHasPixelFilter) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW, U32T(handle->info.dvsSizeY));
@@ -1284,15 +1291,16 @@ static bool davisRPiSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 		davisRPiConfigSet(
 			cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME, 1); // in 250µs blocks (so 250µs)
 	}
-	if (handle->info.dvsHasTestEventGenerator) {
-		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE, false);
-	}
 	if (handle->info.dvsHasROIFilter) {
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN, 0);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW, 0);
 		davisRPiConfigSet(
 			cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN, U32T(handle->info.dvsSizeX - 1));
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW, U32T(handle->info.dvsSizeY - 1));
+	}
+	if (handle->info.dvsHasSkipFilter) {
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS, false);
+		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY, 5);
 	}
 
 	davisRPiConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, true);
@@ -1581,12 +1589,7 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 		case DAVIS_CONFIG_DVS:
 			switch (paramAddr) {
 				case DAVIS_CONFIG_DVS_RUN:
-				case DAVIS_CONFIG_DVS_ACK_DELAY_ROW:
-				case DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN:
-				case DAVIS_CONFIG_DVS_ACK_EXTENSION_ROW:
-				case DAVIS_CONFIG_DVS_ACK_EXTENSION_COLUMN:
 				case DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_DVS_FILTER_ROW_ONLY_EVENTS:
 				case DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL:
 					return (spiConfigSend(state, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
@@ -1627,8 +1630,9 @@ bool davisRPiConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
-					if (handle->info.dvsHasTestEventGenerator) {
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
+					if (handle->info.dvsHasSkipFilter) {
 						return (spiConfigSend(state, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -2011,20 +2015,9 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 
 		case DAVIS_CONFIG_DVS:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_DVS_SIZE_COLUMNS:
-				case DAVIS_CONFIG_DVS_SIZE_ROWS:
-				case DAVIS_CONFIG_DVS_ORIENTATION_INFO:
 				case DAVIS_CONFIG_DVS_RUN:
-				case DAVIS_CONFIG_DVS_ACK_DELAY_ROW:
-				case DAVIS_CONFIG_DVS_ACK_DELAY_COLUMN:
-				case DAVIS_CONFIG_DVS_ACK_EXTENSION_ROW:
-				case DAVIS_CONFIG_DVS_ACK_EXTENSION_COLUMN:
 				case DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_DVS_FILTER_ROW_ONLY_EVENTS:
 				case DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL:
-				case DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER:
-				case DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER:
-				case DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR:
 					return (spiConfigReceive(state, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
 
@@ -2064,8 +2057,9 @@ bool davisRPiConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, 
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE:
-					if (handle->info.dvsHasTestEventGenerator) {
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
+					if (handle->info.dvsHasSkipFilter) {
 						return (spiConfigReceive(state, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
