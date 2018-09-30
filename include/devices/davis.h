@@ -668,16 +668,6 @@ extern "C" {
 #define DAVIS_CONFIG_APS_RUN 4
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
- * enable the reset read phase in addition to the signal read,
- * to allow for correlated double sampling schemes. This heavily
- * improves image quality and should always be turned on. In special
- * cases, especially when the camera is perfectly stationary, this
- * can be turned off for longer periods of time to achieve a higher
- * frame-rate and significantly faster frame capture.
- */
-#define DAVIS_CONFIG_APS_RESET_READ 5
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
  * if the output FIFO for this module is full, stall the APS state machine
  * and wait until it's free again, instead of just dropping the pixels as
  * they are being read out. This guarantees a complete frame readout, at the
@@ -685,7 +675,7 @@ extern "C" {
  * incomplete frames may be transmitted and will then be dropped on the host,
  * resulting in lower frame-rates, especially during high DVS traffic.
  */
-#define DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL 6
+#define DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL 5
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * read-only parameter, information about the presence of the
@@ -694,270 +684,91 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER 7
+#define DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER 6
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * enable Global Shutter mode instead of Rolling Shutter.
  * The Global Shutter eliminates motion artifacts, but
  * is noisier than the Rolling Shutter (worse quality).
  */
-#define DAVIS_CONFIG_APS_GLOBAL_SHUTTER 8
+#define DAVIS_CONFIG_APS_GLOBAL_SHUTTER 7
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
  * or equal to DAVIS_CONFIG_APS_END_COLUMN_0.
  */
-#define DAVIS_CONFIG_APS_START_COLUMN_0 9
+#define DAVIS_CONFIG_APS_START_COLUMN_0 8
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be smaller
  * or equal to DAVIS_CONFIG_APS_END_ROW_0.
  */
-#define DAVIS_CONFIG_APS_START_ROW_0 10
+#define DAVIS_CONFIG_APS_START_ROW_0 9
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * end position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_COLUMN_0.
  */
-#define DAVIS_CONFIG_APS_END_COLUMN_0 11
+#define DAVIS_CONFIG_APS_END_COLUMN_0 10
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * end position on the Y axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_Y-1, and be greater
  * or equal to DAVIS_CONFIG_APS_START_ROW_0.
  */
-#define DAVIS_CONFIG_APS_END_ROW_0 12
+#define DAVIS_CONFIG_APS_END_ROW_0 11
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
- * frame exposure time in microseconds, up to about
- * one second maximum.
+ * frame exposure time.
+ * Range: 0-4194303, in microseconds (maximum ~4s).
  * Very precise for Global Shutter, slightly less exact for
  * Rolling Shutter due to column-based timing constraints.
  */
-#define DAVIS_CONFIG_APS_EXPOSURE 13
+#define DAVIS_CONFIG_APS_EXPOSURE 12
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
- * delay between consecutive frames in microseconds,
- * up to about one second maximum.
- * This can be used to achieve slower frame-rates, down
- * to about 1 Hertz.
+ * time between consecutive frames.
+ * Range: 0-8388607, in microseconds (maximum ~8s).
+ * This can be used to set a frame-rate. Please note the
+ * frame-rate is best-effort, and may not be met if readout
+ * and exposure times exceed this value.
  */
-#define DAVIS_CONFIG_APS_FRAME_DELAY 14
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * column reset settle time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_RESET_SETTLE 15
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * column settle time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_COLUMN_SETTLE 16
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * row settle time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_ROW_SETTLE 17
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * null (between states) settle time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_NULL_SETTLE 18
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * read-only parameter, information about the presence of the
- * Quadruple Region of Interest feature.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_APS_HAS_QUAD_ROI 19
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the X axis for Region of Interest 1.
- * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_1.
- */
-#define DAVIS_CONFIG_APS_START_COLUMN_1 20
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the Y axis for Region of Interest 1.
- * Must be between 0 and APS_SIZE_Y-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_ROW_1.
- */
-#define DAVIS_CONFIG_APS_START_ROW_1 21
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the X axis for Region of Interest 1.
- * Must be between 0 and APS_SIZE_X-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_COLUMN_1.
- */
-#define DAVIS_CONFIG_APS_END_COLUMN_1 22
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the Y axis for Region of Interest 1.
- * Must be between 0 and APS_SIZE_Y-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_ROW_1.
- */
-#define DAVIS_CONFIG_APS_END_ROW_1 23
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the X axis for Region of Interest 2.
- * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_2.
- */
-#define DAVIS_CONFIG_APS_START_COLUMN_2 24
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the Y axis for Region of Interest 2.
- * Must be between 0 and APS_SIZE_Y-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_ROW_2.
- */
-#define DAVIS_CONFIG_APS_START_ROW_2 25
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the X axis for Region of Interest 2.
- * Must be between 0 and APS_SIZE_X-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_COLUMN_2.
- */
-#define DAVIS_CONFIG_APS_END_COLUMN_2 26
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the Y axis for Region of Interest 2.
- * Must be between 0 and APS_SIZE_Y-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_ROW_2.
- */
-#define DAVIS_CONFIG_APS_END_ROW_2 27
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the X axis for Region of Interest 3.
- * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_3.
- */
-#define DAVIS_CONFIG_APS_START_COLUMN_3 28
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * start position on the Y axis for Region of Interest 3.
- * Must be between 0 and APS_SIZE_Y-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_ROW_3.
- */
-#define DAVIS_CONFIG_APS_START_ROW_3 29
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the X axis for Region of Interest 3.
- * Must be between 0 and APS_SIZE_X-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_COLUMN_3.
- */
-#define DAVIS_CONFIG_APS_END_COLUMN_3 30
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * end position on the Y axis for Region of Interest 3.
- * Must be between 0 and APS_SIZE_Y-1, and be greater
- * or equal to DAVIS_CONFIG_APS_START_ROW_3.
- */
-#define DAVIS_CONFIG_APS_END_ROW_3 31
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * read-only parameter, information about the presence of an
- * internal, on-chip ADC to read the pixel values.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_APS_HAS_INTERNAL_ADC 33
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * enable sampling of pixel voltage by the internal ADC circuitry.
- * Must always be enabled to get proper frame values.
- */
-#define DAVIS_CONFIG_APS_SAMPLE_ENABLE 35
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * sample settle time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_SAMPLE_SETTLE 36
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * ramp reset time in ADCClock cycles.
- */
-#define DAVIS_CONFIG_APS_RAMP_RESET 37
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * only perform a short ramp (half length) during reset reads, given that
- * the voltage should always be close to the top of the range.
- * This increases the frame-rate, but may have impacts on image quality,
- * especially in very bright regions.
- */
-#define DAVIS_CONFIG_APS_RAMP_SHORT_RESET 38
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * put all APS pixels into reset, while keeping everything else running.
- * This is only useful for testing and characterizing the internal
- * ADC, to minimize noise.
- */
-#define DAVIS_CONFIG_APS_ADC_TEST_MODE 39
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * Enable/disable ROI region 0.
- * ROI region 0 is always present.
- */
-#define DAVIS_CONFIG_APS_ROI0_ENABLED 40
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * Enable/disable ROI region 1.
- * ROI region 1 is only available when apsHasQuadROI=true,
- * see 'struct caer_davis_info' for more information.
- */
-#define DAVIS_CONFIG_APS_ROI1_ENABLED 41
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * Enable/disable ROI region 2.
- * ROI region 2 is only available when apsHasQuadROI=true,
- * see 'struct caer_davis_info' for more information.
- */
-#define DAVIS_CONFIG_APS_ROI2_ENABLED 42
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * Enable/disable ROI region 3.
- * ROI region 3 is only available when apsHasQuadROI=true,
- * see 'struct caer_davis_info' for more information.
- */
-#define DAVIS_CONFIG_APS_ROI3_ENABLED 43
+#define DAVIS_CONFIG_APS_FRAME_INTERVAL 13
 
 // Extra timing settings for DAVIS640H APS module.
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * charge transfer time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_TRANSFER 50
+#define DAVIS640H_CONFIG_APS_TRANSFER 14
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * Rolling Shutter FD settle time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_RSFDSETTLE 51
+#define DAVIS640H_CONFIG_APS_RSFDSETTLE 15
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * Global Shutter PD reset time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_GSPDRESET 52
+#define DAVIS640H_CONFIG_APS_GSPDRESET 16
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * Global Shutter Reset Fall time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_GSRESETFALL 53
+#define DAVIS640H_CONFIG_APS_GSRESETFALL 17
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * Global Shutter Transfer Fall time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_GSTXFALL 54
+#define DAVIS640H_CONFIG_APS_GSTXFALL 18
 /**
  * Parameter address for module DAVIS_CONFIG_APS (only for DAVIS640H chip):
  * Global Shutter FD reset time in ADCClock cycles.
  */
-#define DAVIS640H_CONFIG_APS_GSFDRESET 55
+#define DAVIS640H_CONFIG_APS_GSFDRESET 19
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
@@ -966,12 +777,12 @@ extern "C" {
  * the DAVIS_CONFIG_APS_RUN parameter.
  * The APS module should not be running prior to calling this,
  * as it only makes sense if frames are not being generated
- * at the time. Also, DAVIS_CONFIG_APS_FRAME_DELAY should
+ * at the time. Also, DAVIS_CONFIG_APS_FRAME_INTERVAL should
  * be set to zero if only doing snapshots, to ensure a
  * quicker readiness for the next one, since the delay is
  * always observed after taking a frame.
  */
-#define DAVIS_CONFIG_APS_SNAPSHOT 80
+#define DAVIS_CONFIG_APS_SNAPSHOT 100
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
@@ -979,49 +790,39 @@ extern "C" {
  * automatically to an appropriate value to maximize information
  * in the scene and minimize under- and over-exposure.
  */
-#define DAVIS_CONFIG_APS_AUTOEXPOSURE 81
+#define DAVIS_CONFIG_APS_AUTOEXPOSURE 101
 
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * run the IMU state machine to get information about the
- * movement and position of the device. This takes the
+ * enable the IMU's accelerometer. This takes the
  * IMU chip out of sleep.
  */
-#define DAVIS_CONFIG_IMU_RUN 0
+#define DAVIS_CONFIG_IMU_RUN_ACCELEROMETER 0
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * put the temperature sensor in standby, disabling it.
+ * enable the IMU's gyroscope. This takes the
+ * IMU chip out of sleep.
  */
-#define DAVIS_CONFIG_IMU_TEMP_STANDBY 1
+#define DAVIS_CONFIG_IMU_RUN_GYROSCOPE 1
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * put the accelerometer sensor in standby, disabling it.
+ * enable the IMU's temperature sensor. This takes the
+ * IMU chip out of sleep.
  */
-#define DAVIS_CONFIG_IMU_ACCEL_STANDBY 2
+#define DAVIS_CONFIG_IMU_RUN_TEMPERATURE 2
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * put the gyroscope sensor in standby, disabling it.
+ * read-only parameter, contains information on the orientation
+ * of the X/Y/Z axes, whether they should be flipped or not on
+ * the host when parsing incoming IMU data samples.
+ * Bit 2: imuFlipX
+ * Bit 1: imuFlipY
+ * Bit 0: imuFlipZ
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Generated IMU events are already
+ * properly flipped when returned to the user.
  */
-#define DAVIS_CONFIG_IMU_GYRO_STANDBY 3
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * put the IMU into Cycle Mode. In Cycle Mode, the device
- * cycles between sleep mode and waking up to take a single
- * sample of data from the accelerometer at a rate determined
- * by DAVIS_CONFIG_IMU_LP_WAKEUP.
- */
-#define DAVIS_CONFIG_IMU_LP_CYCLE 4
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * rate at which the IMU takes an accelerometer sample while
- * in Cycle Mode (see DAVIS_CONFIG_IMU_LP_CYCLE).
- * Valid values are:
- * 0 - 1.25 Hz wake-up frequency
- * 1 - 5 Hz wake-up frequency
- * 2 - 20 Hz wake-up frequency
- * 3 - 40 Hz wake-up frequency
- */
-#define DAVIS_CONFIG_IMU_LP_WAKEUP 5
+#define DAVIS_CONFIG_IMU_ORIENTATION_INFO 3
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * this specifies the divider from the Gyroscope Output Rate used
@@ -1034,7 +835,33 @@ extern "C" {
  * Note: the accelerometer output rate is 1 kHz. This means that for a Sample Rate
  * greater than 1 kHz, the same accelerometer sample may be output multiple times.
  */
-#define DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER 6
+#define DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER 4
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * this configures the digital low-pass filter for the accelerometer
+ * on devices using the InvenSense MPU 9250.
+ * Valid values are from 0 to 7 and have the following meaning:
+ *
+ * 0 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
+ * 1 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
+ * 2 - Accel: BW=99Hz,    Delay=2.88ms,  FS=1kHz
+ * 3 - Accel: BW=44.8Hz,  Delay=4.88ms,  FS=1kHz
+ * 4 - Accel: BW=21.2Hz,  Delay=8.87ms,  FS=1kHz
+ * 5 - Accel: BW=10.2Hz,  Delay=16.83ms, FS=1kHz
+ * 6 - Accel: BW=5.05Hz,  Delay=32.48ms, FS=1kHz
+ * 7 - Accel: BW=420Hz,   Delay=1.38ms,  FS=1kHz
+ */
+#define DAVIS_CONFIG_IMU_ACCEL_DLPF 5
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * select the full scale range of the accelerometer outputs.
+ * Valid values are:
+ * 0 - +- 2 g
+ * 1 - +- 4 g
+ * 2 - +- 8 g
+ * 3 - +- 16 g
+ */
+#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 6
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * this configures the digital low-pass filter for both the
@@ -1062,18 +889,8 @@ extern "C" {
  * 6 - Gyro: BW=5Hz,    Delay=33.48ms, FS=1kHz
  * 7 - Gyro: BW=3600Hz, Delay=0.17ms,  FS=8kHz
  */
-#define DAVIS_CONFIG_IMU_GYRO_DLPF 7
+#define DAVIS_CONFIG_IMU_GYRO_DLPF 8
 #define DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER DAVIS_CONFIG_IMU_GYRO_DLPF
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * select the full scale range of the accelerometer outputs.
- * Valid values are:
- * 0 - +- 2 g
- * 1 - +- 4 g
- * 2 - +- 8 g
- * 3 - +- 16 g
- */
-#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 8
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * select the full scale range of the gyroscope outputs.
@@ -1084,35 +901,6 @@ extern "C" {
  * 3 - +- 2000 °/s
  */
 #define DAVIS_CONFIG_IMU_GYRO_FULL_SCALE 9
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * read-only parameter, contains information on the orientation
- * of the X/Y/Z axes, whether they should be flipped or not on
- * the host when parsing incoming IMU data samples.
- * Bit 2: imuFlipX
- * Bit 1: imuFlipY
- * Bit 0: imuFlipZ
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Generated IMU events are already
- * properly flipped when returned to the user.
- */
-#define DAVIS_CONFIG_IMU_ORIENTATION_INFO 10
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * this configures the digital low-pass filter for the accelerometer
- * on devices using the InvenSense MPU 9250.
- * Valid values are from 0 to 7 and have the following meaning:
- *
- * 0 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
- * 1 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
- * 2 - Accel: BW=99Hz,    Delay=2.88ms,  FS=1kHz
- * 3 - Accel: BW=44.8Hz,  Delay=4.88ms,  FS=1kHz
- * 4 - Accel: BW=21.2Hz,  Delay=8.87ms,  FS=1kHz
- * 5 - Accel: BW=10.2Hz,  Delay=16.83ms, FS=1kHz
- * 6 - Accel: BW=5.05Hz,  Delay=32.48ms, FS=1kHz
- * 7 - Accel: BW=420Hz,   Delay=1.38ms,  FS=1kHz
- */
-#define DAVIS_CONFIG_IMU_ACCEL_DLPF 11
 
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
@@ -1158,9 +946,8 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
  * the minimal length that a pulse must have to trigger the
- * sending of a special event. This is measured in cycles
- * at LogicClock frequency (see 'struct caer_davis_info' for
- * details on how to get the frequency).
+ * sending of a special event.
+ * Range: 1-1048575, in microseconds.
  */
 #define DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH 5
 /**
@@ -1171,170 +958,52 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR 6
+#define DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR 10
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
  * enable the signal generator module. It generates a
  * PWM-like signal based on configurable parameters and
  * outputs it on the OUT JACK signal.
  */
-#define DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR 7
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * instead of generating a PWM-like signal by using the
- * configured parameters, use a signal on the FPGA/CPLD
- * that's passed as an input to the External Input module.
- * By default this is disabled and tied to ground, but
- * it can be useful for customized logic designs.
- */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_USE_CUSTOM_SIGNAL 8
+#define DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR 11
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
  * polarity of the PWM-like signal to be generated.
  * '1' means active high, '0' means active low.
  */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY 9
+#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY 12
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the interval between the start of two consecutive pulses,
- * expressed in cycles at LogicClock frequency (see
- * 'struct caer_davis_info' for details on how to get the frequency).
+ * the interval between the start of two consecutive pulses.
+ * Range: 1-1048575, in microseconds.
  * This must be bigger or equal to DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH.
  * To generate a signal with 50% duty cycle, this would
  * have to be exactly double of DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH.
  */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL 10
+#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL 13
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the length a pulse stays active, expressed in cycles at
- * LogicClock frequency (see 'struct caer_davis_info' for
- * details on how to get the frequency). This must be
- * smaller or equal to DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL.
+ * the length a pulse stays active.
+ * Range: 1-1048575, in microseconds.
+ * This must be smaller or equal to DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL.
  * To generate a signal with 50% duty cycle, this would
  * have to be exactly half of DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL.
  */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH 11
+#define DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH 14
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
  * enables event injection when a rising edge occurs in the
  * generated signal; a special event EXTERNAL_GENERATOR_RISING_EDGE
  * is emitted into the event stream.
  */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE 12
+#define DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE 15
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
  * enables event injection when a falling edge occurs in the
  * generated signal; a special event EXTERNAL_GENERATOR_FALLING_EDGE
  * is emitted into the event stream.
  */
-#define DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE 13
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * read-only parameter, information about the presence of the
- * extra detectors feature.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS 14
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * enable the signal detector module. It generates events
- * when it sees certain types of signals, such as edges or
- * pulses of a defined length, on the B1P20 input pin.
- * This can be useful to inject events into the event
- * stream in response to external stimuli or controls,
- * such as turning on a LED lamp.
- */
-#define DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1 15
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT1_RISING_EDGE event when a
- * rising edge is detected (transition from low voltage to high).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES1 16
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT1_FALLING_EDGE event when a
- * falling edge is detected (transition from high voltage to low).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES1 17
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT1_PULSE event when a pulse, of
- * a specified, configurable polarity and length, is detected.
- * See DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY1 and
- * DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH1 for more details.
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSES1 18
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the polarity the pulse must exhibit to be detected as such.
- * '1' means active high; a pulse will start when the signal
- * goes from low to high and will continue to be seen as the
- * same pulse as long as it stays high.
- * '0' means active low; a pulse will start when the signal
- * goes from high to low and will continue to be seen as the
- * same pulse as long as it stays low.
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY1 19
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the minimal length that a pulse must have to trigger the
- * sending of a special event. This is measured in cycles
- * at LogicClock frequency (see 'struct caer_davis_info' for
- * details on how to get the frequency).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH1 20
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * enable the signal detector module. It generates events
- * when it sees certain types of signals, such as edges or
- * pulses of a defined length, on the B1P21 input pin.
- * This can be useful to inject events into the event
- * stream in response to external stimuli or controls,
- * such as turning on a LED lamp.
- */
-#define DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2 21
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT2_RISING_EDGE event when a
- * rising edge is detected (transition from low voltage to high).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES2 22
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT2_FALLING_EDGE event when a
- * falling edge is detected (transition from high voltage to low).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES2 23
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * send a special EXTERNAL_INPUT2_PULSE event when a pulse, of
- * a specified, configurable polarity and length, is detected.
- * See DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2 and
- * DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2 for more details.
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSES2 24
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the polarity the pulse must exhibit to be detected as such.
- * '1' means active high; a pulse will start when the signal
- * goes from low to high and will continue to be seen as the
- * same pulse as long as it stays high.
- * '0' means active low; a pulse will start when the signal
- * goes from high to low and will continue to be seen as the
- * same pulse as long as it stays low.
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2 25
-/**
- * Parameter address for module DAVIS_CONFIG_EXTINPUT:
- * the minimal length that a pulse must have to trigger the
- * sending of a special event. This is measured in cycles
- * at LogicClock frequency (see 'struct caer_davis_info' for
- * details on how to get the frequency).
- */
-#define DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2 26
+#define DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE 16
 
 /**
  * Parameter address for module DAVIS_CONFIG_SYSINFO:
@@ -1381,6 +1050,23 @@ extern "C" {
  * documentation to get this information.
  */
 #define DAVIS_CONFIG_SYSINFO_ADC_CLOCK 4
+/**
+ * Parameter address for module DAVIS_CONFIG_SYSINFO:
+ * read-only parameter, the frequency in MHz at which the FPGA/CPLD
+ * logic related to USB data transmission is running.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer.
+ */
+#define DAVIS_CONFIG_SYSINFO_USB_CLOCK 5
+/**
+ * Parameter address for module DAVIS_CONFIG_SYSINFO:
+ * read-only parameter, the deviation factor for the clocks.
+ * Due to how FX3 generates the clocks, which are then used by
+ * FPGA/CPLD, they are not integers but have a fractional part.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer.
+ */
+#define DAVIS_CONFIG_SYSINFO_CLOCK_DEVIATION 6
 
 /**
  * Parameter address for module DAVIS_CONFIG_USB:
@@ -1406,16 +1092,6 @@ extern "C" {
  * FPGA/CPLD to some external device like a Raspberry Pi.
  */
 #define DAVIS_CONFIG_DDRAER_RUN 0
-/**
- * Parameter address for module DAVIS_CONFIG_DDRAER:
- * delay the request by this many cycles after having output the data.
- */
-#define DAVIS_CONFIG_DDRAER_REQ_DELAY 1
-/**
- * Parameter address for module DAVIS_CONFIG_DDRAER:
- * wait this many cycles after having received the acknowledge.
- */
-#define DAVIS_CONFIG_DDRAER_ACK_DELAY 2
 
 //@{
 /**
