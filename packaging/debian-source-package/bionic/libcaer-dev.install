@@ -1,0 +1,5 @@
+/usr/include/libcaer/
+/usr/include/libcaercpp/
+/usr/share/caer/
+/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/
+/usr/lib/${DEB_HOST_MULTIARCH}/cmake/libcaer/

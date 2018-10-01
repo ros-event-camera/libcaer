@@ -6,7 +6,7 @@ GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
 PKG_VERSION=2.5.2
 PKG_RELEASE=1
-DISTRO=xenial
+DISTRO=bionic
 SRC_URI="https://github.com/inivation/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
 PPA_REPO="llongi/inivation"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
@@ -45,9 +45,8 @@ tar -xvzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
 
 mkdir -p "$DEBIAN_DIR"
 
-# Copy correct control and rules files for distro
-cp "$CUR_DIR/$DISTRO/control" "$DEBIAN_DIR/control"
-cp "$CUR_DIR/$DISTRO/rules"   "$DEBIAN_DIR/rules"
+# Copy correct debian build files for distro
+cp "$CUR_DIR/$DISTRO/*" "$DEBIAN_DIR/"
 
 # Copy copyright file (use main license)
 cp "$BASE_DIR/COPYING" "$DEBIAN_DIR/copyright"
