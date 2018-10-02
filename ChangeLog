@@ -1,5 +1,22 @@
-Release 2.5.3 - XX.XX.2018
+Release 2.5.4 - XX.10.2018
 IN PROGRESS
+
+NEW FEATURES
+- CMake: automatically set CMAKE_INSTALL_PREFIX to /usr if nothing
+  was specified by user on Unix/Linux, this avoids installs to /usr/local
+  that often lead to the libraries not being found correctly.
+- CMake: support for the ccache compiler cache added.
+- CMake: install udev rules on Unix/Linux, to allow access to iniVation
+  devices. Default rules chmod 0666 the devices, using -DUDEV_SELINUX=1
+  you can install a SELinux-enabled version for systems using TAG 'uaccess'.
+- Packaging Ubuntu: libcaer is now split in two packages: libcaer and
+  libcaer-dev, and is now built using debhelper, and the static library
+  version is now also installed by libcaer-dev.
+
+BUG FIXES
+- Packaging: cmake dependency bumped to 2.8.12 in Ubuntu/Fedora packages.
+- src/usb_utils.c: fixed firmware/logic update message to be clearer.
+
 
 Release 2.5.2 - 25.09.2018
 INCOMPATIBLE CHANGES
