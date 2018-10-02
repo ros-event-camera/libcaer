@@ -18,6 +18,10 @@ IF (NOT ENABLE_OPENCV)
 	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
 ENDIF()
 
+IF (NOT UDEV_SELINUX AND UNIX)
+	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules")
+ENDIF()
+
 IF (NOT CMAKE_INSTALL_PREFIX AND UNIX AND NOT APPLE)
 	SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
 ENDIF()
@@ -136,6 +140,21 @@ IF (NOT (CMAKE_VERSION VERSION_LESS "3.0"))
 		DESTINATION ${export_destination})
 	UNSET(include_dirs)
 	UNSET(export_destination)
+ENDIF()
+
+# Install udev rules
+IF (UNIX)
+	IF (UDEV_SELINUX)
+		INSTALL(FILES
+			docs/udev-rules/selinux/65-inivation.rules
+			docs/udev-rules/selinux/66-inivation_devel.rules
+			DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/udev/rules.d)
+	ELSE()
+		INSTALL(FILES
+			docs/udev-rules/65-inivation.rules
+			docs/udev-rules/66-inivation_devel.rules
+			DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/udev/rules.d)
+	ENDIF()
 ENDIF()
 
 # Automatic documentation generation support
