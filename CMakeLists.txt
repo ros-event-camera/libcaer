@@ -18,6 +18,10 @@ IF (NOT ENABLE_OPENCV)
 	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
 ENDIF()
 
+IF (NOT CMAKE_INSTALL_PREFIX AND UNIX AND NOT APPLE)
+	SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
+ENDIF()
+
 # Project name and version
 PROJECT(libcaer C CXX)
 SET(PROJECT_VERSION_MAJOR 2)
