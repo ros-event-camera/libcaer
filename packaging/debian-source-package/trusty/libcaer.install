@@ -1,2 +1,2 @@
-#etc/udev/rules.d/
+etc/udev/rules.d/
 usr/lib/*/libcaer.so.*
