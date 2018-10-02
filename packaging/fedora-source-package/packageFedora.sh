@@ -2,7 +2,7 @@
 
 # Requirements: Fedora, fedora-packager
 
-FEDORA_RELEASE=f26
+FEDORA_RELEASE=f27
 
 # Download source tarball.
 spectool -g libcaer.spec
