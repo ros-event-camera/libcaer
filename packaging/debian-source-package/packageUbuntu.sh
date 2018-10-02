@@ -46,7 +46,7 @@ tar -xvzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
 mkdir -p "$DEBIAN_DIR"
 
 # Copy correct debian build files for distro
-cp "$CUR_DIR/$DISTRO/*" "$DEBIAN_DIR/"
+cp "$CUR_DIR/$DISTRO/"* "$DEBIAN_DIR/"
 
 # Copy copyright file (use main license)
 cp "$BASE_DIR/COPYING" "$DEBIAN_DIR/copyright"
