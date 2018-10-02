@@ -2,6 +2,9 @@ Release 2.5.4 - XX.10.2018
 IN PROGRESS
 
 NEW FEATURES
+- C++ EventPackets: new function getHeaderPointerForCOutput() to get
+  the underlying C EventPacket pointer and ensure that memory ownership
+  is transferred to it, and not left with the C++ EventPacket.
 - CMake: automatically set CMAKE_INSTALL_PREFIX to /usr if nothing
   was specified by user on Unix/Linux, this avoids installs to /usr/local
   that often lead to the libraries not being found correctly.
