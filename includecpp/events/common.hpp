@@ -2,7 +2,9 @@
 #define LIBCAER_EVENTS_COMMON_HPP_
 
 #include "../libcaer.hpp"
+
 #include <libcaer/events/common.h>
+
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -536,6 +538,19 @@ public:
 		return (isMemoryOwner);
 	}
 
+	// Direct underlying pointer access for conversion back to C.
+	caerEventPacketHeader getHeaderPointerForCOutput() noexcept {
+		isMemoryOwner = false;
+
+		return (header);
+	}
+
+	caerEventPacketHeaderConst getHeaderPointerForCOutput() const noexcept {
+		isMemoryOwner = false;
+
+		return (header);
+	}
+
 	// Convenience methods.
 	size_type capacity() const noexcept {
 		return (getEventCapacity());
@@ -749,7 +764,7 @@ protected:
 
 	virtual const_reference virtualGetEvent(size_type index) const noexcept = 0;
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_COMMON_HPP_ */
