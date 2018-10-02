@@ -12,9 +12,11 @@ NEW FEATURES
 - CMake: install udev rules on Unix/Linux, to allow access to iniVation
   devices. Default rules chmod 0666 the devices, using -DUDEV_SELINUX=1
   you can install a SELinux-enabled version for systems using TAG 'uaccess'.
-- Packaging Ubuntu: libcaer is now split in two packages: libcaer and
-  libcaer-dev, and is now built using debhelper, and the static library
+- Ubuntu Packaging: libcaer is now split in two packages: libcaer and
+  libcaer-dev. It is now built using debhelper, and the static library
   version is now also installed by libcaer-dev.
+- Fedora Packaging: libcaer is now split in three packages: libacer,
+  libcaer-devel and libcaer-static. The static version is the latter.
 
 BUG FIXES
 - Packaging: cmake dependency bumped to 2.8.12 in Ubuntu/Fedora packages.
