@@ -18,8 +18,8 @@ IF (NOT ENABLE_OPENCV)
 	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
 ENDIF()
 
-IF (NOT UDEV_SELINUX AND UNIX AND NOT APPLE)
-	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules on Unix/Linux")
+IF (NOT UDEV_SELINUX)
+	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules on Linux")
 ENDIF()
 
 IF (NOT CMAKE_INSTALL_PREFIX AND UNIX AND NOT APPLE)
@@ -143,17 +143,17 @@ IF (NOT (CMAKE_VERSION VERSION_LESS "3.0"))
 ENDIF()
 
 # Install udev rules
-IF (UNIX AND NOT APPLE)
+IF (OS_LINUX)
 	IF (UDEV_SELINUX)
 		INSTALL(FILES
 			docs/udev-rules/selinux/65-inivation.rules
 			docs/udev-rules/selinux/66-inivation_devel.rules
-			DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/udev/rules.d)
+			DESTINATION "/lib/udev/rules.d/")
 	ELSE()
 		INSTALL(FILES
 			docs/udev-rules/65-inivation.rules
 			docs/udev-rules/66-inivation_devel.rules
-			DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/udev/rules.d)
+			DESTINATION "/lib/udev/rules.d/")
 	ENDIF()
 ENDIF()
 
