@@ -41,7 +41,7 @@ make %{?_smp_mflags}
 make install DESTDIR=%{buildroot}
 
 %files
-%{_sysconfdir}/udev/rules.d/
+/lib/udev/rules.d/
 %{_libdir}/libcaer.so.*
 
 %files devel
