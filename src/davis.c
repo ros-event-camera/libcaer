@@ -336,15 +336,23 @@ static inline void apsInitFrame(davisHandle handle) {
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
 		state->aps.countX[i] = 0;
 		state->aps.countY[i] = 0;
-
-		state->aps.frame.pixelIndexesPosition[i] = 0;
 	}
-
-	// Update ROI region data (position, size).
-	apsROIUpdateSizes(handle);
 
 	// Write out start of frame timestamp.
 	state->aps.frame.tsStartFrame = state->timestamps.current;
+
+	// Send APS info event out (as special event).
+	if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+			(size_t) state->currentPackets.specialPosition, 1, handle)) {
+		return;
+	}
+
+	caerSpecialEvent currentSpecialEvent
+		= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
+	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
+	caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+	state->currentPackets.specialPosition++;
 }
 
 static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
@@ -842,10 +850,8 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	davisHandle handle = (davisHandle) cdh;
 
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, false);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL, true);
-	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL, false);
 
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL, false);
@@ -884,6 +890,12 @@ static bool davisSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	if (handle->info.dvsHasSkipFilter) {
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY, 5);
+	}
+	if (handle->info.dvsHasPolarityFilter) {
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_POLARITY_FLATTEN, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS, false);
+		davisConfigSet(
+			cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE, false); // Suppress OFF events.
 	}
 
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL, true);
@@ -1273,11 +1285,9 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			switch (paramAddr) {
 				case DAVIS_CONFIG_MUX_RUN:
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RUN:
-				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_RUN_CHIP:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_RUN_CHIP:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1815,11 +1825,9 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			switch (paramAddr) {
 				case DAVIS_CONFIG_MUX_RUN:
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RUN:
-				case DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL:
+				case DAVIS_CONFIG_MUX_RUN_CHIP:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_MUX_RUN_CHIP:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
@@ -1828,14 +1836,10 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					*param = false;
 					break;
 
-				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED + 1:
-				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED + 1:
 					if (handle->info.muxHasStatistics) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					}
@@ -2743,19 +2747,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							apsInitFrame(handle);
 
-							// Send APS info event out (as special event).
-							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-									(size_t) state->currentPackets.specialPosition, 1, handle)) {
-								break;
-							}
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-
 							break;
 						}
 
@@ -2764,19 +2755,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.globalShutter = false;
 
 							apsInitFrame(handle);
-
-							// Send APS info event out (as special event).
-							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-									(size_t) state->currentPackets.specialPosition, 1, handle)) {
-								break;
-							}
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
 
 							break;
 						}
@@ -3249,22 +3227,25 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							switch (state->aps.roi.update & 0x03) {
 								case 0:
 									// START COLUMN
-									state->aps.roi.startColumn = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.positionX = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 1:
 									// START ROW
-									state->aps.roi.startRow = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.positionY = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 2:
 									// END COLUMN
-									state->aps.roi.endColumn = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.sizeX = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 3:
 									// END ROW
-									state->aps.roi.endRow = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.sizeY = U16T(state->aps.roi.tmpData | misc8Data);
+
+									// Got all sizes, now compute correct window.
+									apsROIUpdateSizes(handle);
 									break;
 
 								default:
