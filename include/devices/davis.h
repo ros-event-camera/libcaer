@@ -203,12 +203,9 @@ extern "C" {
 #define DAVIS_CONFIG_MUX_TIMESTAMP_RESET 2
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
- * drop IMU events if the USB output FIFO is full, instead of having
- * them pile up at the input FIFOs.
- * This normally should not be enabled to guarantee complete, coherent
- * IMU events, and not get incomplete or wrong IMU information.
+ * power up the chip's bias generator, enabling the chip to work.
  */
-#define DAVIS_CONFIG_MUX_DROP_IMU_ON_TRANSFER_STALL 3
+#define DAVIS_CONFIG_MUX_RUN_CHIP 3
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
  * drop External Input events if the USB output FIFO is full, instead of having
@@ -223,20 +220,6 @@ extern "C" {
 #define DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL 5
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
- * drop APS events if the USB output FIFO is full, instead of having
- * them pile up at the input FIFOs.
- * This normally should not be enabled to guarantee complete, coherent
- * frame events, though small timing differences may cause a reduction
- * in observed image quality.
- */
-#define DAVIS_CONFIG_MUX_DROP_APS_ON_TRANSFER_STALL 6
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
- * power up the chip's bias generator, enabling the chip to work.
- */
-#define DAVIS_CONFIG_MUX_RUN_CHIP 7
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
  * read-only parameter, information about the presence of the
  * statistics feature.
  * This is reserved for internal use and should not be used by
@@ -247,19 +230,11 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
  * read-only parameter, representing the number of dropped
- * IMU events on the device due to full USB buffers.
- * This is a 64bit value, and should always be read using the
- * function: caerDeviceConfigGet64().
- */
-#define DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED 81
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
- * read-only parameter, representing the number of dropped
  * External Input events on the device due to full USB buffers.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED 83
+#define DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED 81
 /**
  * Parameter address for module DAVIS_CONFIG_MUX:
  * read-only parameter, representing the number of dropped
@@ -267,15 +242,7 @@ extern "C" {
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED 85
-/**
- * Parameter address for module DAVIS_CONFIG_MUX:
- * read-only parameter, representing the number of dropped
- * APS events on the device due to full USB buffers.
- * This is a 64bit value, and should always be read using the
- * function: caerDeviceConfigGet64().
- */
-#define DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED 87
+#define DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED 83
 
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
