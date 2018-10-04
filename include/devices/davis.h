@@ -553,6 +553,32 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
+ * polarity suppression filter feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER 60
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * flatten all polarities to OFF (0).
+ */
+#define DAVIS_CONFIG_DVS_FILTER_POLARITY_FLATTEN 61
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * suppress one of the two ON/OFF polarities completely.
+ * Use DAVIS_CONFIG_DVS_FILTER_POLARITY_IGNORE to select which.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS 62
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * polarity to suppress (0=OFF, 1=ON). Use
+ * DAVIS_CONFIG_DVS_FILTER_POLARITY_IGNORE to enable.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE 63
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
  * statistics feature.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
@@ -1546,6 +1572,8 @@ struct caer_davis_info {
 	bool dvsHasROIFilter;
 	/// Feature test: DVS event skip filter.
 	bool dvsHasSkipFilter;
+	/// Feature test: DVS polarity suppression filter.
+	bool dvsHasPolarityFilter;
 	/// Feature test: DVS statistics support.
 	bool dvsHasStatistics;
 	/// APS X axis resolution.

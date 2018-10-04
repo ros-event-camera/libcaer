@@ -345,14 +345,6 @@ static inline void apsInitFrame(davisHandle handle) {
 
 	// Write out start of frame timestamp.
 	state->aps.frame.tsStartFrame = state->timestamps.current;
-
-	// Send APS info event out (as special event).
-	caerSpecialEvent currentSpecialEvent
-		= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
-	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
-	caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-	state->currentPackets.specialPosition++;
 }
 
 static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
@@ -709,6 +701,8 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	handle->info.dvsHasROIFilter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
 	handle->info.dvsHasSkipFilter = param32;
+	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER, &param32);
+	handle->info.dvsHasPolarityFilter = param32;
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
 	handle->info.dvsHasStatistics = param32;
 
@@ -1385,6 +1379,17 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_FLATTEN:
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS:
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE:
+					if (handle->info.dvsHasPolarityFilter) {
+						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_AUTO_TRAIN:
 					if (handle->info.dvsHasPixelFilter) {
 						atomic_store(&handle->state.dvs.pixelFilterAutoTrain.autoTrainRunning, param);
@@ -1904,6 +1909,17 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
 					if (handle->info.dvsHasSkipFilter) {
+						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
+					break;
+
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_FLATTEN:
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS:
+				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE:
+					if (handle->info.dvsHasPolarityFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -2727,6 +2743,19 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							apsInitFrame(handle);
 
+							// Send APS info event out (as special event).
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
+							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+								state->currentPackets.special, state->currentPackets.specialPosition);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
+
 							break;
 						}
 
@@ -2735,6 +2764,19 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.globalShutter = false;
 
 							apsInitFrame(handle);
+
+							// Send APS info event out (as special event).
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
+							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+								state->currentPackets.special, state->currentPackets.specialPosition);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+							caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 
 							break;
 						}
@@ -2836,7 +2878,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 								// Copy pixels over.
 								memcpy(caerFrameEventGetPixelArrayUnsafe(signalFrameEvent),
-									state->aps.frame.resetPixels, caerFrameEventGetPixelsSize(signalFrameEvent));
+									state->aps.frame.signalPixels, caerFrameEventGetPixelsSize(signalFrameEvent));
 #endif
 
 								// Automatic exposure control support. Call once for all ROI regions.
@@ -2865,6 +2907,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									}
 								}
 							}
+
 							break;
 						}
 
@@ -2877,25 +2920,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.currentReadoutType        = APS_READOUT_RESET;
 							state->aps.countY[APS_READOUT_RESET] = 0;
 
-							// The first Reset Column Read Start is also the start
-							// of the exposure for the RS.
-							if ((!state->aps.globalShutter) && (state->aps.countX[APS_READOUT_RESET] == 0)) {
-								state->aps.frame.tsStartExposure = state->timestamps.current;
-
-								// Send APS info event out (as special event).
-								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-										(size_t) state->currentPackets.specialPosition, 1, handle)) {
-									break;
-								}
-
-								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentPackets.special, state->currentPackets.specialPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-								state->currentPackets.specialPosition++;
-							}
-
 							break;
 						}
 
@@ -2907,25 +2931,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							state->aps.currentReadoutType         = APS_READOUT_SIGNAL;
 							state->aps.countY[APS_READOUT_SIGNAL] = 0;
-
-							// The first Signal Column Read Start is also always the end
-							// of the exposure time, for both RS and GS.
-							if (state->aps.countX[APS_READOUT_SIGNAL] == 0) {
-								state->aps.frame.tsEndExposure = state->timestamps.current;
-
-								// Send APS info event out (as special event).
-								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-										(size_t) state->currentPackets.specialPosition, 1, handle)) {
-									break;
-								}
-
-								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentPackets.special, state->currentPackets.specialPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_END);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-								state->currentPackets.specialPosition++;
-							}
 
 							break;
 						}
@@ -2950,30 +2955,58 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							state->aps.countX[state->aps.currentReadoutType]++;
 
-							// The last Reset Column Read End is also the start
-							// of the exposure for the GS.
-							if ((state->aps.globalShutter) && (state->aps.currentReadoutType == APS_READOUT_RESET)
-								&& (state->aps.countX[APS_READOUT_RESET] == state->aps.roi.sizeX)) {
-								state->aps.frame.tsStartExposure = state->timestamps.current;
+							break;
+						}
 
-								// Send APS info event out (as special event).
-								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-										(size_t) state->currentPackets.specialPosition, 1, handle)) {
-									break;
-								}
-
-								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-									state->currentPackets.special, state->currentPackets.specialPosition);
-								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-								caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-								caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-								state->currentPackets.specialPosition++;
+						case 14: { // APS Exposure Start
+							if (state->aps.ignoreEvents) {
+								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Exposure Start event received.");
+
+							state->aps.frame.tsStartExposure = state->timestamps.current;
+
+							// Send APS info event out (as special event).
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
+							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+								state->currentPackets.special, state->currentPackets.specialPosition);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+							caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
 
 							break;
 						}
 
-						case 42: { // External generator (falling edge)
+						case 15: { // APS Exposure End
+							if (state->aps.ignoreEvents) {
+								break;
+							}
+							davisLog(CAER_LOG_DEBUG, handle, "APS Exposure End event received.");
+
+							state->aps.frame.tsEndExposure = state->timestamps.current;
+
+							// Send APS info event out (as special event).
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
+							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+								state->currentPackets.special, state->currentPackets.specialPosition);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+							caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_END);
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
+
+							break;
+						}
+
+						case 16: { // External generator (falling edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
 
 							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
@@ -2990,7 +3023,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							break;
 						}
 
-						case 43: { // External generator (rising edge)
+						case 17: { // External generator (rising edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
 
 							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
@@ -3021,23 +3054,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						break; // Skip invalid Y address (don't update lastY).
 					}
 
-					if (state->dvs.gotY) {
-						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentPackets.special, state->currentPackets.specialPosition);
-
-						// Timestamp at event-stream insertion point.
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-						caerSpecialEventSetType(currentSpecialEvent, DVS_ROW_ONLY);
-						caerSpecialEventSetData(currentSpecialEvent, state->dvs.lastY);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-						state->currentPackets.specialPosition++;
-
-						davisLog(CAER_LOG_DEBUG, handle, "DVS: row-only event received for address Y=%" PRIu16 ".",
-							state->dvs.lastY);
-					}
-
 					state->dvs.lastY = data;
-					state->dvs.gotY  = true;
 
 					break;
 
@@ -3050,16 +3067,21 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						break; // Skip invalid event.
 					}
 
-					// Invert polarity for PixelParade high gain pixels (DavisSense), because of
-					// negative gain from pre-amplifier.
-					uint8_t polarity = ((IS_DAVIS208(handle->info.chipID)) && (data < 192)) ? U8T(~code) : (code);
+					// Invert polarity for PixelParade high gain pixels (DavisSense), because of negative gain from
+					// pre-amplifier. uint8_t polarity = ((IS_DAVIS208(handle->info.chipID)) && (data < 192)) ?
+					// U8T(~code) : (code);
+
+					if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
+							(size_t) state->currentPackets.polarityPosition, 1, handle)) {
+						break;
+					}
 
 					caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
 						state->currentPackets.polarity, state->currentPackets.polarityPosition);
 
 					// Timestamp at event-stream insertion point.
 					caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
-					caerPolarityEventSetPolarity(currentPolarityEvent, (polarity & 0x01));
+					caerPolarityEventSetPolarity(currentPolarityEvent, (code & 0x01));
 					if (state->dvs.invertXY) {
 						caerPolarityEventSetY(currentPolarityEvent, data);
 						caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastY);
@@ -3071,8 +3093,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
 					state->currentPackets.polarityPosition++;
 
-					state->dvs.gotY = false;
-
 					break;
 				}
 
@@ -3082,9 +3102,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					}
 
 					// Ignore too big X/Y counts, can happen if column start/end events are lost.
-					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.expectedCountX)
-						|| (state->aps.countY[state->aps.currentReadoutType]
-							   >= state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]])) {
+					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.roi.sizeX)
+						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.roi.sizeY)) {
 						break;
 					}
 
@@ -3125,8 +3144,10 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							switch (state->imu.count) {
 								case 0:
 									davisLog(CAER_LOG_ERROR, handle,
-										"IMU data: missing IMU Scale Config event. Parsing of IMU events will still be "
-										"attempted, but be aware that Accel/Gyro scale conversions may be inaccurate.");
+										"IMU data: missing IMU Scale Config event. Parsing of IMU events will "
+										"still be "
+										"attempted, but be aware that Accel/Gyro scale conversions may be "
+										"inaccurate.");
 									state->imu.count = 1;
 									// Fall through to next case, as if imu.count was equal to 1.
 
@@ -3167,8 +3188,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									break;
 								}
 
-								// Temperature is signed. Formula for converting to °C:
-								// (SIGNED_VAL / 340) + 36.53
+									// Temperature is signed. Formula for converting to °C:
+									// (SIGNED_VAL / 340) + 36.53
 								case 8: {
 									int16_t temp = I16T((state->imu.tmpData << 8) | misc8Data);
 									caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 340.0F) + 36.53F);
