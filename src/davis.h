@@ -24,7 +24,7 @@
  *     signal separately (marked as ROI regions 1 for reset and 2
  *     for signal respectively)
  */
-#define APS_DEBUG_FRAME 0
+#define APS_DEBUG_FRAME 1
 
 #define APS_ADC_DEPTH 10
 
@@ -91,32 +91,25 @@ struct davis_state {
 		uint16_t currentReadoutType;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
-		uint16_t expectedCountX;
-		uint16_t expectedCountY;
 		struct {
 			int32_t tsStartFrame;
 			int32_t tsStartExposure;
 			int32_t tsEndExposure;
-			size_t *pixelIndexes;
-			size_t pixelIndexesPosition[APS_READOUT_TYPES_NUM];
-			uint16_t *resetPixels;
 			uint16_t *pixels;
+#if APS_DEBUG_FRAME == 1
+			uint16_t *resetPixels;
+			uint16_t *signalPixels;
+#endif
 		} frame;
 		struct {
 			// Temporary values from device.
 			uint16_t update;
 			uint16_t tmpData;
-			bool deviceEnabled[APS_ROI_REGIONS];
-			uint16_t startColumn[APS_ROI_REGIONS];
-			uint16_t startRow[APS_ROI_REGIONS];
-			uint16_t endColumn[APS_ROI_REGIONS];
-			uint16_t endRow[APS_ROI_REGIONS];
 			// Parameters for frame parsing.
-			bool enabled[APS_ROI_REGIONS];
-			uint16_t positionX[APS_ROI_REGIONS];
-			uint16_t positionY[APS_ROI_REGIONS];
-			uint16_t sizeX[APS_ROI_REGIONS];
-			uint16_t sizeY[APS_ROI_REGIONS];
+			uint16_t positionX;
+			uint16_t positionY;
+			uint16_t sizeX;
+			uint16_t sizeY;
 		} roi;
 		struct {
 			uint8_t tmpData;

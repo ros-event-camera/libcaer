@@ -149,16 +149,6 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	return ((ssize_t) resultAll);
 }
 
-static inline float clockFreqCorrect(davisState state, int16_t pureClock) {
-	// FX3 devices need to have their clock-related values corrected
-	// by a factor when sending/getting them.
-	if (state->fx3Support.enabled) {
-		return ((float) pureClock * DAVIS_FX3_CLOCK_FREQ_CORRECTION);
-	}
-
-	return ((float) pureClock);
-}
-
 static inline bool apsPixelIsActive(davisState state, uint16_t x, uint16_t y) {
 	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
 		// Skip disabled ROI regions.
@@ -336,6 +326,11 @@ static inline void apsROIUpdateSizes(davisHandle handle) {
 
 static inline void apsInitFrame(davisHandle handle) {
 	davisState state = &handle->state;
+
+	state->aps.ignoreEvents         = false;
+	state->aps.autoExposure.tmpData = 0;
+	state->aps.roi.tmpData          = 0;
+	state->aps.roi.update           = 0;
 
 	state->aps.currentReadoutType = APS_READOUT_RESET;
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
@@ -545,9 +540,9 @@ static inline void freeAllDataMemory(davisState state) {
 		state->aps.frame.resetPixels = NULL;
 	}
 
-	if (state->aps.frame.pixelIndexes != NULL) {
-		free(state->aps.frame.pixelIndexes);
-		state->aps.frame.pixelIndexes = NULL;
+	if (state->aps.frame.signalPixels != NULL) {
+		free(state->aps.frame.signalPixels);
+		state->aps.frame.signalPixels = NULL;
 	}
 }
 
@@ -1368,9 +1363,11 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
-				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
-					if (handle->info.dvsHasSkipFilter) {
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
+					if (handle->info.dvsHasROIFilter) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -1378,11 +1375,9 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
-					if (handle->info.dvsHasROIFilter) {
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
+					if (handle->info.dvsHasSkipFilter) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -1408,57 +1403,33 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 		case DAVIS_CONFIG_APS:
 			switch (paramAddr) {
 				case DAVIS_CONFIG_APS_RUN:
-				case DAVIS_CONFIG_APS_RESET_READ:
 				case DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_APS_ROW_SETTLE:
 				case DAVIS_CONFIG_APS_START_COLUMN_0:
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
-				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
-				case DAVIS_CONFIG_APS_RESET_SETTLE:
-				case DAVIS_CONFIG_APS_NULL_SETTLE:
-					// Not supported on DAVIS640H APS state machine.
-					if (!IS_DAVIS640H(handle->info.chipID)) {
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
-					// Only available on DAVIS240 due to external ADC use, which has both a row and column timing.
-					if (IS_DAVIS240(handle->info.chipID)) {
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
 				case DAVIS_CONFIG_APS_EXPOSURE:
-					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
+					// Exposure and Frame Interval are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
 					if (!atomic_load(&state->aps.autoExposure.enabled)) {
 						state->aps.autoExposure.lastSetExposure = param;
 
-						float exposureCC = roundf((float) param * clockFreqCorrect(state, handle->info.adcClock));
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, U32T(exposureCC)));
+						float exposureCC = roundf((float) param * state->deviceClocks.adcClockActual);
+						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr, U32T(exposureCC)));
 					}
 					else {
 						return (false);
 					}
 					break;
 
-				case DAVIS_CONFIG_APS_FRAME_DELAY: {
-					// Exposure and Frame Delay are in µs, must be converted to native FPGA cycles
+				case DAVIS_CONFIG_APS_FRAME_INTERVAL: {
+					// Exposure and Frame Interval are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
-					float delayCC = roundf((float) param * clockFreqCorrect(state, handle->info.adcClock));
-					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, U32T(delayCC)));
+					float intervalCC = roundf((float) param * state->deviceClocks.adcClockActual);
+					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_USB, paramAddr, U32T(intervalCC)));
 					break;
 				}
 
@@ -1470,42 +1441,6 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 							return (false);
 						}
 
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_START_COLUMN_1:
-				case DAVIS_CONFIG_APS_END_COLUMN_1:
-				case DAVIS_CONFIG_APS_START_COLUMN_2:
-				case DAVIS_CONFIG_APS_END_COLUMN_2:
-				case DAVIS_CONFIG_APS_START_COLUMN_3:
-				case DAVIS_CONFIG_APS_END_COLUMN_3:
-				case DAVIS_CONFIG_APS_START_ROW_1:
-				case DAVIS_CONFIG_APS_END_ROW_1:
-				case DAVIS_CONFIG_APS_START_ROW_2:
-				case DAVIS_CONFIG_APS_END_ROW_2:
-				case DAVIS_CONFIG_APS_START_ROW_3:
-				case DAVIS_CONFIG_APS_END_ROW_3:
-				case DAVIS_CONFIG_APS_ROI1_ENABLED:
-				case DAVIS_CONFIG_APS_ROI2_ENABLED:
-				case DAVIS_CONFIG_APS_ROI3_ENABLED:
-					if (handle->info.apsHasQuadROI) {
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_SAMPLE_ENABLE:
-				case DAVIS_CONFIG_APS_SAMPLE_SETTLE:
-				case DAVIS_CONFIG_APS_RAMP_RESET:
-				case DAVIS_CONFIG_APS_RAMP_SHORT_RESET:
-				case DAVIS_CONFIG_APS_ADC_TEST_MODE:
-					if (handle->info.apsHasInternalADC) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -1566,17 +1501,14 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 		case DAVIS_CONFIG_IMU:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_IMU_RUN:
-				case DAVIS_CONFIG_IMU_TEMP_STANDBY:
-				case DAVIS_CONFIG_IMU_ACCEL_STANDBY:
-				case DAVIS_CONFIG_IMU_GYRO_STANDBY:
-				case DAVIS_CONFIG_IMU_LP_CYCLE:
-				case DAVIS_CONFIG_IMU_LP_WAKEUP:
+				case DAVIS_CONFIG_IMU_RUN_ACCELEROMETER:
+				case DAVIS_CONFIG_IMU_RUN_GYROSCOPE:
+				case DAVIS_CONFIG_IMU_RUN_TEMPERATURE:
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
-				case DAVIS_CONFIG_IMU_GYRO_DLPF:
-				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
-				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
+				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
+				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 					return (spiConfigSend(&state->usbState, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
@@ -1598,33 +1530,12 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_USE_CUSTOM_SIGNAL:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH1:
-				case DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2:
-					if (handle->info.extInputHasExtraDetectors) {
 						return (spiConfigSend(&state->usbState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
@@ -1912,14 +1823,14 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					*param = false;
 					break;
 
-				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED + 1:
-				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED:
-				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED + 1:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED + 1:
+				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED:
+				case DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED + 1:
 					if (handle->info.muxHasStatistics) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_MUX, paramAddr, param));
 					}
@@ -1978,9 +1889,11 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
-				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
-					if (handle->info.dvsHasSkipFilter) {
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
+				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
+					if (handle->info.dvsHasROIFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -1988,11 +1901,9 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					}
 					break;
 
-				case DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
-				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
-					if (handle->info.dvsHasROIFilter) {
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
+				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
+					if (handle->info.dvsHasSkipFilter) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
@@ -2053,44 +1964,13 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 		case DAVIS_CONFIG_APS:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_APS_SIZE_COLUMNS:
-				case DAVIS_CONFIG_APS_SIZE_ROWS:
-				case DAVIS_CONFIG_APS_ORIENTATION_INFO:
-				case DAVIS_CONFIG_APS_COLOR_FILTER:
 				case DAVIS_CONFIG_APS_RUN:
-				case DAVIS_CONFIG_APS_RESET_READ:
 				case DAVIS_CONFIG_APS_WAIT_ON_TRANSFER_STALL:
-				case DAVIS_CONFIG_APS_ROW_SETTLE:
-				case DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER:
-				case DAVIS_CONFIG_APS_HAS_QUAD_ROI:
-				case DAVIS_CONFIG_APS_HAS_INTERNAL_ADC:
 				case DAVIS_CONFIG_APS_START_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
-				case DAVIS_CONFIG_APS_ROI0_ENABLED:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					break;
-
-				case DAVIS_CONFIG_APS_RESET_SETTLE:
-				case DAVIS_CONFIG_APS_NULL_SETTLE:
-					// Not supported on DAVIS640H APS state machine.
-					if (!IS_DAVIS640H(handle->info.chipID)) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_COLUMN_SETTLE:
-					// Only available on DAVIS240 due to external ADC use, which has both a row and column timing.
-					if (IS_DAVIS240(handle->info.chipID)) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
 					break;
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
@@ -2098,16 +1978,16 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 					*param = state->aps.autoExposure.lastSetExposure;
 					break;
 
-				case DAVIS_CONFIG_APS_FRAME_DELAY: {
-					// Exposure and Frame Delay are in µs, must be converted from native FPGA cycles
+				case DAVIS_CONFIG_APS_FRAME_INTERVAL: {
+					// Frame Interval is in µs, must be converted from native FPGA cycles
 					// by dividing with ADC clock value.
 					uint32_t cyclesValue = 0;
 					if (!spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, &cyclesValue)) {
 						return (false);
 					}
 
-					float delayCC = roundf((float) cyclesValue / clockFreqCorrect(state, handle->info.adcClock));
-					*param        = U32T(delayCC);
+					float intervalCC = roundf((float) cyclesValue / state->deviceClocks.adcClockActual);
+					*param           = U32T(intervalCC);
 
 					return (true);
 					break;
@@ -2115,42 +1995,6 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_START_COLUMN_1:
-				case DAVIS_CONFIG_APS_END_COLUMN_1:
-				case DAVIS_CONFIG_APS_START_COLUMN_2:
-				case DAVIS_CONFIG_APS_END_COLUMN_2:
-				case DAVIS_CONFIG_APS_START_COLUMN_3:
-				case DAVIS_CONFIG_APS_END_COLUMN_3:
-				case DAVIS_CONFIG_APS_START_ROW_1:
-				case DAVIS_CONFIG_APS_END_ROW_1:
-				case DAVIS_CONFIG_APS_START_ROW_2:
-				case DAVIS_CONFIG_APS_END_ROW_2:
-				case DAVIS_CONFIG_APS_START_ROW_3:
-				case DAVIS_CONFIG_APS_END_ROW_3:
-				case DAVIS_CONFIG_APS_ROI1_ENABLED:
-				case DAVIS_CONFIG_APS_ROI2_ENABLED:
-				case DAVIS_CONFIG_APS_ROI3_ENABLED:
-					if (handle->info.apsHasQuadROI) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_APS_SAMPLE_ENABLE:
-				case DAVIS_CONFIG_APS_SAMPLE_SETTLE:
-				case DAVIS_CONFIG_APS_RAMP_RESET:
-				case DAVIS_CONFIG_APS_RAMP_SHORT_RESET:
-				case DAVIS_CONFIG_APS_ADC_TEST_MODE:
-					if (handle->info.apsHasInternalADC) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
@@ -2190,17 +2034,14 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 		case DAVIS_CONFIG_IMU:
 			switch (paramAddr) {
-				case DAVIS_CONFIG_IMU_RUN:
-				case DAVIS_CONFIG_IMU_TEMP_STANDBY:
-				case DAVIS_CONFIG_IMU_ACCEL_STANDBY:
-				case DAVIS_CONFIG_IMU_GYRO_STANDBY:
-				case DAVIS_CONFIG_IMU_LP_CYCLE:
-				case DAVIS_CONFIG_IMU_LP_WAKEUP:
+				case DAVIS_CONFIG_IMU_RUN_ACCELEROMETER:
+				case DAVIS_CONFIG_IMU_RUN_GYROSCOPE:
+				case DAVIS_CONFIG_IMU_RUN_TEMPERATURE:
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
-				case DAVIS_CONFIG_IMU_GYRO_DLPF:
-				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
-				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
+				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
+				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
@@ -2218,39 +2059,16 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
-				case DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR:
-				case DAVIS_CONFIG_EXTINPUT_HAS_EXTRA_DETECTORS:
 					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_USE_CUSTOM_SIGNAL:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
-					}
-					else {
-						return (false);
-					}
-					break;
-
-				case DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY1:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH1:
-				case DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY2:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH2:
-					if (handle->info.extInputHasExtraDetectors) {
 						return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
@@ -2454,19 +2272,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 			break;
 
 		case DAVIS_CONFIG_SYSINFO:
-			switch (paramAddr) {
-				case DAVIS_CONFIG_SYSINFO_LOGIC_VERSION:
-				case DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER:
-				case DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER:
-				case DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK:
-				case DAVIS_CONFIG_SYSINFO_ADC_CLOCK:
-					return (spiConfigReceive(&state->usbState, DAVIS_CONFIG_SYSINFO, paramAddr, param));
-					break;
-
-				default:
-					return (false);
-					break;
-			}
+			// Disallow system info parameters being read directly. Go via info struct!
+			return (false);
 			break;
 
 		case DAVIS_CONFIG_USB:
@@ -2578,24 +2385,16 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	if (state->aps.frame.resetPixels == NULL) {
 		freeAllDataMemory(state);
 
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS reset pixels memory.");
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS reset pixels memory (debug).");
 		return (false);
 	}
 
-	state->aps.frame.pixelIndexes
-		= calloc((size_t)(state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS), sizeof(size_t));
-	if (state->aps.frame.pixelIndexes == NULL) {
+	state->aps.frame.signalPixels
+		= calloc((size_t)(state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS), sizeof(uint16_t));
+	if (state->aps.frame.signalPixels == NULL) {
 		freeAllDataMemory(state);
 
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS pixel positions memory.");
-		return (false);
-	}
-
-	state->aps.expectedCountY = calloc((size_t) state->aps.sizeX, sizeof(uint16_t));
-	if (state->aps.expectedCountY == NULL) {
-		freeAllDataMemory(state);
-
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS expected count Y memory.");
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS signal pixels memory (debug).");
 		return (false);
 	}
 
@@ -2615,17 +2414,6 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 
 	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, &param32);
 	state->aps.globalShutter = param32;
-	spiConfigReceive(&state->usbState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RESET_READ, &param32);
-	state->aps.resetRead = param32;
-
-	// Fully disable APS ROI by default. Device will send the correct values to enable.
-	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-		state->aps.roi.startColumn[i] = state->aps.roi.endColumn[i] = U16T(state->aps.sizeX);
-		state->aps.roi.startRow[i] = state->aps.roi.endRow[i] = U16T(state->aps.sizeY);
-
-		state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
-		state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
-	}
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
@@ -2652,7 +2440,9 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
-		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_ACCELEROMETER, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_GYROSCOPE, true);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_TEMPERATURE, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, true);
 	}
 
@@ -2667,7 +2457,9 @@ bool davisDataStop(caerDeviceHandle cdh) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
-		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_ACCELEROMETER, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_GYROSCOPE, false);
+		davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_TEMPERATURE, false);
 		davisConfigSet(cdh, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, false);
 
 		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, false);
@@ -2705,6 +2497,24 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 
 #define TS_WRAP_ADD 0x8000
 
+static inline bool ensureSpaceForEvents(
+	caerEventPacketHeader *packet, size_t position, size_t numEvents, davisHandle handle) {
+	if ((position + numEvents) <= (size_t) caerEventPacketHeaderGetEventCapacity(*packet)) {
+		return (true);
+	}
+
+	caerEventPacketHeader grownPacket
+		= caerEventPacketGrow(*packet, caerEventPacketHeaderGetEventCapacity(*packet) * 2);
+	if (grownPacket == NULL) {
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
+			caerEventPacketHeaderGetEventType(*packet));
+		return (false);
+	}
+
+	*packet = grownPacket;
+	return (true);
+}
+
 static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	davisHandle handle = vhd;
 	davisState state   = &handle->state;
@@ -2737,20 +2547,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
-		} // +1 to ensure space for double frame info.
-		else if ((state->currentPackets.specialPosition + 1)
-				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special)) {
-			// If not committed, let's check if any of the packets has reached its maximum
-			// capacity limit. If yes, we grow them to accomodate new events.
-			caerSpecialEventPacket grownPacket
-				= (caerSpecialEventPacket) caerEventPacketGrow((caerEventPacketHeader) state->currentPackets.special,
-					caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.special) * 2);
-			if (grownPacket == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow special event packet.");
-				return;
-			}
-
-			state->currentPackets.special = grownPacket;
 		}
 
 		if (state->currentPackets.polarity == NULL) {
@@ -2761,20 +2557,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				return;
 			}
 		}
-		else if (state->currentPackets.polarityPosition
-				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity)) {
-			// If not committed, let's check if any of the packets has reached its maximum
-			// capacity limit. If yes, we grow them to accomodate new events.
-			caerPolarityEventPacket grownPacket
-				= (caerPolarityEventPacket) caerEventPacketGrow((caerEventPacketHeader) state->currentPackets.polarity,
-					caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.polarity) * 2);
-			if (grownPacket == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow polarity event packet.");
-				return;
-			}
-
-			state->currentPackets.polarity = grownPacket;
-		}
 
 		if (state->currentPackets.frame == NULL) {
 			state->currentPackets.frame
@@ -2784,20 +2566,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
 			}
-		} // +3 to ensure space for Quad-ROI (and +7 for debug Quad-ROI).
-		else if ((state->currentPackets.framePosition + ((APS_DEBUG_FRAME == 0) ? (3) : (3 + APS_ROI_REGIONS)))
-				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.frame)) {
-			// If not committed, let's check if any of the packets has reached its maximum
-			// capacity limit. If yes, we grow them to accomodate new events.
-			caerFrameEventPacket grownPacket
-				= (caerFrameEventPacket) caerEventPacketGrow((caerEventPacketHeader) state->currentPackets.frame,
-					caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.frame) * 2);
-			if (grownPacket == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow frame event packet.");
-				return;
-			}
-
-			state->currentPackets.frame = grownPacket;
 		}
 
 		if (state->currentPackets.imu6 == NULL) {
@@ -2807,20 +2575,6 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 				return;
 			}
-		}
-		else if (state->currentPackets.imu6Position
-				 >= caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.imu6)) {
-			// If not committed, let's check if any of the packets has reached its maximum
-			// capacity limit. If yes, we grow them to accomodate new events.
-			caerIMU6EventPacket grownPacket
-				= (caerIMU6EventPacket) caerEventPacketGrow((caerEventPacketHeader) state->currentPackets.imu6,
-					caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader) state->currentPackets.imu6) * 2);
-			if (grownPacket == NULL) {
-				davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow IMU6 event packet.");
-				return;
-			}
-
-			state->currentPackets.imu6 = grownPacket;
 		}
 
 		bool tsReset   = false;
@@ -2868,6 +2622,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 2: { // External input (falling edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External input (falling edge) event received.");
 
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
@@ -2880,6 +2639,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 3: { // External input (rising edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External input (rising edge) event received.");
 
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
@@ -2891,6 +2655,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 						case 4: { // External input (pulse)
 							davisLog(CAER_LOG_DEBUG, handle, "External input (pulse) event received.");
+
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentPackets.special, state->currentPackets.specialPosition);
@@ -2934,6 +2703,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								// possible data loss would be too significant. So instead we keep a private event,
 								// fill it, and then only copy it into the packet here in the END state, at which point
 								// the whole event is ready and cannot be broken/corrupted in any way anymore.
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.imu6,
+										(size_t) state->currentPackets.imu6Position, 1, handle)) {
+									break;
+								}
+
 								caerIMU6Event imuCurrentEvent = caerIMU6EventPacketGetEvent(
 									state->currentPackets.imu6, state->currentPackets.imu6Position);
 								memcpy(imuCurrentEvent, &state->imu.currentEvent, sizeof(struct caer_imu6_event));
@@ -2949,9 +2723,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 						case 8: { // APS Global Shutter Frame Start
 							davisLog(CAER_LOG_DEBUG, handle, "APS GS Frame Start event received.");
-							state->aps.ignoreEvents  = false;
 							state->aps.globalShutter = true;
-							state->aps.resetRead     = true;
 
 							apsInitFrame(handle);
 
@@ -2960,9 +2732,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 						case 9: { // APS Rolling Shutter Frame Start
 							davisLog(CAER_LOG_DEBUG, handle, "APS RS Frame Start event received.");
-							state->aps.ignoreEvents  = false;
 							state->aps.globalShutter = false;
-							state->aps.resetRead     = true;
 
 							apsInitFrame(handle);
 
@@ -2989,92 +2759,93 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							// Validate event and advance frame packet position.
 							if (validFrame) {
-								caerFrameEventConst newFrameEvents[APS_ROI_REGIONS] = {NULL};
+								// Get next frame.
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.frame,
+										(size_t) state->currentPackets.framePosition, 1, handle)) {
+									break;
+								}
 
-								for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-									// Skip disabled ROI regions.
-									if (!state->aps.roi.enabled[i]) {
-										continue;
-									}
+								caerFrameEvent frameEvent = caerFrameEventPacketGetEvent(
+									state->currentPackets.frame, state->currentPackets.framePosition);
+								state->currentPackets.framePosition++;
 
-									// Get next frame.
-									caerFrameEvent frameEvent = caerFrameEventPacketGetEvent(
-										state->currentPackets.frame, state->currentPackets.framePosition);
-									state->currentPackets.framePosition++;
-									newFrameEvents[i] = frameEvent;
+								// Setup new frame.
+								caerFrameEventSetColorFilter(frameEvent, handle->info.apsColorFilter);
+								caerFrameEventSetROIIdentifier(frameEvent, 0);
+								caerFrameEventSetTSStartOfFrame(frameEvent, state->aps.frame.tsStartFrame);
+								caerFrameEventSetTSStartOfExposure(frameEvent, state->aps.frame.tsStartExposure);
+								caerFrameEventSetTSEndOfExposure(frameEvent, state->aps.frame.tsEndExposure);
+								caerFrameEventSetTSEndOfFrame(frameEvent, state->timestamps.current);
+								caerFrameEventSetPositionX(frameEvent, state->aps.roi.positionX);
+								caerFrameEventSetPositionY(frameEvent, state->aps.roi.positionY);
+								caerFrameEventSetLengthXLengthYChannelNumber(frameEvent, state->aps.roi.sizeX,
+									state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+								caerFrameEventValidate(frameEvent, state->currentPackets.frame);
 
-									// Setup new frame.
-									caerFrameEventSetColorFilter(frameEvent, handle->info.apsColorFilter);
-									caerFrameEventSetROIIdentifier(frameEvent, U8T(i));
-									caerFrameEventSetTSStartOfFrame(frameEvent, state->aps.frame.tsStartFrame);
-									caerFrameEventSetTSStartOfExposure(frameEvent, state->aps.frame.tsStartExposure);
-									caerFrameEventSetTSEndOfExposure(frameEvent, state->aps.frame.tsEndExposure);
-									caerFrameEventSetTSEndOfFrame(frameEvent, state->timestamps.current);
-									caerFrameEventSetPositionX(frameEvent, state->aps.roi.positionX[i]);
-									caerFrameEventSetPositionY(frameEvent, state->aps.roi.positionY[i]);
-									caerFrameEventSetLengthXLengthYChannelNumber(frameEvent, state->aps.roi.sizeX[i],
-										state->aps.roi.sizeY[i], APS_ADC_CHANNELS, state->currentPackets.frame);
-									caerFrameEventValidate(frameEvent, state->currentPackets.frame);
-
-									// Copy pixels over row-wise.
-									uint16_t *roiPixels = caerFrameEventGetPixelArrayUnsafe(frameEvent);
-									size_t roiOffset    = 0;
-									size_t frameOffset  = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
-														 + state->aps.roi.positionX[i];
-
-									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
-										memcpy(roiPixels + roiOffset, state->aps.frame.pixels + frameOffset,
-											state->aps.roi.sizeX[i] * sizeof(uint16_t));
-
-										roiOffset += state->aps.roi.sizeX[i];
-										frameOffset += (size_t) handle->info.apsSizeX;
-									}
+								// Copy pixels over.
+								memcpy(caerFrameEventGetPixelArrayUnsafe(frameEvent), state->aps.frame.pixels,
+									caerFrameEventGetPixelsSize(frameEvent));
 
 // Separate debug support.
 #if APS_DEBUG_FRAME == 1
-									// Get debug frame.
-									caerFrameEvent debugEvent = caerFrameEventPacketGetEvent(
-										state->currentPackets.frame, state->currentPackets.framePosition);
-									state->currentPackets.framePosition++;
-
-									// Setup new frame.
-									caerFrameEventSetColorFilter(debugEvent, handle->info.apsColorFilter);
-									caerFrameEventSetROIIdentifier(debugEvent, U8T(i + APS_ROI_REGIONS));
-									caerFrameEventSetTSStartOfFrame(debugEvent, state->aps.frame.tsStartFrame);
-									caerFrameEventSetTSStartOfExposure(debugEvent, state->aps.frame.tsStartExposure);
-									caerFrameEventSetTSEndOfExposure(debugEvent, state->aps.frame.tsEndExposure);
-									caerFrameEventSetTSEndOfFrame(debugEvent, state->timestamps.current);
-									caerFrameEventSetPositionX(debugEvent, state->aps.roi.positionX[i]);
-									caerFrameEventSetPositionY(debugEvent, state->aps.roi.positionY[i]);
-									caerFrameEventSetLengthXLengthYChannelNumber(debugEvent, state->aps.roi.sizeX[i],
-										state->aps.roi.sizeY[i], APS_ADC_CHANNELS, state->currentPackets.frame);
-									caerFrameEventValidate(debugEvent, state->currentPackets.frame);
-
-									// Copy pixels over row-wise.
-									roiPixels   = caerFrameEventGetPixelArrayUnsafe(debugEvent);
-									roiOffset   = 0;
-									frameOffset = (state->aps.roi.positionY[i] * (size_t) handle->info.apsSizeX)
-												  + state->aps.roi.positionX[i];
-
-									for (uint16_t y = 0; y < state->aps.roi.sizeY[i]; y++) {
-										memcpy(roiPixels + roiOffset, state->aps.frame.resetPixels + frameOffset,
-											state->aps.roi.sizeX[i] * sizeof(uint16_t));
-
-										roiOffset += state->aps.roi.sizeX[i];
-										frameOffset += (size_t) handle->info.apsSizeX;
-									}
-#endif
+								// Get debug frames.
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.frame,
+										(size_t) state->currentPackets.framePosition, 2, handle)) {
+									break;
 								}
+
+								// Reset frame.
+								caerFrameEvent resetFrameEvent = caerFrameEventPacketGetEvent(
+									state->currentPackets.frame, state->currentPackets.framePosition);
+								state->currentPackets.framePosition++;
+
+								// Setup new frame.
+								caerFrameEventSetColorFilter(resetFrameEvent, handle->info.apsColorFilter);
+								caerFrameEventSetROIIdentifier(resetFrameEvent, 1);
+								caerFrameEventSetTSStartOfFrame(resetFrameEvent, state->aps.frame.tsStartFrame);
+								caerFrameEventSetTSStartOfExposure(resetFrameEvent, state->aps.frame.tsStartExposure);
+								caerFrameEventSetTSEndOfExposure(resetFrameEvent, state->aps.frame.tsEndExposure);
+								caerFrameEventSetTSEndOfFrame(resetFrameEvent, state->timestamps.current);
+								caerFrameEventSetPositionX(resetFrameEvent, state->aps.roi.positionX);
+								caerFrameEventSetPositionY(resetFrameEvent, state->aps.roi.positionY);
+								caerFrameEventSetLengthXLengthYChannelNumber(resetFrameEvent, state->aps.roi.sizeX,
+									state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+								caerFrameEventValidate(resetFrameEvent, state->currentPackets.frame);
+
+								// Copy pixels over.
+								memcpy(caerFrameEventGetPixelArrayUnsafe(resetFrameEvent), state->aps.frame.resetPixels,
+									caerFrameEventGetPixelsSize(resetFrameEvent));
+
+								// Signal frame.
+								caerFrameEvent signalFrameEvent = caerFrameEventPacketGetEvent(
+									state->currentPackets.frame, state->currentPackets.framePosition);
+								state->currentPackets.framePosition++;
+
+								// Setup new frame.
+								caerFrameEventSetColorFilter(signalFrameEvent, handle->info.apsColorFilter);
+								caerFrameEventSetROIIdentifier(signalFrameEvent, 2);
+								caerFrameEventSetTSStartOfFrame(signalFrameEvent, state->aps.frame.tsStartFrame);
+								caerFrameEventSetTSStartOfExposure(signalFrameEvent, state->aps.frame.tsStartExposure);
+								caerFrameEventSetTSEndOfExposure(signalFrameEvent, state->aps.frame.tsEndExposure);
+								caerFrameEventSetTSEndOfFrame(signalFrameEvent, state->timestamps.current);
+								caerFrameEventSetPositionX(signalFrameEvent, state->aps.roi.positionX);
+								caerFrameEventSetPositionY(signalFrameEvent, state->aps.roi.positionY);
+								caerFrameEventSetLengthXLengthYChannelNumber(signalFrameEvent, state->aps.roi.sizeX,
+									state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+								caerFrameEventValidate(signalFrameEvent, state->currentPackets.frame);
+
+								// Copy pixels over.
+								memcpy(caerFrameEventGetPixelArrayUnsafe(signalFrameEvent),
+									state->aps.frame.resetPixels, caerFrameEventGetPixelsSize(signalFrameEvent));
+#endif
 
 								// Automatic exposure control support. Call once for all ROI regions.
 								if (atomic_load_explicit(&state->aps.autoExposure.enabled, memory_order_relaxed)) {
-									float clockCorrect = clockFreqCorrect(state, handle->info.adcClock);
-
-									float exposureFrameCC
-										= roundf((float) state->aps.autoExposure.currentFrameExposure / clockCorrect);
+									float exposureFrameCC = roundf((float) state->aps.autoExposure.currentFrameExposure
+																   / state->deviceClocks.adcClockActual);
 
 									int32_t newExposureValue = autoExposureCalculate(&state->aps.autoExposure.state,
-										newFrameEvents, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure,
+										frameEvent, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure,
 										atomic_load_explicit(&state->deviceLogLevel, memory_order_relaxed),
 										handle->info.deviceString);
 
@@ -3086,14 +2857,14 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 										state->aps.autoExposure.lastSetExposure = U32T(newExposureValue);
 
-										float newExposureCC = roundf((float) newExposureValue * clockCorrect);
+										float newExposureCC
+											= roundf((float) newExposureValue * state->deviceClocks.adcClockActual);
 
 										spiConfigSendAsync(&state->usbState, DAVIS_CONFIG_APS,
 											DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureCC), NULL, NULL);
 									}
 								}
 							}
-
 							break;
 						}
 
@@ -3112,6 +2883,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								state->aps.frame.tsStartExposure = state->timestamps.current;
 
 								// Send APS info event out (as special event).
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+										(size_t) state->currentPackets.specialPosition, 1, handle)) {
+									break;
+								}
+
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
@@ -3138,6 +2914,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 								state->aps.frame.tsEndExposure = state->timestamps.current;
 
 								// Send APS info event out (as special event).
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+										(size_t) state->currentPackets.specialPosition, 1, handle)) {
+									break;
+								}
+
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
@@ -3160,13 +2941,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							davisLog(CAER_LOG_DEBUG, handle, "APS Column End: CountY[%d] is %d.",
 								state->aps.currentReadoutType, state->aps.countY[state->aps.currentReadoutType]);
 
-							if (state->aps.countY[state->aps.currentReadoutType]
-								!= state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]) {
+							if (state->aps.countY[state->aps.currentReadoutType] != state->aps.roi.sizeY) {
 								davisLog(CAER_LOG_ERROR, handle,
 									"APS Column End - %d - %d: wrong row count %d detected, expected %d.",
 									state->aps.currentReadoutType, state->aps.countX[state->aps.currentReadoutType],
-									state->aps.countY[state->aps.currentReadoutType],
-									state->aps.expectedCountY[state->aps.countX[state->aps.currentReadoutType]]);
+									state->aps.countY[state->aps.currentReadoutType], state->aps.roi.sizeY);
 							}
 
 							state->aps.countX[state->aps.currentReadoutType]++;
@@ -3174,10 +2953,15 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// The last Reset Column Read End is also the start
 							// of the exposure for the GS.
 							if ((state->aps.globalShutter) && (state->aps.currentReadoutType == APS_READOUT_RESET)
-								&& (state->aps.countX[APS_READOUT_RESET] == state->aps.expectedCountX)) {
+								&& (state->aps.countX[APS_READOUT_RESET] == state->aps.roi.sizeX)) {
 								state->aps.frame.tsStartExposure = state->timestamps.current;
 
 								// Send APS info event out (as special event).
+								if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+										(size_t) state->currentPackets.specialPosition, 1, handle)) {
+									break;
+								}
+
 								caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 									state->currentPackets.special, state->currentPackets.specialPosition);
 								caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
@@ -3189,214 +2973,13 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							break;
 						}
 
-						case 14: { // APS Global Shutter Frame Start with no Reset Read
-							davisLog(CAER_LOG_DEBUG, handle, "APS GS NORST Frame Start event received.");
-							state->aps.ignoreEvents  = false;
-							state->aps.globalShutter = true;
-							state->aps.resetRead     = false;
-
-							apsInitFrame(handle);
-
-							// If reset reads are disabled, the start of exposure is closest to
-							// the start of frame.
-							state->aps.frame.tsStartExposure = state->timestamps.current;
-
-							// Send APS info event out (as special event).
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-
-							break;
-						}
-
-						case 15: { // APS Rolling Shutter Frame Start with no Reset Read
-							davisLog(CAER_LOG_DEBUG, handle, "APS RS NORST Frame Start event received.");
-							state->aps.ignoreEvents  = false;
-							state->aps.globalShutter = false;
-							state->aps.resetRead     = false;
-
-							apsInitFrame(handle);
-
-							// If reset reads are disabled, the start of exposure is closest to
-							// the start of frame.
-							state->aps.frame.tsStartExposure = state->timestamps.current;
-
-							// Send APS info event out (as special event).
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, APS_EXPOSURE_START);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-
-							break;
-						}
-
-						case 16:
-						case 17:
-						case 18:
-						case 19:
-						case 20:
-						case 21:
-						case 22:
-						case 23:
-						case 24:
-						case 25:
-						case 26:
-						case 27:
-						case 28:
-						case 29:
-						case 30:
-						case 31: {
-							if (state->imu.ignoreEvents) {
-								break;
-							}
-							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
-
-							// Set correct IMU accel and gyro scales, used to interpret subsequent
-							// IMU samples from the device.
-							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 2) & 0x03);
-							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x03);
-
-							// At this point the IMU event count should be zero (reset by start).
-							if (state->imu.count != 0) {
-								davisLog(CAER_LOG_INFO, handle,
-									"IMU Scale Config: previous IMU start event missed, attempting recovery.");
-							}
-
-							// Increase IMU count by one, to a total of one (0+1=1).
-							// This way we can recover from the above error of missing start, and we can
-							// later discover if the IMU Scale Config event actually arrived itself.
-							state->imu.count = 1;
-
-							break;
-						}
-
-						case 32: {
-							// Next Misc8 APS ROI Size events will refer to ROI region 0.
-							// 0/1 used to distinguish between X and Y sizes.
-							state->aps.roi.update  = (0x00U << 2);
-							state->aps.roi.tmpData = 0;
-
-							state->aps.roi.deviceEnabled[0] = true;
-							state->aps.roi.startColumn[0] = state->aps.roi.endColumn[0] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 33: {
-							// Next Misc8 APS ROI Size events will refer to ROI region 1.
-							// 2/3 used to distinguish between X and Y sizes.
-							state->aps.roi.update  = (0x01U << 2);
-							state->aps.roi.tmpData = 0;
-
-							state->aps.roi.deviceEnabled[1] = true;
-							state->aps.roi.startColumn[1] = state->aps.roi.endColumn[1] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 34: {
-							// Next Misc8 APS ROI Size events will refer to ROI region 2.
-							// 4/5 used to distinguish between X and Y sizes.
-							state->aps.roi.update  = (0x02U << 2);
-							state->aps.roi.tmpData = 0;
-
-							state->aps.roi.deviceEnabled[2] = true;
-							state->aps.roi.startColumn[2] = state->aps.roi.endColumn[2] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 35: {
-							// Next Misc8 APS ROI Size events will refer to ROI region 3.
-							// 6/7 used to distinguish between X and Y sizes.
-							state->aps.roi.update  = (0x03U << 2);
-							state->aps.roi.tmpData = 0;
-
-							state->aps.roi.deviceEnabled[3] = true;
-							state->aps.roi.startColumn[3] = state->aps.roi.endColumn[3] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 36: { // External input 1 (falling edge)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (falling edge) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 37: { // External input 1 (rising edge)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (rising edge) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 38: { // External input 1 (pulse)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 1 (pulse) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT1_PULSE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 39: { // External input 2 (falling edge)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (falling edge) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_FALLING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 40: { // External input 2 (rising edge)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (rising edge) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_RISING_EDGE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 41: { // External input 2 (pulse)
-							davisLog(CAER_LOG_DEBUG, handle, "External input 2 (pulse) event received.");
-
-							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-								state->currentPackets.special, state->currentPackets.specialPosition);
-							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_INPUT2_PULSE);
-							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-							state->currentPackets.specialPosition++;
-							break;
-						}
-
 						case 42: { // External generator (falling edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
+
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
 
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentPackets.special, state->currentPackets.specialPosition);
@@ -3410,51 +2993,17 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						case 43: { // External generator (rising edge)
 							davisLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
 
+							if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+									(size_t) state->currentPackets.specialPosition, 1, handle)) {
+								break;
+							}
+
 							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 								state->currentPackets.special, state->currentPackets.specialPosition);
 							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
 							caerSpecialEventSetType(currentSpecialEvent, EXTERNAL_GENERATOR_RISING_EDGE);
 							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
 							state->currentPackets.specialPosition++;
-							break;
-						}
-
-						case 48: { // Exposure information.
-							// Reset counter and value.
-							state->aps.autoExposure.tmpData              = 0;
-							state->aps.autoExposure.currentFrameExposure = 0;
-							break;
-						}
-
-						case 49: {
-							// ROI region 0 disabled. No follow-up Misc8 info events.
-							state->aps.roi.deviceEnabled[0] = false;
-							state->aps.roi.startColumn[0] = state->aps.roi.endColumn[0] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[0] = state->aps.roi.endRow[0] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 50: {
-							// ROI region 1 disabled. No follow-up Misc8 info events.
-							state->aps.roi.deviceEnabled[1] = false;
-							state->aps.roi.startColumn[1] = state->aps.roi.endColumn[1] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[1] = state->aps.roi.endRow[1] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 51: {
-							// ROI region 2 disabled. No follow-up Misc8 info events.
-							state->aps.roi.deviceEnabled[2] = false;
-							state->aps.roi.startColumn[2] = state->aps.roi.endColumn[2] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[2] = state->aps.roi.endRow[2] = U16T(state->aps.sizeY);
-							break;
-						}
-
-						case 52: {
-							// ROI region 3 disabled. No follow-up Misc8 info events.
-							state->aps.roi.deviceEnabled[3] = false;
-							state->aps.roi.startColumn[3] = state->aps.roi.endColumn[3] = U16T(state->aps.sizeX);
-							state->aps.roi.startRow[3] = state->aps.roi.endRow[3] = U16T(state->aps.sizeY);
 							break;
 						}
 
@@ -3676,31 +3225,25 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							// sizeX/Y and positionX/Y to store endCol/Row and startCol/Row.
 							// We then recalculate all the right values and set everything
 							// up in START_FRAME.
-							size_t apsROIRegion = state->aps.roi.update >> 2;
-
-							if ((apsROIRegion >= APS_ROI_REGIONS) || (!state->aps.roi.deviceEnabled[apsROIRegion])) {
-								break;
-							}
-
 							switch (state->aps.roi.update & 0x03) {
 								case 0:
 									// START COLUMN
-									state->aps.roi.startColumn[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.startColumn = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 1:
 									// START ROW
-									state->aps.roi.startRow[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.startRow = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 2:
 									// END COLUMN
-									state->aps.roi.endColumn[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.endColumn = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								case 3:
 									// END ROW
-									state->aps.roi.endRow[apsROIRegion] = U16T(state->aps.roi.tmpData | misc8Data);
+									state->aps.roi.endRow = U16T(state->aps.roi.tmpData | misc8Data);
 									break;
 
 								default:
@@ -3710,6 +3253,31 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							// Jump to next type of APS info (col->row, start->end).
 							state->aps.roi.update++;
+
+							break;
+						}
+
+						case 3: {
+							if (state->imu.ignoreEvents) {
+								break;
+							}
+							davisLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
+
+							// Set correct IMU accel and gyro scales, used to interpret subsequent
+							// IMU samples from the device.
+							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 2) & 0x03);
+							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x03);
+
+							// At this point the IMU event count should be zero (reset by start).
+							if (state->imu.count != 0) {
+								davisLog(CAER_LOG_INFO, handle,
+									"IMU Scale Config: previous IMU start event missed, attempting recovery.");
+							}
+
+							// Increase IMU count by one, to a total of one (0+1=1).
+							// This way we can recover from the above error of missing start, and we can
+							// later discover if the IMU Scale Config event actually arrived itself.
+							state->imu.count = 1;
 
 							break;
 						}
@@ -4253,8 +3821,7 @@ bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, 
 }
 #endif
 
-bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY) {
+bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY) {
 	davisHandle handle = (davisHandle) cdh;
 
 	// Check if the pointer is valid.
@@ -4268,11 +3835,6 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable,
 		return (false);
 	}
 
-	// Check that ROI region is valid.
-	if (((!handle->info.apsHasQuadROI) && (roiRegion != 0)) || (roiRegion >= DAVIS_APS_ROI_REGIONS_MAX)) {
-		return (false);
-	}
-
 	// Check that end >= start.
 	if ((startX > endX) || (startY > endY)) {
 		return (false);
@@ -4280,14 +3842,17 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable,
 
 	// Dispatch to Raspberry Pi version if that is the device.
 	if (handle->deviceType == CAER_DEVICE_DAVIS_RPI) {
-		return (davisRPiROIConfigure(cdh, roiRegion, enable, startX, startY, endX, endY));
+		return (davisRPiROIConfigure(cdh, startX, startY, endX, endY));
 	}
 
 	// 5 commands always (disable, four coordinates).
 	size_t commandsNumber = 5;
 
-	// 6th command if re-enable.
-	if (enable) {
+	// 6 commands if enable also has to be sent.
+	uint32_t isEnabled = 0;
+	davisConfigGet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, &isEnabled);
+
+	if (isEnabled) {
 		commandsNumber++;
 	}
 
@@ -4301,101 +3866,37 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable,
 
 		switch (i) {
 			case 0: // Disable.
-				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_RUN;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = 0x00;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = 0x00;
 				break;
 
 			case 1: // StartX.
-				switch (roiRegion) {
-					case 0:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_0;
-						break;
-
-					case 1:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_1;
-						break;
-
-					case 2:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_2;
-						break;
-
-					case 3:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_3;
-						break;
-				}
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_COLUMN_0;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((startX >> 8) & 0x00FF);
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(startX & 0x00FF);
 				break;
 
 			case 2: // StartY.
-				switch (roiRegion) {
-					case 0:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_0;
-						break;
-
-					case 1:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_1;
-						break;
-
-					case 2:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_2;
-						break;
-
-					case 3:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_3;
-						break;
-				}
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_START_ROW_0;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((startY >> 8) & 0x00FF);
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(startY & 0x00FF);
 				break;
 
 			case 3: // EndX.
-				switch (roiRegion) {
-					case 0:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_0;
-						break;
-
-					case 1:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_1;
-						break;
-
-					case 2:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_2;
-						break;
-
-					case 3:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_3;
-						break;
-				}
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_COLUMN_0;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((endX >> 8) & 0x00FF);
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(endX & 0x00FF);
 				break;
 
 			case 4: // EndY.
-				switch (roiRegion) {
-					case 0:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_0;
-						break;
-
-					case 1:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_1;
-						break;
-
-					case 2:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_2;
-						break;
-
-					case 3:
-						spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_3;
-						break;
-				}
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_END_ROW_0;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = U8T((endY >> 8) & 0x00FF);
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = U8T(endY & 0x00FF);
 				break;
 
 			case 5: // Enable.
-				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion);
+				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 1] = DAVIS_CONFIG_APS_RUN;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 4] = 0x00;
 				spiMultiConfig[(SPI_CONFIG_MSG_SIZE * i) + 5] = 0x01;
 				break;
