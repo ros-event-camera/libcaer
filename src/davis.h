@@ -91,6 +91,8 @@ struct davis_state {
 		uint16_t currentReadoutType;
 		uint16_t countX[APS_READOUT_TYPES_NUM];
 		uint16_t countY[APS_READOUT_TYPES_NUM];
+		uint16_t expectedCountX;
+		uint16_t expectedCountY;
 		struct {
 			int32_t tsStartFrame;
 			int32_t tsStartExposure;
@@ -103,14 +105,18 @@ struct davis_state {
 		} frame;
 		struct {
 			// Temporary values from device.
-			uint16_t update;
 			uint16_t tmpData;
+			uint16_t update;
 			// Parameters for frame parsing.
 			uint16_t positionX;
 			uint16_t positionY;
 			uint16_t sizeX;
 			uint16_t sizeY;
 		} roi;
+		struct {
+			bool offsetDirection; // 0 is increasing, 1 is decreasing.
+			int16_t offset;
+		} cDavisSupport;
 		struct {
 			uint8_t tmpData;
 			uint32_t currentFrameExposure;

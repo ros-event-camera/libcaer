@@ -28,6 +28,24 @@ static void davisLog(enum caer_log_level logLevel, davisHandle handle, const cha
 	va_end(argumentList);
 }
 
+static inline bool ensureSpaceForEvents(
+	caerEventPacketHeader *packet, size_t position, size_t numEvents, davisHandle handle) {
+	if ((position + numEvents) <= (size_t) caerEventPacketHeaderGetEventCapacity(*packet)) {
+		return (true);
+	}
+
+	caerEventPacketHeader grownPacket
+		= caerEventPacketGrow(*packet, caerEventPacketHeaderGetEventCapacity(*packet) * 2);
+	if (grownPacket == NULL) {
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
+			caerEventPacketHeaderGetEventType(*packet));
+		return (false);
+	}
+
+	*packet = grownPacket;
+	return (true);
+}
+
 ssize_t davisFindAll(caerDeviceDiscoveryResult *discoveredDevices) {
 	return (davisFindInternal(CAER_DEVICE_DAVIS, discoveredDevices));
 }
@@ -149,188 +167,14 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	return ((ssize_t) resultAll);
 }
 
-static inline bool apsPixelIsActive(davisState state, uint16_t x, uint16_t y) {
-	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-		// Skip disabled ROI regions.
-		if (!state->aps.roi.enabled[i]) {
-			continue;
-		}
-
-		if ((x >= state->aps.roi.positionX[i]) && (x < (state->aps.roi.positionX[i] + state->aps.roi.sizeX[i]))
-			&& (y >= state->aps.roi.positionY[i]) && (y < (state->aps.roi.positionY[i] + state->aps.roi.sizeY[i]))) {
-			return (true);
-		}
-	}
-
-	return (false);
-}
-
-static inline void apsCalculateIndexes(davisHandle handle) {
-	davisState state = &handle->state;
-
-	// Recalculate the index inside of pixels[] where each successive
-	// pixel value gotten from the device goes to.
-	uint16_t x = (state->aps.flipX) ? U16T(state->aps.sizeX - 1) : (0);
-	uint16_t y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
-
-	// CDAVIS support.
-	bool cDavisOffsetDirection = false;
-	int16_t cDavisOffset       = 0;
-
-	state->aps.expectedCountX = 0;
-	memset(state->aps.expectedCountY, 0, (size_t) state->aps.sizeX * sizeof(uint16_t));
-
-	size_t index = 0;
-
-	for (uint16_t i = 0; i < state->aps.sizeX; i++) {
-		uint16_t activePixels = 0;
-
-		for (uint16_t j = 0; j < state->aps.sizeY; j++) {
-			uint16_t xDest = x;
-			uint16_t yDest = y;
-
-			// CDAVIS support: first 320 pixels are even, then odd.
-			if (IS_DAVIS640H(handle->info.chipID)) {
-				if (state->aps.flipY) {
-					yDest = U16T(yDest - cDavisOffset);
-				}
-				else {
-					yDest = U16T(yDest + cDavisOffset);
-				}
-
-				if (!cDavisOffsetDirection) { // Increasing
-					cDavisOffset++;
-
-					if (cDavisOffset == 320) {
-						// Switch to decreasing after last even pixel.
-						cDavisOffsetDirection = true;
-						cDavisOffset          = 319;
-					}
-				}
-				else { // Decreasing
-					cDavisOffset = I16T(cDavisOffset - 3);
-				}
-			}
-
-			if (state->aps.invertXY) {
-				SWAP_VAR(uint16_t, xDest, yDest);
-			}
-
-			if (apsPixelIsActive(state, xDest, yDest)) {
-				// pixelIndexes is laid out in column order because that's how
-				// frame update will access it naturally later.
-				state->aps.frame.pixelIndexes[index++] = (size_t)((yDest * handle->info.apsSizeX) + xDest);
-				activePixels++;
-			}
-
-			if (state->aps.flipY) {
-				y--;
-			}
-			else {
-				y++;
-			}
-		}
-
-		if (activePixels > 0) {
-			state->aps.expectedCountY[state->aps.expectedCountX] = activePixels;
-			state->aps.expectedCountX++;
-		}
-
-		// Reset Y for next iteration.
-		y = (state->aps.flipY) ? U16T(state->aps.sizeY - 1) : (0);
-
-		// CDAVIS support: reset for next iteration.
-		if (IS_DAVIS640H(handle->info.chipID)) {
-			cDavisOffsetDirection = false;
-			cDavisOffset          = 0;
-		}
-
-		if (state->aps.flipX) {
-			x--;
-		}
-		else {
-			x++;
-		}
-	}
-
-	davisLog(CAER_LOG_DEBUG, handle, "Recalculated APS ROI indexes.");
-}
-
-static inline void apsROIUpdateSizes(davisHandle handle) {
-	davisState state = &handle->state;
-
-	bool recalculateIndexes = false;
-
-	// Calculate APS ROI sizes for each region.
-	for (size_t i = 0; i < APS_ROI_REGIONS; i++) {
-		uint16_t startColumn = state->aps.roi.startColumn[i];
-		uint16_t startRow    = state->aps.roi.startRow[i];
-		uint16_t endColumn   = state->aps.roi.endColumn[i];
-		uint16_t endRow      = state->aps.roi.endRow[i];
-
-		// Check that ROI region is enabled and Start <= End.
-		bool roiEnabledCol  = (startColumn < state->aps.sizeX) && (endColumn < state->aps.sizeX);
-		bool roiEnabledRow  = (startRow < state->aps.sizeY) && (endRow < state->aps.sizeY);
-		bool roiValidColRow = (startColumn <= endColumn) && (startRow <= endRow);
-
-		if (state->aps.roi.deviceEnabled[i] && roiEnabledCol && roiEnabledRow && roiValidColRow) {
-			state->aps.roi.enabled[i] = true;
-
-			uint16_t newPositionX = startColumn;
-			uint16_t newPositionY = startRow;
-
-			uint16_t newSizeX = U16T(endColumn + 1 - startColumn);
-			uint16_t newSizeY = U16T(endRow + 1 - startRow);
-
-			if (state->aps.invertXY) {
-				SWAP_VAR(uint16_t, newPositionX, newPositionY);
-				SWAP_VAR(uint16_t, newSizeX, newSizeY);
-			}
-
-			if ((state->aps.roi.positionX[i] != newPositionX) || (state->aps.roi.positionY[i] != newPositionY)
-				|| (state->aps.roi.sizeX[i] != newSizeX) || (state->aps.roi.sizeY[i] != newSizeY)) {
-				state->aps.roi.positionX[i] = newPositionX;
-				state->aps.roi.positionY[i] = newPositionY;
-
-				state->aps.roi.sizeX[i] = newSizeX;
-				state->aps.roi.sizeY[i] = newSizeY;
-
-				recalculateIndexes = true;
-			}
-
-			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu enabled - posX=%d, posY=%d, sizeX=%d, sizeY=%d.", i,
-				state->aps.roi.positionX[i], state->aps.roi.positionY[i], state->aps.roi.sizeX[i],
-				state->aps.roi.sizeY[i]);
-		}
-		else {
-			// If was enabled but now isn't, must recalculate indexes.
-			if (state->aps.roi.enabled[i]) {
-				recalculateIndexes = true;
-			}
-
-			// Turn off this ROI region for sure, can be because disabled OR wrong col/row values.
-			state->aps.roi.enabled[i] = false;
-
-			state->aps.roi.positionX[i] = state->aps.roi.sizeX[i] = U16T(handle->info.apsSizeX);
-			state->aps.roi.positionY[i] = state->aps.roi.sizeY[i] = U16T(handle->info.apsSizeY);
-
-			davisLog(CAER_LOG_DEBUG, handle, "APS ROI region %zu disabled.", i);
-		}
-	}
-
-	if (recalculateIndexes) {
-		// Calculate where pixels should go.
-		apsCalculateIndexes(handle);
-	}
-}
-
 static inline void apsInitFrame(davisHandle handle) {
 	davisState state = &handle->state;
 
-	state->aps.ignoreEvents         = false;
-	state->aps.autoExposure.tmpData = 0;
-	state->aps.roi.tmpData          = 0;
-	state->aps.roi.update           = 0;
+	state->aps.ignoreEvents                      = false;
+	state->aps.autoExposure.tmpData              = 0;
+	state->aps.autoExposure.currentFrameExposure = 0;
+	state->aps.roi.tmpData                       = 0;
+	state->aps.roi.update                        = 0;
 
 	state->aps.currentReadoutType = APS_READOUT_RESET;
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
@@ -342,50 +186,65 @@ static inline void apsInitFrame(davisHandle handle) {
 	state->aps.frame.tsStartFrame = state->timestamps.current;
 
 	// Send APS info event out (as special event).
-	if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+	if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 			(size_t) state->currentPackets.specialPosition, 1, handle)) {
-		return;
+		caerSpecialEvent currentSpecialEvent
+			= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
+		caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+		caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
+		caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+		state->currentPackets.specialPosition++;
 	}
+}
 
-	caerSpecialEvent currentSpecialEvent
-		= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
-	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_START);
-	caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-	state->currentPackets.specialPosition++;
+static inline void apsROIUpdateSizes(davisState state) {
+	// Calculate APS ROI sizes.
+	uint16_t startColumn = state->aps.roi.positionX;
+	uint16_t startRow    = state->aps.roi.positionY;
+	uint16_t endColumn   = state->aps.roi.sizeX;
+	uint16_t endRow      = state->aps.roi.sizeY;
+
+	// Position is already set to startCol/Row, so we don't have to reset
+	// it here. We only have to calculate size from start and end Col/Row.
+	state->aps.roi.sizeX = U16T(endColumn + 1 - startColumn);
+	state->aps.roi.sizeY = U16T(endRow + 1 - startRow);
+
+	if (state->aps.invertXY) {
+		state->aps.expectedCountX = state->aps.roi.sizeY;
+		state->aps.expectedCountY = state->aps.roi.sizeX;
+	}
+	else {
+		state->aps.expectedCountX = state->aps.roi.sizeX;
+		state->aps.expectedCountY = state->aps.roi.sizeY;
+	}
 }
 
 static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 	davisState state = &handle->state;
 
-	size_t pixelPosition
-		= state->aps.frame.pixelIndexes[state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]];
-	state->aps.frame.pixelIndexesPosition[state->aps.currentReadoutType]++;
+	uint16_t xPos = (state->aps.flipX)
+						? (U16T(state->aps.expectedCountX - 1 - state->aps.countX[state->aps.currentReadoutType]))
+						: (state->aps.countX[state->aps.currentReadoutType]);
+	uint16_t yPos = (state->aps.flipY)
+						? (U16T(state->aps.expectedCountY - 1 - state->aps.countY[state->aps.currentReadoutType]))
+						: (state->aps.countY[state->aps.currentReadoutType]);
 
-// Separate debug support.
-#if APS_DEBUG_FRAME == 1
-	// Check for overflow.
-	data = (data > 1023) ? (1023) : (data);
-
-	// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
-	data = U16T(data << (16 - APS_ADC_DEPTH));
-
-	// Reset read, put into resetPixels here.
-	if (state->aps.currentReadoutType == APS_READOUT_RESET) {
-		state->aps.frame.resetPixels[pixelPosition] = data;
+	if (IS_DAVIS640H(handle->info.chipID)) {
+		yPos = U16T(yPos + state->aps.cDavisSupport.offset);
 	}
 
-	// Signal read, put into pixels here.
-	if (state->aps.currentReadoutType == APS_READOUT_SIGNAL) {
-		state->aps.frame.pixels[pixelPosition] = data;
+	if (state->aps.invertXY) {
+		SWAP_VAR(uint16_t, xPos, yPos);
 	}
-#else
+
+	size_t pixelPosition = (size_t)(yPos * state->aps.roi.sizeX) + xPos;
+
 	// Standard CDS support.
 	bool isCDavisGS = (IS_DAVIS640H(handle->info.chipID) && state->aps.globalShutter);
 
 	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
 		|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
-		state->aps.frame.resetPixels[pixelPosition] = data;
+		state->aps.frame.pixels[pixelPosition] = data;
 	}
 	else {
 		uint16_t resetValue  = 0;
@@ -395,10 +254,10 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 			// DAVIS640H GS has inverted samples, signal read comes first
 			// and was stored above inside state->aps.currentResetFrame.
 			resetValue  = data;
-			signalValue = state->aps.frame.resetPixels[pixelPosition];
+			signalValue = state->aps.frame.pixels[pixelPosition];
 		}
 		else {
-			resetValue  = state->aps.frame.resetPixels[pixelPosition];
+			resetValue  = state->aps.frame.pixels[pixelPosition];
 			signalValue = data;
 		}
 
@@ -431,12 +290,46 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 
 		state->aps.frame.pixels[pixelPosition] = htole16(U16T(pixelValue));
 	}
-#endif
+
+	// RGB support: first 320 pixels are even, then odd.
+	if (IS_DAVIS640H(handle->info.chipID)) {
+		if (state->aps.cDavisSupport.offsetDirection == 0) { // Increasing
+			state->aps.cDavisSupport.offset++;
+
+			if (state->aps.cDavisSupport.offset == 321) {
+				// Switch to decreasing after last even pixel.
+				state->aps.cDavisSupport.offsetDirection = 1;
+				state->aps.cDavisSupport.offset          = 318;
+			}
+		}
+		else { // Decreasing
+			state->aps.cDavisSupport.offset = I16T(state->aps.cDavisSupport.offset - 3);
+		}
+	}
+
+// Separate debug support.
+#if APS_DEBUG_FRAME == 1
+	// Check for overflow.
+	data = (data > 1023) ? (1023) : (data);
+
+	// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
+	data = U16T(data << (16 - APS_ADC_DEPTH));
+
+	// Reset read, put into resetPixels here.
+	if (state->aps.currentReadoutType == APS_READOUT_RESET) {
+		state->aps.frame.resetPixels[pixelPosition] = data;
+	}
+
+	// Signal read, put into pixels here.
+	if (state->aps.currentReadoutType == APS_READOUT_SIGNAL) {
+		state->aps.frame.signalPixels[pixelPosition] = data;
+	}
 
 	davisLog(CAER_LOG_DEBUG, handle,
 		"APS ADC Sample: column=%" PRIu16 ", row=%" PRIu16 ", index=%zu, data=%" PRIu16 ".",
 		state->aps.countX[state->aps.currentReadoutType], state->aps.countY[state->aps.currentReadoutType],
 		pixelPosition, data);
+#endif
 }
 
 static inline bool apsEndFrame(davisHandle handle) {
@@ -445,29 +338,25 @@ static inline bool apsEndFrame(davisHandle handle) {
 	bool validFrame = true;
 
 	for (size_t i = 0; i < APS_READOUT_TYPES_NUM; i++) {
-		int32_t checkValue = state->aps.expectedCountX;
-
-		// Check main reset read against zero if disabled.
-		if ((i == APS_READOUT_RESET) && (!state->aps.resetRead)) {
-			checkValue = 0;
-		}
-
 		davisLog(CAER_LOG_DEBUG, handle, "APS Frame End: CountX[%zu] is %d.", i, state->aps.countX[i]);
 
-		if (state->aps.countX[i] != checkValue) {
+		if (state->aps.countX[i] != state->aps.expectedCountX) {
 			davisLog(CAER_LOG_ERROR, handle, "APS Frame End - %zu: wrong column count %d detected, expected %d.", i,
-				state->aps.countX[i], checkValue);
+				state->aps.countX[i], state->aps.expectedCountX);
 			validFrame = false;
 		}
 	}
 
 	// Send APS info event out (as special event).
-	caerSpecialEvent currentSpecialEvent
-		= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
-	caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-	caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_END);
-	caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-	state->currentPackets.specialPosition++;
+	if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+			(size_t) state->currentPackets.specialPosition, 1, handle)) {
+		caerSpecialEvent currentSpecialEvent
+			= caerSpecialEventPacketGetEvent(state->currentPackets.special, state->currentPackets.specialPosition);
+		caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+		caerSpecialEventSetType(currentSpecialEvent, APS_FRAME_END);
+		caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+		state->currentPackets.specialPosition++;
+	}
 
 	return (validFrame);
 }
@@ -2517,24 +2406,6 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 
 #define TS_WRAP_ADD 0x8000
 
-static inline bool ensureSpaceForEvents(
-	caerEventPacketHeader *packet, size_t position, size_t numEvents, davisHandle handle) {
-	if ((position + numEvents) <= (size_t) caerEventPacketHeaderGetEventCapacity(*packet)) {
-		return (true);
-	}
-
-	caerEventPacketHeader grownPacket
-		= caerEventPacketGrow(*packet, caerEventPacketHeaderGetEventCapacity(*packet) * 2);
-	if (grownPacket == NULL) {
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
-			caerEventPacketHeaderGetEventType(*packet));
-		return (false);
-	}
-
-	*packet = grownPacket;
-	return (true);
-}
-
 static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	davisHandle handle = vhd;
 	davisState state   = &handle->state;
@@ -2898,6 +2769,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							state->aps.currentReadoutType        = APS_READOUT_RESET;
 							state->aps.countY[APS_READOUT_RESET] = 0;
 
+							state->aps.cDavisSupport.offsetDirection = 0;
+							state->aps.cDavisSupport.offset          = 1; // First pixel of row always even.
+
 							break;
 						}
 
@@ -2909,6 +2783,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							state->aps.currentReadoutType         = APS_READOUT_SIGNAL;
 							state->aps.countY[APS_READOUT_SIGNAL] = 0;
+
+							state->aps.cDavisSupport.offsetDirection = 0;
+							state->aps.cDavisSupport.offset          = 1; // First pixel of row always even.
 
 							break;
 						}
@@ -2924,11 +2801,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 							davisLog(CAER_LOG_DEBUG, handle, "APS Column End: CountY[%d] is %d.",
 								state->aps.currentReadoutType, state->aps.countY[state->aps.currentReadoutType]);
 
-							if (state->aps.countY[state->aps.currentReadoutType] != state->aps.roi.sizeY) {
+							if (state->aps.countY[state->aps.currentReadoutType] != state->aps.expectedCountY) {
 								davisLog(CAER_LOG_ERROR, handle,
 									"APS Column End - %d - %d: wrong row count %d detected, expected %d.",
 									state->aps.currentReadoutType, state->aps.countX[state->aps.currentReadoutType],
-									state->aps.countY[state->aps.currentReadoutType], state->aps.roi.sizeY);
+									state->aps.countY[state->aps.currentReadoutType], state->aps.expectedCountY);
 							}
 
 							state->aps.countX[state->aps.currentReadoutType]++;
@@ -3080,8 +2957,8 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 					}
 
 					// Ignore too big X/Y counts, can happen if column start/end events are lost.
-					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.roi.sizeX)
-						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.roi.sizeY)) {
+					if ((state->aps.countX[state->aps.currentReadoutType] >= state->aps.expectedCountX)
+						|| (state->aps.countY[state->aps.currentReadoutType] >= state->aps.expectedCountY)) {
 						break;
 					}
 
@@ -3245,7 +3122,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 									state->aps.roi.sizeY = U16T(state->aps.roi.tmpData | misc8Data);
 
 									// Got all sizes, now compute correct window.
-									apsROIUpdateSizes(handle);
+									apsROIUpdateSizes(state);
 									break;
 
 								default:
@@ -3317,6 +3194,11 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 						&state->timestamps, data, TS_WRAP_ADD, handle->info.deviceString, &state->deviceLogLevel);
 
 					if (tsBigWrap) {
+						if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+								(size_t) state->currentPackets.specialPosition, 1, handle)) {
+							break;
+						}
+
 						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
 							state->currentPackets.special, state->currentPackets.specialPosition);
 						caerSpecialEventSetTimestamp(currentSpecialEvent, INT32_MAX);
@@ -3374,9 +3256,9 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 						// Allocate+init success, configure it for hot-pixel learning.
 						caerFilterDVSNoiseConfigSet(
-							state->dvs.pixelFilterAutoTrain.noiseFilter, CAER_FILTER_DVS_HOTPIXEL_COUNT, 10000);
+							state->dvs.pixelFilterAutoTrain.noiseFilter, CAER_FILTER_DVS_HOTPIXEL_COUNT, 1000);
 						caerFilterDVSNoiseConfigSet(
-							state->dvs.pixelFilterAutoTrain.noiseFilter, CAER_FILTER_DVS_HOTPIXEL_TIME, 2000000);
+							state->dvs.pixelFilterAutoTrain.noiseFilter, CAER_FILTER_DVS_HOTPIXEL_TIME, 1000000);
 						caerFilterDVSNoiseConfigSet(
 							state->dvs.pixelFilterAutoTrain.noiseFilter, CAER_FILTER_DVS_HOTPIXEL_LEARN, true);
 					}
@@ -3814,11 +3696,9 @@ static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t by
 
 // For special Raspberry Pi version usage.
 #if defined(OS_LINUX)
-bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY);
+bool davisRPiROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY);
 #else
-bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY) {
+bool davisRPiROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY) {
 	return (false);
 }
 #endif

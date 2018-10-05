@@ -49,8 +49,7 @@ static bool spiConfigReceive(davisRPiState state, uint8_t moduleAddr, uint8_t pa
 static bool handleChipBiasSend(davisRPiState state, uint8_t paramAddr, uint32_t param);
 static bool handleChipBiasReceive(davisRPiState state, uint8_t paramAddr, uint32_t *param);
 static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize);
-bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY);
+bool davisRPiROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY);
 
 #if DAVIS_RPI_BENCHMARK == 1
 static void davisRPiBenchmarkDataTranslator(davisRPiHandle handle, const uint16_t *buffer, size_t bufferSize);
@@ -3902,45 +3901,22 @@ static void davisRPiDataTranslator(davisRPiHandle handle, const uint16_t *buffer
 	}
 }
 
-bool davisRPiROIConfigure(caerDeviceHandle cdh, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
-	uint16_t endX, uint16_t endY) {
+bool davisRPiROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY) {
 	davisRPiHandle handle = (davisRPiHandle) cdh;
 
+	uint32_t isEnabled = 0;
+	spiConfigReceive(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, &isEnabled);
+
 	// First disable, then set all four coordinates, then enable again IF requested.
-	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion), 0x00);
+	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, 0x00);
 
-	switch (roiRegion) {
-		case 0:
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, startX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, startY);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, endX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, endY);
-			break;
+	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_0, startX);
+	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_0, startY);
+	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, endX);
+	spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, endY);
 
-		case 1:
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_1, startX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_1, startY);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_1, endX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_1, endY);
-			break;
-
-		case 2:
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_2, startX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_2, startY);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_2, endX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_2, endY);
-			break;
-
-		case 3:
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_COLUMN_3, startX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_START_ROW_3, startY);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_3, endX);
-			spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_3, endY);
-			break;
-	}
-
-	if (enable) {
-		spiConfigSend(&handle->state, DAVIS_CONFIG_APS, U8T(DAVIS_CONFIG_APS_ROI0_ENABLED + roiRegion), 0x01);
+	if (isEnabled) {
+		spiConfigSend(&handle->state, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, 0x01);
 	}
 
 	return (true);
