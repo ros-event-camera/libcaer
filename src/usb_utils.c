@@ -162,7 +162,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			// Get serial number.
 			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
 			int getStringDescResult                         = libusb_get_string_descriptor_ascii(
-				devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+                devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 			// Check serial number success and length.
 			if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
@@ -310,8 +310,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
 				if ((devAddress > 0) && (devDevAddress != devAddress)) {
-					caerUSBLog(CAER_LOG_DEBUG, state, "USB device address restriction is present (%" PRIu8
-													  "), this device didn't match it (%" PRIu8 ").",
+					caerUSBLog(CAER_LOG_DEBUG, state,
+						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8
+						").",
 						devAddress, devDevAddress);
 
 					continue;
@@ -1023,6 +1024,27 @@ static void syncControlInCallback(void *controlInCallbackPtr, int status, const 
 	else {
 		atomic_store(&dataCompletion->completed, 2);
 	}
+}
+
+bool spiConfigSendMultiple(usbState state, spiConfigParams configs, uint16_t numConfigs) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+	}
+
+	return (usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, numConfigs, 0, (uint8_t *) configs,
+		sizeof(struct spi_config_params) * numConfigs));
+}
+
+bool spiConfigSendMultipleAsync(usbState state, spiConfigParams configs, uint16_t numConfigs,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+	}
+
+	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, numConfigs, 0, (uint8_t *) configs,
+		sizeof(struct spi_config_params) * numConfigs, configSendCallback, configSendCallbackPtr));
 }
 
 bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {

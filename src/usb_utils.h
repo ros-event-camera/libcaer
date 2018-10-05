@@ -2,12 +2,14 @@
 #define LIBCAER_SRC_USB_UTILS_H_
 
 #include "libcaer.h"
+
 #include "devices/usb.h"
+
 #include <libusb.h>
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
-#include "c11threads_posix.h"
+#	include "c11threads_posix.h"
 #endif
 
 #define MAX_SERIAL_NUMBER_LENGTH 8
@@ -137,6 +139,18 @@ bool usbControlTransferOut(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
 bool usbControlTransferIn(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
+
+PACKED_STRUCT(struct spi_config_params {
+	uint8_t moduleAddr;
+	uint8_t paramAddr;
+	uint32_t param;
+});
+
+typedef struct spi_config_params *spiConfigParams;
+
+bool spiConfigSendMultiple(usbState state, spiConfigParams configs, uint16_t numConfigs);
+bool spiConfigSendMultipleAsync(usbState state, spiConfigParams configs, uint16_t numConfigs,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr);
 
 bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
 bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
