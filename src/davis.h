@@ -27,10 +27,7 @@
 #define APS_DEBUG_FRAME 1
 
 #define APS_ADC_DEPTH 10
-
 #define APS_ADC_CHANNELS 1
-
-#define APS_ROI_REGIONS 1
 
 #define IMU6_COUNT 15
 
@@ -64,8 +61,6 @@ struct davis_state {
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
 	struct data_exchange dataExchange;
-	// USB Device State
-	struct usb_state usbState;
 	// Timestamp fields
 	struct timestamps_state_new_logic timestamps;
 	struct {
@@ -131,6 +126,7 @@ struct davis_state {
 		bool flipX;
 		bool flipY;
 		bool flipZ;
+		uint8_t type;
 		uint8_t count;
 		uint8_t tmpData;
 		float accelScale;
@@ -164,12 +160,6 @@ struct davis_state {
 		float adcClockActual;
 		float usbClockActual;
 	} deviceClocks;
-	struct {
-		// Debug transfer support (FX3 only).
-		bool enabled;
-		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
-		atomic_uint_fast32_t activeDebugTransfers;
-	} fx3Support;
 };
 
 typedef struct davis_state *davisState;
@@ -180,6 +170,14 @@ struct davis_handle {
 	struct caer_davis_info info;
 	// State for data management, common to all DAVIS.
 	struct davis_state state;
+	// DAVIS USB device specific state.
+	struct usb_state usbState;
+	struct {
+		// Debug transfer support (FX3 only).
+		bool enabled;
+		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
+		atomic_uint_fast32_t activeDebugTransfers;
+	} fx3Support;
 };
 
 typedef struct davis_handle *davisHandle;
