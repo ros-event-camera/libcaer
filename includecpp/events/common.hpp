@@ -545,12 +545,6 @@ public:
 		return (header);
 	}
 
-	caerEventPacketHeaderConst getHeaderPointerForCOutput() const noexcept {
-		isMemoryOwner = false;
-
-		return (header);
-	}
-
 	// Convenience methods.
 	size_type capacity() const noexcept {
 		return (getEventCapacity());
