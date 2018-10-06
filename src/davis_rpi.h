@@ -31,11 +31,7 @@ enum benchmarkMode {
 #define DAVIS_CHIP_REG_LENGTH 7
 
 struct davis_rpi_handle {
-	uint16_t deviceType;
-	// Information fields
-	struct caer_davis_info info;
-	// State for data management, common to all DAVIS.
-	struct davis_common_state state;
+	struct davis_common_handle cHandle;
 	// Data transfer via GPIO for RPi IoT variant.
 	struct {
 		volatile uint32_t *gpioReg;

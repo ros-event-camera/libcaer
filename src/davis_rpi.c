@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
 #include <linux/types.h>
-#include <math.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>

@@ -19,11 +19,7 @@
 #define DEBUG_TRANSFER_SIZE 64
 
 struct davis_handle {
-	uint16_t deviceType;
-	// Information fields
-	struct caer_davis_info info;
-	// State for data management, common to all DAVIS.
-	struct davis_common_state state;
+	struct davis_common_handle cHandle;
 	// DAVIS USB device specific state.
 	struct usb_state usbState;
 	struct {
