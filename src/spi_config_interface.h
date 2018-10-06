@@ -3,6 +3,8 @@
 
 #include "libcaer.h"
 
+#define SPI_CONFIG_MSG_SIZE 6
+
 PACKED_STRUCT(struct spi_config_params {
 	uint8_t moduleAddr;
 	uint8_t paramAddr;

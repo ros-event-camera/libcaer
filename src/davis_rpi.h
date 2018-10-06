@@ -16,7 +16,7 @@
  */
 #define DAVIS_RPI_BENCHMARK 0
 
-#define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (4 * 1000 * 1000)
+#define DAVIS_RPI_BENCHMARK_LIMIT_BYTES (8 * 1024 * 1024)
 
 enum benchmarkMode {
 	ZEROS       = 0,
@@ -30,18 +30,23 @@ enum benchmarkMode {
 #define DAVIS_BIAS_ADDRESS_MAX 36
 #define DAVIS_CHIP_REG_LENGTH 7
 
+struct davis_rpi_gpio {
+	volatile uint32_t *gpioReg;
+	int spiFd;
+	mtx_t spiLock;
+	atomic_uint_fast32_t threadState;
+	thrd_t thread;
+	void (*shutdownCallback)(void *shutdownCallbackPtr);
+	void *shutdownCallbackPtr;
+};
+
+typedef struct davis_rpi_gpio *davisRPiGPIO;
+
 struct davis_rpi_handle {
 	struct davis_common_handle cHandle;
 	// Data transfer via GPIO for RPi IoT variant.
-	struct {
-		volatile uint32_t *gpioReg;
-		int spiFd;
-		mtx_t spiLock;
-		atomic_uint_fast32_t threadState;
-		thrd_t thread;
-		void (*shutdownCallback)(void *shutdownCallbackPtr);
-		void *shutdownCallbackPtr;
-	} gpio;
+	struct davis_rpi_gpio gpio;
+	// Data transfer benchmarking and testing.
 #if DAVIS_RPI_BENCHMARK == 1
 	struct {
 		enum benchmarkMode testMode;
@@ -51,6 +56,7 @@ struct davis_rpi_handle {
 		struct timespec startTime;
 	} benchmark;
 #endif
+	// Bias/chip config register control.
 	struct {
 		uint8_t currentBiasArray[DAVIS_BIAS_ADDRESS_MAX + 1][2];
 		uint8_t currentChipRegister[DAVIS_CHIP_REG_LENGTH];

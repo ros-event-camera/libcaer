@@ -170,7 +170,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	handle->cHandle.deviceType = deviceType;
 
 	// Setup common handling.
-	handle->cHandle.extraState = &handle->usbState;
+	handle->cHandle.spiConfigPtr = &handle->usbState;
 
 	davisCommonState state = &handle->cHandle.state;
 
@@ -256,6 +256,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 		return (NULL);
 	}
 
+	// Populate info variables based on data from device.
 	handle->cHandle.info.deviceID = I16T(deviceID);
 	strncpy(handle->cHandle.info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 	handle->cHandle.info.deviceUSBBusNumber     = usbInfo.busNumber;
@@ -338,14 +339,14 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 	else if (modAddr == DAVIS_CONFIG_USB) {
 		switch (paramAddr) {
 			case DAVIS_CONFIG_USB_RUN:
-				return (spiConfigSend(&handle->usbState, DAVIS_CONFIG_USB, paramAddr, param));
+				return (spiConfigSend(handle->cHandle.spiConfigPtr, DAVIS_CONFIG_USB, paramAddr, param));
 				break;
 
 			case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
 				// Early packet delay is 125µs slices on host, but in cycles
 				// @ USB_CLOCK_FREQ on FPGA, so we must multiply here.
 				float delayCC = roundf((float) param * 125.0F * handle->cHandle.state.deviceClocks.usbClockActual);
-				return (spiConfigSend(&handle->usbState, DAVIS_CONFIG_USB, paramAddr, U32T(delayCC)));
+				return (spiConfigSend(handle->cHandle.spiConfigPtr, DAVIS_CONFIG_USB, paramAddr, U32T(delayCC)));
 				break;
 			}
 
@@ -368,14 +369,14 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 	else if (modAddr == DAVIS_CONFIG_USB) {
 		switch (paramAddr) {
 			case DAVIS_CONFIG_USB_RUN:
-				return (spiConfigReceive(&handle->usbState, DAVIS_CONFIG_USB, paramAddr, param));
+				return (spiConfigReceive(handle->cHandle.spiConfigPtr, DAVIS_CONFIG_USB, paramAddr, param));
 				break;
 
 			case DAVIS_CONFIG_USB_EARLY_PACKET_DELAY: {
 				// Early packet delay is 125µs slices on host, but in cycles
 				// @ USB_CLOCK_FREQ on FPGA, so we must divide here.
 				uint32_t cyclesValue = 0;
-				if (!spiConfigReceive(&handle->usbState, DAVIS_CONFIG_USB, paramAddr, &cyclesValue)) {
+				if (!spiConfigReceive(handle->cHandle.spiConfigPtr, DAVIS_CONFIG_USB, paramAddr, &cyclesValue)) {
 					return (false);
 				}
 
@@ -660,7 +661,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 
 	// 6 commands if enable also has to be sent.
 	uint32_t isEnabled = 0;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, &isEnabled);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, &isEnabled);
 
 	if (isEnabled) {
 		commandsNumber++;
@@ -705,7 +706,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 		}
 	}
 
-	return (spiConfigSendMultiple(handle->extraState, spiMultiConfig, commandsNumber));
+	return (spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, commandsNumber));
 }
 
 uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias) {

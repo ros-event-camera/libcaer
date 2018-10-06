@@ -23,7 +23,7 @@
  *     signal separately (marked as ROI regions 1 for reset and 2
  *     for signal respectively)
  */
-#define APS_DEBUG_FRAME 1
+#define APS_DEBUG_FRAME 0
 
 #define APS_READOUT_TYPES_NUM 2
 #define APS_READOUT_RESET 0
@@ -160,8 +160,8 @@ struct davis_common_handle {
 	struct caer_davis_info info;
 	// State for data management
 	struct davis_common_state state;
-	// Pointer to extra state, depends on implementor.
-	void *extraState;
+	// Pointer to SPI configuration state, depends on implementor.
+	void *spiConfigPtr;
 };
 
 typedef struct davis_common_handle *davisCommonHandle;
@@ -230,6 +230,7 @@ static inline void freeAllDataMemory(davisCommonState state) {
 		state->aps.frame.pixels = NULL;
 	}
 
+#if APS_DEBUG_FRAME == 1
 	if (state->aps.frame.resetPixels != NULL) {
 		free(state->aps.frame.resetPixels);
 		state->aps.frame.resetPixels = NULL;
@@ -239,6 +240,7 @@ static inline void freeAllDataMemory(davisCommonState state) {
 		free(state->aps.frame.signalPixels);
 		state->aps.frame.signalPixels = NULL;
 	}
+#endif
 }
 
 static inline bool ensureSpaceForEvents(
@@ -481,17 +483,17 @@ static void davisCommonInit(davisCommonHandle handle) {
 	// Populate info variables based on data from device.
 	uint32_t param32 = 0;
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
 	handle->info.chipID = I16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
 	handle->info.deviceIsMaster = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
 	state->deviceClocks.logicClock = U16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
 	state->deviceClocks.adcClock = U16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_USB_CLOCK, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_USB_CLOCK, &param32);
 	state->deviceClocks.usbClock = U16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CLOCK_DEVIATION, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CLOCK_DEVIATION, &param32);
 	state->deviceClocks.clockDeviationFactor = U16T(param32);
 
 	// Calculate actual clock frequencies.
@@ -506,36 +508,36 @@ static void davisCommonInit(davisCommonHandle handle) {
 		(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.adcClockActual,
 		(double) state->deviceClocks.usbClockActual);
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
 	handle->info.dvsHasPixelFilter = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
 	handle->info.dvsHasBackgroundActivityFilter = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
 	handle->info.dvsHasROIFilter = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
 	handle->info.dvsHasSkipFilter = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER, &param32);
 	handle->info.dvsHasPolarityFilter = param32;
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
 	handle->info.dvsHasStatistics = param32;
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
 	handle->info.apsColorFilter = U8T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
 	handle->info.apsHasGlobalShutter = param32;
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
 	handle->info.muxHasStatistics = param32;
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
 	state->dvs.sizeX = I16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
 	state->dvs.sizeY = I16T(param32);
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
 	state->dvs.invertXY = param32 & 0x04;
 
 	davisLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
@@ -550,12 +552,12 @@ static void davisCommonInit(davisCommonHandle handle) {
 		handle->info.dvsSizeY = state->dvs.sizeY;
 	}
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
 	state->aps.sizeX = I16T(param32);
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
 	state->aps.sizeY = I16T(param32);
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
 	state->aps.invertXY = param32 & 0x04;
 	state->aps.flipX    = param32 & 0x02;
 	state->aps.flipY    = param32 & 0x01;
@@ -572,7 +574,7 @@ static void davisCommonInit(davisCommonHandle handle) {
 		handle->info.apsSizeY = state->aps.sizeY;
 	}
 
-	spiConfigReceive(handle->extraState, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
 	state->imu.flipX = param32 & 0x04;
 	state->imu.flipY = param32 & 0x02;
 	state->imu.flipZ = param32 & 0x01;
@@ -1043,7 +1045,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_MUX_RUN_CHIP:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_MUX, paramAddr, param));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RESET: {
@@ -1060,7 +1062,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						spiMultiConfig[1].paramAddr  = DAVIS_CONFIG_MUX_TIMESTAMP_RESET;
 						spiMultiConfig[1].param      = false;
 
-						return (spiConfigSendMultiple(handle->extraState, spiMultiConfig, 2));
+						return (spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, 2));
 					}
 					break;
 				}
@@ -1076,7 +1078,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_RUN:
 				case DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL:
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW:
@@ -1096,7 +1098,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN:
 					if (handle->info.dvsHasPixelFilter) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1108,7 +1110,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD:
 				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1120,7 +1122,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
 					if (handle->info.dvsHasROIFilter) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1130,7 +1132,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
 					if (handle->info.dvsHasSkipFilter) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1141,7 +1143,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS:
 				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE:
 					if (handle->info.dvsHasPolarityFilter) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1171,7 +1173,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
@@ -1181,7 +1183,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						state->aps.autoExposure.lastSetExposure = param;
 
 						float exposureCC = roundf((float) param * state->deviceClocks.adcClockActual);
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_APS, paramAddr, U32T(exposureCC)));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, U32T(exposureCC)));
 					}
 					else {
 						return (false);
@@ -1192,7 +1194,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					// Exposure and Frame Interval are in µs, must be converted to native FPGA cycles
 					// by multiplying with ADC clock value.
 					float intervalCC = roundf((float) param * state->deviceClocks.adcClockActual);
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_APS, paramAddr, U32T(intervalCC)));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, U32T(intervalCC)));
 					break;
 				}
 
@@ -1200,11 +1202,11 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					if (handle->info.apsHasGlobalShutter) {
 						// Keep in sync with chip config module GlobalShutter parameter.
 						if (!spiConfigSend(
-								handle->extraState, DAVIS_CONFIG_CHIP, DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
+								handle->spiConfigPtr, DAVIS_CONFIG_CHIP, DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
 							return (false);
 						}
 
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1219,7 +1221,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS640H_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
 					if (IS_DAVIS640H(handle->info.chipID)) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1240,7 +1242,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						spiMultiConfig[1].paramAddr  = DAVIS_CONFIG_APS_RUN;
 						spiMultiConfig[1].param      = false;
 
-						return (spiConfigSendMultiple(handle->extraState, spiMultiConfig, 2));
+						return (spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, 2));
 					}
 					break;
 				}
@@ -1265,7 +1267,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_IMU, paramAddr, param));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
 				default:
@@ -1282,7 +1284,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
-					return (spiConfigSend(handle->extraState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
@@ -1292,7 +1294,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1311,7 +1313,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				if (IS_DAVIS240(handle->info.chipID)) {
 					// DAVIS240 uses the old bias generator with 22 branches, and uses all of them.
 					if (paramAddr < 22) {
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 					}
 				}
 				else if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
@@ -1346,13 +1348,13 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS128_CONFIG_BIAS_SSP:
 						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						case DAVIS346_CONFIG_BIAS_ADCTESTVOLTAGE:
 							// Only supported by DAVIS346 and DAVIS640 chips.
 							if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
-								return (spiConfigSend(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1362,7 +1364,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS208_CONFIG_BIAS_REFSSBN:
 							// Only supported by DAVIS208 chips.
 							if (IS_DAVIS208(handle->info.chipID)) {
-								return (spiConfigSend(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1408,7 +1410,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS640H_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS640H_CONFIG_BIAS_SSP:
 						case DAVIS640H_CONFIG_BIAS_SSN:
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						default:
@@ -1434,13 +1436,13 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
-						return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS240_CONFIG_CHIP_SPECIALPIXELCONTROL:
 						// Only supported by DAVIS240 A/B chips.
 						if (IS_DAVIS240A(handle->info.chipID) || IS_DAVIS240B(handle->info.chipID)) {
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1449,11 +1451,11 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						if (handle->info.apsHasGlobalShutter) {
 							// Keep in sync with APS module GlobalShutter parameter.
 							if (!spiConfigSend(
-									handle->extraState, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
+									handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, param)) {
 								return (false);
 							}
 
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1462,7 +1464,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
 							|| IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
 							|| IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1470,7 +1472,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
 							|| IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1479,7 +1481,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1487,7 +1489,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS208_CONFIG_CHIP_SELECTHIGHPASS:
 						// Only supported by DAVIS208.
 						if (IS_DAVIS208(handle->info.chipID)) {
-							return (spiConfigSend(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1544,7 +1546,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_MUX_RUN_CHIP:
 				case DAVIS_CONFIG_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_MUX_DROP_DVS_ON_TRANSFER_STALL:
-					return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_MUX, paramAddr, param));
+					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_MUX, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_MUX_TIMESTAMP_RESET:
@@ -1557,7 +1559,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED:
 				case DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED + 1:
 					if (handle->info.muxHasStatistics) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_MUX, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_MUX, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1575,7 +1577,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_RUN:
 				case DAVIS_CONFIG_DVS_WAIT_ON_TRANSFER_STALL:
 				case DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL:
-					return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW:
@@ -1595,7 +1597,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_6_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_PIXEL_7_COLUMN:
 					if (handle->info.dvsHasPixelFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1607,7 +1609,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD:
 				case DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME:
 					if (handle->info.dvsHasBackgroundActivityFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1619,7 +1621,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN:
 				case DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW:
 					if (handle->info.dvsHasROIFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1629,7 +1631,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS:
 				case DAVIS_CONFIG_DVS_FILTER_SKIP_EVENTS_EVERY:
 					if (handle->info.dvsHasSkipFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1640,7 +1642,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS:
 				case DAVIS_CONFIG_DVS_FILTER_POLARITY_SUPPRESS_TYPE:
 					if (handle->info.dvsHasPolarityFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1654,7 +1656,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED:
 				case DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED + 1:
 					if (handle->info.dvsHasStatistics) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1664,7 +1666,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS:
 				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS + 1:
 					if (handle->info.dvsHasStatistics && handle->info.dvsHasPixelFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1676,7 +1678,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD:
 				case DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD + 1:
 					if (handle->info.dvsHasStatistics && handle->info.dvsHasBackgroundActivityFilter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_DVS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1706,7 +1708,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_APS_END_COLUMN_0:
 				case DAVIS_CONFIG_APS_START_ROW_0:
 				case DAVIS_CONFIG_APS_END_ROW_0:
-					return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_APS_EXPOSURE:
@@ -1718,7 +1720,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					// Frame Interval is in µs, must be converted from native FPGA cycles
 					// by dividing with ADC clock value.
 					uint32_t cyclesValue = 0;
-					if (!spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, paramAddr, &cyclesValue)) {
+					if (!spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, &cyclesValue)) {
 						return (false);
 					}
 
@@ -1731,7 +1733,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1746,7 +1748,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS640H_CONFIG_APS_GSFDRESET:
 					// Support for DAVISRGB extra timing parameters.
 					if (IS_DAVIS640H(handle->info.chipID)) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_APS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1778,7 +1780,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
 				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
-					return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_IMU, paramAddr, param));
+					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
 					break;
 
 				default:
@@ -1795,7 +1797,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
-					return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
@@ -1805,7 +1807,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					}
 					else {
 						return (false);
@@ -1824,7 +1826,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				if (IS_DAVIS240(handle->info.chipID)) {
 					// DAVIS240 uses the old bias generator with 22 branches, and uses all of them.
 					if (paramAddr < 22) {
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 					}
 				}
 				else if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
@@ -1859,13 +1861,13 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS128_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS128_CONFIG_BIAS_SSP:
 						case DAVIS128_CONFIG_BIAS_SSN:
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						case DAVIS346_CONFIG_BIAS_ADCTESTVOLTAGE:
 							// Only supported by DAVIS346 and DAVIS640 chips.
 							if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)) {
-								return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1875,7 +1877,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS208_CONFIG_BIAS_REFSSBN:
 							// Only supported by DAVIS208 chips.
 							if (IS_DAVIS208(handle->info.chipID)) {
-								return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+								return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							}
 							break;
 
@@ -1921,7 +1923,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						case DAVIS640H_CONFIG_BIAS_BIASBUFFER:
 						case DAVIS640H_CONFIG_BIAS_SSP:
 						case DAVIS640H_CONFIG_BIAS_SSN:
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_BIAS, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_BIAS, paramAddr, param));
 							break;
 
 						default:
@@ -1947,20 +1949,20 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS128_CONFIG_CHIP_RESETTESTPIXEL:
 					case DAVIS128_CONFIG_CHIP_AERNAROW:
 					case DAVIS128_CONFIG_CHIP_USEAOUT:
-						return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						break;
 
 					case DAVIS240_CONFIG_CHIP_SPECIALPIXELCONTROL:
 						// Only supported by DAVIS240 A/B chips.
 						if (IS_DAVIS240A(handle->info.chipID) || IS_DAVIS240B(handle->info.chipID)) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
 					case DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER:
 						// Only supported by some chips.
 						if (handle->info.apsHasGlobalShutter) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1969,7 +1971,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						if (IS_DAVIS128(handle->info.chipID) || IS_DAVIS208(handle->info.chipID)
 							|| IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
 							|| IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1977,7 +1979,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						// Only supported by some of the new DAVIS chips.
 						if (IS_DAVIS346(handle->info.chipID) || IS_DAVIS640(handle->info.chipID)
 							|| IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1986,7 +1988,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
 						// Only supported by DAVIS208 and DAVISRGB.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -1994,7 +1996,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS208_CONFIG_CHIP_SELECTHIGHPASS:
 						// Only supported by DAVIS208.
 						if (IS_DAVIS208(handle->info.chipID)) {
-							return (spiConfigReceive(handle->extraState, DAVIS_CONFIG_CHIP, paramAddr, param));
+							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
 						break;
 
@@ -2226,7 +2228,7 @@ static void davisCommonEventTranslator(
 
 							// Update Master/Slave status on incoming TS resets.
 							// Async call to not deadlock here.
-							spiConfigReceiveAsync(handle->extraState, DAVIS_CONFIG_SYSINFO,
+							spiConfigReceiveAsync(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO,
 								DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &davisCommonTSMasterStatusUpdater,
 								&handle->info);
 							break;
@@ -2415,7 +2417,7 @@ static void davisCommonEventTranslator(
 											float newExposureCC
 												= roundf((float) newExposureValue * state->deviceClocks.adcClockActual);
 
-											spiConfigSendAsync(handle->extraState, DAVIS_CONFIG_APS,
+											spiConfigSendAsync(handle->spiConfigPtr, DAVIS_CONFIG_APS,
 												DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureCC), NULL, NULL);
 										}
 									}
@@ -3013,19 +3015,19 @@ static void davisCommonEventTranslator(
 						size_t i = 0;
 
 						for (; i < (size_t) hotPixelsSize; i++) {
-							spiConfigSendAsync(handle->extraState, DAVIS_CONFIG_DVS,
+							spiConfigSendAsync(handle->spiConfigPtr, DAVIS_CONFIG_DVS,
 								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + 2 * i),
 								(state->dvs.invertXY) ? (hotPixels[i].y) : (hotPixels[i].x), NULL, NULL);
-							spiConfigSendAsync(handle->extraState, DAVIS_CONFIG_DVS,
+							spiConfigSendAsync(handle->spiConfigPtr, DAVIS_CONFIG_DVS,
 								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + 2 * i),
 								(state->dvs.invertXY) ? (hotPixels[i].x) : (hotPixels[i].y), NULL, NULL);
 						}
 
 						for (; i < DVS_HOTPIXEL_HW_MAX; i++) {
-							spiConfigSendAsync(handle->extraState, DAVIS_CONFIG_DVS,
+							spiConfigSendAsync(handle->spiConfigPtr, DAVIS_CONFIG_DVS,
 								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_COLUMN + 2 * i), U32T(state->dvs.sizeX), NULL,
 								NULL);
-							spiConfigSendAsync(handle->extraState, DAVIS_CONFIG_DVS,
+							spiConfigSendAsync(handle->spiConfigPtr, DAVIS_CONFIG_DVS,
 								U8T(DAVIS_CONFIG_DVS_FILTER_PIXEL_0_ROW + 2 * i), U32T(state->dvs.sizeY), NULL, NULL);
 						}
 
