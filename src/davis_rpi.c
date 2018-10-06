@@ -1064,6 +1064,34 @@ static bool handleChipBiasReceive(davisRPiHandle state, uint8_t paramAddr, uint3
 	}
 }
 
+static bool spiConfigSendMultiple(void *state, spiConfigParams configs, uint16_t numConfigs) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+
+		if (!spiConfigSend(state, configs[i].moduleAddr, configs[i].paramAddr, configs[i].param)) {
+			return (false);
+		}
+	}
+
+	return (true);
+}
+
+static bool spiConfigSendMultipleAsync(void *state, spiConfigParams configs, uint16_t numConfigs,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+
+		if (!spiConfigSendAsync(state, configs[i].moduleAddr, configs[i].paramAddr, configs[i].param,
+				configSendCallback, configSendCallbackPtr)) {
+			return (false);
+		}
+	}
+
+	return (true);
+}
+
 static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
 	davisRPiHandle handle = (davisRPiHandle) state;
 
@@ -1076,6 +1104,19 @@ static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, ui
 	return (spiSend(&handle->gpio, moduleAddr, paramAddr, param));
 }
 
+static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	// Call normal spiConfigSend() and execute callback manually. There are no threading/dead-lock
+	// issues here with using SPI directly.
+	bool status = spiConfigSend(state, moduleAddr, paramAddr, param);
+
+	if (configSendCallback != NULL) {
+		(*configSendCallback)(configSendCallbackPtr, !status); // Success is status=0.
+	}
+
+	return (status);
+}
+
 static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
 	davisRPiHandle handle = (davisRPiHandle) state;
 
@@ -1086,4 +1127,19 @@ static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr,
 
 	// Standard SPI receive.
 	return (spiReceive(&handle->gpio, moduleAddr, paramAddr, param));
+}
+
+static bool spiConfigReceiveAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr,
+	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
+	void *configReceiveCallbackPtr) {
+	// Call normal spiConfigReceive() and execute callback manually. There are no threading/dead-lock
+	// issues here with using SPI directly.
+	uint32_t param = 0;
+	bool status    = spiConfigReceive(state, moduleAddr, paramAddr, &param);
+
+	if (configReceiveCallback != NULL) {
+		(*configReceiveCallback)(configReceiveCallbackPtr, !status, param); // Success is status=0.
+	}
+
+	return (status);
 }
