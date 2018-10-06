@@ -1,7 +1,7 @@
 #ifndef LIBCAER_SRC_DAVIS_RPI_H_
 #define LIBCAER_SRC_DAVIS_RPI_H_
 
-#include "davis.h"
+#include "davis_common.h"
 
 #define DAVIS_RPI_DEVICE_NAME "DAVISRPi"
 
@@ -18,7 +18,13 @@
 
 #define DAVIS_RPI_BENCHMARK_LIMIT_EVENTS (4 * 1000 * 1000)
 
-enum benchmarkMode { ZEROS = 0, ONES = 1, COUNTER = 2, SWITCHING = 3, ALTERNATING = 4 };
+enum benchmarkMode {
+	ZEROS       = 0,
+	ONES        = 1,
+	COUNTER     = 2,
+	SWITCHING   = 3,
+	ALTERNATING = 4,
+};
 
 // Alternative, simplified biasing support.
 #define DAVIS_BIAS_ADDRESS_MAX 36
@@ -29,7 +35,7 @@ struct davis_rpi_handle {
 	// Information fields
 	struct caer_davis_info info;
 	// State for data management, common to all DAVIS.
-	struct davis_state state;
+	struct davis_common_state state;
 	// Data transfer via GPIO for RPi IoT variant.
 	struct {
 		volatile uint32_t *gpioReg;

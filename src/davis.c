@@ -168,7 +168,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 }
 
 static inline void apsInitFrame(davisHandle handle) {
-	davisState state = &handle->state;
+	davisCommonState state = &handle->state;
 
 	state->aps.ignoreEvents                      = false;
 	state->aps.autoExposure.tmpData              = 0;
@@ -197,7 +197,7 @@ static inline void apsInitFrame(davisHandle handle) {
 	}
 }
 
-static inline void apsROIUpdateSizes(davisState state) {
+static inline void apsROIUpdateSizes(davisCommonState state) {
 	// Calculate APS ROI sizes.
 	uint16_t startColumn = state->aps.roi.positionX;
 	uint16_t startRow    = state->aps.roi.positionY;
@@ -220,7 +220,7 @@ static inline void apsROIUpdateSizes(davisState state) {
 }
 
 static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
-	davisState state = &handle->state;
+	davisCommonState state = &handle->state;
 
 	uint16_t xPos = (state->aps.flipX)
 						? (U16T(state->aps.expectedCountX - 1 - state->aps.countX[state->aps.currentReadoutType]))
@@ -333,7 +333,7 @@ static inline void apsUpdateFrame(davisHandle handle, uint16_t data) {
 }
 
 static inline bool apsEndFrame(davisHandle handle) {
-	davisState state = &handle->state;
+	davisCommonState state = &handle->state;
 
 	bool validFrame = true;
 
@@ -383,7 +383,7 @@ static inline float calculateIMUGyroScale(uint8_t imuGyroScale) {
 	return (gyroScale);
 }
 
-static inline void freeAllDataMemory(davisState state) {
+static inline void freeAllDataMemory(davisCommonState state) {
 	dataExchangeDestroy(&state->dataExchange);
 
 	// Since the current event packets aren't necessarily
@@ -470,7 +470,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	// Set main deviceType correctly right away.
 	handle->deviceType = deviceType;
 
-	davisState state = &handle->state;
+	davisCommonState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
 	dataExchangeSettingsInit(&state->dataExchange);
@@ -1138,8 +1138,8 @@ static bool davisSendDefaultChipConfig(caerDeviceHandle cdh) {
 }
 
 bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
-	davisHandle handle = (davisHandle) cdh;
-	davisState state   = &handle->state;
+	davisHandle handle     = (davisHandle) cdh;
+	davisCommonState state = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -1667,8 +1667,8 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 }
 
 bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
-	davisHandle handle = (davisHandle) cdh;
-	davisState state   = &handle->state;
+	davisHandle handle     = (davisHandle) cdh;
+	davisCommonState state = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -2207,8 +2207,8 @@ bool davisConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 
 bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 	void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) {
-	davisHandle handle = (davisHandle) cdh;
-	davisState state   = &handle->state;
+	davisHandle handle     = (davisHandle) cdh;
+	davisCommonState state = &handle->state;
 
 	// Store new data available/not available anymore call-backs.
 	dataExchangeSetNotify(&state->dataExchange, dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr);
@@ -2344,8 +2344,8 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 }
 
 bool davisDataStop(caerDeviceHandle cdh) {
-	davisHandle handle = (davisHandle) cdh;
-	davisState state   = &handle->state;
+	davisHandle handle     = (davisHandle) cdh;
+	davisCommonState state = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
@@ -2383,8 +2383,8 @@ bool davisDataStop(caerDeviceHandle cdh) {
 }
 
 caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
-	davisHandle handle = (davisHandle) cdh;
-	davisState state   = &handle->state;
+	davisHandle handle     = (davisHandle) cdh;
+	davisCommonState state = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &handle->usbState.dataTransfersRun));
 }
@@ -2392,8 +2392,8 @@ caerEventPacketContainer davisDataGet(caerDeviceHandle cdh) {
 #define TS_WRAP_ADD 0x8000
 
 static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
-	davisHandle handle = vhd;
-	davisState state   = &handle->state;
+	davisHandle handle     = vhd;
+	davisCommonState state = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -2551,6 +2551,7 @@ static void davisEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesS
 
 							state->imu.ignoreEvents = false;
 							state->imu.count        = 0;
+							state->imu.type         = 0;
 
 							memset(&state->imu.currentEvent, 0, sizeof(struct caer_imu6_event));
 
