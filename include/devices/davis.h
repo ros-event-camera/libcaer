@@ -831,35 +831,9 @@ extern "C" {
 #define DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER 4
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * this configures the digital low-pass filter for the accelerometer
- * on devices using the InvenSense MPU 9250.
- * Valid values are from 0 to 7 and have the following meaning:
- *
- * 0 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
- * 1 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
- * 2 - Accel: BW=99Hz,    Delay=2.88ms,  FS=1kHz
- * 3 - Accel: BW=44.8Hz,  Delay=4.88ms,  FS=1kHz
- * 4 - Accel: BW=21.2Hz,  Delay=8.87ms,  FS=1kHz
- * 5 - Accel: BW=10.2Hz,  Delay=16.83ms, FS=1kHz
- * 6 - Accel: BW=5.05Hz,  Delay=32.48ms, FS=1kHz
- * 7 - Accel: BW=420Hz,   Delay=1.38ms,  FS=1kHz
- */
-#define DAVIS_CONFIG_IMU_ACCEL_DLPF 5
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * select the full scale range of the accelerometer outputs.
- * Valid values are:
- * 0 - +- 2 g
- * 1 - +- 4 g
- * 2 - +- 8 g
- * 3 - +- 16 g
- */
-#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 6
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
  * this configures the digital low-pass filter for both the
  * accelerometer and the gyroscope on InvenSense MPU 6050/6150
- * IMU devices, or for the gyroscope only on InvenSense MPU 9250.
+ * IMU devices, or for the accelerometer only on InvenSense MPU 9250.
  * Valid values are from 0 to 7 and have the following meaning:
  *
  * On InvenSense MPU 6050/6150:
@@ -873,6 +847,33 @@ extern "C" {
  * 7 - Accel: RESERVED,               FS=1kHz - Gyro: RESERVED,               FS=8kHz
  *
  * On InvenSense MPU 9250:
+ * 0 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
+ * 1 - Accel: BW=218.1Hz, Delay=1.88ms,  FS=1kHz
+ * 2 - Accel: BW=99Hz,    Delay=2.88ms,  FS=1kHz
+ * 3 - Accel: BW=44.8Hz,  Delay=4.88ms,  FS=1kHz
+ * 4 - Accel: BW=21.2Hz,  Delay=8.87ms,  FS=1kHz
+ * 5 - Accel: BW=10.2Hz,  Delay=16.83ms, FS=1kHz
+ * 6 - Accel: BW=5.05Hz,  Delay=32.48ms, FS=1kHz
+ * 7 - Accel: BW=420Hz,   Delay=1.38ms,  FS=1kHz
+ */
+#define DAVIS_CONFIG_IMU_ACCEL_DLPF 5
+#define DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER DAVIS_CONFIG_IMU_ACCEL_DLPF
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * select the full scale range of the accelerometer outputs.
+ * Valid values are:
+ * 0 - +- 2 g
+ * 1 - +- 4 g
+ * 2 - +- 8 g
+ * 3 - +- 16 g
+ */
+#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 6
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * this configures the digital low-pass filter for the gyroscope
+ * on devices using the InvenSense MPU 9250.
+ * Valid values are from 0 to 7 and have the following meaning:
+ *
  * 0 - Gyro: BW=250Hz,  Delay=0.97ms,  FS=8kHz
  * 1 - Gyro: BW=184Hz,  Delay=2.9ms,   FS=1kHz
  * 2 - Gyro: BW=92Hz,   Delay=3.9ms,   FS=1kHz
@@ -883,7 +884,6 @@ extern "C" {
  * 7 - Gyro: BW=3600Hz, Delay=0.17ms,  FS=8kHz
  */
 #define DAVIS_CONFIG_IMU_GYRO_DLPF 8
-#define DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER DAVIS_CONFIG_IMU_GYRO_DLPF
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * select the full scale range of the gyroscope outputs.
