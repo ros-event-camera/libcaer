@@ -574,6 +574,9 @@ static void davisCommonInit(davisCommonHandle handle) {
 		handle->info.apsSizeY = state->aps.sizeY;
 	}
 
+	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_TYPE, &param32);
+	handle->info.imuType = U8T(param32);
+
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
 	state->imu.flipX = param32 & 0x04;
 	state->imu.flipY = param32 & 0x02;
@@ -1265,9 +1268,17 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
 				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
-				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
+					break;
+
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
+					if (handle->info.imuType == 2) {
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
 					break;
 
 				default:
@@ -1778,9 +1789,17 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER:
 				case DAVIS_CONFIG_IMU_ACCEL_DLPF:
 				case DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE:
-				case DAVIS_CONFIG_IMU_GYRO_DLPF:
 				case DAVIS_CONFIG_IMU_GYRO_FULL_SCALE:
 					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
+					break;
+
+				case DAVIS_CONFIG_IMU_GYRO_DLPF:
+					if (handle->info.imuType == 2) {
+						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, paramAddr, param));
+					}
+					else {
+						return (false);
+					}
 					break;
 
 				default:

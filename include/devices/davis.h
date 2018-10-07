@@ -787,22 +787,15 @@ extern "C" {
 
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
- * enable the IMU's accelerometer. This takes the
- * IMU chip out of sleep.
+ * read-only parameter, contains information on the type of IMU
+ * chip being used in this device:
+ * 0 - no IMU present
+ * 1 - InvenSense MPU 6050/6150
+ * 2 - InvenSense MPU 9250
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer.
  */
-#define DAVIS_CONFIG_IMU_RUN_ACCELEROMETER 0
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * enable the IMU's gyroscope. This takes the
- * IMU chip out of sleep.
- */
-#define DAVIS_CONFIG_IMU_RUN_GYROSCOPE 1
-/**
- * Parameter address for module DAVIS_CONFIG_IMU:
- * enable the IMU's temperature sensor. This takes the
- * IMU chip out of sleep.
- */
-#define DAVIS_CONFIG_IMU_RUN_TEMPERATURE 2
+#define DAVIS_CONFIG_IMU_TYPE 0
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * read-only parameter, contains information on the orientation
@@ -815,7 +808,25 @@ extern "C" {
  * anything other than libcaer. Generated IMU events are already
  * properly flipped when returned to the user.
  */
-#define DAVIS_CONFIG_IMU_ORIENTATION_INFO 3
+#define DAVIS_CONFIG_IMU_ORIENTATION_INFO 1
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * enable the IMU's accelerometer. This takes the
+ * IMU chip out of sleep.
+ */
+#define DAVIS_CONFIG_IMU_RUN_ACCELEROMETER 2
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * enable the IMU's gyroscope. This takes the
+ * IMU chip out of sleep.
+ */
+#define DAVIS_CONFIG_IMU_RUN_GYROSCOPE 3
+/**
+ * Parameter address for module DAVIS_CONFIG_IMU:
+ * enable the IMU's temperature sensor. This takes the
+ * IMU chip out of sleep.
+ */
+#define DAVIS_CONFIG_IMU_RUN_TEMPERATURE 4
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * this specifies the divider from the Gyroscope Output Rate used
@@ -828,7 +839,7 @@ extern "C" {
  * Note: the accelerometer output rate is 1 kHz. This means that for a Sample Rate
  * greater than 1 kHz, the same accelerometer sample may be output multiple times.
  */
-#define DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER 4
+#define DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER 5
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * this configures the digital low-pass filter for both the
@@ -856,7 +867,7 @@ extern "C" {
  * 6 - Accel: BW=5.05Hz,  Delay=32.48ms, FS=1kHz
  * 7 - Accel: BW=420Hz,   Delay=1.38ms,  FS=1kHz
  */
-#define DAVIS_CONFIG_IMU_ACCEL_DLPF 5
+#define DAVIS_CONFIG_IMU_ACCEL_DLPF 6
 #define DAVIS_CONFIG_IMU_DIGITAL_LOW_PASS_FILTER DAVIS_CONFIG_IMU_ACCEL_DLPF
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
@@ -867,7 +878,7 @@ extern "C" {
  * 2 - +- 8 g
  * 3 - +- 16 g
  */
-#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 6
+#define DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE 7
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * this configures the digital low-pass filter for the gyroscope
@@ -883,7 +894,7 @@ extern "C" {
  * 6 - Gyro: BW=5Hz,    Delay=33.48ms, FS=1kHz
  * 7 - Gyro: BW=3600Hz, Delay=0.17ms,  FS=8kHz
  */
-#define DAVIS_CONFIG_IMU_GYRO_DLPF 8
+#define DAVIS_CONFIG_IMU_GYRO_DLPF 9
 /**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * select the full scale range of the gyroscope outputs.
@@ -893,7 +904,7 @@ extern "C" {
  * 2 - +- 1000 °/s
  * 3 - +- 2000 °/s
  */
-#define DAVIS_CONFIG_IMU_GYRO_FULL_SCALE 9
+#define DAVIS_CONFIG_IMU_GYRO_FULL_SCALE 10
 
 /**
  * Parameter address for module DAVIS_CONFIG_EXTINPUT:
@@ -1551,6 +1562,8 @@ struct caer_davis_info {
 	enum caer_frame_event_color_filter apsColorFilter;
 	/// Feature test: APS supports Global Shutter.
 	bool apsHasGlobalShutter;
+	/// IMU chip type on device: 0 - no IMU, 1 - InvenSense MPU 6050/6150, 2 - InvenSense MPU 9250.
+	uint8_t imuType;
 	/// Feature test: External Input module supports Signal-Generation.
 	bool extInputHasGenerator;
 };
