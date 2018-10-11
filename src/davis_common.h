@@ -1294,14 +1294,19 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
 					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
+				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH: {
+					// Times are in µs on host, but in cycles @ LOGIC_CLOCK_FREQ
+					// on FPGA, so we must multiply here.
+					float timeCC = roundf((float) param * state->deviceClocks.logicClockActual);
+					return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, U32T(timeCC)));
+					break;
+				}
+
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
@@ -1311,6 +1316,20 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 						return (false);
 					}
 					break;
+
+				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
+				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH: {
+					if (handle->info.extInputHasGenerator) {
+						// Times are in µs on host, but in cycles @ LOGIC_CLOCK_FREQ
+						// on FPGA, so we must multiply here.
+						float timeCC = roundf((float) param * state->deviceClocks.logicClockActual);
+						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, U32T(timeCC)));
+					}
+					else {
+						return (false);
+					}
+					break;
+				}
 
 				default:
 					return (false);
@@ -1815,14 +1834,26 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSES:
 				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_POLARITY:
-				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH:
 					return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, param));
 					break;
 
+				case DAVIS_CONFIG_EXTINPUT_DETECT_PULSE_LENGTH: {
+					// Times are in µs on host, but in cycles @ LOGIC_CLOCK_FREQ
+					// on FPGA, so we must divide here.
+					uint32_t cyclesValue = 0;
+					if (!spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, &cyclesValue)) {
+						return (false);
+					}
+
+					float delayCC = roundf((float) cyclesValue / state->deviceClocks.logicClockActual);
+					*param        = U32T(delayCC);
+
+					return (true);
+					break;
+				}
+
 				case DAVIS_CONFIG_EXTINPUT_RUN_GENERATOR:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_POLARITY:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
-				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE:
 				case DAVIS_CONFIG_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE:
 					if (handle->info.extInputHasGenerator) {
@@ -1832,6 +1863,27 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 						return (false);
 					}
 					break;
+
+				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_INTERVAL:
+				case DAVIS_CONFIG_EXTINPUT_GENERATE_PULSE_LENGTH: {
+					if (handle->info.extInputHasGenerator) {
+						// Times are in µs on host, but in cycles @ LOGIC_CLOCK_FREQ
+						// on FPGA, so we must divide here.
+						uint32_t cyclesValue = 0;
+						if (!spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, paramAddr, &cyclesValue)) {
+							return (false);
+						}
+
+						float delayCC = roundf((float) cyclesValue / state->deviceClocks.logicClockActual);
+						*param        = U32T(delayCC);
+
+						return (true);
+					}
+					else {
+						return (false);
+					}
+					break;
+				}
 
 				default:
 					return (false);
