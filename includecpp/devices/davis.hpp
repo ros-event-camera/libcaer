@@ -5,7 +5,9 @@
 #include "../events/imu6.hpp"
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
+
 #include <libcaer/devices/davis.h>
+
 #include "usb.hpp"
 
 namespace libcaer {
@@ -39,9 +41,8 @@ public:
 		return (infoGet().deviceString);
 	}
 
-	void roiConfigure(
-		uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY) const {
-		bool success = caerDavisROIConfigure(handle.get(), roiRegion, enable, startX, startY, endX, endY);
+	void roiConfigure(uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY) const {
+		bool success = caerDavisROIConfigure(handle.get(), startX, startY, endX, endY);
 		if (!success) {
 			std::string exc = toString() + ": failed to configure APS ROI region.";
 			throw std::runtime_error(exc);

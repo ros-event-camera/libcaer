@@ -18,13 +18,6 @@ struct usb_data_completion_struct {
 
 typedef struct usb_data_completion_struct *usbDataCompletion;
 
-struct usb_config_receive_struct {
-	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param);
-	void *configReceiveCallbackPtr;
-};
-
-typedef struct usb_config_receive_struct *usbConfigReceive;
-
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static int usbThreadRun(void *usbStatePtr);
 static bool usbAllocateTransfers(usbState state);
@@ -38,8 +31,6 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
 static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
-static void spiConfigReceiveCallback(
-	void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
 
 static inline bool checkActiveConfigAndClaim(libusb_device_handle *devHandle) {
 	// Check that the active configuration is set to number 1. If not, do so.
@@ -162,7 +153,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			// Get serial number.
 			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
 			int getStringDescResult                         = libusb_get_string_descriptor_ascii(
-				devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+                devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 			// Check serial number success and length.
 			if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
@@ -310,8 +301,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
 				if ((devAddress > 0) && (devDevAddress != devAddress)) {
-					caerUSBLog(CAER_LOG_DEBUG, state, "USB device address restriction is present (%" PRIu8
-													  "), this device didn't match it (%" PRIu8 ").",
+					caerUSBLog(CAER_LOG_DEBUG, state,
+						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8
+						").",
 						devAddress, devDevAddress);
 
 					continue;
@@ -1023,87 +1015,4 @@ static void syncControlInCallback(void *controlInCallbackPtr, int status, const 
 	else {
 		atomic_store(&dataCompletion->completed, 2);
 	}
-}
-
-bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	uint8_t spiConfig[4] = {0};
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (
-		usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig)));
-}
-
-bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
-	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
-	uint8_t spiConfig[4] = {0};
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
-		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
-}
-
-bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	uint8_t spiConfig[4] = {0};
-
-	if (!usbControlTransferIn(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig))) {
-		return (false);
-	}
-
-	*param = 0;
-	*param |= U32T(spiConfig[0] << 24);
-	*param |= U32T(spiConfig[1] << 16);
-	*param |= U32T(spiConfig[2] << 8);
-	*param |= U32T(spiConfig[3] << 0);
-
-	return (true);
-}
-
-bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
-	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
-	void *configReceiveCallbackPtr) {
-	usbConfigReceive config = calloc(1, sizeof(*config));
-	if (config == NULL) {
-		return (false);
-	}
-
-	config->configReceiveCallback    = configReceiveCallback;
-	config->configReceiveCallbackPtr = configReceiveCallbackPtr;
-
-	bool retVal = usbControlTransferInAsync(
-		state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t), &spiConfigReceiveCallback, config);
-	if (!retVal) {
-		free(config);
-
-		return (false);
-	}
-
-	return (true);
-}
-
-static void spiConfigReceiveCallback(
-	void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
-	usbConfigReceive config = configReceiveCallbackPtr;
-
-	uint32_t param = 0;
-
-	if ((status == LIBUSB_TRANSFER_COMPLETED) && (bufferSize == sizeof(uint32_t))) {
-		param |= U32T(buffer[0] << 24);
-		param |= U32T(buffer[1] << 16);
-		param |= U32T(buffer[2] << 8);
-		param |= U32T(buffer[3] << 0);
-	}
-
-	if (config->configReceiveCallback != NULL) {
-		(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
-	}
-
-	free(config);
 }

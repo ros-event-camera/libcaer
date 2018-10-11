@@ -2,12 +2,14 @@
 #define LIBCAER_SRC_USB_UTILS_H_
 
 #include "libcaer.h"
+
 #include "devices/usb.h"
+
 #include <libusb.h>
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
-#include "c11threads_posix.h"
+#	include "c11threads_posix.h"
 #endif
 
 #define MAX_SERIAL_NUMBER_LENGTH 8
@@ -138,12 +140,121 @@ bool usbControlTransferOut(
 bool usbControlTransferIn(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
 
-bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
-bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
-	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr);
-bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
-bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
+// SPI config via USB implementation.
+#include "spi_config_interface.h"
+
+struct usb_config_receive_struct {
+	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param);
+	void *configReceiveCallbackPtr;
+};
+
+typedef struct usb_config_receive_struct *usbConfigReceive;
+
+static void spiConfigReceiveCallback(
+	void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
+
+static bool spiConfigSendMultiple(void *state, spiConfigParams configs, uint16_t numConfigs) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+	}
+
+	return (usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, numConfigs, 0, (uint8_t *) configs,
+		sizeof(struct spi_config_params) * numConfigs));
+}
+
+static bool spiConfigSendMultipleAsync(void *state, spiConfigParams configs, uint16_t numConfigs,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	for (size_t i = 0; i < numConfigs; i++) {
+		// Param must be in big-endian format.
+		configs[i].param = htobe32(configs[i].param);
+	}
+
+	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE, numConfigs, 0, (uint8_t *) configs,
+		sizeof(struct spi_config_params) * numConfigs, configSendCallback, configSendCallbackPtr));
+}
+
+static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+	uint8_t spiConfig[4] = {0};
+
+	spiConfig[0] = U8T(param >> 24);
+	spiConfig[1] = U8T(param >> 16);
+	spiConfig[2] = U8T(param >> 8);
+	spiConfig[3] = U8T(param >> 0);
+
+	return (
+		usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig)));
+}
+
+static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
+	uint8_t spiConfig[4] = {0};
+
+	spiConfig[0] = U8T(param >> 24);
+	spiConfig[1] = U8T(param >> 16);
+	spiConfig[2] = U8T(param >> 8);
+	spiConfig[3] = U8T(param >> 0);
+
+	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
+		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
+}
+
+static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+	uint8_t spiConfig[4] = {0};
+
+	if (!usbControlTransferIn(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig))) {
+		return (false);
+	}
+
+	*param = 0;
+	*param |= U32T(spiConfig[0] << 24);
+	*param |= U32T(spiConfig[1] << 16);
+	*param |= U32T(spiConfig[2] << 8);
+	*param |= U32T(spiConfig[3] << 0);
+
+	return (true);
+}
+
+static bool spiConfigReceiveAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr,
 	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
-	void *configReceiveCallbackPtr);
+	void *configReceiveCallbackPtr) {
+	usbConfigReceive config = calloc(1, sizeof(*config));
+	if (config == NULL) {
+		return (false);
+	}
+
+	config->configReceiveCallback    = configReceiveCallback;
+	config->configReceiveCallbackPtr = configReceiveCallbackPtr;
+
+	bool retVal = usbControlTransferInAsync(
+		state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t), &spiConfigReceiveCallback, config);
+	if (!retVal) {
+		free(config);
+
+		return (false);
+	}
+
+	return (true);
+}
+
+static void spiConfigReceiveCallback(
+	void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
+	usbConfigReceive config = configReceiveCallbackPtr;
+
+	uint32_t param = 0;
+
+	if ((status == LIBUSB_TRANSFER_COMPLETED) && (bufferSize == sizeof(uint32_t))) {
+		param |= U32T(buffer[0] << 24);
+		param |= U32T(buffer[1] << 16);
+		param |= U32T(buffer[2] << 8);
+		param |= U32T(buffer[3] << 0);
+	}
+
+	if (config->configReceiveCallback != NULL) {
+		(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
+	}
+
+	free(config);
+}
 
 #endif /* LIBCAER_SRC_USB_UTILS_H_ */
