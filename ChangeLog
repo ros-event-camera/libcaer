@@ -1,5 +1,23 @@
-Release 2.5.4 - XX.10.2018
+Release 3.0.0 - XX.10.2018
 IN PROGRESS
+
+INCOMPATIBLE CHANGES
+Support for new logic version 16:
+- changed, slightly more efficient data encoding (IMU, APS).
+- cleaned up device configuration, removed lots of unused debug options.
+- changed APS FrameDelay to FrameInterval, to allow for setting time
+  between frames and thus control the frame rate directly.
+- new hardware filter options for DVS: Background Activity, Refractory
+  Period, Skip Events, Polarity Suppress/Flatten, Region of Interest (ROI)
+  and single Pixel Filtering.
+- full support for new iniVation devices: DAVIS346 Blue, DAVIS346 Red
+  and DAVIS346 Red Color.
+
+This represents a new major release version, as it breaks the API
+for DAVIS devices: the available configuration options (#defines in
+davis.h) heavily change; the struct caer_davis_info and the
+caerDavisROIConfigure() function also change incompatibly.
+Please ensure all applications targeting DAVIS are recompiled!
 
 NEW FEATURES
 - C++ EventPackets: new function getHeaderPointerForCOutput() to get
@@ -11,12 +29,12 @@ NEW FEATURES
 - CMake: support for the ccache compiler cache added.
 - CMake: install udev rules on Unix/Linux, to allow access to iniVation
   devices. Default rules chmod 0666 the devices, using -DUDEV_SELINUX=1
-  you can install a SELinux-enabled version for systems using TAG 'uaccess'.
+  installs a SELinux-enabled version for systems using TAG 'uaccess'.
 - Ubuntu Packaging: libcaer is now split in two packages: libcaer and
   libcaer-dev. It is now built using debhelper, and the static library
   version is now also installed by libcaer-dev.
 - Fedora Packaging: libcaer is now split in three packages: libacer,
-  libcaer-devel and libcaer-static. The static version is the latter.
+  libcaer-devel and libcaer-static. The static version is in the latter.
 
 BUG FIXES
 - Packaging: cmake dependency bumped to 2.8.12 in Ubuntu/Fedora packages.
