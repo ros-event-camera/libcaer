@@ -786,6 +786,26 @@ extern "C" {
 #define DAVIS_CONFIG_APS_AUTOEXPOSURE 101
 
 /**
+ * List of supported APS frame modes.
+ */
+enum caer_davis_aps_frame_modes {
+	APS_FRAME_DEFAULT   = 0,
+	APS_FRAME_GRAYSCALE = 1,
+	APS_FRAME_ORIGINAL  = 2,
+};
+
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * select desired type of frame output. Available are:
+ * 0 - Default, meaning grayscale on MONO cameras and RGB color on
+ *     cameras with color filters.
+ * 1 - Grayscale, always a grayscale intensity frame.
+ * 2 - Original, send the frame exactly as it comes in from the
+ *     device (will show grid pattern on color cameras).
+ */
+#define DAVIS_CONFIG_APS_FRAME_MODE 102
+
+/**
  * List of supported IMU models.
  */
 enum caer_davis_imu_types {

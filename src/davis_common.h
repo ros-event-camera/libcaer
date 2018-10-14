@@ -30,7 +30,6 @@
 #define APS_READOUT_SIGNAL 1
 
 #define APS_ADC_DEPTH 10
-#define APS_ADC_CHANNELS 1
 
 #define DVS_HOTPIXEL_HW_MAX 8
 
@@ -2134,7 +2133,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 	}
 
 	state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID), 0,
-		handle->info.apsSizeX, handle->info.apsSizeY, APS_ADC_CHANNELS);
+		handle->info.apsSizeX, handle->info.apsSizeY, (handle->info.apsColorFilter == MONO) ? (GRAYSCALE) : (RGB));
 	if (state->currentPackets.frame == NULL) {
 		freeAllDataMemory(state);
 
@@ -2150,8 +2149,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 		return (false);
 	}
 
-	state->aps.frame.pixels
-		= calloc((size_t)(state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS), sizeof(uint16_t));
+	state->aps.frame.pixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
 	if (state->aps.frame.pixels == NULL) {
 		freeAllDataMemory(state);
 
@@ -2160,8 +2158,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 	}
 
 #if APS_DEBUG_FRAME == 1
-	state->aps.frame.resetPixels
-		= calloc((size_t)(state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS), sizeof(uint16_t));
+	state->aps.frame.resetPixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
 	if (state->aps.frame.resetPixels == NULL) {
 		freeAllDataMemory(state);
 
@@ -2169,8 +2166,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 		return (false);
 	}
 
-	state->aps.frame.signalPixels
-		= calloc((size_t)(state->aps.sizeX * state->aps.sizeY * APS_ADC_CHANNELS), sizeof(uint16_t));
+	state->aps.frame.signalPixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
 	if (state->aps.frame.signalPixels == NULL) {
 		freeAllDataMemory(state);
 
@@ -2244,9 +2240,9 @@ static void davisCommonEventTranslator(
 		}
 
 		if (state->currentPackets.frame == NULL) {
-			state->currentPackets.frame
-				= caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE, I16T(handle->info.deviceID),
-					state->timestamps.wrapOverflow, handle->info.apsSizeX, handle->info.apsSizeY, APS_ADC_CHANNELS);
+			state->currentPackets.frame = caerFrameEventPacketAllocate(DAVIS_FRAME_DEFAULT_SIZE,
+				I16T(handle->info.deviceID), state->timestamps.wrapOverflow, handle->info.apsSizeX,
+				handle->info.apsSizeY, (handle->info.apsColorFilter == MONO) ? (GRAYSCALE) : (RGB));
 			if (state->currentPackets.frame == NULL) {
 				davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate frame event packet.");
 				return;
@@ -2458,7 +2454,7 @@ static void davisCommonEventTranslator(
 									caerFrameEventSetPositionX(frameEvent, state->aps.roi.positionX);
 									caerFrameEventSetPositionY(frameEvent, state->aps.roi.positionY);
 									caerFrameEventSetLengthXLengthYChannelNumber(frameEvent, state->aps.roi.sizeX,
-										state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+										state->aps.roi.sizeY, GRAYSCALE, state->currentPackets.frame);
 									caerFrameEventValidate(frameEvent, state->currentPackets.frame);
 
 									// Copy pixels over.
@@ -2515,7 +2511,7 @@ static void davisCommonEventTranslator(
 									caerFrameEventSetPositionX(resetFrameEvent, state->aps.roi.positionX);
 									caerFrameEventSetPositionY(resetFrameEvent, state->aps.roi.positionY);
 									caerFrameEventSetLengthXLengthYChannelNumber(resetFrameEvent, state->aps.roi.sizeX,
-										state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+										state->aps.roi.sizeY, GRAYSCALE, state->currentPackets.frame);
 									caerFrameEventValidate(resetFrameEvent, state->currentPackets.frame);
 
 									// Copy pixels over.
@@ -2538,7 +2534,7 @@ static void davisCommonEventTranslator(
 									caerFrameEventSetPositionX(signalFrameEvent, state->aps.roi.positionX);
 									caerFrameEventSetPositionY(signalFrameEvent, state->aps.roi.positionY);
 									caerFrameEventSetLengthXLengthYChannelNumber(signalFrameEvent, state->aps.roi.sizeX,
-										state->aps.roi.sizeY, APS_ADC_CHANNELS, state->currentPackets.frame);
+										state->aps.roi.sizeY, GRAYSCALE, state->currentPackets.frame);
 									caerFrameEventValidate(signalFrameEvent, state->currentPackets.frame);
 
 									// Copy pixels over.
