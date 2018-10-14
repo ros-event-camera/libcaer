@@ -385,7 +385,7 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 		state->aps.frame.pixels[pixelPosition] = htole16(U16T(pixelValue));
 	}
 
-	// RGB support: first 320 pixels are even, then odd.
+	// DAVIS640H support: first 320 pixels are even, then odd.
 	if (IS_DAVIS640H(handle->info.chipID)) {
 		if (state->aps.cDavisSupport.offsetDirection == 0) { // Increasing
 			state->aps.cDavisSupport.offset++;
@@ -1222,7 +1222,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS640H_CONFIG_APS_GSRESETFALL:
 				case DAVIS640H_CONFIG_APS_GSTXFALL:
 				case DAVIS640H_CONFIG_APS_GSFDRESET:
-					// Support for DAVISRGB extra timing parameters.
+					// Support for DAVIS640H extra timing parameters.
 					if (IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
@@ -1404,7 +1404,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					}
 				}
 				else if (IS_DAVIS640H(handle->info.chipID)) {
-					// DAVISRGB also uses the 37 branches bias generator, with different values.
+					// DAVIS640H also uses the 37 branches bias generator, with different values.
 					switch (paramAddr) {
 						case DAVIS640H_CONFIG_BIAS_APSCAS:
 						case DAVIS640H_CONFIG_BIAS_OVG1LO:
@@ -1509,7 +1509,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
 					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
 					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
-						// Only supported by DAVIS208 and DAVISRGB.
+						// Only supported by DAVIS208 and DAVIS640H.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
@@ -1776,7 +1776,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS640H_CONFIG_APS_GSRESETFALL:
 				case DAVIS640H_CONFIG_APS_GSTXFALL:
 				case DAVIS640H_CONFIG_APS_GSFDRESET:
-					// Support for DAVISRGB extra timing parameters.
+					// Support for DAVIS640H extra timing parameters.
 					if (IS_DAVIS640H(handle->info.chipID)) {
 						return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
 					}
@@ -1958,7 +1958,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					}
 				}
 				else if (IS_DAVIS640H(handle->info.chipID)) {
-					// DAVISRGB also uses the 37 branches bias generator, with different values.
+					// DAVIS640H also uses the 37 branches bias generator, with different values.
 					switch (paramAddr) {
 						case DAVIS640H_CONFIG_BIAS_APSCAS:
 						case DAVIS640H_CONFIG_BIAS_OVG1LO:
@@ -2057,7 +2057,7 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG1LO:    // Also DAVIS208_CONFIG_CHIP_SELECTPREAMPAVG.
 					case DAVIS640H_CONFIG_CHIP_ADJUSTOVG2LO:    // Also DAVIS208_CONFIG_CHIP_SELECTBIASREFSS.
 					case DAVIS640H_CONFIG_CHIP_ADJUSTTX2OVG2HI: // Also DAVIS208_CONFIG_CHIP_SELECTSENSE.
-						// Only supported by DAVIS208 and DAVISRGB.
+						// Only supported by DAVIS208 and DAVIS640H.
 						if (IS_DAVIS208(handle->info.chipID) || IS_DAVIS640H(handle->info.chipID)) {
 							return (spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_CHIP, paramAddr, param));
 						}
