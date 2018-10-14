@@ -2770,6 +2770,7 @@ static void davisCommonEventTranslator(
 							if (state->imu.ignoreEvents) {
 								break;
 							}
+							davisLog(CAER_LOG_DEBUG, handle, "IMU Data event (%" PRIu8 ") received.", misc8Data);
 
 							// IMU data event.
 							switch (state->imu.count) {
