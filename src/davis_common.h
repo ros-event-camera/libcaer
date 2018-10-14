@@ -290,7 +290,9 @@ static inline void apsInitFrame(davisCommonHandle handle) {
 	}
 }
 
-static inline void apsROIUpdateSizes(davisCommonState state) {
+static inline void apsROIUpdateSizes(davisCommonHandle handle) {
+	davisCommonState state = &handle->state;
+
 	// Calculate APS ROI sizes.
 	uint16_t startColumn = state->aps.roi.positionX;
 	uint16_t startRow    = state->aps.roi.positionY;
@@ -301,6 +303,23 @@ static inline void apsROIUpdateSizes(davisCommonState state) {
 	// it here. We only have to calculate size from start and end Col/Row.
 	state->aps.roi.sizeX = U16T(endColumn + 1 - startColumn);
 	state->aps.roi.sizeY = U16T(endRow + 1 - startRow);
+
+	// Sanity check.
+	if ((state->aps.roi.positionX >= handle->info.apsSizeX) || (state->aps.roi.sizeX > handle->info.apsSizeX)) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI X sizes incorrect - PosX: %d, SizeX: %d.", state->aps.roi.positionX,
+			state->aps.roi.sizeX);
+
+		state->aps.roi.positionX = 0;
+		state->aps.roi.sizeX     = U16T(handle->info.apsSizeX);
+	}
+
+	if ((state->aps.roi.positionY >= handle->info.apsSizeY) || (state->aps.roi.sizeY > handle->info.apsSizeY)) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI Y sizes incorrect - PosY: %d, SizeY: %d.", state->aps.roi.positionY,
+			state->aps.roi.sizeY);
+
+		state->aps.roi.positionY = 0;
+		state->aps.roi.sizeY     = U16T(handle->info.apsSizeY);
+	}
 
 	if (state->aps.invertXY) {
 		state->aps.expectedCountX = state->aps.roi.sizeY;
@@ -2904,7 +2923,7 @@ static void davisCommonEventTranslator(
 									state->aps.roi.sizeY = U16T(state->aps.roi.tmpData | misc8Data);
 
 									// Got all sizes, now compute correct window.
-									apsROIUpdateSizes(state);
+									apsROIUpdateSizes(handle);
 									break;
 
 								default:
