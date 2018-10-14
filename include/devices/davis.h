@@ -786,6 +786,35 @@ extern "C" {
 #define DAVIS_CONFIG_APS_AUTOEXPOSURE 101
 
 /**
+ * List of supported IMU models.
+ */
+enum caer_davis_imu_types {
+	IMU_NONE                 = 0,
+	IMU_INVENSENSE_6050_6150 = 1,
+	IMU_INVENSENSE_9250      = 2,
+};
+
+/**
+ * List of accelerometer scale settings for InvenSense IMUs.
+ */
+enum caer_davis_imu_invensense_accel_scale {
+	ACCEL_2G  = 0,
+	ACCEL_4G  = 1,
+	ACCEL_8G  = 2,
+	ACCEL_16G = 3,
+};
+
+/**
+ * List of gyroscope scale settings for InvenSense IMUs.
+ */
+enum caer_davis_imu_invensense_gyro_scale {
+	GYRO_250DPS  = 0,
+	GYRO_500DPS  = 1,
+	GYRO_1000DPS = 2,
+	GYRO_2000DPS = 3,
+};
+
+/**
  * Parameter address for module DAVIS_CONFIG_IMU:
  * read-only parameter, contains information on the type of IMU
  * chip being used in this device:
@@ -1562,8 +1591,8 @@ struct caer_davis_info {
 	enum caer_frame_event_color_filter apsColorFilter;
 	/// Feature test: APS supports Global Shutter.
 	bool apsHasGlobalShutter;
-	/// IMU chip type on device: 0 - no IMU, 1 - InvenSense MPU 6050/6150, 2 - InvenSense MPU 9250.
-	uint8_t imuType;
+	/// IMU chip type on device.
+	enum caer_davis_imu_types imuType;
 	/// Feature test: External Input module supports Signal-Generation.
 	bool extInputHasGenerator;
 };
