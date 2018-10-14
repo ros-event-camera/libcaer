@@ -55,8 +55,8 @@ struct davis_common_state {
 	struct {
 		// DVS specific fields
 		uint16_t lastY;
-		int16_t sizeX;
-		int16_t sizeY;
+		uint16_t sizeX;
+		uint16_t sizeY;
 		bool invertXY;
 		struct {
 			atomic_bool autoTrainRunning;
@@ -65,8 +65,8 @@ struct davis_common_state {
 	} dvs;
 	struct {
 		// APS specific fields
-		int16_t sizeX;
-		int16_t sizeY;
+		uint16_t sizeX;
+		uint16_t sizeY;
 		bool invertXY;
 		bool flipX;
 		bool flipY;
@@ -532,9 +532,9 @@ static void davisCommonInit(davisCommonHandle handle) {
 	handle->info.muxHasStatistics = param32;
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
-	state->dvs.sizeX = I16T(param32);
+	state->dvs.sizeX = U16T(param32);
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
-	state->dvs.sizeY = I16T(param32);
+	state->dvs.sizeY = U16T(param32);
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
 	state->dvs.invertXY = param32 & 0x04;
@@ -543,18 +543,18 @@ static void davisCommonInit(davisCommonHandle handle) {
 		state->dvs.invertXY);
 
 	if (state->dvs.invertXY) {
-		handle->info.dvsSizeX = state->dvs.sizeY;
-		handle->info.dvsSizeY = state->dvs.sizeX;
+		handle->info.dvsSizeX = I16T(state->dvs.sizeY);
+		handle->info.dvsSizeY = I16T(state->dvs.sizeX);
 	}
 	else {
-		handle->info.dvsSizeX = state->dvs.sizeX;
-		handle->info.dvsSizeY = state->dvs.sizeY;
+		handle->info.dvsSizeX = I16T(state->dvs.sizeX);
+		handle->info.dvsSizeY = I16T(state->dvs.sizeY);
 	}
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
-	state->aps.sizeX = I16T(param32);
+	state->aps.sizeX = U16T(param32);
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
-	state->aps.sizeY = I16T(param32);
+	state->aps.sizeY = U16T(param32);
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
 	state->aps.invertXY = param32 & 0x04;
@@ -565,12 +565,12 @@ static void davisCommonInit(davisCommonHandle handle) {
 		state->aps.sizeX, state->aps.sizeY, state->aps.invertXY, state->aps.flipX, state->aps.flipY);
 
 	if (state->aps.invertXY) {
-		handle->info.apsSizeX = state->aps.sizeY;
-		handle->info.apsSizeY = state->aps.sizeX;
+		handle->info.apsSizeX = I16T(state->aps.sizeY);
+		handle->info.apsSizeY = I16T(state->aps.sizeX);
 	}
 	else {
-		handle->info.apsSizeX = state->aps.sizeX;
-		handle->info.apsSizeY = state->aps.sizeY;
+		handle->info.apsSizeX = I16T(state->aps.sizeX);
+		handle->info.apsSizeY = I16T(state->aps.sizeY);
 	}
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_TYPE, &param32);
