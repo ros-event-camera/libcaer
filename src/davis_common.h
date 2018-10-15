@@ -305,20 +305,28 @@ static inline void apsROIUpdateSizes(davisCommonHandle handle) {
 	state->aps.roi.sizeY = U16T(endRow + 1 - startRow);
 
 	// Sanity check.
-	if ((state->aps.roi.positionX >= handle->info.apsSizeX) || (state->aps.roi.sizeX > handle->info.apsSizeX)) {
-		davisLog(CAER_LOG_ALERT, handle, "ROI X sizes incorrect - PosX: %d, SizeX: %d.", state->aps.roi.positionX,
-			state->aps.roi.sizeX);
+	if ((state->aps.roi.sizeX == 0) || (state->aps.roi.sizeX > handle->info.apsSizeX)) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI X size incorrect - SizeX: %d.", state->aps.roi.sizeX);
 
-		state->aps.roi.positionX = 0;
-		state->aps.roi.sizeX     = U16T(handle->info.apsSizeX);
+		state->aps.roi.sizeX = U16T(handle->info.apsSizeX);
 	}
 
-	if ((state->aps.roi.positionY >= handle->info.apsSizeY) || (state->aps.roi.sizeY > handle->info.apsSizeY)) {
-		davisLog(CAER_LOG_ALERT, handle, "ROI Y sizes incorrect - PosY: %d, SizeY: %d.", state->aps.roi.positionY,
-			state->aps.roi.sizeY);
+	if ((state->aps.roi.sizeY == 0) || (state->aps.roi.sizeY > handle->info.apsSizeY)) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI Y size incorrect - SizeY: %d.", state->aps.roi.sizeY);
+
+		state->aps.roi.sizeY = U16T(handle->info.apsSizeY);
+	}
+
+	if ((state->aps.roi.positionX + state->aps.roi.sizeX) > handle->info.apsSizeX) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI X position incorrect - PosX: %d.", state->aps.roi.positionX);
+
+		state->aps.roi.positionX = 0;
+	}
+
+	if ((state->aps.roi.positionY + state->aps.roi.sizeY) > handle->info.apsSizeY) {
+		davisLog(CAER_LOG_ALERT, handle, "ROI Y position incorrect - PosY: %d.", state->aps.roi.positionY);
 
 		state->aps.roi.positionY = 0;
-		state->aps.roi.sizeY     = U16T(handle->info.apsSizeY);
 	}
 
 	if (state->aps.invertXY) {
