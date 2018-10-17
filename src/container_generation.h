@@ -2,7 +2,9 @@
 #define LIBCAER_SRC_CONTAINER_GENERATION_H_
 
 #include "libcaer.h"
+
 #include "events/special.h"
+
 #include "data_exchange.h"
 #include "timestamps.h"
 
@@ -97,7 +99,8 @@ static inline void containerGenerationExecute(containerGeneration state, bool em
 			// Failed to forward packet container, just drop it, it doesn't contain
 			// any critical information anyway.
 			commonLog(CAER_LOG_NOTICE, deviceString, deviceLogLevel,
-				"Dropped EventPacket Container because ring-buffer full!");
+				"Dropped EventPacket Container because ring-buffer full! This means your processing loop is not "
+				"keeping up with new data ready to be read from caerDeviceDataGet().");
 
 			caerEventPacketContainerFree(state->currentPacketContainer);
 		}
