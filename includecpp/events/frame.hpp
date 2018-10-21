@@ -384,6 +384,25 @@ public:
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
+	FrameEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxNumPixels,
+		int16_t maxChannelNumber) {
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
+
+		if (maxNumPixels <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of pixels not allowed.");
+		}
+		if (maxChannelNumber <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of channels not allowed.");
+		}
+
+		caerFrameEventPacket packet = caerFrameEventPacketAllocateNumPixels(
+			eventCapacity, eventSource, tsOverflow, maxNumPixels, maxChannelNumber);
+		constructorCheckNullptr(packet);
+
+		header        = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
+	}
+
 	FrameEventPacket(caerFrameEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
@@ -439,12 +458,26 @@ public:
 	};
 
 	std::unique_ptr<FrameEventPacket> demosaic(demosaicTypes demosaicType) const {
-		std::unique_ptr<FrameEventPacket> outPacket(new FrameEventPacket(*this));
+		std::unique_ptr<FrameEventPacket> outPacket(new FrameEventPacket(
+			this->capacity(), this->getEventSource(), this->getEventTSOverflow(), this->getEventSize(), RGB));
 
-		for (auto &frame : *outPacket) {
-			caerFrameUtilsDemosaic(&frame, &frame,
+		size_t idx = 0;
+		for (auto &frame : *this) {
+			// Copy header over.
+			memcpy(&((*outPacket)[idx]), &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+
+			// Set channels to RGB and validate frame.
+			(*outPacket)[idx].setLengthXLengthYChannelNumber(
+				frame.getLengthX(), frame.getLengthY(), libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+
+			(*outPacket)[idx].validate(*outPacket);
+
+			// Do interpolation.
+			caerFrameUtilsDemosaic(&frame, &((*outPacket)[idx]),
 				static_cast<enum caer_frame_utils_demosaic_types>(
 					static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+
+			idx++;
 		}
 
 		return (outPacket);
