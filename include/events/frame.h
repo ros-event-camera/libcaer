@@ -136,6 +136,39 @@ typedef struct caer_frame_event_packet *caerFrameEventPacket;
 typedef const struct caer_frame_event_packet *caerFrameEventPacketConst;
 
 /**
+ * Allocate a new frame events packet, passing the total number of maximum
+ * pixels instead of the maximum X/Y dimensions expected.
+ * Use free() to reclaim this memory.
+ * The frame events allocate memory for a maximum sized pixels array, depending
+ * on the parameters passed to this function, so that every event occupies the
+ * same amount of memory (constant size). The actual frames inside of it
+ * might be smaller than that, for example when using ROI, and their actual size
+ * is stored inside the frame event and should always be queried from there.
+ * The unused part of a pixels array is guaranteed to be zeros.
+ *
+ * @param eventCapacity the maximum number of events this packet will hold.
+ * @param eventSource the unique ID representing the source/generator of this packet.
+ * @param tsOverflow the current timestamp overflow counter value for this packet.
+ * @param maxNumPixels the maximum number of pixels that can be held by a frame event.
+ * @param maxChannelNumber the maximum expected number of channels for frames in this packet.
+ *
+ * @return a valid FrameEventPacket handle or NULL on error.
+ */
+static inline caerFrameEventPacket caerFrameEventPacketAllocateNumPixels(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxNumPixels, int16_t maxChannelNumber) {
+	if ((maxNumPixels <= 0) || (maxChannelNumber <= 0)) {
+		return (NULL);
+	}
+
+	size_t pixelSize = sizeof(uint16_t) * (size_t) maxNumPixels * (size_t) maxChannelNumber;
+	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
+	size_t eventSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t)) + pixelSize;
+
+	return ((caerFrameEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, FRAME_EVENT,
+		I32T(eventSize), offsetof(struct caer_frame_event, ts_endframe)));
+}
+
+/**
  * Allocate a new frame events packet.
  * Use free() to reclaim this memory.
  * The frame events allocate memory for a maximum sized pixels array, depending
@@ -160,12 +193,8 @@ static inline caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCap
 		return (NULL);
 	}
 
-	size_t pixelSize = sizeof(uint16_t) * (size_t) maxLengthX * (size_t) maxLengthY * (size_t) maxChannelNumber;
-	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
-	size_t eventSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t)) + pixelSize;
-
-	return ((caerFrameEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, FRAME_EVENT,
-		I32T(eventSize), offsetof(struct caer_frame_event, ts_endframe)));
+	return (caerFrameEventPacketAllocateNumPixels(
+		eventCapacity, eventSource, tsOverflow, maxLengthX * maxLengthY, maxChannelNumber));
 }
 
 /**
@@ -690,9 +719,10 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
 	size_t neededMemory = (sizeof(uint16_t) * (size_t) lengthX * (size_t) lengthY * channelNumber);
 
 	if (neededMemory > caerFrameEventPacketGetPixelsSize(packet)) {
-		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetLengthXLengthYChannelNumber() with "
-													 "values that result in requiring %zu bytes, which exceeds the "
-													 "maximum allocated event size of %zu bytes.",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetLengthXLengthYChannelNumber() with "
+			"values that result in requiring %zu bytes, which exceeds the "
+			"maximum allocated event size of %zu bytes.",
 			neededMemory, (size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader));
 		return;
 	}
