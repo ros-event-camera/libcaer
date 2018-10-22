@@ -13,14 +13,14 @@ enum pixelColorEnum { PXR, PXB, PXG1, PXG2, PXW };
 
 static const enum pixelColorEnum colorKeys[9][4] = {
 	[MONO] = {PXR, PXR, PXR, PXR}, // This is impossible (MONO), so just use red pixel value, as good as any.
-	[RGBG] = {PXB, PXG1, PXG2, PXR},
-	[GRGB] = {PXG2, PXR, PXB, PXG1},
-	[GBGR] = {PXG1, PXB, PXR, PXG2},
-	[BGRG] = {PXR, PXG2, PXG1, PXB},
-	[RGBW] = {PXB, PXG1, PXW, PXR},
-	[GRWB] = {PXW, PXR, PXB, PXG1},
-	[WBGR] = {PXG1, PXB, PXR, PXW},
-	[BWRG] = {PXR, PXW, PXG1, PXB},
+	[RGBG] = {PXR, PXG2, PXG1, PXB},
+	[GRGB] = {PXG1, PXB, PXR, PXG2},
+	[GBGR] = {PXG2, PXR, PXB, PXG1},
+	[BGRG] = {PXB, PXG1, PXG2, PXR},
+	[RGBW] = {PXR, PXW, PXG1, PXB},
+	[GRWB] = {PXG1, PXB, PXR, PXW},
+	[WBGR] = {PXW, PXR, PXB, PXG1},
+	[BWRG] = {PXB, PXG1, PXW, PXR},
 };
 
 void caerFrameUtilsDemosaic(
@@ -107,7 +107,7 @@ void caerFrameUtilsDemosaic(
 			int32_t idxLEFTDOWN   = idxCENTERDOWN - 1;
 			int32_t idxRIGHTDOWN  = idxCENTERDOWN + 1;
 
-			enum pixelColorEnum pixelColor = colorKeys[colorFilter][(x & 0x01) | (y & 0x01)];
+			enum pixelColorEnum pixelColor = colorKeys[colorFilter][((x & 0x01) << 1) | (y & 0x01)];
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
