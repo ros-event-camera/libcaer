@@ -2496,7 +2496,6 @@ static void davisCommonEventTranslator(
 									caerFrameEventSetLengthXLengthYChannelNumber(state->aps.frame.currentEvent,
 										state->aps.roi.sizeX, state->aps.roi.sizeY, GRAYSCALE,
 										state->currentPackets.frame);
-									caerFrameEventValidate(state->aps.frame.currentEvent, state->currentPackets.frame);
 
 									// Automatic exposure control support.
 									if (atomic_load_explicit(&state->aps.autoExposure.enabled, memory_order_relaxed)) {
@@ -2575,6 +2574,9 @@ static void davisCommonEventTranslator(
 											caerFrameEventGetPixelArrayUnsafeConst(state->aps.frame.currentEvent),
 											caerFrameEventGetPixelsSize(state->aps.frame.currentEvent));
 									}
+
+									// Finally, validate new frame.
+									caerFrameEventValidate(frameEvent, state->currentPackets.frame);
 								}
 
 // Separate debug support.
