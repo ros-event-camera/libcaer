@@ -9,6 +9,7 @@
 #include "autoexposure.h"
 #include "container_generation.h"
 #include "data_exchange.h"
+#include "frame_utils.h"
 #include "spi_config_interface.h"
 
 #include <math.h>
@@ -78,10 +79,8 @@ struct davis_common_state {
 		uint16_t expectedCountX;
 		uint16_t expectedCountY;
 		struct {
-			int32_t tsStartFrame;
-			int32_t tsStartExposure;
-			int32_t tsEndExposure;
-			uint16_t *pixels;
+			caerFrameEvent currentEvent;
+			atomic_uint_fast8_t mode;
 #if APS_DEBUG_FRAME == 1
 			uint16_t *resetPixels;
 			uint16_t *signalPixels;
@@ -224,9 +223,9 @@ static inline void freeAllDataMemory(davisCommonState state) {
 
 	containerGenerationDestroy(&state->container);
 
-	if (state->aps.frame.pixels != NULL) {
-		free(state->aps.frame.pixels);
-		state->aps.frame.pixels = NULL;
+	if (state->aps.frame.currentEvent != NULL) {
+		free(state->aps.frame.currentEvent);
+		state->aps.frame.currentEvent = NULL;
 	}
 
 #if APS_DEBUG_FRAME == 1
@@ -276,7 +275,7 @@ static inline void apsInitFrame(davisCommonHandle handle) {
 	}
 
 	// Write out start of frame timestamp.
-	state->aps.frame.tsStartFrame = state->timestamps.current;
+	caerFrameEventSetTSStartOfFrame(state->aps.frame.currentEvent, state->timestamps.current);
 
 	// Send APS info event out (as special event).
 	if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
@@ -364,7 +363,7 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 
 	if (((state->aps.currentReadoutType == APS_READOUT_RESET) && (!isCDavisGS))
 		|| ((state->aps.currentReadoutType == APS_READOUT_SIGNAL) && isCDavisGS)) {
-		state->aps.frame.pixels[pixelPosition] = data;
+		state->aps.frame.currentEvent->pixels[pixelPosition] = data;
 	}
 	else {
 		uint16_t resetValue  = 0;
@@ -374,10 +373,10 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 			// DAVIS640H GS has inverted samples, signal read comes first
 			// and was stored above inside state->aps.currentResetFrame.
 			resetValue  = data;
-			signalValue = state->aps.frame.pixels[pixelPosition];
+			signalValue = state->aps.frame.currentEvent->pixels[pixelPosition];
 		}
 		else {
-			resetValue  = state->aps.frame.pixels[pixelPosition];
+			resetValue  = state->aps.frame.currentEvent->pixels[pixelPosition];
 			signalValue = data;
 		}
 
@@ -408,7 +407,7 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 		// Normalize the ADC value to 16bit generic depth. This depends on ADC used.
 		pixelValue = pixelValue << (16 - APS_ADC_DEPTH);
 
-		state->aps.frame.pixels[pixelPosition] = htole16(U16T(pixelValue));
+		state->aps.frame.currentEvent->pixels[pixelPosition] = htole16(U16T(pixelValue));
 	}
 
 	// DAVIS640H support: first 320 pixels are even, then odd.
@@ -437,12 +436,12 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 
 	// Reset read, put into resetPixels here.
 	if (state->aps.currentReadoutType == APS_READOUT_RESET) {
-		state->aps.frame.resetPixels[pixelPosition] = data;
+		state->aps.frame.resetPixels[pixelPosition] = htole16(data);
 	}
 
 	// Signal read, put into pixels here.
 	if (state->aps.currentReadoutType == APS_READOUT_SIGNAL) {
-		state->aps.frame.signalPixels[pixelPosition] = data;
+		state->aps.frame.signalPixels[pixelPosition] = htole16(data);
 	}
 
 	davisLog(CAER_LOG_DEBUG, handle,
@@ -466,6 +465,9 @@ static inline bool apsEndFrame(davisCommonHandle handle) {
 			validFrame = false;
 		}
 	}
+
+	// Write out end of frame timestamp.
+	caerFrameEventSetTSEndOfFrame(state->aps.frame.currentEvent, state->timestamps.current);
 
 	// Send APS info event out (as special event).
 	if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
@@ -687,6 +689,7 @@ static bool davisCommonSendDefaultFPGAConfig(davisCommonHandle handle) {
 	davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_COLUMN_0, U32T(handle->info.apsSizeX - 1));
 	davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_END_ROW_0, U32T(handle->info.apsSizeY - 1));
 	davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
+	davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_FRAME_MODE, APS_FRAME_DEFAULT);
 	davisCommonConfigSet(
 		handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4000); // in µs, converted to cycles @ ADCClock later
 	davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_FRAME_INTERVAL,
@@ -1280,6 +1283,10 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					atomic_store(&state->aps.autoExposure.enabled, param);
 					break;
 
+				case DAVIS_CONFIG_APS_FRAME_MODE:
+					atomic_store(&state->aps.frame.mode, param);
+					break;
+
 				default:
 					return (false);
 					break;
@@ -1820,6 +1827,10 @@ static bool davisCommonConfigGet(davisCommonHandle handle, int8_t modAddr, uint8
 					*param = atomic_load(&state->aps.autoExposure.enabled);
 					break;
 
+				case DAVIS_CONFIG_APS_FRAME_MODE:
+					*param = atomic_load(&state->aps.frame.mode);
+					break;
+
 				default:
 					return (false);
 					break;
@@ -2176,13 +2187,21 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 		return (false);
 	}
 
-	state->aps.frame.pixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
-	if (state->aps.frame.pixels == NULL) {
+	size_t pixelsSize = sizeof(uint16_t) * (size_t) state->aps.sizeX * (size_t) state->aps.sizeY;
+	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
+	size_t frameSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t)) + pixelsSize;
+
+	state->aps.frame.currentEvent = calloc(1, frameSize);
+	if (state->aps.frame.currentEvent == NULL) {
 		freeAllDataMemory(state);
 
-		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS pixels memory.");
+		davisLog(CAER_LOG_CRITICAL, handle, "Failed to allocate APS current event memory.");
 		return (false);
 	}
+
+	// Initialize constant frame data.
+	caerFrameEventSetColorFilter(state->aps.frame.currentEvent, handle->info.apsColorFilter);
+	caerFrameEventSetROIIdentifier(state->aps.frame.currentEvent, 0);
 
 #if APS_DEBUG_FRAME == 1
 	state->aps.frame.resetPixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
@@ -2471,22 +2490,12 @@ static void davisCommonEventTranslator(
 										state->currentPackets.frame, state->currentPackets.framePosition);
 									state->currentPackets.framePosition++;
 
-									// Setup new frame.
-									caerFrameEventSetColorFilter(frameEvent, handle->info.apsColorFilter);
-									caerFrameEventSetROIIdentifier(frameEvent, 0);
-									caerFrameEventSetTSStartOfFrame(frameEvent, state->aps.frame.tsStartFrame);
-									caerFrameEventSetTSStartOfExposure(frameEvent, state->aps.frame.tsStartExposure);
-									caerFrameEventSetTSEndOfExposure(frameEvent, state->aps.frame.tsEndExposure);
-									caerFrameEventSetTSEndOfFrame(frameEvent, state->timestamps.current);
-									caerFrameEventSetPositionX(frameEvent, state->aps.roi.positionX);
-									caerFrameEventSetPositionY(frameEvent, state->aps.roi.positionY);
-									caerFrameEventSetLengthXLengthYChannelNumber(frameEvent, state->aps.roi.sizeX,
-										state->aps.roi.sizeY, GRAYSCALE, state->currentPackets.frame);
-									caerFrameEventValidate(frameEvent, state->currentPackets.frame);
-
-									// Copy pixels over.
-									memcpy(caerFrameEventGetPixelArrayUnsafe(frameEvent), state->aps.frame.pixels,
-										caerFrameEventGetPixelsSize(frameEvent));
+									// Finalize frame setup.
+									caerFrameEventSetPositionX(state->aps.frame.currentEvent, state->aps.roi.positionX);
+									caerFrameEventSetPositionY(state->aps.frame.currentEvent, state->aps.roi.positionY);
+									caerFrameEventSetLengthXLengthYChannelNumber(state->aps.frame.currentEvent,
+										state->aps.roi.sizeX, state->aps.roi.sizeY, GRAYSCALE,
+										state->currentPackets.frame);
 
 									// Automatic exposure control support.
 									if (atomic_load_explicit(&state->aps.autoExposure.enabled, memory_order_relaxed)) {
@@ -2495,7 +2504,8 @@ static void davisCommonEventTranslator(
 													 / state->deviceClocks.adcClockActual);
 
 										int32_t newExposureValue = autoExposureCalculate(&state->aps.autoExposure.state,
-											frameEvent, U32T(exposureFrameCC), state->aps.autoExposure.lastSetExposure,
+											state->aps.frame.currentEvent, U32T(exposureFrameCC),
+											state->aps.autoExposure.lastSetExposure,
 											atomic_load_explicit(&state->deviceLogLevel, memory_order_relaxed),
 											handle->info.deviceString);
 
@@ -2515,6 +2525,58 @@ static void davisCommonEventTranslator(
 												DAVIS_CONFIG_APS_EXPOSURE, U32T(newExposureCC), NULL, NULL);
 										}
 									}
+
+									// Copy header over.
+									memcpy(frameEvent, state->aps.frame.currentEvent,
+										(sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+
+									if (handle->info.apsColorFilter != MONO) {
+										// Color camera. Frame mode decides what to return.
+										enum caer_davis_aps_frame_modes frameMode
+											= atomic_load_explicit(&state->aps.frame.mode, memory_order_relaxed);
+
+										if (frameMode == APS_FRAME_DEFAULT) {
+											// Default for color sensor means a color image.
+											// Set destination to RGB and do interpolation.
+											caerFrameEventSetLengthXLengthYChannelNumber(frameEvent,
+												state->aps.roi.sizeX, state->aps.roi.sizeY, RGB,
+												state->currentPackets.frame);
+
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+											caerFrameUtilsDemosaic(
+												state->aps.frame.currentEvent, frameEvent, DEMOSAIC_OPENCV_STANDARD);
+#else
+											caerFrameUtilsDemosaic(
+												state->aps.frame.currentEvent, frameEvent, DEMOSAIC_STANDARD);
+#endif
+										}
+										else if (frameMode == APS_FRAME_GRAYSCALE) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+											caerFrameUtilsDemosaic(
+												state->aps.frame.currentEvent, frameEvent, DEMOSAIC_OPENCV_TO_GRAY);
+#else
+											caerFrameUtilsDemosaic(
+												state->aps.frame.currentEvent, frameEvent, DEMOSAIC_TO_GRAY);
+#endif
+										}
+										else {
+											// APS_FRAME_ORIGINAL, just copy pixels.
+											memcpy(caerFrameEventGetPixelArrayUnsafe(frameEvent),
+												caerFrameEventGetPixelArrayUnsafeConst(state->aps.frame.currentEvent),
+												caerFrameEventGetPixelsSize(state->aps.frame.currentEvent));
+										}
+									}
+									else {
+										// Grayscale camera. All modes are equal here
+										// Header is already grayscale and fully setup.
+										// Always copy the pixels over and that's it.
+										memcpy(caerFrameEventGetPixelArrayUnsafe(frameEvent),
+											caerFrameEventGetPixelArrayUnsafeConst(state->aps.frame.currentEvent),
+											caerFrameEventGetPixelsSize(state->aps.frame.currentEvent));
+									}
+
+									// Finally, validate new frame.
+									caerFrameEventValidate(frameEvent, state->currentPackets.frame);
 								}
 
 // Separate debug support.
@@ -2530,11 +2592,14 @@ static void davisCommonEventTranslator(
 									// Setup new frame.
 									caerFrameEventSetColorFilter(resetFrameEvent, handle->info.apsColorFilter);
 									caerFrameEventSetROIIdentifier(resetFrameEvent, 1);
-									caerFrameEventSetTSStartOfFrame(resetFrameEvent, state->aps.frame.tsStartFrame);
-									caerFrameEventSetTSStartOfExposure(
-										resetFrameEvent, state->aps.frame.tsStartExposure);
-									caerFrameEventSetTSEndOfExposure(resetFrameEvent, state->aps.frame.tsEndExposure);
-									caerFrameEventSetTSEndOfFrame(resetFrameEvent, state->timestamps.current);
+									caerFrameEventSetTSStartOfFrame(resetFrameEvent,
+										caerFrameEventGetTSStartOfFrame(state->aps.frame.currentEvent));
+									caerFrameEventSetTSStartOfExposure(resetFrameEvent,
+										caerFrameEventGetTSStartOfExposure(state->aps.frame.currentEvent));
+									caerFrameEventSetTSEndOfExposure(resetFrameEvent,
+										caerFrameEventGetTSEndOfExposure(state->aps.frame.currentEvent));
+									caerFrameEventSetTSEndOfFrame(
+										resetFrameEvent, caerFrameEventGetTSEndOfFrame(state->aps.frame.currentEvent));
 									caerFrameEventSetPositionX(resetFrameEvent, state->aps.roi.positionX);
 									caerFrameEventSetPositionY(resetFrameEvent, state->aps.roi.positionY);
 									caerFrameEventSetLengthXLengthYChannelNumber(resetFrameEvent, state->aps.roi.sizeX,
@@ -2553,11 +2618,14 @@ static void davisCommonEventTranslator(
 									// Setup new frame.
 									caerFrameEventSetColorFilter(signalFrameEvent, handle->info.apsColorFilter);
 									caerFrameEventSetROIIdentifier(signalFrameEvent, 2);
-									caerFrameEventSetTSStartOfFrame(signalFrameEvent, state->aps.frame.tsStartFrame);
-									caerFrameEventSetTSStartOfExposure(
-										signalFrameEvent, state->aps.frame.tsStartExposure);
-									caerFrameEventSetTSEndOfExposure(signalFrameEvent, state->aps.frame.tsEndExposure);
-									caerFrameEventSetTSEndOfFrame(signalFrameEvent, state->timestamps.current);
+									caerFrameEventSetTSStartOfFrame(resetFrameEvent,
+										caerFrameEventGetTSStartOfFrame(state->aps.frame.currentEvent));
+									caerFrameEventSetTSStartOfExposure(resetFrameEvent,
+										caerFrameEventGetTSStartOfExposure(state->aps.frame.currentEvent));
+									caerFrameEventSetTSEndOfExposure(resetFrameEvent,
+										caerFrameEventGetTSEndOfExposure(state->aps.frame.currentEvent));
+									caerFrameEventSetTSEndOfFrame(
+										resetFrameEvent, caerFrameEventGetTSEndOfFrame(state->aps.frame.currentEvent));
 									caerFrameEventSetPositionX(signalFrameEvent, state->aps.roi.positionX);
 									caerFrameEventSetPositionY(signalFrameEvent, state->aps.roi.positionY);
 									caerFrameEventSetLengthXLengthYChannelNumber(signalFrameEvent, state->aps.roi.sizeX,
@@ -2633,7 +2701,8 @@ static void davisCommonEventTranslator(
 							}
 							davisLog(CAER_LOG_DEBUG, handle, "APS Exposure Start event received.");
 
-							state->aps.frame.tsStartExposure = state->timestamps.current;
+							caerFrameEventSetTSStartOfExposure(
+								state->aps.frame.currentEvent, state->timestamps.current);
 
 							// Send APS info event out (as special event).
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
@@ -2655,7 +2724,7 @@ static void davisCommonEventTranslator(
 							}
 							davisLog(CAER_LOG_DEBUG, handle, "APS Exposure End event received.");
 
-							state->aps.frame.tsEndExposure = state->timestamps.current;
+							caerFrameEventSetTSEndOfExposure(state->aps.frame.currentEvent, state->timestamps.current);
 
 							// Send APS info event out (as special event).
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,

@@ -18,10 +18,12 @@ extern "C" {
 
 enum caer_frame_utils_demosaic_types {
 	DEMOSAIC_STANDARD = 0,
+	DEMOSAIC_TO_GRAY  = 1,
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-	DEMOSAIC_OPENCV_NORMAL     = 1,
-	DEMOSAIC_OPENCV_EDGE_AWARE = 2,
-// DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
+	DEMOSAIC_OPENCV_STANDARD   = 2,
+	DEMOSAIC_OPENCV_EDGE_AWARE = 3,
+	DEMOSAIC_OPENCV_TO_GRAY    = 4,
+// DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images.
 #endif
 };
 
@@ -34,9 +36,10 @@ enum caer_frame_utils_contrast_types {
 #endif
 };
 
-caerFrameEventPacket caerFrameUtilsDemosaic(
-	caerFrameEventPacketConst framePacket, enum caer_frame_utils_demosaic_types demosaicType);
-void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
+void caerFrameUtilsDemosaic(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_demosaic_types demosaicType);
+void caerFrameUtilsContrast(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_contrast_types contrastType);
 
 #ifdef __cplusplus
 }

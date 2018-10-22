@@ -2,7 +2,9 @@
 #define LIBCAER_EVENTS_FRAME_HPP_
 
 #include <libcaer/events/frame.h>
+
 #include "common.hpp"
+
 #include <libcaer/frame_utils.h>
 
 // Separate define for getOpenCVMat() from main LIBCAER_HAVE_OPENCV,
@@ -11,13 +13,13 @@
 // which case you need to have OpenCV installed for the application
 // using this only, not necessarily for libcaer.
 #ifndef LIBCAER_FRAMECPP_OPENCV_INSTALLED
-#define LIBCAER_FRAMECPP_OPENCV_INSTALLED LIBCAER_HAVE_OPENCV
+#	define LIBCAER_FRAMECPP_OPENCV_INSTALLED LIBCAER_HAVE_OPENCV
 #endif
 
 #if defined(LIBCAER_FRAMECPP_OPENCV_INSTALLED) && LIBCAER_FRAMECPP_OPENCV_INSTALLED == 1
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/utility.hpp>
+#	include <opencv2/core.hpp>
+#	include <opencv2/core/utility.hpp>
 
 #endif
 
@@ -382,6 +384,25 @@ public:
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
+	FrameEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxNumPixels,
+		int16_t maxChannelNumber) {
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
+
+		if (maxNumPixels <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of pixels not allowed.");
+		}
+		if (maxChannelNumber <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of channels not allowed.");
+		}
+
+		caerFrameEventPacket packet = caerFrameEventPacketAllocateNumPixels(
+			eventCapacity, eventSource, tsOverflow, maxNumPixels, maxChannelNumber);
+		constructorCheckNullptr(packet);
+
+		header        = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
+	}
+
 	FrameEventPacket(caerFrameEventPacket packet, bool takeMemoryOwnership = true) {
 		constructorCheckNullptr(packet);
 
@@ -428,22 +449,38 @@ public:
 
 	enum class demosaicTypes {
 		STANDARD = 0,
+		TO_GRAY  = 1,
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-		OPENCV_NORMAL     = 1,
-		OPENCV_EDGE_AWARE = 2,
-// OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
+		OPENCV_STANDARD   = 2,
+		OPENCV_EDGE_AWARE = 3,
+		OPENCV_TO_GRAY    = 4,
 #endif
 	};
 
 	std::unique_ptr<FrameEventPacket> demosaic(demosaicTypes demosaicType) const {
-		caerFrameEventPacket colorPacket = caerFrameUtilsDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
-			static_cast<enum caer_frame_utils_demosaic_types>(
-				static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
-		if (colorPacket == nullptr) {
-			throw std::runtime_error("Failed to generate a demosaiced frame event packet.");
+		std::unique_ptr<FrameEventPacket> outPacket(new FrameEventPacket(
+			this->capacity(), this->getEventSource(), this->getEventTSOverflow(), this->getEventSize(), RGB));
+
+		size_t idx = 0;
+		for (auto &frame : *this) {
+			// Copy header over.
+			memcpy(&((*outPacket)[idx]), &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+
+			// Set channels to RGB and validate frame.
+			(*outPacket)[idx].setLengthXLengthYChannelNumber(
+				frame.getLengthX(), frame.getLengthY(), libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+
+			(*outPacket)[idx].validate(*outPacket);
+
+			// Do interpolation.
+			caerFrameUtilsDemosaic(&frame, &((*outPacket)[idx]),
+				static_cast<enum caer_frame_utils_demosaic_types>(
+					static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+
+			idx++;
 		}
 
-		return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(colorPacket)));
+		return (outPacket);
 	}
 
 	enum class contrastTypes {
@@ -456,12 +493,14 @@ public:
 	};
 
 	void contrast(contrastTypes contrastType) noexcept {
-		caerFrameUtilsContrast(reinterpret_cast<caerFrameEventPacket>(header),
-			static_cast<enum caer_frame_utils_contrast_types>(
-				static_cast<typename std::underlying_type<contrastTypes>::type>(contrastType)));
+		for (auto &frame : *this) {
+			caerFrameUtilsContrast(&frame, &frame,
+				static_cast<enum caer_frame_utils_contrast_types>(
+					static_cast<typename std::underlying_type<contrastTypes>::type>(contrastType)));
+		}
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_FRAME_HPP_ */
