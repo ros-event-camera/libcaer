@@ -42,6 +42,7 @@ void caerFrameUtilsDemosaic(
 
 	const enum caer_frame_event_color_channels outputColorChannels = caerFrameEventGetChannelNumber(outputFrame);
 
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 	if ((demosaicType == DEMOSAIC_STANDARD || demosaicType == DEMOSAIC_OPENCV_STANDARD
 			|| demosaicType == DEMOSAIC_OPENCV_EDGE_AWARE)
 		&& outputColorChannels != RGB) {
@@ -53,6 +54,16 @@ void caerFrameUtilsDemosaic(
 		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to grayscale requires output frame to be GRAYSCALE.");
 		return;
 	}
+#else
+	if (demosaicType == DEMOSAIC_STANDARD && outputColorChannels != RGB) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to color requires output frame to be RGB.");
+		return;
+	}
+	else if (demosaicType == DEMOSAIC_TO_GRAY && outputColorChannels != GRAYSCALE) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to grayscale requires output frame to be GRAYSCALE.");
+		return;
+	}
+#endif
 
 	if ((caerFrameEventGetLengthX(inputFrame) != caerFrameEventGetLengthX(outputFrame))
 		|| (caerFrameEventGetLengthY(inputFrame) != caerFrameEventGetLengthY(outputFrame))) {
