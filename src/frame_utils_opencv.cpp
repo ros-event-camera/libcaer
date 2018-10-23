@@ -1,7 +1,6 @@
 #include "frame_utils.h"
 
 #include <algorithm>
-#include <array>
 #include <opencv2/core.hpp>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>
@@ -255,7 +254,7 @@ void caerFrameUtilsOpenCVContrast(
 	// So, if this is a grayscale image, good, else if its a color
 	// image we convert it to YCrCb and operate on the Y channel only.
 	cv::Mat intensity;
-	std::array<cv::Mat, 3> yCrCbPlanes;
+	cv::Mat yCrCbPlanes[3];
 	cv::Mat rgbaAlpha;
 
 	// Grayscale, no intensity extraction needed.
@@ -325,7 +324,7 @@ void caerFrameUtilsOpenCVContrast(
 	// components back together into an RGB(A) image.
 	if (output.channels() != GRAYSCALE) {
 		cv::Mat YCrCbrgb;
-		merge(yCrCbPlanes, YCrCbrgb);
+		merge(yCrCbPlanes, 3, YCrCbrgb);
 
 		CV_Assert(YCrCbrgb.type() == CV_16UC3);
 
