@@ -7,7 +7,7 @@ PKG_NAME=libcaer
 PKG_VERSION=3.0.0
 PKG_RELEASE=1
 DISTRO=bionic
-SRC_URI="https://github.com/inivation/$PKG_NAME/archive/$PKG_VERSION.tar.gz"
+SRC_URI="https://gitlab.com/inivation/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
 PPA_REPO="llongi/inivation"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)

@@ -75,10 +75,10 @@ public headers and documented there.
 
 HELP:
 
-Please use our GitHub bug tracker to report issues and bugs, or
+Please use our GitLab bug tracker to report issues and bugs, or
 our Google Groups mailing list for discussions and announcements.
 
-BUG TRACKER: https://github.com/inivation/libcaer/issues/
+BUG TRACKER: https://gitlab.com/inivation/libcaer/issues/
 MAILING LIST: https://groups.google.com/d/forum/caer-users/
 
 BUILD STATUS: https://travis-ci.org/inivation/libcaer/
