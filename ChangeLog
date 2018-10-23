@@ -1,17 +1,21 @@
-Release 3.0.0 - XX.10.2018
-IN PROGRESS
+Release 3.0.0 - 23.10.2018
 
 INCOMPATIBLE CHANGES
-Support for new logic version 16:
-- changed, slightly more efficient data encoding (IMU, APS).
-- cleaned up device configuration, removed lots of unused debug options.
-- changed APS FrameDelay to FrameInterval, to allow for setting time
-  between frames and thus control the frame rate directly.
-- new hardware filter options for DVS: Background Activity, Refractory
-  Period, Skip Events, Polarity Suppress/Flatten, Region of Interest (ROI)
-  and single Pixel Filtering.
-- full support for new iniVation devices: DAVIS346 Blue, DAVIS346 Red
-  and DAVIS346 Red Color.
+- frame_utils.h: caerFrameUtilsDemosaic() and caerFrameUtilsContrast()
+  functions have different signatures to allow for more flexibility in
+  where frames to be modified are sourced and stored. Also the type
+  enums changed to add Bayer->Gray conversion options.
+
+- davis.h: support for new logic version 16:
+ - changed, slightly more efficient data encoding (IMU, APS).
+ - cleaned up device configuration, removed lots of unused debug options.
+ - changed APS FrameDelay to FrameInterval, to allow for setting time
+   between frames and thus control the frame rate directly.
+ - new hardware filter options for DVS: Background Activity, Refractory
+   Period, Skip Events, Polarity Suppress/Flatten, Region of Interest (ROI)
+   and single Pixel Filtering.
+ - full support for new iniVation devices: DAVIS346 Blue, DAVIS346 Red
+   and DAVIS346 Red Color.
 
 This represents a new major release version, as it breaks the API
 for DAVIS devices: the available configuration options (#defines in
@@ -23,6 +27,11 @@ NEW FEATURES
 - C++ EventPackets: new function getHeaderPointerForCOutput() to get
   the underlying C EventPacket pointer and ensure that memory ownership
   is transferred to it, and not left with the C++ EventPacket.
+- FrameEventPackets: new caerFrameEventPacketAllocateNumPixels() function
+  to allocate based on total number of pixels instead of X/Y lengths.
+- davis.h: added new DAVIS_CONFIG_APS_FRAME_MODE configuration option.
+- davis.h: added enums for easier IMU option handling (caer_davis_imu_types,
+  caer_davis_imu_invensense_accel_scale, caer_davis_imu_invensense_gyro_scale).
 - CMake: automatically set CMAKE_INSTALL_PREFIX to /usr if nothing
   was specified by user on Unix/Linux, this avoids installs to /usr/local
   that often lead to the libraries not being found correctly.
@@ -40,6 +49,7 @@ NEW FEATURES
 BUG FIXES
 - Packaging: cmake dependency bumped to 2.8.12 in Ubuntu/Fedora packages.
 - src/usb_utils.c: fixed firmware/logic update message to be clearer.
+- src/container_generation.h: clearer message on dropped event packets.
 
 
 Release 2.5.2 - 25.09.2018
