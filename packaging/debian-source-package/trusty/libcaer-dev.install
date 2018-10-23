@@ -4,4 +4,3 @@ usr/share/caer/
 usr/lib/*/libcaer.so
 usr/lib/*/libcaer.a
 usr/lib/*/pkgconfig/
-usr/lib/*/cmake/libcaer/
