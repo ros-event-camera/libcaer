@@ -74,6 +74,11 @@ SET(LIBCAER_INCDIRS ${LIBCAER_INCDIRS} ${LIBUSB1_INCLUDE_DIRS})
 SET(LIBCAER_LIBDIRS ${LIBCAER_LIBDIRS} ${LIBUSB1_LIBRARY_DIRS})
 SET(LIBCAER_LIBS  ${LIBCAER_LIBS} ${LIBUSB1_LIBRARIES})
 
+# Windows needs extra winsock library for portable endian functions.
+IF (OS_WINDOWS)
+	SET(LIBCAER_LIBS ${LIBCAER_LIBS} ws2_32)
+ENDIF()
+
 # Optional: serial devices support
 IF (ENABLE_SERIALDEV)
 	# Require libserialport, minimum 0.1.1 version.
