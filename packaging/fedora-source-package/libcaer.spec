@@ -3,10 +3,10 @@ Name:    libcaer
 Version: 3.0.0
 Release: 0%{?dist}
 License: BSD
-URL:     https://github.com/inivation/libcaer/
+URL:     https://gitlab.com/inivation/libcaer/
 Vendor:  iniVation AG
 
-Source0: https://github.com/inivation/libcaer/archive/%{version}.tar.gz
+Source0: https://gitlab.com/inivation/%{name}/-/archive/%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires: gcc >= 4.9, gcc-c++ >= 4.9, cmake >= 2.8.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.1.0
 Requires: libusbx >= 1.0.17, libserialport >= 0.1.1, opencv >= 3.1.0
@@ -57,4 +57,4 @@ make install DESTDIR=%{buildroot}
 
 %changelog
 * Fri Mar 23 2018 iniVation AG <support@inivation.com>
-See ChangeLog file in source or GitHub.
+See ChangeLog file in source or GitLab.
