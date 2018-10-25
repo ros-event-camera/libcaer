@@ -474,14 +474,28 @@ public:
 			// Copy header over. This will also copy validity information, so all copied frames are valid.
 			memcpy(&outFrame, &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 
-			// Change channel to RGB.
-			outFrame.setLengthXLengthYChannelNumber(
-				frame.getLengthX(), frame.getLengthY(), libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+			// Verify requirements for demosaicing operation.
+			if ((frame.getChannelNumber() == libcaer::events::FrameEvent::colorChannels::GRAYSCALE)
+				&& (frame.getColorFilter() != libcaer::events::FrameEvent::colorFilter::MONO)) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+				if ((demosaicType != demosaicTypes::TO_GRAY) && (demosaicType != demosaicTypes::OPENCV_TO_GRAY)) {
+#else
+				if (demosaicType != demosaicTypes::TO_GRAY) {
+#endif
+					// Change channel to RGB. If color requested.
+					outFrame.setLengthXLengthYChannelNumber(frame.getLengthX(), frame.getLengthY(),
+						libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+				}
 
-			// Do interpolation.
-			caerFrameUtilsDemosaic(&frame, &outFrame,
-				static_cast<enum caer_frame_utils_demosaic_types>(
-					static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+				// Do interpolation.
+				caerFrameUtilsDemosaic(&frame, &outFrame,
+					static_cast<enum caer_frame_utils_demosaic_types>(
+						static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+			}
+			else {
+				// Just copy data over.
+				memcpy(outFrame.getPixelArrayUnsafe(), frame.getPixelArrayUnsafe(), frame.getPixelsSize());
+			}
 
 			outIdx++;
 		}
