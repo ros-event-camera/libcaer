@@ -459,26 +459,50 @@ public:
 
 	std::unique_ptr<FrameEventPacket> demosaic(demosaicTypes demosaicType) const {
 		std::unique_ptr<FrameEventPacket> outPacket(new FrameEventPacket(
-			this->capacity(), this->getEventSource(), this->getEventTSOverflow(), this->getEventSize(), RGB));
+			this->getEventValid(), this->getEventSource(), this->getEventTSOverflow(), this->getEventSize(), RGB));
 
-		size_t idx = 0;
-		for (auto &frame : *this) {
-			// Copy header over.
-			memcpy(&((*outPacket)[idx]), &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+		size_t outIdx = 0;
 
-			// Set channels to RGB and validate frame.
-			(*outPacket)[idx].setLengthXLengthYChannelNumber(
-				frame.getLengthX(), frame.getLengthY(), libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+		for (const auto &frame : *this) {
+			// Only operate on valid frames.
+			if (!frame.isValid()) {
+				continue;
+			}
 
-			(*outPacket)[idx].validate(*outPacket);
+			auto outFrame = ((*outPacket)[outIdx]);
 
-			// Do interpolation.
-			caerFrameUtilsDemosaic(&frame, &((*outPacket)[idx]),
-				static_cast<enum caer_frame_utils_demosaic_types>(
-					static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+			// Copy header over. This will also copy validity information, so all copied frames are valid.
+			memcpy(&outFrame, &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 
-			idx++;
+			// Verify requirements for demosaicing operation.
+			if ((frame.getChannelNumber() == libcaer::events::FrameEvent::colorChannels::GRAYSCALE)
+				&& (frame.getColorFilter() != libcaer::events::FrameEvent::colorFilter::MONO)) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+				if ((demosaicType != demosaicTypes::TO_GRAY) && (demosaicType != demosaicTypes::OPENCV_TO_GRAY)) {
+#else
+				if (demosaicType != demosaicTypes::TO_GRAY) {
+#endif
+					// Change channel to RGB. If color requested.
+					outFrame.setLengthXLengthYChannelNumber(frame.getLengthX(), frame.getLengthY(),
+						libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+				}
+
+				// Do interpolation.
+				caerFrameUtilsDemosaic(&frame, &outFrame,
+					static_cast<enum caer_frame_utils_demosaic_types>(
+						static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+			}
+			else {
+				// Just copy data over.
+				memcpy(outFrame.getPixelArrayUnsafe(), frame.getPixelArrayUnsafe(), frame.getPixelsSize());
+			}
+
+			outIdx++;
 		}
+
+		// Set number of events in output packet correctly.
+		outPacket->setEventNumber(outIdx);
+		outPacket->setEventValid(outIdx);
 
 		return (outPacket);
 	}
@@ -494,6 +518,11 @@ public:
 
 	void contrast(contrastTypes contrastType) noexcept {
 		for (auto &frame : *this) {
+			// Only operate on valid frames.
+			if (!frame.isValid()) {
+				continue;
+			}
+
 			caerFrameUtilsContrast(&frame, &frame,
 				static_cast<enum caer_frame_utils_contrast_types>(
 					static_cast<typename std::underlying_type<contrastTypes>::type>(contrastType)));

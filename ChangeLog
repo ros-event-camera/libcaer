@@ -1,3 +1,15 @@
+Release 3.0.2 - XX.XX.2018
+WORK_IN_PROGRESS
+
+BUG FIXES
+- C++ API frame.hpp: fix demosaic(), set number of (valid) events in
+  resulting packet correctly. Don't log errors if operation cannot
+  be performed, just copy over unchanged pixel data.
+  Also only operate on valid events for demosaic() and contrast().
+- CMake: fix linking on Windows.
+- Ubuntu Packaging: build with correct GCC version on Ubuntu 14.04 Trusty.
+
+
 Release 3.0.0 - 23.10.2018
 
 INCOMPATIBLE CHANGES
