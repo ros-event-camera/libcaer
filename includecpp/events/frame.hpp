@@ -469,10 +469,10 @@ public:
 				continue;
 			}
 
-			auto outFrame = ((*outPacket)[outIdx]);
+			auto &outFrame = ((*outPacket)[outIdx]);
 
 			// Copy header over. This will also copy validity information, so all copied frames are valid.
-			memcpy(&outFrame, &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+			memcpy(static_cast<void *>(&outFrame), &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 
 			// Verify requirements for demosaicing operation.
 			if ((frame.getChannelNumber() == libcaer::events::FrameEvent::colorChannels::GRAYSCALE)
