@@ -1,4 +1,5 @@
 #include "libcaer.h"
+
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <time.h>
@@ -64,12 +65,6 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 		return;
 	}
 
-	// Logging must be enabled. This is thread-local to create
-	// regions of disabled logging.
-	if (caerLogDisabledTL) {
-		return;
-	}
-
 	// Only log messages above the specified severity level.
 	if (logLevel > systemLogLevel) {
 		return;
@@ -77,6 +72,12 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 
 	// At least one output must be enabled!
 	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0)) {
+		return;
+	}
+
+	// Logging must be enabled. This is thread-local to create
+	// regions of disabled logging.
+	if (caerLogDisabledTL) {
 		return;
 	}
 
