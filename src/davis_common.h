@@ -179,11 +179,17 @@ static void davisCommonEventTranslator(
 static void davisCommonTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
 
 static void davisLog(enum caer_log_level logLevel, davisCommonHandle handle, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	uint8_t systemLogLevel = atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed);
+
+	if (logLevel > systemLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
-		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
-		format, argumentList);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
+		handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
 }
 

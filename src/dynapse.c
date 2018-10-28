@@ -1,4 +1,5 @@
 #include "dynapse.h"
+
 #include <unistd.h>
 
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
@@ -169,11 +170,17 @@ struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y) {
 }
 
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	uint8_t systemLogLevel = atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed);
+
+	if (logLevel > systemLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
-		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
-		format, argumentList);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
+		handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
 }
 

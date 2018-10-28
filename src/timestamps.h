@@ -2,14 +2,17 @@
 #define LIBCAER_SRC_TIMESTAMPS_H_
 
 #include "libcaer.h"
+
 #include "events/common.h"
+
 #include "portable_time.h"
+
 #include <stdatomic.h>
 
 #ifdef NDEBUG
-#define TIMESTAMPS_DEBUG 0
+#	define TIMESTAMPS_DEBUG 0
 #else
-#define TIMESTAMPS_DEBUG 1
+#	define TIMESTAMPS_DEBUG 1
 #endif
 
 #define TIMESTAMPS_DEBUG_DRIFT_ALARM 100000 // in µs, default 100ms.
@@ -33,6 +36,11 @@ static inline void commonLog(enum caer_log_level logLevel, const char *deviceStr
 
 static inline void commonLog(
 	enum caer_log_level logLevel, const char *deviceString, uint8_t deviceLogLevel, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	if (logLevel > deviceLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
 	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), deviceLogLevel, logLevel,
