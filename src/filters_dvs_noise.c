@@ -53,9 +53,16 @@ static void caerFilterDVSNoiseApplyInternal(
 	caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarityPacket, bool statisticsOnly);
 
 static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	uint8_t systemLogLevel = handle->logLevel;
+
+	if (logLevel > systemLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), handle->logLevel, logLevel,
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
 		"DVS Noise Filter", format, argumentList);
 	va_end(argumentList);
 }

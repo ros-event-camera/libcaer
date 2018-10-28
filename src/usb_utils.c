@@ -54,11 +54,17 @@ static inline bool checkActiveConfigAndClaim(libusb_device_handle *devHandle) {
 }
 
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	uint8_t systemLogLevel = atomic_load_explicit(&state->usbLogLevel, memory_order_relaxed);
+
+	if (logLevel > systemLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
-		atomic_load_explicit(&state->usbLogLevel, memory_order_relaxed), logLevel, state->usbThreadName, format,
-		argumentList);
+	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
+		state->usbThreadName, format, argumentList);
 	va_end(argumentList);
 }
 
