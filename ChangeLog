@@ -8,6 +8,8 @@ BUG FIXES
   Also only operate on valid events for demosaic() and contrast().
 - CMake: fix linking on Windows.
 - Ubuntu Packaging: build with correct GCC version on Ubuntu 14.04 Trusty.
+- Logging: performance improvements; move expensive check (TLS) to
+  last position, ensure log-level is checked first in custom loggers.
 
 
 Release 3.0.0 - 23.10.2018
