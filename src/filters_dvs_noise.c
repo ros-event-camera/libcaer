@@ -79,7 +79,7 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 
 	// Default to global log-level.
 	enum caer_log_level logLevel = caerLogLevelGet();
-	noiseFilter->logLevel        = logLevel;
+	noiseFilter->logLevel        = U8T(logLevel);
 
 	// Default values for filters.
 	noiseFilter->hotPixelTime                    = 1000000; // 1 second.
