@@ -1290,7 +1290,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					break;
 
 				case DAVIS_CONFIG_APS_FRAME_MODE:
-					atomic_store(&state->aps.frame.mode, param);
+					atomic_store(&state->aps.frame.mode, U8T(param));
 					break;
 
 				default:
@@ -2911,11 +2911,11 @@ static void davisCommonEventTranslator(
 									if (!(state->imu.type & IMU_TYPE_TEMP)) {
 										if (state->imu.type & IMU_TYPE_GYRO) {
 											// No temperature, but gyro.
-											state->imu.count += 2;
+											state->imu.count = U8T(state->imu.count + 2);
 										}
 										else {
 											// No others enabled.
-											state->imu.count += 8;
+											state->imu.count = U8T(state->imu.count + 8);
 										}
 									}
 									break;
@@ -2930,7 +2930,7 @@ static void davisCommonEventTranslator(
 									// IMU parser count depends on which data is present.
 									if (!(state->imu.type & IMU_TYPE_GYRO)) {
 										// No others enabled.
-										state->imu.count += 6;
+										state->imu.count = U8T(state->imu.count + 6);
 									}
 									break;
 								}

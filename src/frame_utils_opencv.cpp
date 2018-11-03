@@ -60,6 +60,11 @@ void caerFrameUtilsOpenCVDemosaic(
 					code = cv::COLOR_BayerRG2RGB;
 					break;
 
+				case MONO:
+				case RGBW:
+				case GRWB:
+				case WBGR:
+				case BWRG:
 				default:
 					// Impossible, other color filters get filtered out above.
 					break;
@@ -84,6 +89,11 @@ void caerFrameUtilsOpenCVDemosaic(
 					code = cv::COLOR_BayerRG2RGB_EA;
 					break;
 
+				case MONO:
+				case RGBW:
+				case GRWB:
+				case WBGR:
+				case BWRG:
 				default:
 					// Impossible, other color filters get filtered out above.
 					break;
@@ -108,12 +118,19 @@ void caerFrameUtilsOpenCVDemosaic(
 					code = cv::COLOR_BayerRG2GRAY;
 					break;
 
+				case MONO:
+				case RGBW:
+				case GRWB:
+				case WBGR:
+				case BWRG:
 				default:
 					// Impossible, other color filters get filtered out above.
 					break;
 			}
 			break;
 
+		case DEMOSAIC_STANDARD:
+		case DEMOSAIC_TO_GRAY:
 		default:
 			// Impossible, other demosaic types are not available in OpenCV.
 			break;
