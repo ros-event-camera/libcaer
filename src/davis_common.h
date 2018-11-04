@@ -710,11 +710,11 @@ static bool davisCommonSendDefaultFPGAConfig(davisCommonHandle handle) {
 		davisCommonConfigSet(handle, DAVIS_CONFIG_APS, DAVIS640H_CONFIG_APS_GSFDRESET, 900);   // in cycles @ ADCClock
 	}
 
-	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER, 0);
-	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_DLPF, 1);
-	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE, 1);
-	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_DLPF, 1);
-	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, 1);
+	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_SAMPLE_RATE_DIVIDER, 0);     // Sampling rate: 1KHz.
+	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_DLPF, 1);              // FS: 1KHz.
+	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ACCEL_FULL_SCALE, ACCEL_4G); // +- 4 g.
+	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_DLPF, 1);               // FS: 1KHz.
+	davisCommonConfigSet(handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_GYRO_FULL_SCALE, GYRO_500DPS); // +- 500 °/s
 
 	davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES, false);
 	davisCommonConfigSet(handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_FALLING_EDGES, false);
@@ -1290,7 +1290,7 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 					break;
 
 				case DAVIS_CONFIG_APS_FRAME_MODE:
-					atomic_store(&state->aps.frame.mode, param);
+					atomic_store(&state->aps.frame.mode, U8T(param));
 					break;
 
 				default:
@@ -2911,11 +2911,11 @@ static void davisCommonEventTranslator(
 									if (!(state->imu.type & IMU_TYPE_TEMP)) {
 										if (state->imu.type & IMU_TYPE_GYRO) {
 											// No temperature, but gyro.
-											state->imu.count += 2;
+											state->imu.count = U8T(state->imu.count + 2);
 										}
 										else {
 											// No others enabled.
-											state->imu.count += 8;
+											state->imu.count = U8T(state->imu.count + 8);
 										}
 									}
 									break;
@@ -2930,7 +2930,7 @@ static void davisCommonEventTranslator(
 									// IMU parser count depends on which data is present.
 									if (!(state->imu.type & IMU_TYPE_GYRO)) {
 										// No others enabled.
-										state->imu.count += 6;
+										state->imu.count = U8T(state->imu.count + 6);
 									}
 									break;
 								}

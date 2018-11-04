@@ -801,13 +801,13 @@ struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps) {
 		}
 	}
 
-	biasValue.coarseValue = U8T(coarseValue);
+	biasValue.coarseValue = coarseValue;
 
 	// Calculate coarse current value based on value going to device.
 	// This is the maximum for the fine divider.
 	double coarseCurrent = (double) coarseCurrents[coarseValue];
 
-	int32_t fineValue = I32T(round(((255.0 * (double) picoAmps) / coarseCurrent)));
+	double fineValue = round(((255.0 * (double) picoAmps) / coarseCurrent));
 
 	// Ensure within range.
 	if (fineValue < 1) {

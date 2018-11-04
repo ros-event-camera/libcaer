@@ -78,7 +78,8 @@ caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY) 
 	noiseFilter->sizeY = sizeY;
 
 	// Default to global log-level.
-	noiseFilter->logLevel = caerLogLevelGet();
+	enum caer_log_level logLevel = caerLogLevelGet();
+	noiseFilter->logLevel        = U8T(logLevel);
 
 	// Default values for filters.
 	noiseFilter->hotPixelTime                    = 1000000; // 1 second.
@@ -648,10 +649,12 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 		noiseFilter->hotPixelArraySize = 0;
 	}
 
+	size_t pixelNumber = (size_t)(noiseFilter->sizeX * noiseFilter->sizeY);
+
 	// Count number of hot pixels.
 	size_t hotPixelsNumber = 0;
 
-	for (size_t i = 0; i < (noiseFilter->sizeX * noiseFilter->sizeY); i++) {
+	for (size_t i = 0; i < pixelNumber; i++) {
 		if (noiseFilter->hotPixelLearningMap[i] >= noiseFilter->hotPixelCount) {
 			hotPixelsNumber++;
 		}
@@ -661,7 +664,7 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 	struct dvs_pixel_with_count hotPixels[hotPixelsNumber];
 
 	size_t idx = 0;
-	for (size_t i = 0; i < (noiseFilter->sizeX * noiseFilter->sizeY); i++) {
+	for (size_t i = 0; i < pixelNumber; i++) {
 		if (noiseFilter->hotPixelLearningMap[i] >= noiseFilter->hotPixelCount) {
 			hotPixels[idx].address.x = U16T(i % noiseFilter->sizeX);
 			hotPixels[idx].address.y = U16T(i / noiseFilter->sizeX);

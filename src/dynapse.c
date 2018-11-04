@@ -314,7 +314,7 @@ caerDeviceHandle dynapseOpen(
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
-	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s ID-%" PRIu16, DYNAPSE_DEVICE_NAME, deviceID);
+	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s %" PRIu16, DYNAPSE_DEVICE_NAME, deviceID);
 	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
 	usbSetThreadName(&state->usbState, usbThreadName);

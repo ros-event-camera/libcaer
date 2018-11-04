@@ -920,7 +920,7 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer) 
 	usbControl extraControlData = transfer->user_data;
 
 	if (extraControlData->controlOutCallback != NULL) {
-		(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, transfer->status);
+		(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, (int) transfer->status);
 	}
 
 	libusb_free_transfer(transfer);
@@ -930,7 +930,7 @@ static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer) {
 	usbControl extraControlData = transfer->user_data;
 
 	if (extraControlData->controlInCallback != NULL) {
-		(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, transfer->status,
+		(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, (int) transfer->status,
 			libusb_control_transfer_get_data(transfer), (size_t) transfer->actual_length);
 	}
 

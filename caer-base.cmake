@@ -168,12 +168,11 @@ IF (CC_GCC OR CC_CLANG)
 		# Enable all useful warnings in GCC one-by-one.
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wunused -Wundef -Wformat=2 -Winit-self -Wuninitialized")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings")
-		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wredundant-decls -Wmissing-declarations -Wstack-protector")
+		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wredundant-decls -Wmissing-declarations -Wdouble-promotion")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wshadow -Wfloat-equal -Wconversion -Wstrict-overflow=5")
-		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wdouble-promotion")
 
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs")
-		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wbad-function-cast -Wjump-misses-init -Wunsuffixed-float-constants")
+		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wbad-function-cast -Wjump-misses-init")
 	ENDIF()
 
 	IF (CC_CLANG)
