@@ -179,8 +179,7 @@ static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const
 
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
-		handle->info.deviceString, format, argumentList);
+	caerLogVAFull(systemLogLevel, logLevel, handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
 }
 

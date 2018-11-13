@@ -8,6 +8,7 @@
 static atomic_uint_fast8_t caerLogLevel     = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
 static atomic_int caerLogFileDescriptor1    = ATOMIC_VAR_INIT(STDERR_FILENO);
 static atomic_int caerLogFileDescriptor2    = ATOMIC_VAR_INIT(-1);
+static atomic_uintptr_t caerLogCallbackPtr  = ATOMIC_VAR_INIT(0);
 static _Thread_local bool caerLogDisabledTL = false;
 
 void caerLogLevelSet(enum caer_log_level logLevel) {
@@ -16,6 +17,18 @@ void caerLogLevelSet(enum caer_log_level logLevel) {
 
 enum caer_log_level caerLogLevelGet(void) {
 	return (atomic_load_explicit(&caerLogLevel, memory_order_relaxed));
+}
+
+void caerLogCallbackSet(caerLogCallback callback) {
+	uintptr_t cb = (uintptr_t) callback;
+
+	atomic_store(&caerLogCallbackPtr, cb);
+}
+
+caerLogCallback caerLogCallbackGet(void) {
+	uintptr_t cb = atomic_load(&caerLogCallbackPtr);
+
+	return ((caerLogCallback) cb);
 }
 
 void caerLogFileDescriptorsSet(int fd1, int fd2) {
@@ -52,13 +65,11 @@ void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *fo
 }
 
 void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) {
-	caerLogVAFull(atomic_load_explicit(&caerLogFileDescriptor1, memory_order_relaxed),
-		atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed),
-		atomic_load_explicit(&caerLogLevel, memory_order_relaxed), logLevel, subSystem, format, args);
+	caerLogVAFull(atomic_load_explicit(&caerLogLevel, memory_order_relaxed), logLevel, subSystem, format, args);
 }
 
-void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, enum caer_log_level logLevel,
-	const char *subSystem, const char *format, va_list args) {
+void caerLogVAFull(
+	uint8_t systemLogLevel, enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) {
 	// Check that subSystem and format are defined correctly.
 	if ((subSystem == NULL) || (format == NULL)) {
 		caerLog(CAER_LOG_ERROR, "Logger", "Missing subSystem or format strings. Neither can be NULL.");
@@ -71,7 +82,12 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 	}
 
 	// At least one output must be enabled!
-	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0)) {
+	int logFileDescriptor1         = atomic_load_explicit(&caerLogFileDescriptor1, memory_order_relaxed);
+	int logFileDescriptor2         = atomic_load_explicit(&caerLogFileDescriptor2, memory_order_relaxed);
+	uintptr_t cb                   = atomic_load_explicit(&caerLogCallbackPtr, memory_order_relaxed);
+	caerLogCallback logCallbackPtr = (caerLogCallback) cb;
+
+	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0) && (logCallbackPtr == NULL)) {
 		return;
 	}
 
@@ -169,5 +185,9 @@ void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t syste
 
 	if (logFileDescriptor2 >= 0) {
 		write(logFileDescriptor2, logString, logLength);
+	}
+
+	if (logCallbackPtr != NULL) {
+		(*logCallbackPtr)(logString, logLength);
 	}
 }

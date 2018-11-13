@@ -14,8 +14,7 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
-		handle->info.deviceString, format, argumentList);
+	caerLogVAFull(systemLogLevel, logLevel, handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
 }
 

@@ -43,8 +43,7 @@ static inline void commonLog(
 
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), deviceLogLevel, logLevel,
-		deviceString, format, argumentList);
+	caerLogVAFull(deviceLogLevel, logLevel, deviceString, format, argumentList);
 	va_end(argumentList);
 }
 
