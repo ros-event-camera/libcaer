@@ -62,8 +62,7 @@ static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise h
 
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
-		"DVS Noise Filter", format, argumentList);
+	caerLogVAFull(systemLogLevel, logLevel, "DVS Noise Filter", format, argumentList);
 	va_end(argumentList);
 }
 

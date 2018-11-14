@@ -63,8 +63,7 @@ static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char 
 
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(), systemLogLevel, logLevel,
-		state->usbThreadName, format, argumentList);
+	caerLogVAFull(systemLogLevel, logLevel, state->usbThreadName, format, argumentList);
 	va_end(argumentList);
 }
 
