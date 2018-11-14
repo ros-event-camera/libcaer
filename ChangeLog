@@ -1,6 +1,16 @@
 Release 3.0.2 - XX.XX.2018
 WORK_IN_PROGRESS
 
+INCOMPATIBLE CHANGES
+- Logging: caerLogVAFull() API has been simplified, the two file descriptor
+  arguments have been removed, use the proper caerLogFileDescriptorsSet()
+  API to set them when needed.
+
+NEW FEATURES
+- Logging: added caerLogCallbackSet() and caerLogCallbackGet() functions
+  to set/get a global callback function to be executed on every caerLog()
+  logging call, the log message and its size are passed to the callback.
+
 BUG FIXES
 - C++ API frame.hpp: fix demosaic(), set number of (valid) events in
   resulting packet correctly. Don't log errors if operation cannot
@@ -10,6 +20,7 @@ BUG FIXES
 - Ubuntu Packaging: build with correct GCC version on Ubuntu 14.04 Trusty.
 - Logging: performance improvements; move expensive check (TLS) to
   last position, ensure log-level is checked first in custom loggers.
+- Fix various compiler warnings.
 
 
 Release 3.0.0 - 23.10.2018
