@@ -2,6 +2,8 @@ Release 3.0.2 - XX.XX.2018
 WORK_IN_PROGRESS
 
 INCOMPATIBLE CHANGES
+- DAVIS: require logic version 18. Fixes issues with IMU Run Controls,
+  fixes corrupt data in DAVIS346 BLUE.
 - Logging: caerLogVAFull() API has been simplified, the two file descriptor
   arguments have been removed, use the proper caerLogFileDescriptorsSet()
   API to set them when needed.
