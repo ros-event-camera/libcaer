@@ -18,6 +18,7 @@ BUG FIXES
   resulting packet correctly. Don't log errors if operation cannot
   be performed, just copy over unchanged pixel data.
   Also only operate on valid events for demosaic() and contrast().
+- DAVIS IMU: temperature readings on InvenSense 6050 were off by +1.53°C.
 - CMake: fix linking on Windows.
 - Ubuntu Packaging: build with correct GCC version on Ubuntu 14.04 Trusty.
 - Logging: performance improvements; move expensive check (TLS) to
