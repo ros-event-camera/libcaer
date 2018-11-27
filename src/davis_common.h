@@ -1238,9 +1238,11 @@ static bool davisCommonConfigSet(davisCommonHandle handle, int8_t modAddr, uint8
 				case DAVIS_CONFIG_APS_GLOBAL_SHUTTER:
 					if (handle->info.apsHasGlobalShutter) {
 						// Keep in sync with chip config module GlobalShutter parameter.
-						if (!spiConfigSend(
-								handle->spiConfigPtr, DAVIS_CONFIG_CHIP, DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
-							return (false);
+						if (!IS_DAVIS640H(handle->info.chipID)) {
+							if (!spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_CHIP,
+									DAVIS128_CONFIG_CHIP_GLOBAL_SHUTTER, param)) {
+								return (false);
+							}
 						}
 
 						return (spiConfigSend(handle->spiConfigPtr, DAVIS_CONFIG_APS, paramAddr, param));
