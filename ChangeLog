@@ -1,7 +1,9 @@
-Release 3.0.2 - XX.XX.2018
-WORK_IN_PROGRESS
+Release 3.1.0 - 27.11.2018
 
 INCOMPATIBLE CHANGES
+- DAVIS: require firmware version 5 and logic version 18. Fixes issues with
+  IMU Run Controls, fixes corrupt data in DAVIS BLUE 346, enables IMU on
+  DAVIS RED 346.
 - Logging: caerLogVAFull() API has been simplified, the two file descriptor
   arguments have been removed, use the proper caerLogFileDescriptorsSet()
   API to set them when needed.
@@ -16,6 +18,7 @@ BUG FIXES
   resulting packet correctly. Don't log errors if operation cannot
   be performed, just copy over unchanged pixel data.
   Also only operate on valid events for demosaic() and contrast().
+- DAVIS IMU: temperature readings on InvenSense 6050 were off by +1.53°C.
 - CMake: fix linking on Windows.
 - Ubuntu Packaging: build with correct GCC version on Ubuntu 14.04 Trusty.
 - Logging: performance improvements; move expensive check (TLS) to

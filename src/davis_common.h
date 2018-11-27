@@ -2922,9 +2922,16 @@ static void davisCommonEventTranslator(
 
 								case 7: {
 									// Temperature is signed. Formula for converting to °C:
-									// (SIGNED_VAL / 340) + 36.53
+									// (SIGNED_VAL / 340) + 35 for InvenSense MPU-6050
+									// (SIGNED_VAL / 333.87) + 21 for InvenSense MPU-9250
 									int16_t temp = I16T((state->imu.tmpData << 8) | misc8Data);
-									caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 340.0F) + 36.53F);
+
+									if (handle->info.imuType == IMU_INVENSENSE_9250) {
+										caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 333.87F) + 21.0F);
+									}
+									else {
+										caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 340.0F) + 35.0F);
+									}
 
 									// IMU parser count depends on which data is present.
 									if (!(state->imu.type & IMU_TYPE_GYRO)) {
