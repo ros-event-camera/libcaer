@@ -4,7 +4,7 @@
 
 GPG_PUBLIC_KEY=0x058B659E
 PKG_NAME=libcaer
-PKG_VERSION=3.0.0
+PKG_VERSION=3.1.0
 PKG_RELEASE=1
 DISTRO=bionic
 SRC_URI="https://gitlab.com/inivation/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
