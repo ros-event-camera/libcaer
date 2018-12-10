@@ -10,6 +10,7 @@
 
 #include "davis.h"
 #include "dvs128.h"
+#include "dvs132s.h"
 #include "dynapse.h"
 #include "edvs.h"
 
@@ -34,6 +35,7 @@ struct caer_device_discovery_result {
 		struct caer_edvs_info edvsInfo;
 		struct caer_davis_info davisInfo;
 		struct caer_dynapse_info dynapseInfo;
+		struct caer_dvs132s_info dvs132sInfo;
 	} deviceInfo;
 };
 

@@ -3,6 +3,7 @@
 #include "davis.h"
 #include "davis_rpi.h"
 #include "dvs128.h"
+#include "dvs132s.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -28,6 +29,7 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 #else
 	[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
+	[CAER_DEVICE_DVS132S] = &dvs132sFind,
 };
 
 ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices) {
@@ -150,6 +152,13 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 
 		case CAER_DEVICE_DAVIS_RPI: {
 			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, 0, 0, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_DVS132S: {
+			struct caer_dvs132s_info *info = &discoveredDevice->deviceInfo.dvs132sInfo;
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
 		}
 

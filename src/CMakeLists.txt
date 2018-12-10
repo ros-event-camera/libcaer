@@ -9,7 +9,8 @@ SET(LIBCAER_SRC_FILES
 	device.c
 	dvs128.c
 	davis.c
-	dynapse.c)
+	dynapse.c
+	dvs132s.c)
 
 IF(OS_LINUX)
 	# Raspberry Pi support available only on Linux.
