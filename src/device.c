@@ -3,6 +3,7 @@
 #include "davis.h"
 #include "davis_rpi.h"
 #include "dvs128.h"
+#include "dvs132s.h"
 #include "dynapse.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -26,6 +27,7 @@ static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
+		[CAER_DEVICE_DVS132S] = &dvs132sOpen,
 };
 
 static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -42,6 +44,7 @@ static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 		[CAER_DEVICE_EDVS]      = NULL,
 #endif
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
+		[CAER_DEVICE_DVS132S]   = NULL,
 };
 
 static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -60,6 +63,7 @@ static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handl
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
+	[CAER_DEVICE_DVS132S] = &dvs132sClose,
 };
 
 static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -78,6 +82,7 @@ static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHan
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
+	[CAER_DEVICE_DVS132S] = &dvs132sSendDefaultConfig,
 };
 
 static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -98,6 +103,7 @@ static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
+		[CAER_DEVICE_DVS132S] = &dvs132sConfigSet,
 };
 
 static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -118,6 +124,7 @@ static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
+		[CAER_DEVICE_DVS132S] = &dvs132sConfigGet,
 };
 
 static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle,
@@ -139,6 +146,7 @@ static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
+		[CAER_DEVICE_DVS132S] = &dvs132sDataStart,
 };
 
 static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -157,6 +165,7 @@ static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
+	[CAER_DEVICE_DVS132S] = &dvs132sDataStop,
 };
 
 static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -175,6 +184,7 @@ static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(ca
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
+	[CAER_DEVICE_DVS132S] = &dvs132sDataGet,
 };
 
 // Add empty InfoGet for optional devices, such as serial ones.
