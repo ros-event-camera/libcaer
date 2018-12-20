@@ -18,6 +18,10 @@ IF (NOT ENABLE_OPENCV)
 	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
 ENDIF()
 
+IF (NOT UDEV_INSTALL)
+	SET(UDEV_INSTALL 1 CACHE BOOL "Install udev rules on Linux")
+ENDIF()
+
 IF (NOT UDEV_SELINUX)
 	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules on Linux")
 ENDIF()
@@ -30,7 +34,7 @@ ENDIF()
 PROJECT(libcaer C CXX)
 SET(PROJECT_VERSION_MAJOR 3)
 SET(PROJECT_VERSION_MINOR 1)
-SET(PROJECT_VERSION_PATCH 0)
+SET(PROJECT_VERSION_PATCH 1)
 SET(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # Compiler cache support
@@ -148,7 +152,9 @@ IF (NOT (CMAKE_VERSION VERSION_LESS "3.0"))
 ENDIF()
 
 # Install udev rules
-IF (OS_LINUX)
+IF (OS_LINUX AND UDEV_INSTALL)
+	MESSAGE(STATUS "Installing global udev rules into /lib/udev/rules.d/")
+
 	IF (UDEV_SELINUX)
 		INSTALL(FILES
 			docs/udev-rules/selinux/65-inivation.rules
