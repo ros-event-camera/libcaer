@@ -17,9 +17,8 @@ static void debugTranslator(dvs132sHandle handle, const uint8_t *buffer, size_t 
 static void dvs132sLog(enum caer_log_level logLevel, dvs132sHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(
-		atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel, handle->info.deviceString,
-		format, argumentList);
+	caerLogVAFull(atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel,
+		handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
 }
 
@@ -414,27 +413,27 @@ static bool dvs132sSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 static bool dvs132sSendDefaultBiasConfig(caerDeviceHandle cdh) {
 	// Default bias configuration.
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_PRBP,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(1 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(100 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_PRSFBP,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(1 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(1)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_BLPUBP,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(10 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(0)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_BIASBUFBP,
 		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(10 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_OFFBN,
 		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(200)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_DIFFBN,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(4 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(10 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_ONBN,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(40 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(400 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_CASBN,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(40 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(400 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_DPBN,
 		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(100 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_BIASBUFBN,
 		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(10 * 1000)));
 	dvs132sConfigSet(cdh, DVS132S_CONFIG_BIAS, DVS132S_CONFIG_BIAS_ABUFBN,
-		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(100 * 1000)));
+		caerBiasCoarseFine1024Generate(caerBiasCoarseFine1024FromCurrent(0)));
 
 	return (true);
 }
