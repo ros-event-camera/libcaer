@@ -80,12 +80,12 @@ extern "C" {
 /**
  * libcaer serial devices support.
  */
-#define LIBCAER_HAVE_SERIALDEV @ENABLE_SERIALDEV@
+#cmakedefine01 LIBCAER_HAVE_SERIALDEV
 
 /**
  * libcaer OpenCV support.
  */
-#define LIBCAER_HAVE_OPENCV @ENABLE_OPENCV@
+#cmakedefine01 LIBCAER_HAVE_OPENCV
 
 /**
  * Error codes, used for the errno variable to give
