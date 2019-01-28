@@ -1,4 +1,4 @@
-FUNCTION(CAER_SETUP NEED_CPP14)
+FUNCTION(CAER_SETUP NEED_CPP17)
 
 # Set compiler info
 SET(CC_CLANG FALSE)
@@ -54,11 +54,18 @@ SET(OS_LINUX ${OS_LINUX} PARENT_SCOPE)
 SET(OS_MACOSX ${OS_MACOSX} PARENT_SCOPE)
 SET(OS_WINDOWS ${OS_WINDOWS} PARENT_SCOPE)
 
-IF (NEED_CPP14)
-	# Check GCC compiler version, 5.2 is needed at least for C++14 support.
+IF (NEED_CPP17)
+	# Check GCC compiler version, 7.0 is needed at least for C++17 support.
 	IF (CC_GCC)
-		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "5.2.0")
-			MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 5.2.0.")
+		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "7.0.0")
+			MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 7.0.0.")
+		ENDIF()
+	ENDIF()
+
+	# Check Clang compiler version, 5.0 is needed at least for C++17 support.
+	IF (CC_CLANG)
+		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "5.0.0")
+			MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 5.0.0.")
 		ENDIF()
 	ENDIF()
 ELSE()
@@ -68,12 +75,12 @@ ELSE()
 			MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 4.9.0.")
 		ENDIF()
 	ENDIF()
-ENDIF()
 
-# Check Clang compiler version, 3.6 is needed at least for atomics and C++14 support.
-IF (CC_CLANG)
-	IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "3.6.0")
-		MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 3.6.0.")
+	# Check Clang compiler version, 3.6 is needed at least for atomics support.
+	IF (CC_CLANG)
+		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "3.6.0")
+			MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 3.6.0.")
+		ENDIF()
 	ENDIF()
 ENDIF()
 
@@ -153,8 +160,8 @@ ENDIF()
 IF (CC_GCC OR CC_CLANG)
 	# C11 standard needed (atomics, threads)
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-	IF (NEED_CPP14)
-		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+	IF (NEED_CPP17)
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 	ELSE()
 		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	ENDIF()
