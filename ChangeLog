@@ -1,3 +1,20 @@
+Release 3.1.2 - XX.02.2019
+
+INCOMPATIBLE CHANGES
+- CMake: installed caer-base.cmake file now requires either C++11,
+  used in libcaer, or C++17, used in caer. This upgrades the requirement
+  for project calling CAER_SETUP(TRUE) to C++17 from C++14.
+
+NEW FEATURES
+- Devices: added support for the DVS132S test chip.
+- CMake: added UDEV_INSTALL switch to disable udev rules installation.
+- CMake: search for and support OpenCV 4.
+
+BUG FIXES
+- CMake: ensure LIBCAER_HAVE_SERIALDEV and LIBCAER_HAVE_OPENCV defines
+  in libcaer.h are always properly defined to be 0 or 1.
+
+
 Release 3.1.0 - 27.11.2018
 
 INCOMPATIBLE CHANGES
