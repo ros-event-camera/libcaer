@@ -4,6 +4,13 @@ INCOMPATIBLE CHANGES
 - CMake: installed caer-base.cmake file now requires either C++11,
   used in libcaer, or C++17, used in caer. This upgrades the requirement
   for project calling CAER_SETUP(TRUE) to C++17 from C++14.
+- CMake: caer-base.cmake does not provide the following variables anymore:
+  - CM_BUILD_DIR (not useful)
+  - CM_SHARE_DIR (already known when accessing the file)
+  - CAER_C_THREAD_LIBS (renamed to SYSTEM_THREAD_LIBS)
+  - CAER_MODULES_DIR (not part of libcaer)
+- CMake: renamed CAER_LOCAL_INCDIRS/CAER_LOCAL_LIBDIRS/CAER_LOCAL_PREFIX
+  to USER_LOCAL_INCDIRS/USER_LOCAL_LIBDIRS/USER_LOCAL_PREFIX.
 
 NEW FEATURES
 - Devices: added support for the DVS132S test chip.

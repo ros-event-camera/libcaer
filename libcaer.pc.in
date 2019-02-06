@@ -1,4 +1,4 @@
-prefix=@CAER_LOCAL_PREFIX@
+prefix=@USER_LOCAL_PREFIX@
 exec_prefix=${prefix}
 libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
