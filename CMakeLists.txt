@@ -2,6 +2,18 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 
 # General build settings
+IF (NOT CMAKE_BUILD_TYPE)
+	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
+ENDIF()
+
+IF (NOT CMAKE_INSTALL_PREFIX)
+	IF (UNIX AND NOT APPLE)
+		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
+	ELSE()
+		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
+	ENDIF()
+ENDIF()
+
 IF (NOT ENABLE_STATIC)
 	SET(ENABLE_STATIC 0 CACHE BOOL "Build and install static library in addition to default shared library")
 ENDIF()

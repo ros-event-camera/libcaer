@@ -1,18 +1,5 @@
 FUNCTION(CAER_SETUP NEED_CPP17)
 
-# General build settings
-IF (NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
-ENDIF()
-
-IF (NOT CMAKE_INSTALL_PREFIX)
-	IF (UNIX AND NOT APPLE)
-		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
-	ELSE()
-		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
-	ENDIF()
-ENDIF()
-
 # Compiler cache support
 FIND_PROGRAM(CCACHE_FOUND ccache)
 IF (CCACHE_FOUND)
@@ -230,6 +217,7 @@ ENDIF()
 # Print info summary for debug purposes
 MESSAGE(STATUS "Project name is: ${PROJECT_NAME}")
 MESSAGE(STATUS "Project version is: ${PROJECT_VERSION}")
+MESSAGE(STATUS "Build type is: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Compiler is Clang: ${CC_CLANG}")
 MESSAGE(STATUS "Compiler is GCC: ${CC_GCC}")
 MESSAGE(STATUS "Compiler is IntelCC: ${CC_ICC}")
