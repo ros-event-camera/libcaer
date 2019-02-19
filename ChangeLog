@@ -13,7 +13,7 @@ INCOMPATIBLE CHANGES
   to USER_LOCAL_INCDIRS/USER_LOCAL_LIBDIRS/USER_LOCAL_PREFIX.
 
 NEW FEATURES
-- Devices: added support for the DVS132S test chip.
+- Devices: added support for the DVS132S test chip in the C/C++ API.
 - CMake: added UDEV_INSTALL switch to disable udev rules installation.
 - CMake: search for and support OpenCV 4.
 

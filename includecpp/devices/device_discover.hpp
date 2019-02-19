@@ -2,11 +2,14 @@
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_HPP_
 
 #include <libcaer/devices/device_discover.h>
+
 #include "davis.hpp"
 #include "device.hpp"
 #include "dvs128.hpp"
+#include "dvs132s.hpp"
 #include "dynapse.hpp"
 #include "edvs.hpp"
+
 #include <memory>
 #include <vector>
 
@@ -89,13 +92,20 @@ public:
 				return (std::unique_ptr<libcaer::devices::davisrpi>(new libcaer::devices::davisrpi(deviceID)));
 				break;
 
+			case CAER_DEVICE_DVS132S: {
+				const struct caer_dvs132s_info *info = &discoveredDevice.deviceInfo.dvs132sInfo;
+				return (std::unique_ptr<libcaer::devices::dvs132s>(new libcaer::devices::dvs132s(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
+				break;
+			}
+
 			default:
 				throw std::runtime_error("Device Discovery: cannot open unknown device.");
 				break;
 		}
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_DEVICE_DISCOVER_HPP_ */
