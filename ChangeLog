@@ -1,4 +1,4 @@
-Release 3.1.2 - XX.02.2019
+Release 3.2.0 - XX.03.2019
 
 INCOMPATIBLE CHANGES
 - CMake: installed caer-base.cmake file now requires either C++11,
@@ -11,6 +11,10 @@ INCOMPATIBLE CHANGES
   - CAER_MODULES_DIR (not part of libcaer)
 - CMake: renamed CAER_LOCAL_INCDIRS/CAER_LOCAL_LIBDIRS/CAER_LOCAL_PREFIX
   to USER_LOCAL_INCDIRS/USER_LOCAL_LIBDIRS/USER_LOCAL_PREFIX.
+- Python bindings: removed experimental Python SWIG bindings.
+  Please use https://github.com/duguyue100/pyaer/ instead.
+- Events: removed unused event types: Config, Ear, Matrix4x4,
+  Point1D, Point2D, Point3D, Point4D and Sample.
 
 NEW FEATURES
 - Devices: added support for the DVS132S test chip in the C/C++ API.
