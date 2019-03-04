@@ -24,6 +24,7 @@ NEW FEATURES
 BUG FIXES
 - CMake: ensure LIBCAER_HAVE_SERIALDEV and LIBCAER_HAVE_OPENCV defines
   in libcaer.h are always properly defined to be 0 or 1.
+- device_discovery.c example: fix compilation with new struct davis_info.
 
 
 Release 3.1.0 - 27.11.2018

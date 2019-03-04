@@ -59,30 +59,24 @@ int main(void) {
 
 					if (!discovered[i].deviceErrorVersion) {
 						printf("  - Timestamp Master: %d\n", discovered[i].deviceInfo.davisInfo.deviceIsMaster);
+						printf("  - Firmware Version: %d\n", discovered[i].deviceInfo.davisInfo.firmwareVersion);
 						printf("  - Logic Version: %d\n", discovered[i].deviceInfo.davisInfo.logicVersion);
-						printf("  - Logic Clock Frequency: %d\n", discovered[i].deviceInfo.davisInfo.logicClock);
-						printf("  - ADC Clock Frequency: %d\n", discovered[i].deviceInfo.davisInfo.adcClock);
 						printf("  - Chip ID: %d\n", discovered[i].deviceInfo.davisInfo.chipID);
 						printf("  - DVS Size X: %d\n", discovered[i].deviceInfo.davisInfo.dvsSizeX);
 						printf("  - DVS Size Y: %d\n", discovered[i].deviceInfo.davisInfo.dvsSizeY);
 						printf("  - DVS Statistics: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasStatistics);
 						printf("  - DVS ROI Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasROIFilter);
 						printf("  - DVS Pixel Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasPixelFilter);
+						printf("  - DVS Skip Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasSkipFilter);
+						printf("  - DVS Polarity Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasPolarityFilter);
 						printf("  - DVS BA/Refr Filter: %d\n",
 							discovered[i].deviceInfo.davisInfo.dvsHasBackgroundActivityFilter);
-						printf("  - DVS Test Event Generator: %d\n",
-							discovered[i].deviceInfo.davisInfo.dvsHasTestEventGenerator);
 						printf("  - APS Size X: %d\n", discovered[i].deviceInfo.davisInfo.apsSizeX);
 						printf("  - APS Size Y: %d\n", discovered[i].deviceInfo.davisInfo.apsSizeY);
 						printf("  - APS Color Filter: %d\n", discovered[i].deviceInfo.davisInfo.apsColorFilter);
 						printf("  - APS Global Shutter: %d\n", discovered[i].deviceInfo.davisInfo.apsHasGlobalShutter);
-						printf("  - APS Quad-ROI: %d\n", discovered[i].deviceInfo.davisInfo.apsHasQuadROI);
-						printf("  - APS External ADC: %d\n", discovered[i].deviceInfo.davisInfo.apsHasExternalADC);
-						printf("  - APS Internal ADC: %d\n", discovered[i].deviceInfo.davisInfo.apsHasInternalADC);
 						printf(
 							"  - External IO Generator: %d\n", discovered[i].deviceInfo.davisInfo.extInputHasGenerator);
-						printf("  - External IO Extra Detectors: %d\n",
-							discovered[i].deviceInfo.davisInfo.extInputHasExtraDetectors);
 						printf("  - Multiplexer Statistics: %d\n", discovered[i].deviceInfo.davisInfo.muxHasStatistics);
 					}
 				}
