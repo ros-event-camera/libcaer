@@ -168,13 +168,17 @@ IF (CC_GCC OR CC_CLANG)
 
 	IF (CC_GCC)
 		# Enable all useful warnings in GCC one-by-one.
-		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wunused -Wundef -Wformat=2 -Winit-self -Wuninitialized")
+		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wunused -Wundef -Wformat=2 -Wuninitialized -Winit-self")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wredundant-decls -Wmissing-declarations -Wdouble-promotion")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wshadow -Wfloat-equal -Wconversion -Wstrict-overflow=5")
+		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-cond -Wduplicated-branches -Wlogical-op")
 
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs")
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wbad-function-cast -Wjump-misses-init")
+
+		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wold-style-cast -Wuseless-cast -Wcatch-value=3 -Wextra-semi")
+		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wzero-as-null-pointer-constant -Wno-invalid-offsetof")
 	ENDIF()
 
 	IF (CC_CLANG)
@@ -184,7 +188,7 @@ IF (CC_GCC OR CC_CLANG)
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-parentheses-equality -Wno-covered-switch-default")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-used-but-marked-unused -Wno-cast-align")
 
-		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-old-style-cast")
+		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic")
 		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wno-global-constructors -Wno-exit-time-destructors")
 	ENDIF()
 
