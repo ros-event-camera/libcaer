@@ -20,6 +20,8 @@ NEW FEATURES
 - Devices: added support for the DVS132S test chip in the C/C++ API.
 - CMake: added UDEV_INSTALL switch to disable udev rules installation.
 - CMake: search for and support OpenCV 4.
+- GCC/CMake: add more compiler warnings.
+- C++ ringbuffer.hpp: add comparison operators.
 
 BUG FIXES
 - CMake: ensure LIBCAER_HAVE_SERIALDEV and LIBCAER_HAVE_OPENCV defines

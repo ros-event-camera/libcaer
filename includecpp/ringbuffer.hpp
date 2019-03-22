@@ -2,6 +2,7 @@
 #define LIBCAER_RINGBUFFER_HPP_
 
 #include <libcaer/ringbuffer.h>
+
 #include <memory>
 #include <stdexcept>
 
@@ -31,6 +32,14 @@ public:
 		ringBuffer = std::shared_ptr<struct caer_ring_buffer>(rBuf, deleteRingBuffer);
 	}
 
+	bool operator==(const RingBuffer &rhs) const noexcept {
+		return (ringBuffer == rhs.ringBuffer);
+	}
+
+	bool operator!=(const RingBuffer &rhs) const noexcept {
+		return (!operator==(rhs));
+	}
+
 	void put(void *elem) const {
 		bool success = caerRingBufferPut(ringBuffer.get(), elem);
 		if (!success) {
@@ -50,7 +59,7 @@ public:
 		return (caerRingBufferLook(ringBuffer.get()));
 	}
 };
-}
-}
+} // namespace ringbuffer
+} // namespace libcaer
 
 #endif /* LIBCAER_RINGBUFFER_HPP_ */
