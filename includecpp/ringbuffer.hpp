@@ -4,7 +4,6 @@
 #include <atomic>
 #include <cstdint>
 #include <stdexcept>
-#include <vector>
 
 // Alignment specification support (with defines for cache line alignment).
 #if !defined(CACHELINE_SIZE)
@@ -18,16 +17,22 @@ template<typename T> class RingBuffer {
 private:
 	alignas(CACHELINE_SIZE) size_t putPos;
 	alignas(CACHELINE_SIZE) size_t getPos;
-	alignas(CACHELINE_SIZE) const std::vector<std::atomic<T>> elements;
+	alignas(CACHELINE_SIZE) std::atomic<T> *const elements;
 	const size_t sizeAdj;
 	const T placeholder;
 
 public:
-	RingBuffer(size_t sz) : putPos(0), getPos(0), elements(sz), sizeAdj(sz - 1), placeholder() {
+	RingBuffer(size_t sz) : putPos(0), getPos(0), elements(nullptr), sizeAdj(sz - 1), placeholder() {
 		// Force multiple of two size for performance.
 		if ((sz == 0) || ((sz & sizeAdj) != 0)) {
 			throw std::invalid_argument("Size must be a power of two.");
 		}
+
+		elements = new std::atomic<T>[sz]();
+	}
+
+	~RingBuffer() noexcept {
+		delete[] elements;
 	}
 
 	bool operator==(const RingBuffer &rhs) const noexcept {
