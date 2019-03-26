@@ -18,7 +18,7 @@ template<typename T> class RingBuffer {
 private:
 	alignas(CACHELINE_SIZE) size_t putPos;
 	alignas(CACHELINE_SIZE) size_t getPos;
-	alignas(CACHELINE_SIZE) const std::vector<std::atomic<T>> elements;
+	alignas(CACHELINE_SIZE) std::vector<std::atomic<T>> elements;
 	const size_t sizeAdj;
 	const T placeholder;
 
