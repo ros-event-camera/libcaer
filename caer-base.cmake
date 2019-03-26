@@ -208,9 +208,6 @@ ENDIF()
 
 # Linker settings
 IF (OS_UNIX AND NOT OS_MACOSX)
-	# Used on newer CMake.
-	SET(CMAKE_LINK_WHAT_YOU_USE TRUE PARENT_SCOPE)
-
 	# Add --as-needed to linker flags for executables.
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed" PARENT_SCOPE)
 
