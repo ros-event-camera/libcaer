@@ -44,7 +44,7 @@ public:
 			throw std::invalid_argument("Default constructed elements are not allowed in the ringbuffer.");
 		}
 
-		const T &curr = elements[putPos].load(std::memory_order_acquire);
+		const T curr = elements[putPos].load(std::memory_order_acquire);
 
 		// If the place where we want to put the new element is NULL, it's still
 		// free and we can use it.
@@ -62,7 +62,7 @@ public:
 	}
 
 	bool full() const noexcept {
-		const T &curr = elements[putPos].load(std::memory_order_acquire);
+		const T curr = elements[putPos].load(std::memory_order_acquire);
 
 		// If the place where we want to put the new element is NULL, it's still
 		// free and thus the buffer still has available space.
@@ -104,6 +104,20 @@ public:
 
 		// Else, buffer is empty.
 		throw std::out_of_range("Ringbuffer empty.");
+	}
+
+	bool empty() const noexcept {
+		const T curr = elements[getPos].load(std::memory_order_acquire);
+
+		// If the place where we want to get an element from is not NULL, there
+		// is valid content there, which we return, without removing it from the
+		// ring buffer.
+		if (curr != placeholder) {
+			return (false);
+		}
+
+		// Else, buffer is empty.
+		return (true);
 	}
 };
 
