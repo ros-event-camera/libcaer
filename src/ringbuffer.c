@@ -1,20 +1,19 @@
 #include "ringbuffer.h"
+
 #include "portable_aligned_alloc.h"
+
 #include <stdalign.h> // To get alignas() macro.
 #include <stdatomic.h>
 
 // Alignment specification support (with defines for cache line alignment).
 #if !defined(CACHELINE_SIZE)
-#define CACHELINE_SIZE 64 // Default (big enough for most processors), must be power of two!
+#	define CACHELINE_SIZE 128 // Default (big enough for most processors), must be power of two!
 #endif
 
 struct caer_ring_buffer {
 	alignas(CACHELINE_SIZE) size_t putPos;
-	uint8_t PAD_putPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	alignas(CACHELINE_SIZE) size_t getPos;
-	uint8_t PAD_getPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	alignas(CACHELINE_SIZE) size_t size;
-	uint8_t PAD_size[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	atomic_uintptr_t elements[];
 };
 
@@ -76,14 +75,14 @@ bool caerRingBufferPut(caerRingBuffer rBuf, void *elem) {
 bool caerRingBufferFull(caerRingBuffer rBuf) {
 	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->putPos], memory_order_acquire);
 
-	// If the place where we want to put a new element is not NULL,
-	// there is no place to put new data, so the buffer is full.
-	if (curr != NULL) {
-		return (true);
+	// If the place where we want to put the new element is NULL, it's still
+	// free and thus the buffer still has available space.
+	if (curr == NULL) {
+		return (false);
 	}
 
-	// Else, buffer is not full.
-	return (false);
+	// Else, buffer is full.
+	return (true);
 }
 
 void *caerRingBufferGet(caerRingBuffer rBuf) {
@@ -116,4 +115,18 @@ void *caerRingBufferLook(caerRingBuffer rBuf) {
 
 	// Else, buffer is empty.
 	return (NULL);
+}
+
+bool caerRingBufferEmpty(caerRingBuffer rBuf) {
+	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->getPos], memory_order_acquire);
+
+	// If the place where we want to get an element from is not NULL, there
+	// is valid content there, which we return, without removing it from the
+	// ring buffer.
+	if (curr != NULL) {
+		return (false);
+	}
+
+	// Else, buffer is empty.
+	return (true);
 }

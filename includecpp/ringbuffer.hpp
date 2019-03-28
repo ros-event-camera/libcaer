@@ -8,7 +8,7 @@
 
 // Alignment specification support (with defines for cache line alignment).
 #if !defined(CACHELINE_SIZE)
-#	define CACHELINE_SIZE 64 // Default (big enough for most processors), must be power of two!
+#	define CACHELINE_SIZE 128 // Default (big enough for most processors), must be power of two!
 #endif
 
 namespace libcaer {
@@ -28,6 +28,8 @@ public:
 		if ((sz == 0) || ((sz & sizeAdj) != 0)) {
 			throw std::invalid_argument("Size must be a power of two.");
 		}
+
+		std::atomic_thread_fence(std::memory_order_release);
 	}
 
 	bool operator==(const RingBuffer &rhs) const noexcept {
