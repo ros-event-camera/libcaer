@@ -179,6 +179,9 @@ void caerLogVAFull(
 	snprintf(
 		logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, logMessageString);
 
+	// Can't do anything about error results anyway, so just ignore.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 	if (logFileDescriptor1 >= 0) {
 		write(logFileDescriptor1, logString, logLength);
 	}
@@ -186,6 +189,7 @@ void caerLogVAFull(
 	if (logFileDescriptor2 >= 0) {
 		write(logFileDescriptor2, logString, logLength);
 	}
+#pragma GCC diagnostic pop
 
 	if (logCallbackPtr != NULL) {
 		(*logCallbackPtr)(logString, logLength);

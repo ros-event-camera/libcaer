@@ -1753,7 +1753,8 @@ struct caer_bias_coarsefine1024 caerBiasCoarseFine1024FromCurrent(uint32_t picoA
 	}
 
 	// Calculate coarse value in pico-Ampere, where 0 is disabled and 1023 is max.
-	int32_t coarseValue = I32T(ceil(((1023.0 * fineNudge * (double) picoAmps) / 1000000.0)));
+	double coarseValueDouble = ceil(((1023.0 * fineNudge * (double) picoAmps) / 1000000.0));
+	int32_t coarseValue      = I32T(coarseValueDouble);
 
 	// Ensure within range.
 	if (coarseValue < 1) {
@@ -1769,7 +1770,8 @@ struct caer_bias_coarsefine1024 caerBiasCoarseFine1024FromCurrent(uint32_t picoA
 	// This is the maximum for the fine divider.
 	double coarseCurrent = (1000000.0 * (double) coarseValue) / 1023.0;
 
-	int32_t fineValue = I32T(round(((1023.0 * (double) picoAmps) / coarseCurrent)));
+	double fineValueDouble = round(((1023.0 * (double) picoAmps) / coarseCurrent));
+	int32_t fineValue      = I32T(fineValueDouble);
 
 	// Ensure within range.
 	if (fineValue < 1) {

@@ -178,8 +178,11 @@ static void closeRPi(davisRPiHandle handle) {
 	// SPI lock mutex destroyed in main exit.
 	spiClose(gpio);
 
-	// Unmap GPIO memory region.
+	// Unmap GPIO memory region. Cast is fine, needed by API.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	munmap((void *) gpio->gpioReg, GPIO_REG_LEN);
+#pragma GCC diagnostic pop
 }
 
 caerDeviceHandle davisRPiOpen(

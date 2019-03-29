@@ -257,7 +257,11 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
 }
 
 void caerFilterDVSNoiseStatsApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacketConst polarity) {
+	// Statistics-only mode is guaranteed to only read the memory.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	caerFilterDVSNoiseApplyInternal(noiseFilter, (caerPolarityEventPacket) polarity, true);
+#pragma GCC diagnostic pop
 }
 
 static void caerFilterDVSNoiseApplyInternal(

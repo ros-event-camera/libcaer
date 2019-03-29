@@ -1,3 +1,7 @@
+# This is often the case due to how we try to have multiple compatible
+# definitions of functions in C.
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
+
 SET(LIBCAER_SRC_FILES
 	ringbuffer.c
 	log.c

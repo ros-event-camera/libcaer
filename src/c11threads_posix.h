@@ -10,8 +10,8 @@
 #include <time.h>
 
 #if defined(__linux__)
-#include <sys/prctl.h>
-#include <sys/resource.h>
+#	include <sys/prctl.h>
+#	include <sys/resource.h>
 #endif
 
 typedef pthread_t thrd_t;
@@ -38,7 +38,11 @@ enum {
 #define MAX_THREAD_NAME_LENGTH 15
 
 static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
+	// This is fine on most architectures.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 	int ret = pthread_create(thr, NULL, (void *(*) (void *) ) func, arg);
+#pragma GCC diagnostic pop
 
 	switch (ret) {
 		case 0:
