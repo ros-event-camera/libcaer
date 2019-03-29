@@ -185,7 +185,8 @@ IF (CC_GCC OR CC_CLANG)
 		# Enable all warnings in Clang, then turn off useless ones.
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Weverything -Wno-packed -Wno-padded -Wno-unreachable-code-break")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-vla")
-		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-covered-switch-default -Wno-float-equal")
+		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-covered-switch-default -Wno-float-equal -Wno-cast-align")
+		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wno-unknown-warning-option")
 
 		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic")
 		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wno-global-constructors -Wno-exit-time-destructors")
