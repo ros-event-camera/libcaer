@@ -29,6 +29,9 @@ ENDIF()
 IF (ENABLE_OPENCV)
 	# Add C++ OpenCV support..
 	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} frame_utils_opencv.cpp)
+
+	# The included C parts need to do this.
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-zero-as-null-pointer-constant")
 ENDIF()
 
 # Set full RPATH
