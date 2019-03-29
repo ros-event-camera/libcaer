@@ -38,9 +38,9 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	(void) deviceLogString;
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Last set exposure value was: %d.",
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Last set exposure value was: %" PRIu32 ".",
 		exposureLastSetValue);
-	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Frame exposure value was: %d.",
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: Frame exposure value was: %" PRIu32 ".",
 		exposureFrameValue);
 #endif
 
@@ -168,7 +168,7 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 	}
 
 #if AUTOEXPOSURE_ENABLE_DEBUG_LOGGING == 1
-	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: New exposure value is: %" PRIi64 ".",
+	commonLog(CAER_LOG_INFO, deviceLogString, deviceLogLevel, "AutoExposure: New exposure value is: %" PRIi32 ".",
 		newExposure);
 #endif
 
