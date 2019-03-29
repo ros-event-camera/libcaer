@@ -32,6 +32,12 @@ IF (ENABLE_OPENCV)
 
 	# The included C parts need to do this.
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-zero-as-null-pointer-constant")
+
+	# Clang weirdness: also looks into the C code, which of course
+	# will use old-style casts (the only cast available).
+	IF (CC_CLANG)
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast")
+	ENDIF()
 ENDIF()
 
 # Set full RPATH
