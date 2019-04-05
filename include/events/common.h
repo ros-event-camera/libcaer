@@ -75,15 +75,15 @@ enum caer_default_event_types {
 	FRAME_EVENT     = 2,  //!< Frame (intensity, APS) events.
 	IMU6_EVENT      = 3,  //!< 6 axes IMU events.
 	IMU9_EVENT      = 4,  //!< 9 axes IMU events.
-	SAMPLE_EVENT    = 5,  //!< ADC sample events.
-	EAR_EVENT       = 6,  //!< Ear (cochlea) events.
-	CONFIG_EVENT    = 7,  //!< Device configuration events.
-	POINT1D_EVENT   = 8,  //!< 1D measurement events.
-	POINT2D_EVENT   = 9,  //!< 2D measurement events.
-	POINT3D_EVENT   = 10, //!< 3D measurement events.
-	POINT4D_EVENT   = 11, //!< 4D measurement events.
+	SAMPLE_EVENT    = 5,  //!< ADC sample events (deprecated).
+	EAR_EVENT       = 6,  //!< Ear (cochlea) events (deprecated).
+	CONFIG_EVENT    = 7,  //!< Device configuration events (deprecated).
+	POINT1D_EVENT   = 8,  //!< 1D measurement events (deprecated).
+	POINT2D_EVENT   = 9,  //!< 2D measurement events (deprecated).
+	POINT3D_EVENT   = 10, //!< 3D measurement events (deprecated).
+	POINT4D_EVENT   = 11, //!< 4D measurement events (deprecated).
 	SPIKE_EVENT     = 12, //!< Spike events.
-	MATRIX4x4_EVENT = 13, //!< 4D matrix events.
+	MATRIX4x4_EVENT = 13, //!< 4D matrix events (deprecated).
 };
 
 /**
