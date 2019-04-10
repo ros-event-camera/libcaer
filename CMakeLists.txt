@@ -111,7 +111,7 @@ WRITE_BASIC_CONFIG_VERSION_FILE(
 SET(include_dirs ${CMAKE_INSTALL_INCLUDEDIR})
 SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 CONFIGURE_PACKAGE_CONFIG_FILE(
-	${PROJECT_SOURCE_DIR}/libcaerConfig.cmake.in
+	${PROJECT_SOURCE_DIR}/cmakemod/${PROJECT_NAME}Config.cmake.in
 	${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
 	INSTALL_DESTINATION ${export_destination}
 	PATH_VARS include_dirs export_destination)
