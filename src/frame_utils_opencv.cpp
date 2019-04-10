@@ -191,7 +191,7 @@ static void frameUtilsOpenCVContrastNormalize(const cv::Mat &input, cv::Mat &out
 	double range = maxValue - minValue;
 
 	// Calculate alpha (contrast).
-	double alpha = ((double) UINT16_MAX) / range;
+	double alpha = (static_cast<double>(UINT16_MAX)) / range;
 
 	// Calculate beta (brightness).
 	double beta = -minValue * alpha;

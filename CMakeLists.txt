@@ -37,7 +37,6 @@ ENDIF()
 # Project name and version
 PROJECT(libcaer
 	VERSION 3.1.9
-	HOMEPAGE_URL "https://gitlab.com/inivation/libcaer/"
 	LANGUAGES C CXX)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
