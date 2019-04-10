@@ -1,4 +1,4 @@
-FUNCTION(CAER_SETUP NEED_CPP17)
+FUNCTION(CAER_SETUP)
 
 # Compiler cache support
 FIND_PROGRAM(CCACHE_FOUND ccache)
@@ -61,36 +61,6 @@ SET(OS_LINUX ${OS_LINUX} PARENT_SCOPE)
 SET(OS_MACOSX ${OS_MACOSX} PARENT_SCOPE)
 SET(OS_WINDOWS ${OS_WINDOWS} PARENT_SCOPE)
 
-IF (NEED_CPP17)
-	# Check GCC compiler version, 7.0 is needed at least for C++17 support.
-	IF (CC_GCC)
-		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "7.0.0")
-			MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 7.0.0.")
-		ENDIF()
-	ENDIF()
-
-	# Check Clang compiler version, 5.0 is needed at least for C++17 support.
-	IF (CC_CLANG)
-		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "5.0.0")
-			MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 5.0.0.")
-		ENDIF()
-	ENDIF()
-ELSE()
-	# Check GCC compiler version, 4.9 is needed at least for atomics support.
-	IF (CC_GCC)
-		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "4.9.0")
-			MESSAGE(FATAL_ERROR "GCC version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 4.9.0.")
-		ENDIF()
-	ENDIF()
-
-	# Check Clang compiler version, 3.6 is needed at least for atomics support.
-	IF (CC_CLANG)
-		IF (${CMAKE_C_COMPILER_VERSION} VERSION_LESS "3.6.0")
-			MESSAGE(FATAL_ERROR "Clang version found is ${CMAKE_C_COMPILER_VERSION}. Required >= 3.6.0.")
-		ENDIF()
-	ENDIF()
-ENDIF()
-
 # Test if we are on a big-endian architecture
 INCLUDE(TestBigEndian)
 TEST_BIG_ENDIAN(SYSTEM_BIGENDIAN)
@@ -151,16 +121,8 @@ IF (NOT USER_LOCAL_PREFIX)
 	SET(USER_LOCAL_PREFIX ${USER_LOCAL_PREFIX} PARENT_SCOPE)
 ENDIF()
 
-# Set C/C++ compiler options
+# Enable C/C++ compiler warnings
 IF (CC_GCC OR CC_CLANG)
-	# C11 standard needed (atomics, threads)
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
-	IF (NEED_CPP17)
-		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-	ELSE()
-		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	ENDIF()
-
 	# Enable all warnings for GCC / Clang
 	SET(WARN_COMMON_FLAGS "-pedantic -Wall -Wextra")
 	SET(WARN_C_FLAGS "")

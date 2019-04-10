@@ -30,11 +30,11 @@ IF (ENABLE_OPENCV)
 	# Add C++ OpenCV support..
 	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} frame_utils_opencv.cpp)
 
-	# The included C parts need to do this.
+	# The included C headers need to do this (NULL is 0, nullptr not available).
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-zero-as-null-pointer-constant")
 
 	# Clang weirdness: also looks into the C code, which of course
-	# will use old-style casts (the only cast available).
+	# will use old-style casts (the only cast available there).
 	IF (CC_CLANG)
 		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast")
 	ENDIF()
@@ -51,7 +51,9 @@ SET_TARGET_PROPERTIES(caer
 	VERSION ${PROJECT_VERSION}
 )
 
-TARGET_LINK_LIBRARIES(caer ${LIBCAER_LIBS})
+TARGET_LINK_LIBRARIES(caer PUBLIC ${LIBCAER_LIBS})
+TARGET_INCLUDE_DIRECTORIES(caer PRIVATE ${LIBCAER_INCDIRS} ${CMAKE_SOURCE_DIR}/include/)
+TARGET_INCLUDE_DIRECTORIES(caer PUBLIC ${OpenCV_INCLUDE_DIRS}) # Used in headers.
 
 IF (OS_WINDOWS)
 	INSTALL(TARGETS caer EXPORT libcaer-exports RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -67,7 +69,9 @@ IF (ENABLE_STATIC)
 		OUTPUT_NAME caer
 	)
 
-	TARGET_LINK_LIBRARIES(caerStatic ${LIBCAER_LIBS})
+	TARGET_LINK_LIBRARIES(caerStatic PUBLIC ${LIBCAER_LIBS})
+	TARGET_INCLUDE_DIRECTORIES(caerStatic PRIVATE ${LIBCAER_INCDIRS} ${CMAKE_SOURCE_DIR}/include/)
+	TARGET_INCLUDE_DIRECTORIES(caerStatic PUBLIC ${OpenCV_INCLUDE_DIRS}) # Used in headers.
 
 	IF (OS_WINDOWS)
 		INSTALL(TARGETS caerStatic EXPORT libcaer-exports RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
