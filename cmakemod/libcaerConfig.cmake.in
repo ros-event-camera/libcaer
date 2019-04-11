@@ -28,7 +28,7 @@
 @PACKAGE_INIT@
 
 CMAKE_POLICY(PUSH)
-CMAKE_POLICY(VERSION 3.5)
+CMAKE_POLICY(VERSION 3.12)
 
 INCLUDE(@PACKAGE_export_destination@/libcaer-exports.cmake)
 SET(libcaer_INCLUDE_DIRS @PACKAGE_include_dirs@)

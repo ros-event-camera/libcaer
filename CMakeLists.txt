@@ -1,5 +1,5 @@
-# Init CMake (require at least version 3.8.0)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
+# Init CMake (require at least version 3.12.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12.0)
 
 # General build settings
 IF (NOT CMAKE_BUILD_TYPE)
