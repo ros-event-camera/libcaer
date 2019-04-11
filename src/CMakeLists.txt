@@ -23,7 +23,7 @@ SET_TARGET_PROPERTIES(libcaer PROPERTIES POSITION_INDEPENDENT_CODE 1)
 TARGET_COMPILE_OPTIONS(libcaer PRIVATE -Wno-unused-function)
 
 TARGET_LINK_LIBRARIES(libcaer PUBLIC PkgConfig::libusb ${BASE_LIBS})
-TARGET_INCLUDE_DIRECTORIES(libcaer PRIVATE PkgConfig::libusb ${CMAKE_SOURCE_DIR}/include/)
+TARGET_INCLUDE_DIRECTORIES(libcaer PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 
 IF(OS_LINUX)
 	# Raspberry Pi support available only on Linux.
@@ -35,7 +35,6 @@ IF (ENABLE_SERIALDEV)
 	TARGET_SOURCES(libcaer PRIVATE edvs.c)
 
 	TARGET_LINK_LIBRARIES(libcaer PUBLIC PkgConfig::libserialport)
-	TARGET_INCLUDE_DIRECTORIES(libcaer PRIVATE PkgConfig::libserialport)
 ENDIF()
 
 IF (ENABLE_OPENCV)
@@ -43,7 +42,6 @@ IF (ENABLE_OPENCV)
 	TARGET_SOURCES(libcaer PRIVATE frame_utils_opencv.cpp)
 
 	TARGET_LINK_LIBRARIES(libcaer PUBLIC ${OpenCV_LIBS})
-	TARGET_INCLUDE_DIRECTORIES(libcaer PRIVATE ${OpenCV_INCLUDE_DIRS})
 
 	# The included C headers need to do this (NULL is 0, nullptr not available).
 	TARGET_COMPILE_OPTIONS(libcaer PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-zero-as-null-pointer-constant>)
