@@ -1,5 +1,5 @@
-# Init CMake (require at least version 3.5.0)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5.0)
+# Init CMake (require at least version 3.8.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
 
 # General build settings
 IF (NOT CMAKE_BUILD_TYPE)
@@ -72,13 +72,13 @@ MESSAGE(STATUS "Base libraries: ${BASE_LIBS}")
 INCLUDE(FindPkgConfig)
 
 # Required: basic USB devices support
-PKG_CHECK_MODULES(LIBUSB1 REQUIRED libusb-1.0>=1.0.17)
+PKG_CHECK_MODULES(libusb REQUIRED IMPORTED_TARGET libusb-1.0>=1.0.17)
 SET(LIBCAER_PKGCONFIG_REQUIRES_PRIVATE "libusb-1.0 >= 1.0.17")
 
 # Optional: serial devices support
 IF (ENABLE_SERIALDEV)
 	# Require libserialport, minimum 0.1.1 version.
-	PKG_CHECK_MODULES(SERIALPORT REQUIRED libserialport>=0.1.1)
+	PKG_CHECK_MODULES(libserialport REQUIRED IMPORTED_TARGET libserialport>=0.1.1)
 	SET(LIBCAER_PKGCONFIG_REQUIRES_PRIVATE "${LIBCAER_PKGCONFIG_REQUIRES_PRIVATE}, libserialport >= 0.1.1")
 ENDIF()
 

@@ -56,14 +56,14 @@ TARGET_LINK_LIBRARIES(caer
 		${OpenCV_LIBS}
 	PRIVATE
 		${BASE_LIBS}
-		${LIBUSB1_LIBRARIES}
-		${SERIALPORT_LIBRARIES})
+		PkgConfig::libusb
+		PkgConfig::libserialport)
 TARGET_INCLUDE_DIRECTORIES(caer
 	PUBLIC
 		${OpenCV_INCLUDE_DIRS}
 	PRIVATE
-		${LIBUSB1_INCLUDE_DIRS}
-		${SERIALPORT_INCLUDE_DIRS}
+		PkgConfig::libusb
+		PkgConfig::libserialport
 		${CMAKE_SOURCE_DIR}/include/)
 
 IF (OS_WINDOWS)
