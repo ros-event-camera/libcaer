@@ -1,0 +1,11 @@
+stages:
+  - build
+
+build_mac:
+  stage: build
+  tags:
+    - mac
+    - build
+  script:
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_OPENCV=1 .
+    - make -j2
