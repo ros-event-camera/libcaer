@@ -1,6 +1,7 @@
 Release 3.2.0 - XX.03.2019
 
 INCOMPATIBLE CHANGES
+- CMake: version 3.12.0 or newer of CMake is now required.
 - CMake: installed caer-base.cmake file now requires either C++11,
   used in libcaer, or C++17, used in caer. This upgrades the requirement
   for project calling CAER_SETUP(TRUE) to C++17 from C++14.
