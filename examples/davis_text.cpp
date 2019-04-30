@@ -1,3 +1,4 @@
+#define LIBCAER_FRAMECPP_OPENCV_INSTALLED 0
 #include <libcaercpp/devices/davis.hpp>
 
 #include <atomic>

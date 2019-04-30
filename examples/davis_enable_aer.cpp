@@ -8,6 +8,7 @@
 * Compile with:
 * g++ -std=c++11 -pedantic -Wall -Wextra -O2 -o davis_enable_aer davis_enable_aer.cpp -D_DEFAULT_SOURCE=1 -lcaer
 */
+#define LIBCAER_FRAMECPP_OPENCV_INSTALLED 0
 #include <libcaercpp/devices/davis.hpp>
 
 using namespace std;
@@ -28,7 +29,7 @@ int main(void) {
 	davisHandle.sendDefaultConfig();
 
 	// Enable external AER control, keep chip runnning.
-	davisHandle.configSet(DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_FORCE_CHIP_BIAS_ENABLE, true);
+	davisHandle.configSet(DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, true);
 	davisHandle.configSet(DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL, true);
 
 	// Close automatically done by destructor.
