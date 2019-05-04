@@ -410,7 +410,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	}
 
 	// Ensure no data is left over from previous runs, if the camera
-	// wasn't shut-down properly. First ensure it is shut down.
+	// wasn't shut-down properly. First ensure it is shut down completely.
 	davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
 	davisConfigSet(cdh, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_ACCELEROMETER, false);
@@ -428,7 +428,8 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&clearSleep, NULL);
 
-	libusb_clear_halt(handle->usbState.deviceHandle, 0x82);
+	// And reset the USB side of things.
+	usbControlResetDataEndpoint(&handle->usbState);
 
 	if (!usbDataTransfersStart(&handle->usbState)) {
 		freeAllDataMemory(state);
