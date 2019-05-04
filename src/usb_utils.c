@@ -1021,3 +1021,7 @@ static void syncControlInCallback(void *controlInCallbackPtr, int status, const 
 		atomic_store(&dataCompletion->completed, 2);
 	}
 }
+
+bool usbControlResetDataEndpoint(usbState state) {
+	return (libusb_clear_halt(state->deviceHandle, USB_DEFAULT_DATA_ENDPOINT) == LIBUSB_SUCCESS);
+}

@@ -139,6 +139,7 @@ bool usbControlTransferOut(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
 bool usbControlTransferIn(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
+bool usbControlResetDataEndpoint(usbState state);
 
 // SPI config via USB implementation.
 #include "spi_config_interface.h"

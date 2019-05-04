@@ -977,6 +977,27 @@ bool dvs132sDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	// the first one is observed.
 	state->imu.ignoreEvents = true;
 
+	// Ensure no data is left over from previous runs, if the camera
+	// wasn't shut-down properly. First ensure it is shut down completely.
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_RUN, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_RUN_ACCELEROMETER, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_RUN_GYROSCOPE, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_RUN_TEMPERATURE, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_EXTINPUT, DVS132S_CONFIG_EXTINPUT_RUN_DETECTOR, false);
+
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_MUX, DVS132S_CONFIG_MUX_RUN, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_MUX, DVS132S_CONFIG_MUX_TIMESTAMP_RUN, false);
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_USB, DVS132S_CONFIG_USB_RUN, false);
+
+	dvs132sConfigSet(cdh, DVS132S_CONFIG_MUX, DVS132S_CONFIG_MUX_RUN_CHIP, false);
+
+	// Then wait 10ms for FPGA device side buffers to clear.
+	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
+	thrd_sleep(&clearSleep, NULL);
+
+	// And reset the USB side of things.
+	usbControlResetDataEndpoint(&state->usbState);
+
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
@@ -1620,8 +1641,8 @@ static void dvs132sEventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
 								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-										  || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
-										  || (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
 			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
