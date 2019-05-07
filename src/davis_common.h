@@ -803,7 +803,7 @@ static bool davisCommonSendDefaultChipConfig(davisCommonHandle handle) {
 		davisCommonConfigSet(
 			handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_LOCALBUFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 164)));
 		davisCommonConfigSet(
-			handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
+			handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 144)));
 		davisCommonConfigSet(
 			handle, DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
 		davisCommonConfigSet(
@@ -875,7 +875,7 @@ static bool davisCommonSendDefaultChipConfig(davisCommonHandle handle) {
 		davisCommonConfigSet(
 			handle, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_OFFBN, caerBiasCoarseFineGenerate(CF_N_TYPE(4, 1)));
 		davisCommonConfigSet(
-			handle, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(5, 129)));
+			handle, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PIXINVBN, caerBiasCoarseFineGenerate(CF_N_TYPE(6, 144)));
 		davisCommonConfigSet(
 			handle, DAVIS_CONFIG_BIAS, DAVIS128_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(CF_P_TYPE(2, 58)));
 		davisCommonConfigSet(
@@ -3127,9 +3127,9 @@ static void davisCommonEventTranslator(
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
 		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
 								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-										  || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
-										  || (state->currentPackets.framePosition >= currentPacketContainerCommitSize)
-										  || (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.framePosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
 			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
