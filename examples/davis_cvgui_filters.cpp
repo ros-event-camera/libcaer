@@ -1,12 +1,14 @@
 #include <libcaercpp/devices/davis.hpp>
+
 #include <libcaercpp/filters/dvs_noise.hpp>
+
 #include <atomic>
 #include <csignal>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #if !defined(LIBCAER_HAVE_OPENCV) || LIBCAER_HAVE_OPENCV == 0
-#error "This example requires OpenCV support in libcaer to be enabled."
+#	error "This example requires OpenCV support in libcaer to be enabled."
 #endif
 
 using namespace std;
@@ -111,7 +113,9 @@ int main(void) {
 
 	// Disable APS (frames) and IMU, not used for showing event filtering.
 	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, false);
-	davisHandle.configSet(DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, false);
+	davisHandle.configSet(DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_ACCELEROMETER, false);
+	davisHandle.configSet(DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_GYROSCOPE, false);
+	davisHandle.configSet(DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN_TEMPERATURE, false);
 
 	cv::namedWindow("PLOT_EVENTS",
 		cv::WindowFlags::WINDOW_AUTOSIZE | cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
