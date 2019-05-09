@@ -3,6 +3,7 @@
 
 #include "devices/device_discover.h"
 #include "devices/dynapse.h"
+
 #include "container_generation.h"
 #include "data_exchange.h"
 #include "usb_utils.h"
@@ -11,7 +12,7 @@
 
 #define DYNAPSE_DEVICE_PID 0x841D
 
-#define DYNAPSE_REQUIRED_LOGIC_REVISION 5
+#define DYNAPSE_REQUIRED_LOGIC_VERSION 5
 #define DYNAPSE_REQUIRED_FIRMWARE_VERSION 3
 
 #define VENDOR_REQUEST_FPGA_CONFIG_AER 0xC5

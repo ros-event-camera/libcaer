@@ -189,7 +189,7 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 
 	struct usb_info *foundDynapse = NULL;
 
-	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, DYNAPSE_REQUIRED_LOGIC_REVISION,
+	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, DYNAPSE_REQUIRED_LOGIC_VERSION, -1,
 		DYNAPSE_REQUIRED_FIRMWARE_VERSION, &foundDynapse);
 
 	if (result <= 0) {
@@ -323,7 +323,7 @@ caerDeviceHandle dynapseOpen(
 	struct usb_info usbInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DYNAPSE_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_REVISION,
+			devAddressRestrict, serialNumberRestrict, DYNAPSE_REQUIRED_LOGIC_VERSION, -1,
 			DYNAPSE_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dynapseLog(
@@ -1599,10 +1599,9 @@ static void dynapseEventTranslator(void *vhd, const uint8_t *buffer, size_t byte
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit
-			= (currentPacketContainerCommitSize > 0)
-			  && ((state->currentPackets.spikePosition >= currentPacketContainerCommitSize)
-					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
+								   && ((state->currentPackets.spikePosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
 			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);

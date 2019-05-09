@@ -29,7 +29,7 @@ ssize_t dvs132sFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	struct usb_info *foundDVS132S = NULL;
 
 	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS132S_DEVICE_PID, DVS132S_REQUIRED_LOGIC_VERSION,
-		DVS132S_REQUIRED_FIRMWARE_VERSION, &foundDVS132S);
+		DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, &foundDVS132S);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -175,8 +175,8 @@ caerDeviceHandle dvs132sOpen(
 	struct usb_info usbInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS132S_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, DVS132S_REQUIRED_LOGIC_VERSION, DVS132S_REQUIRED_FIRMWARE_VERSION,
-			&usbInfo)) {
+			devAddressRestrict, serialNumberRestrict, DVS132S_REQUIRED_LOGIC_VERSION,
+			DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvs132sLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");

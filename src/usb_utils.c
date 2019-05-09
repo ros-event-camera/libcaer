@@ -67,8 +67,8 @@ static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char 
 	va_end(argumentList);
 }
 
-ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
-	struct usb_info **foundUSBDevices) {
+ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
+	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices) {
 	// Set to NULL initially (for error return).
 	*foundUSBDevices = NULL;
 
@@ -195,7 +195,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 			// Verify device logic version.
 			bool logicVersionOK = true;
 
-			if (requiredLogicRevision >= 0) {
+			if (requiredLogicVersion >= 0) {
 				// Communication with device open, get logic version information.
 				uint32_t param32 = 0;
 
@@ -220,15 +220,48 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic version.
-				if (param32 != U32T(requiredLogicRevision)) {
+				if (param32 != U32T(requiredLogicVersion)) {
 					logicVersionOK = false;
 				}
 
 				(*foundUSBDevices)[matches].logicVersion = I16T(param32);
 			}
 
+			// Verify device logic minimum patch level.
+			bool logicPatchOK = true;
+
+			if (minimumLogicPatch >= 0) {
+				// Communication with device open, get logic patch level information.
+				uint32_t param32 = 0;
+
+				// Get logic patch level from generic SYSINFO module.
+				uint8_t spiConfig[4] = {0};
+
+				if (libusb_control_transfer(devHandle,
+						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
+					!= sizeof(spiConfig)) {
+					libusb_release_interface(devHandle, 0);
+					libusb_close(devHandle);
+
+					(*foundUSBDevices)[matches].errorVersion = true;
+					matches++;
+					continue;
+				}
+
+				param32 |= U32T(spiConfig[0] << 24);
+				param32 |= U32T(spiConfig[1] << 16);
+				param32 |= U32T(spiConfig[2] << 8);
+				param32 |= U32T(spiConfig[3] << 0);
+
+				// Verify device logic minimum patch level.
+				if (param32 < U32T(minimumLogicPatch)) {
+					logicPatchOK = false;
+				}
+			}
+
 			// If any of the version checks failed, stop.
-			if (!firmwareVersionOK || !logicVersionOK) {
+			if (!firmwareVersionOK || !logicVersionOK || !logicPatchOK) {
 				(*foundUSBDevices)[matches].errorVersion = true;
 			}
 
@@ -246,7 +279,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRev
 }
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
-	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
 	struct usb_info *deviceUSBInfo) {
 	errno = 0;
 
@@ -389,7 +422,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				// Verify device logic version.
 				bool logicVersionOK = true;
 
-				if (requiredLogicRevision >= 0) {
+				if (requiredLogicVersion >= 0) {
 					// Communication with device open, get logic version information.
 					uint32_t param32 = 0;
 
@@ -416,12 +449,12 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic version.
-					if (param32 != U32T(requiredLogicRevision)) {
+					if (param32 != U32T(requiredLogicVersion)) {
 						caerUSBLog(CAER_LOG_ERROR, state,
 							"Device logic version incorrect. You have version %" PRIu32 "; but version %" PRIu32
 							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
-							param32, U32T(requiredLogicRevision));
+							param32, U32T(requiredLogicVersion));
 
 						logicVersionOK = false;
 						errno          = CAER_ERROR_LOGIC_VERSION;
@@ -430,8 +463,51 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					deviceUSBInfo->logicVersion = I16T(param32);
 				}
 
+				// Verify device logic minimum patch level.
+				bool logicPatchOK = true;
+
+				if (minimumLogicPatch >= 0) {
+					// Communication with device open, get logic patch level information.
+					uint32_t param32 = 0;
+
+					// Get logic patch level from generic SYSINFO module.
+					uint8_t spiConfig[4] = {0};
+
+					if (libusb_control_transfer(devHandle,
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
+						!= sizeof(spiConfig)) {
+						libusb_release_interface(devHandle, 0);
+						libusb_close(devHandle);
+						devHandle = NULL;
+
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic patch level.");
+
+						errno = CAER_ERROR_COMMUNICATION;
+						continue;
+					}
+
+					param32 |= U32T(spiConfig[0] << 24);
+					param32 |= U32T(spiConfig[1] << 16);
+					param32 |= U32T(spiConfig[2] << 8);
+					param32 |= U32T(spiConfig[3] << 0);
+
+					// Verify device logic minimum patch level.
+					if (param32 < U32T(minimumLogicPatch)) {
+						caerUSBLog(CAER_LOG_ERROR, state,
+							"Device logic patch level insufficient. You have patch level %" PRIu32
+							"; but patch level %" PRIu32
+							" is required. Please update by following the Flashy documentation at "
+							"'https://inivation.com/support/software/reflashing/'.",
+							param32, U32T(minimumLogicPatch));
+
+						logicPatchOK = false;
+						errno        = CAER_ERROR_LOGIC_VERSION;
+					}
+				}
+
 				// If any of the version checks failed, stop.
-				if (!firmwareVersionOK || !logicVersionOK) {
+				if (!firmwareVersionOK || !logicVersionOK || !logicPatchOK) {
 					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 					devHandle = NULL;

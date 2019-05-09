@@ -33,16 +33,16 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	struct usb_info *foundDavisFX2 = NULL;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
-		resultFX2 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &foundDavisFX2);
+		resultFX2 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, DAVIS_FX2_REQUIRED_LOGIC_VERSION,
+			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &foundDavisFX2);
 	}
 
 	ssize_t resultFX3              = 0;
 	struct usb_info *foundDavisFX3 = NULL;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3)) {
-		resultFX3 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &foundDavisFX3);
+		resultFX3 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, DAVIS_FX3_REQUIRED_LOGIC_VERSION,
+			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &foundDavisFX3);
 	}
 
 	if ((resultFX2 < 0) || (resultFX3 < 0)) {
@@ -199,14 +199,14 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&handle->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &usbInfo);
+			devAddressRestrict, serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_VERSION,
+			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &usbInfo);
 	}
 
 	if ((!deviceFound) && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
 		deviceFound = usbDeviceOpen(&handle->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_REVISION,
-			DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &usbInfo);
+			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_VERSION,
+			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &usbInfo);
 
 		if (deviceFound) {
 			handle->fx3Support.enabled = true;

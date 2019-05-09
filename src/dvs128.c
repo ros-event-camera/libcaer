@@ -25,7 +25,7 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 	struct usb_info *foundDVS128 = NULL;
 
 	ssize_t result
-		= usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, DVS_REQUIRED_FIRMWARE_VERSION, &foundDVS128);
+		= usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION, &foundDVS128);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -141,7 +141,7 @@ caerDeviceHandle dvs128Open(
 	struct usb_info usbInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
-			serialNumberRestrict, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			serialNumberRestrict, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
@@ -752,10 +752,9 @@ static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytes
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit
-			= (currentPacketContainerCommitSize > 0)
-			  && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
+								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
 			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
