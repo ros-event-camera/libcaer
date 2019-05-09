@@ -1120,6 +1120,14 @@ enum caer_davis_imu_invensense_gyro_scale {
  * anything other than libcaer.
  */
 #define DAVIS_CONFIG_SYSINFO_CLOCK_DEVIATION 6
+/**
+ * Parameter address for module DAVIS_CONFIG_SYSINFO:
+ * read-only parameter, the patch version of the logic currently
+ * running on the device's FPGA/CPLD.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer.
+ */
+#define DAVIS_CONFIG_SYSINFO_LOGIC_PATCH 7
 
 /**
  * Parameter address for module DAVIS_CONFIG_USB:

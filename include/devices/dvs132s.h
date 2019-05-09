@@ -613,6 +613,14 @@ enum caer_dvs132s_imu_bosch_gyro_filter {
  * anything other than libcaer.
  */
 #define DVS132S_CONFIG_SYSINFO_CLOCK_DEVIATION 6
+/**
+ * Parameter address for module DVS132S_CONFIG_SYSINFO:
+ * read-only parameter, the patch version of the logic currently
+ * running on the device's FPGA/CPLD.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer.
+ */
+#define DVS132S_CONFIG_SYSINFO_LOGIC_PATCH 7
 
 /**
  * Parameter address for module DVS132S_CONFIG_USB:
