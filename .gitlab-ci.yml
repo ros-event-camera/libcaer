@@ -11,7 +11,7 @@ build_mac:
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
-    - make install
+    - sudo make install
 
 build_rpi:
   stage: build
@@ -26,4 +26,4 @@ build_rpi:
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
-    - make install
+    - sudo make install
