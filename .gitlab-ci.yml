@@ -1,4 +1,4 @@
-build_mac:
+build_macosx:
   stage: build
   tags:
     - mac
@@ -13,7 +13,7 @@ build_mac:
     - make -j2
     - sudo make install
 
-build_rpi:
+build_raspbian:
   stage: build
   tags:
     - rpi
@@ -27,3 +27,19 @@ build_rpi:
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
     - sudo make install
+
+build_ubuntu1804:
+  stage: build
+  tags:
+    - docker
+    - build
+  image: ubuntu:18.04
+  before_script:
+    - apt-get -y update
+    - apt-get -y upgrade
+    - apt-get -y install build-essential cmake pkg-config libusb-1.0-0-dev libserialport-dev libopencv-dev
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j2
