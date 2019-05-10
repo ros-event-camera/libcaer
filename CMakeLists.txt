@@ -34,6 +34,10 @@ IF (NOT UDEV_SELINUX)
 	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules on Linux")
 ENDIF()
 
+IF (NOT EXAMPLES_INSTALL)
+	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
+ENDIF()
+
 # Project name and version
 PROJECT(libcaer
 	VERSION 3.1.9
@@ -149,7 +153,9 @@ IF (DOXYGEN_FOUND)
 ENDIF()
 
 # Compile all examples
-ADD_SUBDIRECTORY(examples)
+IF (EXAMPLES_INSTALL)
+	ADD_SUBDIRECTORY(examples)
+ENDIF()
 
 # Support automatic RPM generation
 SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
