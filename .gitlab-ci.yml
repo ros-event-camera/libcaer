@@ -32,11 +32,10 @@ build_ubuntu1804:
   stage: build
   tags:
     - docker
-  image: ubuntu:18.04
+  image: inivation/ubuntu:18.04
   before_script:
     - apt-get -y update
     - apt-get -y upgrade
-    - apt-get -y install build-essential cmake pkg-config libusb-1.0-0-dev libserialport-dev libopencv-dev
   script:
     - mkdir build
     - cd build
