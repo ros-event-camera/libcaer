@@ -9,3 +9,12 @@ build_mac:
   script:
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_OPENCV=1 .
     - make -j2
+
+ build_rpi:
+  stage: build
+  tags:
+    - rpi
+    - build
+  script:
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr .
+    - make -j2
