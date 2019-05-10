@@ -136,15 +136,16 @@ IF (CC_GCC OR CC_CLANG)
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wshadow -Wconversion -Wstrict-overflow=5 -Wlogical-op")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-cond")
 
-		IF (CMAKE_C_COMPILER_VERSION VERSION_GREATER 7.0)
-			SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-branches")
-		ENDIF()
-
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs")
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wbad-function-cast -Wjump-misses-init")
 
-		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wold-style-cast -Wcatch-value=3 -Wextra-semi")
-		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wzero-as-null-pointer-constant")
+		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wold-style-cast -Wzero-as-null-pointer-constant")
+
+		IF (CMAKE_C_COMPILER_VERSION VERSION_GREATER 7.0)
+			SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-branches")
+
+			SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wcatch-value=3 -Wextra-semi")
+		ENDIF()
 	ENDIF()
 
 	IF (CC_CLANG)
