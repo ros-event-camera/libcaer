@@ -1,13 +1,15 @@
 #ifndef LIBCAER_SRC_DATA_EXCHANGE_H_
 #define LIBCAER_SRC_DATA_EXCHANGE_H_
 
-#include "libcaer.h"
-#include "ringbuffer.h"
-#include "devices/device.h"
+#include "libcaer/libcaer.h"
+#include "libcaer/ringbuffer.h"
+
+#include "libcaer/devices/device.h"
+
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
-#include "c11threads_posix.h"
+#	include "c11threads_posix.h"
 #endif
 
 enum { THR_IDLE = 0, THR_RUNNING = 1, THR_EXITED = 2 };

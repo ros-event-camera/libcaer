@@ -95,6 +95,9 @@ IF (ENABLE_OPENCV)
 	ENDIF()
 ENDIF()
 
+# Add main include dir for all targets
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include/)
+
 # Subdirectories
 ADD_SUBDIRECTORY(include)
 ADD_SUBDIRECTORY(src)

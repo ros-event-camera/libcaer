@@ -1,4 +1,4 @@
-#include "frame_utils.h"
+#include "libcaer/frame_utils.h"
 
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 // Use C++ OpenCV demosaic and contrast functions, defined

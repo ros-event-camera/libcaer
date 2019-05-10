@@ -1,4 +1,4 @@
-#include "filters/dvs_noise.h"
+#include "libcaer/filters/dvs_noise.h"
 
 struct caer_filter_dvs_noise {
 	// Logging support.

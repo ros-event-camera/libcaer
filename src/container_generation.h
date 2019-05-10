@@ -1,9 +1,9 @@
 #ifndef LIBCAER_SRC_CONTAINER_GENERATION_H_
 #define LIBCAER_SRC_CONTAINER_GENERATION_H_
 
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
-#include "events/special.h"
+#include "libcaer/events/special.h"
 
 #include "data_exchange.h"
 #include "timestamps.h"

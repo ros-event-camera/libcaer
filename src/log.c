@@ -1,4 +1,4 @@
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
 #include <stdarg.h>
 #include <stdatomic.h>

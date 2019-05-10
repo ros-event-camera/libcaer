@@ -1,15 +1,15 @@
 #ifndef LIBCAER_SRC_DAVIS_COMMON_H_
 #define LIBCAER_SRC_DAVIS_COMMON_H_
 
-#include "devices/davis.h"
-#include "devices/device_discover.h"
+#include "libcaer/devices/davis.h"
+#include "libcaer/devices/device_discover.h"
 
-#include "filters/dvs_noise.h"
+#include "libcaer/filters/dvs_noise.h"
 
 #include "autoexposure.h"
 #include "container_generation.h"
 #include "data_exchange.h"
-#include "frame_utils.h"
+#include "libcaer/frame_utils.h"
 #include "spi_config_interface.h"
 
 #include <math.h>

@@ -1,7 +1,7 @@
 #ifndef LIBCAER_SRC_SPI_CONFIG_INTERFACE_H_
 #define LIBCAER_SRC_SPI_CONFIG_INTERFACE_H_
 
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
 #define SPI_CONFIG_MSG_SIZE 6
 

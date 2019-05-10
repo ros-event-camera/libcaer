@@ -1,8 +1,9 @@
 #ifndef LIBCAER_SRC_DVS128_H_
 #define LIBCAER_SRC_DVS128_H_
 
-#include "devices/device_discover.h"
-#include "devices/dvs128.h"
+#include "libcaer/devices/device_discover.h"
+#include "libcaer/devices/dvs128.h"
+
 #include "container_generation.h"
 #include "data_exchange.h"
 #include "usb_utils.h"

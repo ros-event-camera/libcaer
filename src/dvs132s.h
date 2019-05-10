@@ -1,8 +1,8 @@
 #ifndef LIBCAER_SRC_DVS132S_H_
 #define LIBCAER_SRC_DVS132S_H_
 
-#include "devices/device_discover.h"
-#include "devices/dvs132s.h"
+#include "libcaer/devices/device_discover.h"
+#include "libcaer/devices/dvs132s.h"
 
 #include "container_generation.h"
 #include "data_exchange.h"

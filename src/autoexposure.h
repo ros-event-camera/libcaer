@@ -1,11 +1,11 @@
 #ifndef LIBCAER_SRC_AUTOEXPOSURE_H_
 #define LIBCAER_SRC_AUTOEXPOSURE_H_
 
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
-#include "events/frame.h"
+#include "libcaer/events/frame.h"
 
-#include "devices/davis.h"
+#include "libcaer/devices/davis.h"
 
 #ifdef NDEBUG
 #	define AUTOEXPOSURE_ENABLE_DEBUG_LOGGING 0

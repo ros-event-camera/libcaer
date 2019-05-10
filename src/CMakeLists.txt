@@ -23,7 +23,6 @@ SET_TARGET_PROPERTIES(libcaer PROPERTIES POSITION_INDEPENDENT_CODE 1)
 TARGET_COMPILE_OPTIONS(libcaer PRIVATE -Wno-unused-function)
 
 TARGET_LINK_LIBRARIES(libcaer PUBLIC PkgConfig::libusb ${BASE_LIBS})
-TARGET_INCLUDE_DIRECTORIES(libcaer PRIVATE ${CMAKE_SOURCE_DIR}/include/)
 
 IF (OS_LINUX)
 	# Raspberry Pi support available only on Linux.

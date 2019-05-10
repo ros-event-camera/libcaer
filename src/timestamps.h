@@ -1,9 +1,9 @@
 #ifndef LIBCAER_SRC_TIMESTAMPS_H_
 #define LIBCAER_SRC_TIMESTAMPS_H_
 
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
-#include "events/common.h"
+#include "libcaer/events/common.h"
 
 #include "portable_time.h"
 

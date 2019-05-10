@@ -1,15 +1,17 @@
 #ifndef LIBCAER_SRC_EDVS_H_
 #define LIBCAER_SRC_EDVS_H_
 
-#include "devices/device_discover.h"
-#include "devices/edvs.h"
+#include "libcaer/devices/device_discover.h"
+#include "libcaer/devices/edvs.h"
+
 #include "container_generation.h"
 #include "data_exchange.h"
+
 #include <libserialport.h>
 #include <stdatomic.h>
 
 #if defined(HAVE_PTHREADS)
-#include "c11threads_posix.h"
+#	include "c11threads_posix.h"
 #endif
 
 #define EDVS_DEVICE_NAME "EDVS-4337"

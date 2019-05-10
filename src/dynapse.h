@@ -1,8 +1,8 @@
 #ifndef LIBCAER_SRC_DYNAPSE_H_
 #define LIBCAER_SRC_DYNAPSE_H_
 
-#include "devices/device_discover.h"
-#include "devices/dynapse.h"
+#include "libcaer/devices/device_discover.h"
+#include "libcaer/devices/dynapse.h"
 
 #include "container_generation.h"
 #include "data_exchange.h"

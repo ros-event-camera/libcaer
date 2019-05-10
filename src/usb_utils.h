@@ -1,9 +1,9 @@
 #ifndef LIBCAER_SRC_USB_UTILS_H_
 #define LIBCAER_SRC_USB_UTILS_H_
 
-#include "libcaer.h"
+#include "libcaer/libcaer.h"
 
-#include "devices/usb.h"
+#include "libcaer/devices/usb.h"
 
 #include <libusb.h>
 #include <stdatomic.h>
