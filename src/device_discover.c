@@ -9,7 +9,7 @@
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 #	include "edvs.h"
 #else
-#	include "devices/edvs.h"
+#	include "libcaer/devices/edvs.h"
 #endif
 
 // Supported devices and their functions.
