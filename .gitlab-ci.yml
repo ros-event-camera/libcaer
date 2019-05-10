@@ -6,8 +6,13 @@ build_mac:
   tags:
     - mac
     - build
+  before_script:
+    - brew update
+    - brew upgrade
   script:
-    - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_OPENCV=1 .
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
 
 build_rpi:
@@ -15,6 +20,11 @@ build_rpi:
   tags:
     - rpi
     - build
+  before_script:
+    - apt-get update
+    - apt-get upgrade
   script:
-    - cmake -DCMAKE_INSTALL_PREFIX=/usr .
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
