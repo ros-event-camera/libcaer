@@ -1,7 +1,7 @@
 build_macosx:
   stage: build
   tags:
-    - mac
+    - macosx
     - build
   before_script:
     - brew update
@@ -16,7 +16,7 @@ build_macosx:
 build_raspbian:
   stage: build
   tags:
-    - rpi
+    - raspbian
     - build
   before_script:
     - sudo apt-get -y update
@@ -32,7 +32,6 @@ build_ubuntu1804:
   stage: build
   tags:
     - docker
-    - build
   image: ubuntu:18.04
   before_script:
     - apt-get -y update
