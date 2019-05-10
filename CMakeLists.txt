@@ -97,7 +97,6 @@ ENDIF()
 
 # Subdirectories
 ADD_SUBDIRECTORY(include)
-ADD_SUBDIRECTORY(includecpp)
 ADD_SUBDIRECTORY(src)
 
 # Generate pkg-config file
