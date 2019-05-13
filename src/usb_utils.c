@@ -147,6 +147,18 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			(*foundUSBDevices)[matches].busNumber  = libusb_get_bus_number(devicesList[i]);
 			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
 
+			// Verify device firmware version before opening, so that firmwareVersion
+			// is always defined, even on open errors.
+			bool firmwareVersionOK = true;
+
+			if (requiredFirmwareVersion >= 0) {
+				if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
+					firmwareVersionOK = false;
+				}
+
+				(*foundUSBDevices)[matches].firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
+			}
+
 			libusb_device_handle *devHandle = NULL;
 
 			if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
@@ -179,17 +191,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				(*foundUSBDevices)[matches].errorOpen = true;
 				matches++;
 				continue;
-			}
-
-			// Verify device firmware version.
-			bool firmwareVersionOK = true;
-
-			if (requiredFirmwareVersion >= 0) {
-				if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
-					firmwareVersionOK = false;
-				}
-
-				(*foundUSBDevices)[matches].firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
 			}
 
 			// Verify device logic version.
