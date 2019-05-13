@@ -8,8 +8,8 @@ Vendor:  iniVation AG
 
 Source0: https://gitlab.com/inivation/%{name}/-/archive/%{version}/%{name}-%{version}.tar.gz
 
-BuildRequires: gcc >= 4.9, gcc-c++ >= 4.9, cmake >= 2.8.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.1.0
-Requires: libusbx >= 1.0.17, libserialport >= 0.1.1, opencv >= 3.1.0
+BuildRequires: gcc >= 7.0, gcc-c++ >= 7.0, cmake >= 3.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.2.0
+Requires: libusbx >= 1.0.17, libserialport >= 0.1.1, opencv >= 3.2.0
 
 %description
 Minimal C library to access, configure and get data from neuromorphic sensors
@@ -18,7 +18,7 @@ and processors. Currently supported devices are the Dynamic Vision Sensor
 
 %package devel
 Summary: Minimal C library to interact with neuromorphic sensors and processors (development files)
-Requires: %{name}%{?_isa} = %{version}-%{release}, cmake >= 2.8.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.1.0
+Requires: %{name}%{?_isa} = %{version}-%{release}, cmake >= 3.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.2.0
 
 %description devel
 Development files for libcaer, such as headers, pkg-config files, etc..
@@ -34,7 +34,7 @@ Static version (.a) of the libcaer library.
 %autosetup
 
 %build
-%cmake -DENABLE_STATIC=1 -DUDEV_SELINUX=1 -DENABLE_SERIALDEV=1 -DENABLE_OPENCV=1 .
+%cmake -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DUDEV_SELINUX=1 .
 make %{?_smp_mflags}
 
 %install
