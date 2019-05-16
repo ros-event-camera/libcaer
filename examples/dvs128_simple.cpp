@@ -63,9 +63,9 @@ int main(void) {
 	// Let's take a look at the information we have on the device.
 	struct caer_dvs128_info dvs128_info = dvs128Handle.infoGet();
 
-	printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Logic: %d.\n", dvs128_info.deviceString,
+	printf("%s --- ID: %d, Master: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n", dvs128_info.deviceString,
 		dvs128_info.deviceID, dvs128_info.deviceIsMaster, dvs128_info.dvsSizeX, dvs128_info.dvsSizeY,
-		dvs128_info.logicVersion);
+		dvs128_info.firmwareVersion);
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!

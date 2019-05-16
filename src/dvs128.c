@@ -52,6 +52,8 @@ ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
 		dvs128InfoPtr->deviceUSBDeviceAddress = foundDVS128[i].devAddress;
 		strncpy(dvs128InfoPtr->deviceSerialNumber, foundDVS128[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
+		dvs128InfoPtr->firmwareVersion = foundDVS128[i].firmwareVersion;
+
 		// Reopen DVS128 device to get additional info, if possible at all.
 		if (!foundDVS128[i].errorOpen && !foundDVS128[i].errorVersion) {
 			caerDeviceHandle dvs
@@ -189,7 +191,7 @@ caerDeviceHandle dvs128Open(
 	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
 	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
 	handle->info.deviceString           = usbInfoString;
-	handle->info.logicVersion           = 1;
+	handle->info.firmwareVersion        = usbInfo.firmwareVersion;
 	handle->info.deviceIsMaster         = true;
 	handle->info.dvsSizeX               = DVS_ARRAY_SIZE_X;
 	handle->info.dvsSizeY               = DVS_ARRAY_SIZE_Y;

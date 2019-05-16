@@ -217,6 +217,8 @@ ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		dynapseInfoPtr->deviceUSBDeviceAddress = foundDynapse[i].devAddress;
 		strncpy(dynapseInfoPtr->deviceSerialNumber, foundDynapse[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
+		dynapseInfoPtr->logicVersion = (!foundDynapse[i].errorOpen) ? (foundDynapse[i].logicVersion) : (-1);
+
 		// Reopen Dynap-SE device to get additional info, if possible at all.
 		if (!foundDynapse[i].errorOpen && !foundDynapse[i].errorVersion) {
 			caerDeviceHandle dynapse

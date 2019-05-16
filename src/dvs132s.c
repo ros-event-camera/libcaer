@@ -56,6 +56,9 @@ ssize_t dvs132sFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		dvs132sInfoPtr->deviceUSBDeviceAddress = foundDVS132S[i].devAddress;
 		strncpy(dvs132sInfoPtr->deviceSerialNumber, foundDVS132S[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
+		dvs132sInfoPtr->firmwareVersion = foundDVS132S[i].firmwareVersion;
+		dvs132sInfoPtr->logicVersion    = (!foundDVS132S[i].errorOpen) ? (foundDVS132S[i].logicVersion) : (-1);
+
 		// Reopen DVS128 device to get additional info, if possible at all.
 		if (!foundDVS132S[i].errorOpen && !foundDVS132S[i].errorVersion) {
 			caerDeviceHandle dvs

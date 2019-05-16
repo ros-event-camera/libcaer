@@ -85,6 +85,9 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX2[i].devAddress;
 		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX2[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
+		davisInfoPtr->firmwareVersion = foundDavisFX2[i].firmwareVersion;
+		davisInfoPtr->logicVersion    = (!foundDavisFX2[i].errorOpen) ? (foundDavisFX2[i].logicVersion) : (-1);
+
 		// Reopen DAVIS device to get additional info, if possible at all.
 		if (!foundDavisFX2[i].errorOpen && !foundDavisFX2[i].errorVersion) {
 			caerDeviceHandle davis
@@ -111,6 +114,9 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		davisInfoPtr->deviceUSBBusNumber     = foundDavisFX3[i].busNumber;
 		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX3[i].devAddress;
 		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX3[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+		davisInfoPtr->firmwareVersion = foundDavisFX3[i].firmwareVersion;
+		davisInfoPtr->logicVersion    = (!foundDavisFX3[i].errorOpen) ? (foundDavisFX3[i].logicVersion) : (-1);
 
 		// Reopen DAVIS device to get additional info, if possible at all.
 		if (!foundDavisFX3[i].errorOpen && !foundDavisFX3[i].errorVersion) {

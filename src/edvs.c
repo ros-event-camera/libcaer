@@ -45,20 +45,30 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	size_t i = 0, matches = 0;
 
 	while (serialPortList[i++] != NULL) {
+		const char *serialPortName = sp_get_port_name(serialPortList[i]);
+
 		// Skip undefined devices.
-		if (sp_get_port_name(serialPortList[i]) == NULL || strlen(sp_get_port_name(serialPortList[i])) == 0) {
+		if (serialPortName == NULL || strlen(serialPortName) == 0) {
 			continue;
 		}
 
 		// Try to open the serial device as an eDVS, with all supported baud-rates.
 		caerLogDisable(true);
-		caerDeviceHandle edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M);
+
+		uint32_t serialBaudRate = CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M;
+		caerDeviceHandle edvs   = edvsOpen(0, serialPortName, serialBaudRate);
+
 		if (edvs == NULL) {
-			edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M);
+			serialBaudRate = CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M;
+			edvs           = edvsOpen(0, serialPortName, serialBaudRate);
+
 			if (edvs == NULL) {
-				edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M);
+				serialBaudRate = CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M;
+				edvs           = edvsOpen(0, serialPortName, serialBaudRate);
+
 				if (edvs == NULL) {
-					edvs = edvsOpen(0, sp_get_port_name(serialPortList[i]), CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M);
+					serialBaudRate = CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M;
+					edvs           = edvsOpen(0, serialPortName, serialBaudRate);
 				}
 			}
 		}
@@ -89,6 +99,9 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		(*discoveredDevices)[matches].deviceErrorOpen    = (errno == CAER_ERROR_COMMUNICATION);
 		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
 		struct caer_edvs_info *edvsInfoPtr               = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
+
+		strncpy(edvsInfoPtr->serialPortName, serialPortName, 64);
+		edvsInfoPtr->serialBaudRate = serialBaudRate;
 
 		if (edvs != NULL) {
 			*edvsInfoPtr = caerEDVSInfoGet(edvs);
@@ -980,10 +993,9 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 		// tsReset and tsBigWrap are already defined above.
 		// Trigger if any of the global container-wide thresholds are met.
 		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
-		bool containerSizeCommit
-			= (currentPacketContainerCommitSize > 0)
-			  && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
-					 || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
+		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
+								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
 		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
 			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);

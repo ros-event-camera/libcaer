@@ -26,7 +26,7 @@ int main(void) {
 
 					if (!discovered[i].deviceErrorVersion) {
 						printf("  - Timestamp Master: %d\n", discovered[i].deviceInfo.dvs128Info.deviceIsMaster);
-						printf("  - Logic Version: %d\n", discovered[i].deviceInfo.dvs128Info.logicVersion);
+						printf("  - Firmware Version: %d\n", discovered[i].deviceInfo.dvs128Info.firmwareVersion);
 						printf("  - DVS Size X: %d\n", discovered[i].deviceInfo.dvs128Info.dvsSizeX);
 						printf("  - DVS Size Y: %d\n", discovered[i].deviceInfo.dvs128Info.dvsSizeY);
 					}
@@ -68,7 +68,8 @@ int main(void) {
 						printf("  - DVS ROI Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasROIFilter);
 						printf("  - DVS Pixel Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasPixelFilter);
 						printf("  - DVS Skip Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasSkipFilter);
-						printf("  - DVS Polarity Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasPolarityFilter);
+						printf(
+							"  - DVS Polarity Filter: %d\n", discovered[i].deviceInfo.davisInfo.dvsHasPolarityFilter);
 						printf("  - DVS BA/Refr Filter: %d\n",
 							discovered[i].deviceInfo.davisInfo.dvsHasBackgroundActivityFilter);
 						printf("  - APS Size X: %d\n", discovered[i].deviceInfo.davisInfo.apsSizeX);

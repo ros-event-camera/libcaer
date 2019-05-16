@@ -210,7 +210,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 
-					(*foundUSBDevices)[matches].errorVersion = true;
+					(*foundUSBDevices)[matches].errorOpen = true;
 					matches++;
 					continue;
 				}
@@ -245,7 +245,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 
-					(*foundUSBDevices)[matches].errorVersion = true;
+					(*foundUSBDevices)[matches].errorOpen = true;
 					matches++;
 					continue;
 				}
