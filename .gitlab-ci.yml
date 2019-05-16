@@ -10,7 +10,7 @@ build_macosx:
     - mkdir build
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
     - sudo make install
 
 build_raspbian:
@@ -25,7 +25,7 @@ build_raspbian:
     - mkdir build
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
     - sudo make install
 
 build_ubuntu_1604:
@@ -40,7 +40,7 @@ build_ubuntu_1604:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=0 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_1804:
   stage: build
@@ -54,7 +54,7 @@ build_ubuntu_1804:
     - mkdir build
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_gcc6:
   stage: build
@@ -68,7 +68,7 @@ build_ubuntu_curr_gcc6:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_gcc7:
   stage: build
@@ -82,7 +82,7 @@ build_ubuntu_curr_gcc7:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_COMPILER=g++-7 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_gcc8:
   stage: build
@@ -96,7 +96,7 @@ build_ubuntu_curr_gcc8:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_gcc9:
   stage: build
@@ -110,7 +110,7 @@ build_ubuntu_curr_gcc9:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_clang6:
   stage: build
@@ -124,7 +124,7 @@ build_ubuntu_curr_clang6:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_clang7:
   stage: build
@@ -138,7 +138,7 @@ build_ubuntu_curr_clang7:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_curr_clang8:
   stage: build
@@ -152,7 +152,7 @@ build_ubuntu_curr_clang8:
     - mkdir build
     - cd build
     - cmake -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 pages:
   tags:
