@@ -42,8 +42,7 @@ $ sudo make install
 
 DOCUMENTATION:
 
-The API documentation for a release can be found at docs/libcaer_api_manual.pdf.
-Online documentation is available at https://inivation.github.io/libcaer/
+Online HTML documentation is available at https://inivation.gitlab.io/libcaer/
 Also check the examples/ directory and the iniVation Support website.
 
 For the development tree, you can generate the documentation using:
@@ -81,5 +80,5 @@ our Google Groups mailing list for discussions and announcements.
 BUG TRACKER: https://gitlab.com/inivation/libcaer/issues/
 MAILING LIST: https://groups.google.com/d/forum/caer-users/
 
-BUILD STATUS: https://travis-ci.org/inivation/libcaer/
+BUILD STATUS: https://gitlab.com/inivation/libcaer/pipelines/
 CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inivation.libcaer
