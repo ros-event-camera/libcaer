@@ -13,6 +13,16 @@ build_macosx:
     - make -j1
     - sudo make install
 
+build_windows:
+  stage: build
+  tags:
+    - windows
+    - build
+  before_script:
+    - pacman -Syuu --noconfirm
+  script:
+    - echo $PWD
+
 build_raspbian:
   stage: build
   tags:
