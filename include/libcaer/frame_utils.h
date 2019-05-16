@@ -41,6 +41,11 @@ void caerFrameUtilsDemosaic(
 void caerFrameUtilsContrast(
 	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_contrast_types contrastType);
 
+enum caer_frame_utils_pixel_color { PX_COLOR_R, PX_COLOR_B, PX_COLOR_G1, PX_COLOR_G2, PX_COLOR_W };
+
+enum caer_frame_utils_pixel_color caerFrameUtilsPixelColor(
+	enum caer_frame_event_color_filter colorFilter, int32_t x, int32_t y);
+
 #ifdef __cplusplus
 }
 #endif

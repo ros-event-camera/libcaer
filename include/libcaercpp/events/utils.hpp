@@ -17,6 +17,10 @@ namespace utils {
 
 inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
+inline enum caer_frame_utils_pixel_color getPixelColor(
+	libcaer::events::FrameEvent::colorFilter cFilter, int32_t x, int32_t y);
+inline enum caer_frame_utils_pixel_color getPixelColor(
+	enum caer_frame_event_color_filter cFilter, int32_t x, int32_t y);
 
 inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(
 	caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
@@ -83,6 +87,20 @@ inline std::shared_ptr<EventPacket> makeSharedFromCStruct(
 			break;
 	}
 }
+
+inline enum caer_frame_utils_pixel_color getPixelColor(
+	libcaer::events::FrameEvent::colorFilter cFilter, int32_t x, int32_t y) {
+	return (caerFrameUtilsPixelColor(
+		static_cast<enum caer_frame_event_color_filter>(
+			static_cast<typename std::underlying_type<libcaer::events::FrameEvent::colorFilter>::type>(cFilter)),
+		x, y));
+}
+
+inline enum caer_frame_utils_pixel_color getPixelColor(
+	enum caer_frame_event_color_filter cFilter, int32_t x, int32_t y) {
+	return (caerFrameUtilsPixelColor(cFilter, x, y));
+}
+
 } // namespace utils
 } // namespace events
 } // namespace libcaer

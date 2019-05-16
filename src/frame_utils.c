@@ -9,19 +9,23 @@ extern void caerFrameUtilsOpenCVContrast(
 	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_contrast_types contrastType);
 #endif
 
-enum pixelColorEnum { PXR, PXB, PXG1, PXG2, PXW };
-
-static const enum pixelColorEnum colorKeys[9][4] = {
-	[MONO] = {PXR, PXR, PXR, PXR}, // This is impossible (MONO), so just use red pixel value, as good as any.
-	[RGBG] = {PXR, PXG2, PXG1, PXB},
-	[GRGB] = {PXG1, PXB, PXR, PXG2},
-	[GBGR] = {PXG2, PXR, PXB, PXG1},
-	[BGRG] = {PXB, PXG1, PXG2, PXR},
-	[RGBW] = {PXR, PXW, PXG1, PXB},
-	[GRWB] = {PXG1, PXB, PXR, PXW},
-	[WBGR] = {PXW, PXR, PXB, PXG1},
-	[BWRG] = {PXB, PXG1, PXW, PXR},
+static const enum caer_frame_utils_pixel_color colorKeys[9][4] = {
+	// This is impossible (MONO), so just use red pixel value, as good as any.
+	[MONO] = {PX_COLOR_R, PX_COLOR_R, PX_COLOR_R, PX_COLOR_R},
+	[RGBG] = {PX_COLOR_R, PX_COLOR_G2, PX_COLOR_G1, PX_COLOR_B},
+	[GRGB] = {PX_COLOR_G1, PX_COLOR_B, PX_COLOR_R, PX_COLOR_G2},
+	[GBGR] = {PX_COLOR_G2, PX_COLOR_R, PX_COLOR_B, PX_COLOR_G1},
+	[BGRG] = {PX_COLOR_B, PX_COLOR_G1, PX_COLOR_G2, PX_COLOR_R},
+	[RGBW] = {PX_COLOR_R, PX_COLOR_W, PX_COLOR_G1, PX_COLOR_B},
+	[GRWB] = {PX_COLOR_G1, PX_COLOR_B, PX_COLOR_R, PX_COLOR_W},
+	[WBGR] = {PX_COLOR_W, PX_COLOR_R, PX_COLOR_B, PX_COLOR_G1},
+	[BWRG] = {PX_COLOR_B, PX_COLOR_G1, PX_COLOR_W, PX_COLOR_R},
 };
+
+enum caer_frame_utils_pixel_color caerFrameUtilsPixelColor(
+	enum caer_frame_event_color_filter colorFilter, int32_t x, int32_t y) {
+	return (colorKeys[colorFilter][((x & 0x01) << 1) | (y & 0x01)]);
+}
 
 void caerFrameUtilsDemosaic(
 	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_demosaic_types demosaicType) {
@@ -107,13 +111,13 @@ void caerFrameUtilsDemosaic(
 			int32_t idxLEFTDOWN   = idxCENTERDOWN - 1;
 			int32_t idxRIGHTDOWN  = idxCENTERDOWN + 1;
 
-			enum pixelColorEnum pixelColor = colorKeys[colorFilter][((x & 0x01) << 1) | (y & 0x01)];
+			enum caer_frame_utils_pixel_color pixelColor = caerFrameUtilsPixelColor(colorFilter, x, y);
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
 
 			switch (pixelColor) {
-				case PXR: {
+				case PX_COLOR_R: {
 					// This is a R pixel. It is always surrounded by G and B only.
 					RComp = inPixels[idxCENTER];
 
@@ -179,7 +183,7 @@ void caerFrameUtilsDemosaic(
 					break;
 				}
 
-				case PXB: {
+				case PX_COLOR_B: {
 					// This is a B pixel. It is always surrounded by G and R only.
 					BComp = inPixels[idxCENTER];
 
@@ -245,7 +249,7 @@ void caerFrameUtilsDemosaic(
 					break;
 				}
 
-				case PXG1: {
+				case PX_COLOR_G1: {
 					// This is a G1 (first green) pixel. It is always surrounded by all of R, G, B.
 					GComp = inPixels[idxCENTER];
 
@@ -304,7 +308,7 @@ void caerFrameUtilsDemosaic(
 					break;
 				}
 
-				case PXG2: {
+				case PX_COLOR_G2: {
 					// This is a G2 (second green) pixel. It is always surrounded by all of R, G, B.
 					GComp = inPixels[idxCENTER];
 
@@ -363,7 +367,7 @@ void caerFrameUtilsDemosaic(
 					break;
 				}
 
-				case PXW: {
+				case PX_COLOR_W: {
 					// This is a W pixel, modified Bayer pattern instead of G2.
 					// It is always surrounded by all of R, G, B.
 					// TODO: how can W itself contribute to the three colors?
