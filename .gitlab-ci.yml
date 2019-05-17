@@ -23,7 +23,7 @@ build_windows:
   before_script:
     - pacman -Syuu --noconfirm
   script:
-    - source /etc/profile
+    - MSYSTEM=MINGW64 source /etc/profile
     - mkdir build
     - cd build
     - cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
