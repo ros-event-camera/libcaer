@@ -1,10 +1,19 @@
-Release 3.2.0 - XX.03.2019
+Release 3.2.0 - 20.05.2019
 
 INCOMPATIBLE CHANGES
+- DAVIS firmware and logic update: DAVIS FX3 firmware v6 and logic v18.1.
+  Fixes a possible USB data corruption bug in some rare cases, especially
+  on MacOS X systems. Improves quality of APS frames.
+- All devices: dataStart() stops all producers and resets all buffers,
+  ensuring no stale data remains. Producers must be enabled only after
+  having called dataStart(), it not using the START_PRODUCERS feature.
 - CMake: version 3.12.0 or newer of CMake is now required.
-- CMake: installed caer-base.cmake file now requires either C++11,
-  used in libcaer, or C++17, used in caer. This upgrades the requirement
-  for project calling CAER_SETUP(TRUE) to C++17 from C++14.
+- Ubuntu: dropped support for Trusty 14.04.
+- DVS128: renamed logicVersion to firmwareVersion in dvs128_info struct.
+- Python bindings: removed experimental Python SWIG bindings.
+  Please use https://github.com/duguyue100/pyaer/ instead (issue #65).
+- CMake: installed caer-base.cmake dropped its argument. Use standard
+  CMake facilities to select the needed C/C++ standard version.
 - CMake: caer-base.cmake does not provide the following variables anymore:
   - CM_BUILD_DIR (not useful)
   - CM_SHARE_DIR (already known when accessing the file)
@@ -12,22 +21,26 @@ INCOMPATIBLE CHANGES
   - CAER_MODULES_DIR (not part of libcaer)
 - CMake: renamed CAER_LOCAL_INCDIRS/CAER_LOCAL_LIBDIRS/CAER_LOCAL_PREFIX
   to USER_LOCAL_INCDIRS/USER_LOCAL_LIBDIRS/USER_LOCAL_PREFIX.
-- Python bindings: removed experimental Python SWIG bindings.
-  Please use https://github.com/duguyue100/pyaer/ instead.
 - Events: removed unused event types: Config, Ear, Matrix4x4,
-  Point1D, Point2D, Point3D, Point4D and Sample.
+  Point1D, Point2D, Point3D, Point4D and Sample (issue #85).
 
 NEW FEATURES
 - Devices: added support for the DVS132S test chip in the C/C++ API.
-- CMake: added UDEV_INSTALL switch to disable udev rules installation.
-- CMake: search for and support OpenCV 4.
+- CMake: added UDEV_INSTALL switch to disable udev rules installation (issue #82).
+- CMake: search for and support OpenCV 4 (issues #83, #90).
 - GCC/CMake: add more compiler warnings.
 - C++ ringbuffer.hpp: add comparison operators.
+- Examples: compile and install examples with -DEXAMPLES_INSTALL=1.
+- frame_utils.h: added caerFrameUtilsPixelColor() function (issue #89).
+- Device discovery: firmwareVersion is always defined for USB devices
+  during device discovery. SerialPortName and SerialBaudRate are always
+  defined for eDVS devices (issue #88).
 
 BUG FIXES
 - CMake: ensure LIBCAER_HAVE_SERIALDEV and LIBCAER_HAVE_OPENCV defines
   in libcaer.h are always properly defined to be 0 or 1.
 - device_discovery.c example: fix compilation with new struct davis_info.
+- Examples: fix incorrect defines.
 
 
 Release 3.1.0 - 27.11.2018
