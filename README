@@ -78,7 +78,7 @@ Please use our GitLab bug tracker to report issues and bugs, or
 our Google Groups mailing list for discussions and announcements.
 
 BUG TRACKER: https://gitlab.com/inivation/libcaer/issues/
-MAILING LIST: https://groups.google.com/d/forum/caer-users/
+MAILING LIST: https://groups.google.com/d/forum/dv-users/
 
 BUILD STATUS: https://gitlab.com/inivation/libcaer/pipelines/
 CODE ANALYSIS: https://sonarcloud.io/dashboard?id=com.inivation.libcaer
