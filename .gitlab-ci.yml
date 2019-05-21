@@ -11,7 +11,7 @@ build_macosx:
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
-    - sudo make install
+    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then sudo make install; fi
 
 build_windows:
   stage: build
@@ -28,7 +28,7 @@ build_windows:
     - cd build
     - cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
-    - make install
+    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then make install; fi
 
 build_raspbian:
   stage: build
@@ -43,7 +43,7 @@ build_raspbian:
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
-    - sudo make install
+    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then sudo make install; fi
 
 build_ubuntu_1604:
   stage: build
