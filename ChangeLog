@@ -1,3 +1,12 @@
+Release 3.2.2 - XX.05.2019
+
+BUG FIXES
+- CMake: fix compatibility with older pre-6.0 GCCs (issue #93).
+- USB devices: better error messages on failure to open a device,
+  better distinction of generic 'any-camera' case and specific
+  USB ports or serial numbers.
+
+
 Release 3.2.0 - 20.05.2019
 
 INCOMPATIBLE CHANGES
