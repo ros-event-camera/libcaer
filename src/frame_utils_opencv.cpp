@@ -21,7 +21,7 @@ void caerFrameUtilsOpenCVDemosaic(
 	const enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(inputFrame);
 
 	if ((colorFilter == RGBW) || (colorFilter == GRWB) || (colorFilter == BWRG) || (colorFilter == WBGR)) {
-		caerLog(CAER_LOG_WARNING, __func__,
+		caerLog(CAER_LOG_ERROR, __func__,
 			"OpenCV demosaic types don't support the RGBW color filter variants, only RGBG. "
 			"Please use the 'DEMOSAIC_STANDARD' or 'DEMOSAIC_TO_GRAY' types for RGBW sensors.");
 		return;

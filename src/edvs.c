@@ -206,7 +206,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	// Initialize mutex lock for writes (reads never happen concurrently,
 	// and only on one thread).
 	if (mtx_init(&state->serialState.serialWriteLock, mtx_plain) != thrd_success) {
-		edvsLog(CAER_LOG_ERROR, handle, "Failed to initialize serial write lock.");
+		edvsLog(CAER_LOG_CRITICAL, handle, "Failed to initialize serial write lock.");
 
 		free(handle->info.deviceString);
 		free(handle);

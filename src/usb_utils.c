@@ -352,11 +352,26 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
 
-					caerUSBLog((openingSpecificUSBAddr) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO), state,
-						"Failed to open USB device. This usually happens due to permission or driver issues, or "
-						"because the device is already in use.");
+					if (openingSpecificUSBAddr) {
+						caerUSBLog(CAER_LOG_CRITICAL, state,
+							"Failed to open USB device with user-specified busNumber=%" PRIu8 " and devAddress=%" PRIu8
+							". This usually happens due to permissions or driver issues, or because the device is "
+							"already in use by another running program.",
+							busNumber, devAddress);
 
-					continue;
+						// This is the only device that can match a specific USB address.
+						// So if we fail here, we can stop and error out.
+						errno = CAER_ERROR_OPEN_ACCESS;
+						break;
+					}
+					else {
+						caerUSBLog(CAER_LOG_INFO, state,
+							"Failed to open candidate USB device. This usually happens due to permissions or driver "
+							"issues, or because the device is already in use by another running program. Trying next "
+							"device.");
+
+						continue;
+					}
 				}
 
 				// Get the device's serial number.
@@ -369,9 +384,21 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
+					errno = CAER_ERROR_COMMUNICATION;
 
-					continue;
+					if (openingSpecificUSBAddr) {
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
+
+						// This is the only device that can match a specific USB address.
+						// So if we fail here, we can stop and error out.
+						break;
+					}
+					else {
+						caerUSBLog(
+							CAER_LOG_ERROR, state, "Failed to get a valid USB serial number. Trying next device.");
+
+						continue;
+					}
 				}
 
 				// Check the serial number restriction, if any is present.
@@ -379,11 +406,24 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_INFO, state,
-						"USB serial number restriction is present (%s), this device didn't match it (%s).",
-						serialNumber, deviceSerialNumber);
+					if (openingSpecificUSBAddr) {
+						caerUSBLog(CAER_LOG_CRITICAL, state,
+							"USB serial number restriction is present (%s) in addition to USB bus/address "
+							"restrictions, this single candidate device didn't match it (%s).",
+							serialNumber, deviceSerialNumber);
 
-					continue;
+						// This is the only device that can match a specific USB address.
+						// So if we fail here, we can stop and error out.
+						errno = CAER_ERROR_OPEN_ACCESS;
+						break;
+					}
+					else {
+						caerUSBLog(CAER_LOG_DEBUG, state,
+							"USB serial number restriction is present (%s), this device didn't match it (%s).",
+							serialNumber, deviceSerialNumber);
+
+						continue;
+					}
 				}
 
 				// Copy serial number over.
@@ -395,11 +435,23 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog((openingSpecificUSBAddr || openingSpecificSerial) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO),
-						state,
-						"Failed to claim USB interface. This usually happens because the device is already in use.");
+					if (openingSpecificUSBAddr || openingSpecificSerial) {
+						caerUSBLog(CAER_LOG_CRITICAL, state,
+							"Failed to open USB device with user-specified bus/address or serial number. This usually "
+							"happens because the device is already in use by another running program.");
 
-					continue;
+						// This is the only device that can match a specific USB address or serial number.
+						// So if we fail here, we can stop and error out.
+						errno = CAER_ERROR_OPEN_ACCESS;
+						break;
+					}
+					else {
+						caerUSBLog(CAER_LOG_INFO, state,
+							"Failed to open candidate USB device. This usually happens because the device is already "
+							"in use by another running program. Trying next device.");
+
+						continue;
+					}
 				}
 
 				// Verify device firmware version.
@@ -407,7 +459,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 				if (requiredFirmwareVersion >= 0) {
 					if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
-						caerUSBLog(CAER_LOG_ERROR, state,
+						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device firmware version incorrect. You have version %" PRIu8 "; but version %" PRIu8
 							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
@@ -438,10 +490,21 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						libusb_close(devHandle);
 						devHandle = NULL;
 
-						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic version.");
-
 						errno = CAER_ERROR_COMMUNICATION;
-						continue;
+
+						if (openingSpecificUSBAddr || openingSpecificSerial) {
+							caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic version.");
+
+							// This is the only device that can match a specific USB address or serial number.
+							// So if we fail here, we can stop and error out.
+							break;
+						}
+						else {
+							caerUSBLog(
+								CAER_LOG_ERROR, state, "Failed to get current logic version. Trying next device.");
+
+							continue;
+						}
 					}
 
 					param32 |= U32T(spiConfig[0] << 24);
@@ -451,7 +514,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					// Verify device logic version.
 					if (param32 != U32T(requiredLogicVersion)) {
-						caerUSBLog(CAER_LOG_ERROR, state,
+						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device logic version incorrect. You have version %" PRIu32 "; but version %" PRIu32
 							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
@@ -482,10 +545,21 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						libusb_close(devHandle);
 						devHandle = NULL;
 
-						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic patch level.");
-
 						errno = CAER_ERROR_COMMUNICATION;
-						continue;
+
+						if (openingSpecificUSBAddr || openingSpecificSerial) {
+							caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic patch level.");
+
+							// This is the only device that can match a specific USB address or serial number.
+							// So if we fail here, we can stop and error out.
+							break;
+						}
+						else {
+							caerUSBLog(
+								CAER_LOG_ERROR, state, "Failed to get current logic patch level. Trying next device.");
+
+							continue;
+						}
 					}
 
 					param32 |= U32T(spiConfig[0] << 24);
@@ -495,7 +569,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					// Verify device logic minimum patch level.
 					if (param32 < U32T(minimumLogicPatch)) {
-						caerUSBLog(CAER_LOG_ERROR, state,
+						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device logic patch level insufficient. You have patch level %" PRIu32
 							"; but patch level %" PRIu32
 							" is required. Please update by following the Flashy documentation at "
@@ -513,7 +587,14 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					continue;
+					if (openingSpecificUSBAddr || openingSpecificSerial) {
+						// This is the only device that can match a specific USB address or serial number.
+						// So if we fail here, we can stop and error out.
+						break;
+					}
+					else {
+						continue;
+					}
 				}
 
 				// Initialize transfers mutex.
@@ -522,10 +603,21 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
-					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize USB transfer mutex.");
-
 					errno = CAER_ERROR_RESOURCE_ALLOCATION;
-					continue;
+
+					if (openingSpecificUSBAddr || openingSpecificSerial) {
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize USB transfer mutex.");
+
+						// This is the only device that can match a specific USB address or serial number.
+						// So if we fail here, we can stop and error out.
+						break;
+					}
+					else {
+						caerUSBLog(
+							CAER_LOG_ERROR, state, "Failed to initialize USB transfer mutex. Trying next device.");
+
+						continue;
+					}
 				}
 
 				break;
