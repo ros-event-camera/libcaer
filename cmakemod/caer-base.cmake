@@ -134,18 +134,21 @@ IF (CC_GCC OR CC_CLANG)
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wredundant-decls -Wmissing-declarations -Wdouble-promotion")
 		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wshadow -Wconversion -Wstrict-overflow=5 -Wlogical-op")
-		SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-cond")
 
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs")
 		SET(WARN_C_FLAGS "${WARN_C_FLAGS} -Wbad-function-cast -Wjump-misses-init")
 
 		SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wold-style-cast -Wzero-as-null-pointer-constant")
 
+		IF (CMAKE_C_COMPILER_VERSION VERSION_GREATER 6.0)
+			SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-cond")
+		ENDIF()
+
 		IF (CMAKE_C_COMPILER_VERSION VERSION_GREATER 7.0)
 			SET(WARN_COMMON_FLAGS "${WARN_COMMON_FLAGS} -Wduplicated-branches")
 		ENDIF()
 
-		IF (CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.0)
+		IF (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
 			SET(WARN_CXX_FLAGS "${WARN_CXX_FLAGS} -Wcatch-value=3 -Wextra-semi")
 		ENDIF()
 	ENDIF()
