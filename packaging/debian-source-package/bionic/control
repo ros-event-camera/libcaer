@@ -13,5 +13,5 @@ Description: Minimal C library to interact with neuromorphic sensors and process
 
 Package: libcaer-dev
 Architecture: any
-Depends: libcaer (= ${binary:Version}), ${misc:Depends}, cmake (>= 3.12), pkg-config (>= 0.29.0), libusb-1.0-0-dev (>= 1.0.17), libserialport-dev (>= 0.1.1), libopencv-dev (>= 3.2.0)
+Depends: libcaer (= ${binary:Version}), ${misc:Depends}, cmake (>= 3.12), pkg-config (>= 0.29.0), libopencv-dev (>= 3.2.0)
 Description: Minimal C library to interact with neuromorphic sensors and processors (development files)

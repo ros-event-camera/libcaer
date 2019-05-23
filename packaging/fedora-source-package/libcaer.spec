@@ -18,7 +18,7 @@ and processors. Currently supported devices are the Dynamic Vision Sensor
 
 %package devel
 Summary: Minimal C library to interact with neuromorphic sensors and processors (development files)
-Requires: %{name}%{?_isa} = %{version}-%{release}, cmake >= 3.12, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.2.0
+Requires: %{name}%{?_isa} = %{version}-%{release}, cmake >= 3.12, pkgconfig >= 0.29.0, opencv-devel >= 3.2.0
 
 %description devel
 Development files for libcaer, such as headers, pkg-config files, etc..
