@@ -23,13 +23,6 @@ Requires: %{name}%{?_isa} = %{version}-%{release}, cmake >= 3.12, pkgconfig >= 0
 %description devel
 Development files for libcaer, such as headers, pkg-config files, etc..
 
-%package static
-Summary: Minimal C library to interact with neuromorphic sensors and processors (static library)
-Requires: %{name}-devel%{?_isa} = %{version}-%{release}
-
-%description static
-Static version (.a) of the libcaer library.
-
 %prep
 %autosetup
 
@@ -49,11 +42,9 @@ make install DESTDIR=%{buildroot}
 %{_includedir}/libcaercpp/
 %{_datarootdir}/caer/
 %{_libdir}/libcaer.so
+%{_libdir}/libcaer.a
 %{_libdir}/pkgconfig/
 %{_libdir}/cmake/libcaer/
-
-%files static
-%{_libdir}/libcaer.a
 
 %changelog
 * Fri Mar 23 2018 iniVation AG <support@inivation.com>
