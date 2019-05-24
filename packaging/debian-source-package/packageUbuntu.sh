@@ -8,7 +8,7 @@ PKG_VERSION=3.2.0
 PKG_RELEASE=1
 DISTRO=bionic
 SRC_URI="https://gitlab.com/inivation/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
-PPA_REPO="llongi/inivation"
+PPA_REPO="inivation/inivation"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"
@@ -16,7 +16,7 @@ BUILD_DIR="$CUR_DIR/build/"
 PKG_BUILD_DIR="$BUILD_DIR/$PKG_NAME-$PKG_VERSION/"
 DEBIAN_DIR="$PKG_BUILD_DIR/debian/"
 UPLOAD="false"
-DEBUILD_ARGS="-k$GPG_PUBLIC_KEY -sa"
+DEBUILD_ARGS="-k$GPG_PUBLIC_KEY -sa -d"
 
 while test $# -gt 0
 do
