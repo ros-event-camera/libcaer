@@ -8,7 +8,7 @@ PKG_VERSION=3.2.0
 PKG_RELEASE=1
 DISTRO=bionic
 SRC_URI="https://gitlab.com/inivation/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
-PPA_REPO="inivation/inivation"
+PPA_REPO="inivation-ppa/inivation"
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"
