@@ -100,7 +100,9 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		(*discoveredDevices)[matches].deviceErrorVersion = false; // No version check is done.
 		struct caer_edvs_info *edvsInfoPtr               = &((*discoveredDevices)[matches].deviceInfo.edvsInfo);
 
-		strncpy(edvsInfoPtr->serialPortName, serialPortName, 64);
+		strncpy(edvsInfoPtr->serialPortName, serialPortName, 63);
+		edvsInfoPtr->serialPortName[63] = '\0';
+
 		edvsInfoPtr->serialBaudRate = serialBaudRate;
 
 		if (edvs != NULL) {
