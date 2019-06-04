@@ -5,6 +5,8 @@ BUG FIXES
 - USB devices: better error messages on failure to open a device,
   better distinction of generic 'any-camera' case and specific
   USB ports or serial numbers.
+- eDVS: fix strncpy() compiler warning, ensure serial number is
+  always NULL terminated.
 
 
 Release 3.2.0 - 20.05.2019
