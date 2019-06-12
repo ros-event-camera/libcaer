@@ -8,6 +8,8 @@ BUG FIXES
   USB ports or serial numbers.
 - eDVS: fix strncpy() compiler warning, ensure serial number is
   always NULL terminated.
+- DAVIS: fix APS frame color interpolation for color cameras
+  when ROI is enabled (issue #94).
 
 
 Release 3.2.0 - 20.05.2019

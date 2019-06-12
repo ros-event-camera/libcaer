@@ -111,7 +111,9 @@ void caerFrameUtilsDemosaic(
 			int32_t idxLEFTDOWN   = idxCENTERDOWN - 1;
 			int32_t idxRIGHTDOWN  = idxCENTERDOWN + 1;
 
-			enum caer_frame_utils_pixel_color pixelColor = caerFrameUtilsPixelColor(colorFilter, x, y);
+			enum caer_frame_utils_pixel_color pixelColor = caerFrameUtilsPixelColor(
+				colorFilter, caerFrameEventGetPositionX(inputFrame) + x, caerFrameEventGetPositionY(inputFrame) + y);
+
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
