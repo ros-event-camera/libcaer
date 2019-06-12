@@ -18,13 +18,40 @@ static void frameUtilsOpenCVContrastCLAHE(const cv::Mat &input, cv::Mat &output,
 
 void caerFrameUtilsOpenCVDemosaic(
 	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_demosaic_types demosaicType) {
-	const enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(inputFrame);
+	enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(inputFrame);
 
 	if ((colorFilter == RGBW) || (colorFilter == GRWB) || (colorFilter == BWRG) || (colorFilter == WBGR)) {
 		caerLog(CAER_LOG_ERROR, __func__,
 			"OpenCV demosaic types don't support the RGBW color filter variants, only RGBG. "
 			"Please use the 'DEMOSAIC_STANDARD' or 'DEMOSAIC_TO_GRAY' types for RGBW sensors.");
 		return;
+	}
+
+	// Adjust color filter value to take ROI into account.
+	enum caer_frame_utils_pixel_color zeroPixelColor = caerFrameUtilsPixelColor(
+		colorFilter, caerFrameEventGetPositionX(inputFrame), caerFrameEventGetPositionY(inputFrame));
+
+	switch (zeroPixelColor) {
+		case PX_COLOR_R:
+			colorFilter = RGBG;
+			break;
+
+		case PX_COLOR_G1:
+			colorFilter = GRGB;
+			break;
+
+		case PX_COLOR_G2:
+			colorFilter = GBGR;
+			break;
+
+		case PX_COLOR_B:
+			colorFilter = BGRG;
+			break;
+
+		case PX_COLOR_W:
+		default:
+			// Impossible, other color filters get filtered out above.
+			break;
 	}
 
 	// Demosaic the actual pixels. Only supports RGBG!
