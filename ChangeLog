@@ -1,4 +1,4 @@
-Release 3.2.2 - XX.06.2019
+Release 3.2.2 - 15.07.2019
 
 BUG FIXES
 - CMake: fix compatibility with older pre-6.0 GCCs (issue #93).
