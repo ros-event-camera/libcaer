@@ -187,3 +187,59 @@ pages:
       - public
   only:
     - master
+
+release_ubuntu:
+  stage: deploy
+  tags:
+    - docker
+  image: inivation/ubuntu:rolling
+  before_script:
+    - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
+    - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
+  script:
+    - cd packaging/debian-source-package/
+    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - sleep 60 # rate-limit connections to PPA upload server
+    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro bionic --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - sleep 60 # rate-limit connections to PPA upload server
+    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro disco --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+  only:
+    - tags
+
+release_fedora:
+  stage: deploy
+  tags:
+    - docker
+  image: inivation/fedora:latest
+  before_script:
+    - mkdir -p ~/.config/
+    - cp "${COPR_API_KEY}" ~/.config/copr
+  script:
+    - cd packaging/fedora-source-package/
+    - ./packageFedora.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
+    - copr-cli build inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc30.src.rpm"
+  only:
+    - tags
+
+release_gentoo_arch_brew:
+  stage: deploy
+  tags:
+    - docker
+  image: inivation/gentoo:latest
+  before_script:
+    - mkdir -p ~/.ssh/
+    - cp "${GITCI_SSH_KEY}" ~/.ssh/id_ed25519
+    - chmod 0600 ~/.ssh/id_ed25519
+    - ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
+    - ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+    - cp "${GITCI_SSH_CONF}" ~/.gitconfig
+  script:
+    - cd packaging/linux/
+    # Gentoo release
+    - ./gentoo-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --pkg-category dev-libs
+    # Arch release
+    - ./arch-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
+    # Brew release
+    - ./brew-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
+  only:
+    - tags
