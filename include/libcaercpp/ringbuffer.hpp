@@ -46,7 +46,7 @@ public:
 			throw std::invalid_argument("Default constructed elements are not allowed in the ringbuffer.");
 		}
 
-		const size_t putPosLocal = putPos.load(std::memory_order_acquire);
+		const size_t putPosLocal = putPos.load(std::memory_order_relaxed);
 
 		const T curr = elements[putPosLocal].load(std::memory_order_acquire);
 
@@ -56,7 +56,7 @@ public:
 			elements[putPosLocal].store(elem, std::memory_order_release);
 
 			// Increase local put pointer.
-			putPos.store(((putPosLocal + 1) & sizeAdj), std::memory_order_release);
+			putPos.store(((putPosLocal + 1) & sizeAdj), std::memory_order_relaxed);
 
 			return;
 		}
@@ -66,7 +66,7 @@ public:
 	}
 
 	bool full() const noexcept {
-		const T curr = elements[putPos.load(std::memory_order_acquire)].load(std::memory_order_acquire);
+		const T curr = elements[putPos.load(std::memory_order_relaxed)].load(std::memory_order_acquire);
 
 		// If the place where we want to put the new element is NULL, it's still
 		// free and thus the buffer still has available space.
@@ -79,7 +79,7 @@ public:
 	}
 
 	T get() {
-		const size_t getPosLocal = getPos.load(std::memory_order_acquire);
+		const size_t getPosLocal = getPos.load(std::memory_order_relaxed);
 
 		T curr = elements[getPosLocal].load(std::memory_order_acquire);
 
@@ -89,7 +89,7 @@ public:
 			elements[getPosLocal].store(placeholder, std::memory_order_release);
 
 			// Increase local get pointer.
-			getPos.store(((getPosLocal + 1) & sizeAdj), std::memory_order_release);
+			getPos.store(((getPosLocal + 1) & sizeAdj), std::memory_order_relaxed);
 
 			return (curr);
 		}
@@ -99,7 +99,7 @@ public:
 	}
 
 	T look() const {
-		T curr = elements[getPos.load(std::memory_order_acquire)].load(std::memory_order_acquire);
+		T curr = elements[getPos.load(std::memory_order_relaxed)].load(std::memory_order_acquire);
 
 		// If the place where we want to get an element from is not NULL, there
 		// is valid content there, which we return, without removing it from the
@@ -113,7 +113,7 @@ public:
 	}
 
 	bool empty() const noexcept {
-		const T curr = elements[getPos.load(std::memory_order_acquire)].load(std::memory_order_acquire);
+		const T curr = elements[getPos.load(std::memory_order_relaxed)].load(std::memory_order_acquire);
 
 		// If the place where we want to get an element from is not NULL, there
 		// is valid content there, which we return, without removing it from the
@@ -137,8 +137,8 @@ public:
 	 * @return approximate number of elements
 	 */
 	size_t size() const noexcept {
-		const size_t putPosLocal = putPos.load(std::memory_order_acquire);
-		const size_t getPosLocal = getPos.load(std::memory_order_acquire);
+		const size_t putPosLocal = putPos.load(std::memory_order_relaxed);
+		const size_t getPosLocal = getPos.load(std::memory_order_relaxed);
 
 		// Standard way to get ringbuffer size.
 		const size_t dist = ((putPosLocal - getPosLocal) & sizeAdj);
@@ -148,7 +148,7 @@ public:
 		// one index to overtake the other. We try to disambiguate those
 		// cases here, but cannot guarantee exact size always.
 		if (dist <= 1 || dist >= sizeAdj) {
-			if (elements[getPosLocal].load(std::memory_order_acquire) == placeholder) {
+			if (elements[getPosLocal].load(std::memory_order_relaxed) == placeholder) {
 				return (0); // Empty or close to.
 			}
 			else {
