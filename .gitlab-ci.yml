@@ -43,7 +43,15 @@ build_raspbian:
     - cd build
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
-    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then sudo make install; fi
+    - if [[ "${CI_COMMIT_REF_NAME}" != "master" ]] ;  then exit 0; fi
+    - sudo make install
+    - sudo cpack
+    - mv "libcaer.armv7l.deb" "libcaer-raspbian-$CI_COMMIT_REF_NAME.deb"
+    - mv "libcaer.armv7l.rpm" "libcaer-raspbian-$CI_COMMIT_REF_NAME.rpm"
+    - aws s3 cp "libcaer-raspbian-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/libcaer/raspbian/libcaer-raspbian-$CI_COMMIT_REF_NAME.deb"
+    - aws s3 cp "libcaer-raspbian-$CI_COMMIT_REF_NAME.rpm" "s3://release.inivation.com/libcaer/raspbian/libcaer-raspbian-$CI_COMMIT_REF_NAME.rpm"
+    - sudo rm -rf _CPack_Packages
+
 
 build_ubuntu_1604:
   stage: build
