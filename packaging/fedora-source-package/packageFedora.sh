@@ -4,7 +4,7 @@
 
 PKG_NAME=
 PKG_VERSION=0
-FEDORA_RELEASE=f30
+FEDORA_RELEASE=f31
 
 while test $# -gt 0
 do
