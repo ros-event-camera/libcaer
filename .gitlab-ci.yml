@@ -77,20 +77,6 @@ build_ubuntu_1804:
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
 
-build_ubuntu_curr_gcc6:
-  stage: build
-  tags:
-    - docker
-  image: inivation/ubuntu:rolling
-  before_script:
-    - apt-get -y update
-    - apt-get -y upgrade
-  script:
-    - mkdir build
-    - cd build
-    - cmake -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j1
-
 build_ubuntu_curr_gcc7:
   stage: build
   tags:
@@ -175,6 +161,20 @@ build_ubuntu_curr_clang8:
     - cmake -DCMAKE_C_COMPILER=clang-8 -DCMAKE_CXX_COMPILER=clang++-8 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j1
 
+build_ubuntu_curr_clang9:
+  stage: build
+  tags:
+    - docker
+  image: inivation/ubuntu:rolling
+  before_script:
+    - apt-get -y update
+    - apt-get -y upgrade
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j1
+
 pages:
   tags:
     - docker
@@ -224,7 +224,7 @@ release_fedora:
   script:
     - cd packaging/fedora-source-package/
     - ./packageFedora.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
-    - copr-cli build --nowait inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc30.src.rpm"
+    - copr-cli build --nowait inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc31.src.rpm"
   only:
     - tags
     - web
