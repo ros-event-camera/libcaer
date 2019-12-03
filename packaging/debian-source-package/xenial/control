@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: iniVation AG <support@inivation.com>
 Build-Depends: debhelper (>=9), cmake (>= 3.10), pkg-config (>= 0.29.0), libusb-1.0-0-dev (>= 1.0.17), libopencv-dev (>= 3.2.0), gcc-7, g++-7
 Standards-Version: 4.0.0
-Homepage: https://gitlab.com/inivation/libcaer/
+Homepage: https://gitlab.com/inivation/dv/libcaer/
 
 Package: libcaer
 Architecture: any
