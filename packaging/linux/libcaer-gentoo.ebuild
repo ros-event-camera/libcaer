@@ -6,9 +6,9 @@ EAPI=6
 inherit eutils cmake-utils
 
 DESCRIPTION="Minimal C library to access, configure and get data from neuromorphic sensors and processors."
-HOMEPAGE="https://gitlab.com/inivation/${PN}/"
+HOMEPAGE="https://gitlab.com/inivation/dv/${PN}/"
 
-SRC_URI="https://gitlab.com/inivation/${PN}/-/archive/${PV}/${P}.tar.gz"
+SRC_URI="https://gitlab.com/inivation/dv/${PN}/-/archive/${PV}/${P}.tar.gz"
 
 LICENSE="BSD-2"
 SLOT="0"
