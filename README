@@ -72,6 +72,19 @@ caerDeviceClose(&h);
 All configuration parameters and event types are specified in the
 public headers and documented there.
 
+PAPER REFERENCES:
+
+DVS: https://ieeexplore.ieee.org/document/4444573
+P. Lichtsteiner, C. Posch and T. Delbruck, "A 128×128 120dB 15us Latency Asynchronous Temporal Contrast Vision Sensor",
+IEEE Journal of Solid State Circuits, 43(2) 566-576, 2008.
+
+DAVIS: https://ieeexplore.ieee.org/document/6889103
+C. Brandli, R. Berner, M. Yang, S.-C. Liu, and T. Delbruck, “A 240x180 130dB 3us Latency Global Shutter Spatiotemporal Vision Sensor”,
+IEEE Journal of Solid State Circuits, 49(10) 2333-2341, 2014.
+
+For an exhaustive list of papers and research concerning event-based vision, please refer to:
+https://github.com/uzh-rpg/event-based_vision_resources
+
 HELP:
 
 Please use our GitLab bug tracker to report issues and bugs, or
