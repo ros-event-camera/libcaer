@@ -139,7 +139,7 @@ bool usbControlTransferOut(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
 bool usbControlTransferIn(
 	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize);
-bool usbControlResetDataEndpoint(usbState state);
+bool usbControlResetDataEndpoint(usbState state, uint8_t endpoint);
 
 // SPI config via USB implementation.
 #include "spi_config_interface.h"
@@ -175,7 +175,7 @@ static bool spiConfigSendMultipleAsync(void *state, spiConfigParams configs, uin
 		sizeof(struct spi_config_params) * numConfigs, configSendCallback, configSendCallbackPtr));
 }
 
-static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+static bool spiConfigSend(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param) {
 	uint8_t spiConfig[4] = {0};
 
 	spiConfig[0] = U8T(param >> 24);
@@ -187,7 +187,7 @@ static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, ui
 		usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig)));
 }
 
-static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+static bool spiConfigSendAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param,
 	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
 	uint8_t spiConfig[4] = {0};
 
@@ -200,7 +200,7 @@ static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAdd
 		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
 }
 
-static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+static bool spiConfigReceive(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
 	uint8_t spiConfig[4] = {0};
 
 	if (!usbControlTransferIn(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig))) {
@@ -216,7 +216,7 @@ static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr,
 	return (true);
 }
 
-static bool spiConfigReceiveAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr,
+static bool spiConfigReceiveAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr,
 	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
 	void *configReceiveCallbackPtr) {
 	usbConfigReceive config = calloc(1, sizeof(*config));

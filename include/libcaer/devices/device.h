@@ -10,6 +10,7 @@
 #define LIBCAER_DEVICES_DEVICE_H_
 
 #include "../libcaer.h"
+
 #include "../events/packetContainer.h"
 
 #ifdef __cplusplus

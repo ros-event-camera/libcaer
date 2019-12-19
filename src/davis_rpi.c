@@ -1095,7 +1095,7 @@ static bool spiConfigSendMultipleAsync(void *state, spiConfigParams configs, uin
 	return (true);
 }
 
-static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
+static bool spiConfigSend(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param) {
 	davisRPiHandle handle = (davisRPiHandle) state;
 
 	// Handle biases/chip config separately.
@@ -1107,7 +1107,7 @@ static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, ui
 	return (spiSend(&handle->gpio, moduleAddr, paramAddr, param));
 }
 
-static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+static bool spiConfigSendAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param,
 	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
 	// Call normal spiConfigSend() and execute callback manually. There are no threading/dead-lock
 	// issues here with using SPI directly.
@@ -1120,7 +1120,7 @@ static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAdd
 	return (status);
 }
 
-static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
+static bool spiConfigReceive(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
 	davisRPiHandle handle = (davisRPiHandle) state;
 
 	// Handle biases/chip config separately.
@@ -1132,7 +1132,7 @@ static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr,
 	return (spiReceive(&handle->gpio, moduleAddr, paramAddr, param));
 }
 
-static bool spiConfigReceiveAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr,
+static bool spiConfigReceiveAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr,
 	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
 	void *configReceiveCallbackPtr) {
 	// Call normal spiConfigReceive() and execute callback manually. There are no threading/dead-lock

@@ -168,12 +168,12 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			}
 
 			// Get serial number.
-			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
+			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {'N', 'O', '_', 'S', 'N', 0};
 			int getStringDescResult                         = libusb_get_string_descriptor_ascii(
                 devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 			// Check serial number success and length.
-			if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+			if (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
 				libusb_close(devHandle);
 
 				(*foundUSBDevices)[matches].errorOpen = true;
@@ -375,12 +375,12 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Get the device's serial number.
-				char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
+				char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {'N', 'O', '_', 'S', 'N', 0};
 				int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
 					(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 				// Check serial number success and length.
-				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+				if (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
 					libusb_close(devHandle);
 					devHandle = NULL;
 
@@ -1191,6 +1191,6 @@ static void syncControlInCallback(void *controlInCallbackPtr, int status, const 
 	}
 }
 
-bool usbControlResetDataEndpoint(usbState state) {
-	return (libusb_clear_halt(state->deviceHandle, USB_DEFAULT_DATA_ENDPOINT) == LIBUSB_SUCCESS);
+bool usbControlResetDataEndpoint(usbState state, uint8_t endpoint) {
+	return (libusb_clear_halt(state->deviceHandle, endpoint) == LIBUSB_SUCCESS);
 }

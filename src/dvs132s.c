@@ -999,7 +999,7 @@ bool dvs132sDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	thrd_sleep(&clearSleep, NULL);
 
 	// And reset the USB side of things.
-	usbControlResetDataEndpoint(&state->usbState);
+	usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
