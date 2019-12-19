@@ -15,6 +15,7 @@
 #endif
 
 #define EDVS_DEVICE_NAME "EDVS-4337"
+#define MINI_EDVS_DEVICE_NAME "meDVS128"
 
 #define EDVS_ARRAY_SIZE_X 128
 #define EDVS_ARRAY_SIZE_Y 128

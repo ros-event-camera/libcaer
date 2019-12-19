@@ -40,7 +40,7 @@ ENDIF()
 
 # Project name and version
 PROJECT(libcaer
-	VERSION 3.2.2
+	VERSION 3.3.0
 	LANGUAGES C CXX)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
@@ -137,12 +137,10 @@ IF (OS_LINUX AND UDEV_INSTALL)
 	IF (UDEV_SELINUX)
 		INSTALL(FILES
 			docs/udev-rules/selinux/65-inivation.rules
-			docs/udev-rules/selinux/66-inivation_devel.rules
 			DESTINATION "/lib/udev/rules.d/")
 	ELSE()
 		INSTALL(FILES
 			docs/udev-rules/65-inivation.rules
-			docs/udev-rules/66-inivation_devel.rules
 			DESTINATION "/lib/udev/rules.d/")
 	ENDIF()
 ENDIF()

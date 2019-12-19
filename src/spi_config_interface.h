@@ -17,12 +17,12 @@ static bool spiConfigSendMultiple(void *state, spiConfigParams configs, uint16_t
 static bool spiConfigSendMultipleAsync(void *state, spiConfigParams configs, uint16_t numConfigs,
 	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr);
 
-static bool spiConfigSend(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param);
-static bool spiConfigSendAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
+static bool spiConfigSend(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param);
+static bool spiConfigSendAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t param,
 	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr);
 
-static bool spiConfigReceive(void *state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param);
-static bool spiConfigReceiveAsync(void *state, uint8_t moduleAddr, uint8_t paramAddr,
+static bool spiConfigReceive(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param);
+static bool spiConfigReceiveAsync(void *state, uint16_t moduleAddr, uint16_t paramAddr,
 	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
 	void *configReceiveCallbackPtr);
 

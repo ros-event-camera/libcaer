@@ -57,7 +57,7 @@ static inline int32_t containerGenerationGetMaxInterval(containerGeneration stat
 	return (I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)));
 }
 
-static inline int64_t containerGenerationIsCommitTimestampElapsed(
+static inline bool containerGenerationIsCommitTimestampElapsed(
 	containerGeneration state, int32_t tsWrapOverflow, int32_t tsCurrent) {
 	return (generateFullTimestamp(tsWrapOverflow, tsCurrent) > state->currentPacketContainerCommitTimestamp);
 }

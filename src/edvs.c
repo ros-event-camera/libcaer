@@ -322,7 +322,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 
 	// Extract model from startup message. This tells us if we really connected
 	// to an eDVS device.
-	if (strstr(startMessage, EDVS_DEVICE_NAME) == NULL) {
+	if ((strstr(startMessage, EDVS_DEVICE_NAME) == NULL) && (strstr(startMessage, MINI_EDVS_DEVICE_NAME) == NULL)) {
 		edvsLog(CAER_LOG_ERROR, handle, "This does not appear to be an eDVS device (according to startup message).");
 
 		sp_close(state->serialState.serialPort);
@@ -966,7 +966,7 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 
 				uint8_t x     = (xByte & LOW_BITS_MASK);
 				uint8_t y     = (yByte & LOW_BITS_MASK);
-				bool polarity = (xByte & HIGH_BIT_MASK);
+				bool polarity = !(xByte & HIGH_BIT_MASK);
 
 				// Check range conformity.
 				if ((x < EDVS_ARRAY_SIZE_X) && (y < EDVS_ARRAY_SIZE_Y)) {

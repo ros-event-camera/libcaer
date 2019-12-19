@@ -435,7 +435,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	thrd_sleep(&clearSleep, NULL);
 
 	// And reset the USB side of things.
-	usbControlResetDataEndpoint(&handle->usbState);
+	usbControlResetDataEndpoint(&handle->usbState, USB_DEFAULT_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&handle->usbState)) {
 		freeAllDataMemory(state);
