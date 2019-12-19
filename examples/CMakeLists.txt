@@ -35,6 +35,10 @@ IF (ENABLE_OPENCV)
 	ADD_EXECUTABLE(davis_cvgui_filters davis_cvgui_filters.cpp)
 	TARGET_LINK_LIBRARIES(davis_cvgui_filters PRIVATE caer ${OpenCV_LIBS})
 	INSTALL(TARGETS davis_cvgui_filters DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer/examples)
+
+	ADD_EXECUTABLE(dv_explorer_s dv_explorer_s.cpp)
+	TARGET_LINK_LIBRARIES(dv_explorer_s PRIVATE caer ${OpenCV_LIBS})
+	INSTALL(TARGETS dv_explorer_s DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer/examples)
 ENDIF()
 
 ADD_EXECUTABLE(davis_enable_aer davis_enable_aer.cpp)

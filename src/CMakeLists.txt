@@ -10,7 +10,9 @@ SET(LIBCAER_SOURCES
 	dvs128.c
 	davis.c
 	dynapse.c
-	dvs132s.c)
+	dvs132s.c
+	dv_explorer.c
+	dv_explorer_s.c)
 
 # This is often the case due to how we try to have multiple compatible
 # definitions of functions in C.

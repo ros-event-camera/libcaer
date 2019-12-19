@@ -2,6 +2,8 @@
 
 #include "davis.h"
 #include "davis_rpi.h"
+#include "dv_explorer.h"
+#include "dv_explorer_s.h"
 #include "dvs128.h"
 #include "dvs132s.h"
 #include "dynapse.h"
@@ -27,7 +29,9 @@ static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-		[CAER_DEVICE_DVS132S] = &dvs132sOpen,
+		[CAER_DEVICE_DVS132S]       = &dvs132sOpen,
+		[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerOpen,
+		[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSOpen,
 };
 
 static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -43,8 +47,10 @@ static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_EDVS]      = NULL,
 #endif
-		[CAER_DEVICE_DAVIS_RPI] = NULL,
-		[CAER_DEVICE_DVS132S]   = NULL,
+		[CAER_DEVICE_DAVIS_RPI]     = NULL,
+		[CAER_DEVICE_DVS132S]       = NULL,
+		[CAER_DEVICE_DV_EXPLORER]   = NULL,
+		[CAER_DEVICE_DV_EXPLORER_S] = NULL,
 };
 
 static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -63,7 +69,9 @@ static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handl
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
-	[CAER_DEVICE_DVS132S] = &dvs132sClose,
+	[CAER_DEVICE_DVS132S]       = &dvs132sClose,
+	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerClose,
+	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSClose,
 };
 
 static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -82,7 +90,9 @@ static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHan
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
-	[CAER_DEVICE_DVS132S] = &dvs132sSendDefaultConfig,
+	[CAER_DEVICE_DVS132S]       = &dvs132sSendDefaultConfig,
+	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerSendDefaultConfig,
+	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSSendDefaultConfig,
 };
 
 static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -103,7 +113,9 @@ static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-		[CAER_DEVICE_DVS132S] = &dvs132sConfigSet,
+		[CAER_DEVICE_DVS132S]       = &dvs132sConfigSet,
+		[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerConfigSet,
+		[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSConfigSet,
 };
 
 static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -124,7 +136,9 @@ static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-		[CAER_DEVICE_DVS132S] = &dvs132sConfigGet,
+		[CAER_DEVICE_DVS132S]       = &dvs132sConfigGet,
+		[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerConfigGet,
+		[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSConfigGet,
 };
 
 static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle,
@@ -146,7 +160,9 @@ static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 #else
 		[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-		[CAER_DEVICE_DVS132S] = &dvs132sDataStart,
+		[CAER_DEVICE_DVS132S]       = &dvs132sDataStart,
+		[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerDataStart,
+		[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSDataStart,
 };
 
 static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -165,7 +181,9 @@ static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
-	[CAER_DEVICE_DVS132S] = &dvs132sDataStop,
+	[CAER_DEVICE_DVS132S]       = &dvs132sDataStop,
+	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerDataStop,
+	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSDataStop,
 };
 
 static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -184,7 +202,9 @@ static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(ca
 #else
 	[CAER_DEVICE_DAVIS_RPI]     = NULL,
 #endif
-	[CAER_DEVICE_DVS132S] = &dvs132sDataGet,
+	[CAER_DEVICE_DVS132S]       = &dvs132sDataGet,
+	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerDataGet,
+	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSDataGet,
 };
 
 // Add empty InfoGet for optional devices, such as serial ones.
