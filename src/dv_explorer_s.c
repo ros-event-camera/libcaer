@@ -237,6 +237,9 @@ caerDeviceHandle dvExplorerSOpen(
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
 
+	// Disable histogram, not currently used/mapped.
+	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
+
 	// Commands in firmware but not documented, unused.
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3043, 0x01); // Bypass ESP.
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3249, 0x00);
@@ -294,17 +297,8 @@ struct caer_dvx_s_info caerDVExplorerSInfoGet(caerDeviceHandle cdh) {
 }
 
 bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
-
 	// Set default biases.
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_BIAS, DVX_S_DVS_BIAS_SIMPLE, DVX_S_DVS_BIAS_SIMPLE_DEFAULT);
-
-	// Disable transformation blocks.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_ENABLE, false);
-
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
 
 	// External trigger.
 	dvExplorerSConfigSet(
@@ -363,6 +357,23 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_END, 1);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_END_FINE, 50);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_SELX_START, 15);
+
+	// Crop block.
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_ENABLE, false);
+
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_X_START_ADDRESS, 0);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_Y_START_ADDRESS, 0);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_X_END_ADDRESS, 639);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_Y_END_ADDRESS, 479);
+
+	// Activity decision block.
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_ENABLE, false);
+
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_POS_THRESHOLD, 300);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE, 1);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME, 3);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
 
 	return (true);
 }
