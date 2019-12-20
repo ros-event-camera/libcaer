@@ -253,6 +253,11 @@ caerDeviceHandle dvExplorerSOpen(
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
 
+	// Fine clock counts based on clock frequency.
+	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
+	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
+	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
+
 	// Disable histogram, not currently used/mapped.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
 
@@ -357,22 +362,18 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_19, 0x7FFF);
 
 	// Timing settings.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_READ_INTERVAL, 48000);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GENERATION_INTERVAL, 4);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH_COUNT, 2);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH_COUNT_FINE, 50);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_COUNT, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_COUNT_FINE, 50);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_GH_FINE, 10);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SELX_END_FINE, 6);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_AED_UPDATE_FINE, 4);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_AY_END_FINE, 6);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_MAX_EVENT_NUM_FINE, 10);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_R_START_FINE, 8);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_R_END_FINE, 10);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_END, 1);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS_END_FINE, 50);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_SELX_START, 15);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_ED, 2);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH2GRS, 0);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS, 1);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH2SEL, 4);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SELW, 6);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2AY_R, 4);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2AY_F, 6);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2R_R, 8);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2R_F, 10);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_SEL, 15);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_GH, 10);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_READ_FIXED, 48000);
 
 	// Crop block.
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_ENABLE, false);
@@ -620,182 +621,128 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GENERATION_INTERVAL: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (
-						i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GENERATION_INTERVAL, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_GH_COUNT: {
-					// Max. 128 ms (127 + 1).
+				case DVX_S_DVS_TIMING_ED: {
+					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
 					}
 
-					// In microseconds, multi-register value.
-					uint8_t milliseconds = (param / 1000) & 0x7F;
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, milliseconds);
-
-					uint16_t microseconds = (param % 1000) & 0x03FF;
-
-					i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, U8T((microseconds >> 8) & 0x0003));
-					return (i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, U8T(microseconds & 0x00FF)));
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, 0x00);
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, 0x00);
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, 0x02));
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GH_COUNT_FINE: {
-					if (param >= 128) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_GRS_COUNT: {
-					// Max. 128 ms (127 + 1).
+				case DVX_S_DVS_TIMING_GH2GRS: {
+					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
 					}
 
-					// In microseconds, multi-register value.
-					uint8_t milliseconds = (param / 1000) & 0x7F;
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, milliseconds);
-
-					uint16_t microseconds = (param % 1000) & 0x03FF;
-
-					i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, U8T((microseconds >> 8) & 0x0003));
-					return (i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, U8T(microseconds & 0x00FF)));
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, 0x00);
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, 0x00);
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, 0x00));
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS_COUNT_FINE: {
-					if (param >= 128) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_NEXT_GH_FINE: {
-					if (param >= 128) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_SELX_END_FINE: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_END_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_AED_UPDATE_FINE: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AED_UPDATE_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_AY_END_FINE: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_MAX_EVENT_NUM_FINE: {
-					if (param >= 64) {
-						return (false);
-					}
-
-					return (
-						i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_MAX_EVENT_NUM_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_R_START_FINE: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_R_END_FINE: {
-					if (param >= 256) {
-						return (false);
-					}
-
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END_FINE, U8T(param)));
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_GRS_END: {
-					// Max. 128 ms (127 + 1).
+				case DVX_S_DVS_TIMING_GRS: {
+					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
 					}
 
-					// In microseconds, multi-register value.
-					uint8_t milliseconds = (param / 1000) & 0x7F;
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, milliseconds);
-
-					uint16_t microseconds = (param % 1000) & 0x03FF;
-
-					i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, U8T((microseconds >> 8) & 0x0003));
-					return (i2cConfigSend(
-						&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, U8T(microseconds & 0x00FF)));
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, 0x00);
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, 0x00);
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, 0x01));
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS_END_FINE: {
-					if (param >= 128) {
+				case DVX_S_DVS_TIMING_GH2SEL: {
+					if (param >= 256) {
 						return (false);
 					}
 
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, U8T(param)));
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_FIRST_SELX_START, U8T(param)));
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_READ_INTERVAL: {
-					if (param >= 65536) {
+				case DVX_S_DVS_TIMING_SELW: {
+					if (param >= 256) {
 						return (false);
 					}
 
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL, U8T(param >> 8));
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL + 1, U8T(param)));
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_WIDTH, U8T(param)));
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_SELX_START: {
-					if (param >= 65536) {
+				case DVX_S_DVS_TIMING_SEL2AY_R: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_START, U8T(param)));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2AY_F: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END, U8T(param)));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2R_R: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START, U8T(param)));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2R_F: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END, U8T(param)));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_SEL: {
+					if ((param >= 65536) || (param < 5)) {
 						return (false);
 					}
 
 					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, U8T(param >> 8));
-					return (
-						i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, U8T(param)));
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, U8T(param));
+
+					// Also set MAX_EVENT_NUM, which is defined as NEXT_SEL-5, up to a maximum of 60.
+					uint8_t maxEventNum = (param < 65) ? U8T(param - 5) : U8T(60);
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_MAX_EVENT_NUM, maxEventNum));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_GH: {
+					if (param >= 128) {
+						return (false);
+					}
+
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_CNT, U8T(param)));
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_READ_FIXED: {
+					if (param >= 65536) {
+						return (false);
+					}
+
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL, U8T(param >> 8));
+					return (i2cConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL + 1, U8T(param)));
 					break;
 				}
 
@@ -1375,190 +1322,79 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GENERATION_INTERVAL: {
+				case DVX_S_DVS_TIMING_ED: {
 					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(
-							&state->usbState, DEVICE_DVS, REGISTER_TIMING_GENERATION_INTERVAL, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_GH_COUNT: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, &currVal)) {
-						return (false);
-					}
-
-					*param = (currVal * 1000);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, &currVal)) {
 						return (false);
 					}
 
-					*param |= U32T(currVal << 8);
+					*param = U32T(currVal << 8);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, &currVal)) {
 						return (false);
 					}
 
 					*param |= currVal;
-					break;
-				}
 
-				case DVX_S_DVS_TIMING_GH_COUNT_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, &currVal)) {
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, &currVal)) {
 						return (false);
 					}
 
-					*param = currVal;
+					*param *= currVal;
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS_COUNT: {
+				case DVX_S_DVS_TIMING_GH2GRS: {
 					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, &currVal)) {
-						return (false);
-					}
-
-					*param = (currVal * 1000);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, &currVal)) {
 						return (false);
 					}
 
-					*param |= U32T(currVal << 8);
+					*param = U32T(currVal << 8);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, &currVal)) {
 						return (false);
 					}
 
 					*param |= currVal;
-					break;
-				}
 
-				case DVX_S_DVS_TIMING_GRS_COUNT_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, &currVal)) {
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, &currVal)) {
 						return (false);
 					}
 
-					*param = currVal;
+					*param *= currVal;
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_GH_FINE: {
+				case DVX_S_DVS_TIMING_GRS: {
 					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_SELX_END_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_END_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_AED_UPDATE_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AED_UPDATE_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_AY_END_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_MAX_EVENT_NUM_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_MAX_EVENT_NUM_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_R_START_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_R_END_FINE: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END_FINE, &currVal)) {
-						return (false);
-					}
-
-					*param = currVal;
-					break;
-				}
-
-				case DVX_S_DVS_TIMING_GRS_END: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, &currVal)) {
-						return (false);
-					}
-
-					*param = (currVal * 1000);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, &currVal)) {
 						return (false);
 					}
 
-					*param |= U32T(currVal << 8);
+					*param = U32T(currVal << 8);
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, &currVal)) {
 						return (false);
 					}
 
 					*param |= currVal;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, &currVal)) {
+						return (false);
+					}
+
+					*param *= currVal;
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS_END_FINE: {
+				case DVX_S_DVS_TIMING_GH2SEL: {
 					uint8_t currVal = 0;
 
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, &currVal)) {
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_FIRST_SELX_START, &currVal)) {
 						return (false);
 					}
 
@@ -1566,24 +1402,62 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_READ_INTERVAL: {
+				case DVX_S_DVS_TIMING_SELW: {
 					uint8_t currVal = 0;
 
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL, &currVal)) {
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_WIDTH, &currVal)) {
 						return (false);
 					}
 
-					*param = U32T(currVal << 8);
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL + 1, &currVal)) {
-						return (false);
-					}
-
-					*param |= currVal;
+					*param = currVal;
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_SELX_START: {
+				case DVX_S_DVS_TIMING_SEL2AY_R: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_START, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2AY_F: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2R_R: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SEL2R_F: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_SEL: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, &currVal)) {
@@ -1594,6 +1468,35 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 
 					if (!i2cConfigReceive(
 							&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_GH: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_CNT, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_READ_FIXED: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL + 1, &currVal)) {
 						return (false);
 					}
 
