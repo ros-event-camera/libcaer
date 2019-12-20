@@ -2,6 +2,8 @@
 
 #include "davis.h"
 #include "davis_rpi.h"
+#include "dv_explorer.h"
+#include "dv_explorer_s.h"
 #include "dvs128.h"
 #include "dvs132s.h"
 #include "dynapse.h"
@@ -29,7 +31,9 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 #else
 	[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-	[CAER_DEVICE_DVS132S] = &dvs132sFind,
+	[CAER_DEVICE_DVS132S]       = &dvs132sFind,
+	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerFind,
+	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSFind,
 };
 
 ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices) {
@@ -157,6 +161,20 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 
 		case CAER_DEVICE_DVS132S: {
 			struct caer_dvs132s_info *info = &discoveredDevice->deviceInfo.dvs132sInfo;
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_DV_EXPLORER: {
+			struct caer_dvx_info *info = &discoveredDevice->deviceInfo.dvExplorerInfo;
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_DV_EXPLORER_S: {
+			struct caer_dvx_s_info *info = &discoveredDevice->deviceInfo.dvExplorerSInfo;
 			return (caerDeviceOpen(
 				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;

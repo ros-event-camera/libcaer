@@ -27,8 +27,10 @@ extern "C" {
  * 5 - CAER_DEVICE_EDVS
  * 6 - CAER_DEVICE_DAVIS_RPI
  * 7 - CAER_DEVICE_DVS132S
+ * 8 - CAER_DEVICE_DVEXPLORER
+ * 9 - CAER_DEVICE_DVEXPLORER_S
  */
-#define CAER_SUPPORTED_DEVICES_NUMBER 8
+#define CAER_SUPPORTED_DEVICES_NUMBER 10
 
 /**
  * Pointer to an open device on which to operate.

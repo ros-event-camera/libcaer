@@ -7,4 +7,6 @@
 /davis_rpi_benchmark
 /dynapse_simple
 /device_discovery
+/dv_explorer
+/dv_explorer_s
 /*.exe
