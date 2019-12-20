@@ -15,6 +15,22 @@ static void dvExplorerSLog(enum caer_log_level logLevel, dvExplorerSHandle handl
 	va_end(argumentList);
 }
 
+static inline uint32_t zeroBitCountRight(uint8_t currVal) {
+	uint32_t bitCount;
+
+	if (currVal) {
+		currVal = (currVal ^ (currVal - 1)) >> 1; // Set value's trailing 0s to 1s and zero rest.
+		for (bitCount = 0; currVal; bitCount++) {
+			currVal >>= 1;
+		}
+	}
+	else {
+		bitCount = 8;
+	}
+
+	return (bitCount);
+}
+
 ssize_t dvExplorerSFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Set to NULL initially (for error return).
 	*discoveredDevices = NULL;
@@ -1152,6 +1168,761 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 				case CAER_HOST_CONFIG_LOG_LEVEL:
 					*param = atomic_load(&state->deviceLogLevel);
 					break;
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_S_DVS:
+			switch (paramAddr) {
+				case DVX_S_DVS_MODE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_MODE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_EVENT_FLATTEN: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x40) == true);
+					break;
+				}
+
+				case DVX_S_DVS_EVENT_ON_ONLY: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x20) == true);
+					break;
+				}
+
+				case DVX_S_DVS_EVENT_OFF_ONLY: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_S_DVS_SUBSAMPLE_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x04) == true);
+					break;
+				}
+
+				case DVX_S_DVS_AREA_BLOCKING_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_S_DVS_DUAL_BINNING_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_SUBSAMPLE_VERTICAL: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x38) >> 3);
+					break;
+				}
+
+				case DVX_S_DVS_SUBSAMPLE_HORIZONTAL: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal & 0x07);
+					break;
+				}
+
+				case DVX_S_DVS_AREA_BLOCKING_0:
+				case DVX_S_DVS_AREA_BLOCKING_1:
+				case DVX_S_DVS_AREA_BLOCKING_2:
+				case DVX_S_DVS_AREA_BLOCKING_3:
+				case DVX_S_DVS_AREA_BLOCKING_4:
+				case DVX_S_DVS_AREA_BLOCKING_5:
+				case DVX_S_DVS_AREA_BLOCKING_6:
+				case DVX_S_DVS_AREA_BLOCKING_7:
+				case DVX_S_DVS_AREA_BLOCKING_8:
+				case DVX_S_DVS_AREA_BLOCKING_9:
+				case DVX_S_DVS_AREA_BLOCKING_10:
+				case DVX_S_DVS_AREA_BLOCKING_11:
+				case DVX_S_DVS_AREA_BLOCKING_12:
+				case DVX_S_DVS_AREA_BLOCKING_13:
+				case DVX_S_DVS_AREA_BLOCKING_14:
+				case DVX_S_DVS_AREA_BLOCKING_15:
+				case DVX_S_DVS_AREA_BLOCKING_16:
+				case DVX_S_DVS_AREA_BLOCKING_17:
+				case DVX_S_DVS_AREA_BLOCKING_18:
+				case DVX_S_DVS_AREA_BLOCKING_19: {
+					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_S_DVS_AREA_BLOCKING_0));
+
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, regAddr, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, U16T(regAddr + 1), &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMESTAMP_RESET: {
+					*param = false;
+					break;
+				}
+
+				case DVX_S_DVS_GLOBAL_RESET_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_S_DVS_GLOBAL_RESET_DURING_READOUT: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_GLOBAL_RESET_READOUT, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_GLOBAL_HOLD_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x01) == true);
+					break;
+				}
+
+				case DVX_S_DVS_FIXED_READ_TIME_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_FIXED_READ_TIME, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_EXTERNAL_TRIGGER_MODE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_EXTERNAL_TRIGGER, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GENERATION_INTERVAL: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_TIMING_GENERATION_INTERVAL, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GH_COUNT: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 1000);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GH_COUNT_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GRS_COUNT: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 1000);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GRS_COUNT_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_GH_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_SELX_END_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_END_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_AED_UPDATE_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AED_UPDATE_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_AY_END_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_MAX_EVENT_NUM_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_MAX_EVENT_NUM_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_R_START_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_R_END_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GRS_END: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 1000);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_GRS_END_FINE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_READ_INTERVAL: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_INTERVAL + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_TIMING_NEXT_SELX_START: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_S_DVS_CROPPER:
+			switch (paramAddr) {
+				case DVX_S_DVS_CROPPER_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_BYPASS, &currVal)) {
+						return (false);
+					}
+
+					*param = !currVal;
+					break;
+				}
+
+				case DVX_S_DVS_CROPPER_Y_START_ADDRESS: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, &currVal)) {
+						return (false);
+					}
+
+					*param += zeroBitCountRight(currVal);
+					break;
+				}
+
+				case DVX_S_DVS_CROPPER_Y_END_ADDRESS: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, &currVal)) {
+						return (false);
+					}
+
+					*param += (zeroBitCountRight(~currVal) - 1);
+					break;
+				}
+
+				case DVX_S_DVS_CROPPER_X_START_ADDRESS: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_CROPPER_X_END_ADDRESS: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_S_DVS_ACTIVITY_DECISION:
+			switch (paramAddr) {
+				case DVX_S_DVS_ACTIVITY_DECISION_ENABLE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_BYPASS, &currVal)) {
+						return (false);
+					}
+
+					*param = !currVal;
+					break;
+				}
+
+				case DVX_S_DVS_ACTIVITY_DECISION_POS_THRESHOLD: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_ACTIVITY_DECISION_NEG_THRESHOLD: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_RATE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_TIME, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_S_DVS_BIAS:
+			switch (paramAddr) {
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOG: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x08) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_SF: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x04) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_ON: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_nRST: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x01) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGA: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGD: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x0C) >> 2);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_LEVEL_SF: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_LEVEL_nOFF: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_AMP: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_ON: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_S_DVS_BIAS_CURRENT_OFF: {
+					uint8_t currVal = 0;
+
+					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
 
 				default:
 					return (false);
