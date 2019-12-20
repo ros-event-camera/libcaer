@@ -2113,8 +2113,7 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 
 				groupAddr *= 8; // 8 pixels per group.
 
-				// 8-pixel group event presence and polarity.
-				// 2 is OFF polarity, 3 is ON.
+				// 8-pixel group, two polarities, up to 16 events can be generated.
 				if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
 						(size_t) state->currentPackets.polarityPosition, 16, handle)) {
 					for (uint16_t i = 0, mask = 0x8000; i < 16; i++, mask >>= 1) {
