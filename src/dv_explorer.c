@@ -328,7 +328,7 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
 	dvExplorerConfigSet(
-		(caerDeviceHandle) handle, DVX_DVS_CHIP, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
+		(caerDeviceHandle) handle, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
 
 	// System settings.
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
