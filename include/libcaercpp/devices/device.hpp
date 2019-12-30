@@ -2,9 +2,12 @@
 #define LIBCAER_DEVICES_DEVICE_HPP_
 
 #include "../libcaer.hpp"
+
 #include "../events/packetContainer.hpp"
 #include "../events/utils.hpp"
+
 #include <libcaer/devices/device.h>
+
 #include <memory>
 #include <string>
 
@@ -54,6 +57,21 @@ public:
 		return (param);
 	}
 
+	void configGet64(int8_t modAddr, uint8_t paramAddr, uint64_t *param) const {
+		bool success = caerDeviceConfigGet64(handle.get(), modAddr, paramAddr, param);
+		if (!success) {
+			std::string exc = toString() + ": failed to get configuration parameter, modAddr=" + std::to_string(modAddr)
+							  + ", paramAddr=" + std::to_string(paramAddr) + ".";
+			throw std::runtime_error(exc);
+		}
+	}
+
+	uint64_t configGet64(int8_t modAddr, uint8_t paramAddr) const {
+		uint64_t param = 0;
+		configGet64(modAddr, paramAddr, &param);
+		return (param);
+	}
+
 	void dataStart(void (*dataNotifyIncrease)(void *ptr), void (*dataNotifyDecrease)(void *ptr),
 		void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr), void *dataShutdownUserPtr) const {
 		bool success = caerDeviceDataStart(handle.get(), dataNotifyIncrease, dataNotifyDecrease, dataNotifyUserPtr,
@@ -90,7 +108,7 @@ public:
 		return (cppContainer);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_DEVICE_HPP_ */
