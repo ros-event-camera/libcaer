@@ -4,8 +4,6 @@
 
 static void dvExplorerLog(enum caer_log_level logLevel, dvExplorerHandle handle, const char *format, ...)
 	ATTRIBUTE_FORMAT(3);
-static bool dvExplorerSendDefaultFPGAConfig(caerDeviceHandle cdh);
-static bool dvExplorerSendDefaultBiasConfig(caerDeviceHandle cdh);
 static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static void dvExplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
 
@@ -21,6 +19,22 @@ static void dvExplorerLog(enum caer_log_level logLevel, dvExplorerHandle handle,
 	caerLogVAFull(atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel,
 		handle->info.deviceString, format, argumentList);
 	va_end(argumentList);
+}
+
+static inline uint32_t zeroBitCountRight(uint8_t currVal) {
+	uint32_t bitCount;
+
+	if (currVal) {
+		currVal = (currVal ^ (currVal - 1)) >> 1; // Set value's trailing 0s to 1s and zero rest.
+		for (bitCount = 0; currVal; bitCount++) {
+			currVal >>= 1;
+		}
+	}
+	else {
+		bitCount = 8;
+	}
+
+	return (bitCount);
 }
 
 ssize_t dvExplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
@@ -60,7 +74,7 @@ ssize_t dvExplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		dvExplorerInfoPtr->firmwareVersion = foundDVExplorer[i].firmwareVersion;
 		dvExplorerInfoPtr->logicVersion    = (!foundDVExplorer[i].errorOpen) ? (foundDVExplorer[i].logicVersion) : (-1);
 
-		// Reopen DVS128 device to get additional info, if possible at all.
+		// Reopen DV_EXPLORER device to get additional info, if possible at all.
 		if (!foundDVExplorer[i].errorOpen && !foundDVExplorer[i].errorVersion) {
 			caerDeviceHandle dvs = dvExplorerOpen(
 				0, dvExplorerInfoPtr->deviceUSBBusNumber, dvExplorerInfoPtr->deviceUSBDeviceAddress, NULL);
@@ -296,6 +310,46 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigReceive(&state->usbState, DVX_EXTINPUT, DVX_EXTINPUT_HAS_GENERATOR, &param32);
 	handle->info.extInputHasGenerator = param32;
 
+	// Initialize Samsung DVS chip.
+	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, true); // Take DVS out of reset.
+
+	// Wait 10ms for DVS to start.
+	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
+	thrd_sleep(&dvsSleep, NULL);
+
+	// Bias reset.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
+
+	// Bias enable.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGP, 0x07);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGN, 0xFF);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFP, 0x03);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
+
+	dvExplorerConfigSet(
+		(caerDeviceHandle) handle, DVX_DVS_CHIP, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
+
+	// System settings.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
+	spiConfigSend(
+		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80 to enable MGROUP compression.
+
+	// Digital settings.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
+
+	// Fine clock counts based on clock frequency.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
+
+	// Disable histogram, not currently used/mapped.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
+
 	// On FX3, start the debug transfers once everything else is ready.
 	allocateDebugTransfers(handle);
 
@@ -310,6 +364,8 @@ bool dvExplorerClose(caerDeviceHandle cdh) {
 	dvExplorerState state   = &handle->state;
 
 	dvExplorerLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
+
+	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, false); // Put DVS in reset.
 
 	// Stop debug transfers on FX3 devices.
 	cancelAndDeallocateDebugTransfers(handle);
@@ -349,20 +405,6 @@ struct caer_dvx_info caerDVExplorerInfoGet(caerDeviceHandle cdh) {
 }
 
 bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
-	// First send default bias config.
-	if (!dvExplorerSendDefaultBiasConfig(cdh)) {
-		return (false);
-	}
-
-	// Send default FPGA config.
-	if (!dvExplorerSendDefaultFPGAConfig(cdh)) {
-		return (false);
-	}
-
-	return (true);
-}
-
-static bool dvExplorerSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	dvExplorerHandle handle = (dvExplorerHandle) cdh;
 
 	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RESET, false);
@@ -400,11 +442,80 @@ static bool dvExplorerSendDefaultFPGAConfig(caerDeviceHandle cdh) {
 	dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_EARLY_PACKET_DELAY,
 		8); // in 125µs time-slices (defaults to 1ms)
 
-	return (true);
-}
+	// Set default biases.
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
 
-static bool dvExplorerSendDefaultBiasConfig(caerDeviceHandle cdh) {
-	// Default bias configuration.
+	// External trigger.
+	dvExplorerConfigSet(
+		cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE, DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
+
+	// Digital readout configuration.
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_HOLD_ENABLE, true);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_ENABLE, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_DURING_READOUT, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_FIXED_READ_TIME_ENABLE, false);
+
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_FLATTEN, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_ON_ONLY, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_OFF_ONLY, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_ENABLE, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_ENABLE, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_DUAL_BINNING_ENABLE, false);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL, 0);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL, 0);
+
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_0, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_1, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_2, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_3, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_4, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_5, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_6, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_7, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_8, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_9, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_10, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_11, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_12, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_13, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_14, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_15, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_16, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_17, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_18, 0x7FFF);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_19, 0x7FFF);
+
+	// Timing settings.
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_ED, 2);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2GRS, 0);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GRS, 1);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2SEL, 4);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SELW, 6);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_R, 4);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_F, 6);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_R, 8);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_F, 10);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_SEL, 15);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_GH, 10);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_READ_FIXED, 48000);
+
+	// Crop block.
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_ENABLE, false);
+
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_START_ADDRESS, 0);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS, 0);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_END_ADDRESS, 639);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS, 479);
+
+	// Activity decision block.
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE, false);
+
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_THRESHOLD, 300);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_RATE, 1);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME, 3);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
+
 	return (true);
 }
 
@@ -576,6 +687,665 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 					return (spiConfigSend(&state->usbState, DVX_USB, paramAddr, U32T(delayCC)));
 					break;
 				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_MODE: {
+					if (param >= 3) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_MODE, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_FLATTEN: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT,
+						(param) ? U8T(currVal | 0x40) : U8T(U8T(currVal) & ~0x40)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_ON_ONLY: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT,
+						(param) ? U8T(currVal | 0x20) : U8T(U8T(currVal) & ~0x20)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_OFF_ONLY: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT,
+						(param) ? U8T(currVal | 0x10) : U8T(U8T(currVal) & ~0x10)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE,
+						(param) ? U8T(U8T(currVal) & ~0x04) : U8T(currVal | 0x04)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_AREA_BLOCKING_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE,
+						(param) ? U8T(U8T(currVal) & ~0x02) : U8T(currVal | 0x02)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_DUAL_BINNING_ENABLE: {
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_DUAL_BINNING, (param) ? (0x01) : (0x00)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_VERTICAL: {
+					if (param >= 8) {
+						return (false);
+					}
+
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					currVal = U8T(currVal & 0x38) | U8T(param << 3);
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL: {
+					if (param >= 8) {
+						return (false);
+					}
+
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					currVal = U8T(currVal & 0x07) | U8T(param);
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
+					break;
+				}
+
+				case DVX_DVS_CHIP_AREA_BLOCKING_0:
+				case DVX_DVS_CHIP_AREA_BLOCKING_1:
+				case DVX_DVS_CHIP_AREA_BLOCKING_2:
+				case DVX_DVS_CHIP_AREA_BLOCKING_3:
+				case DVX_DVS_CHIP_AREA_BLOCKING_4:
+				case DVX_DVS_CHIP_AREA_BLOCKING_5:
+				case DVX_DVS_CHIP_AREA_BLOCKING_6:
+				case DVX_DVS_CHIP_AREA_BLOCKING_7:
+				case DVX_DVS_CHIP_AREA_BLOCKING_8:
+				case DVX_DVS_CHIP_AREA_BLOCKING_9:
+				case DVX_DVS_CHIP_AREA_BLOCKING_10:
+				case DVX_DVS_CHIP_AREA_BLOCKING_11:
+				case DVX_DVS_CHIP_AREA_BLOCKING_12:
+				case DVX_DVS_CHIP_AREA_BLOCKING_13:
+				case DVX_DVS_CHIP_AREA_BLOCKING_14:
+				case DVX_DVS_CHIP_AREA_BLOCKING_15:
+				case DVX_DVS_CHIP_AREA_BLOCKING_16:
+				case DVX_DVS_CHIP_AREA_BLOCKING_17:
+				case DVX_DVS_CHIP_AREA_BLOCKING_18:
+				case DVX_DVS_CHIP_AREA_BLOCKING_19: {
+					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
+
+					if (!spiConfigSend(&state->usbState, DEVICE_DVS, regAddr, U8T(param >> 8))) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, U16T(regAddr + 1), U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMESTAMP_RESET: {
+					if (param) {
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_RESET, 0x01);
+						return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_RESET, 0x00));
+					}
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_RESET_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL,
+						(param) ? U8T(currVal | 0x02) : U8T(U8T(currVal) & ~0x02)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_RESET_DURING_READOUT: {
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_GLOBAL_RESET_READOUT,
+						(param) ? (0x01) : (0x00)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_HOLD_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL,
+						(param) ? U8T(currVal | 0x01) : U8T(U8T(currVal) & ~0x01)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_FIXED_READ_TIME_ENABLE: {
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_FIXED_READ_TIME, (param) ? (0x01) : (0x00)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE: {
+					if (param >= 3) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_EXTERNAL_TRIGGER, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_ED: {
+					// TODO: figure this out.
+					if (param >= 128000) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, 0x00);
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, 0x00);
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, 0x02));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GH2GRS: {
+					// TODO: figure this out.
+					if (param >= 128000) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, 0x00);
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, 0x00);
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, 0x00));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GRS: {
+					// TODO: figure this out.
+					if (param >= 128000) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, 0x00);
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, 0x00);
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, 0x01));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GH2SEL: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_FIRST_SELX_START, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SELW: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_WIDTH, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2AY_R: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_START, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2AY_F: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2R_R: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2R_F: {
+					if (param >= 256) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_NEXT_SEL: {
+					if ((param >= 65536) || (param < 5)) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, U8T(param >> 8));
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, U8T(param));
+
+					// Also set MAX_EVENT_NUM, which is defined as NEXT_SEL-5, up to a maximum of 60.
+					uint8_t maxEventNum = (param < 65) ? U8T(param - 5) : U8T(60);
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_MAX_EVENT_NUM, maxEventNum));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_NEXT_GH: {
+					if (param >= 128) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_CNT, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_READ_FIXED: {
+					if (param >= 65536) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL, U8T(param >> 8));
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL + 1, U8T(param)));
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_CROPPER:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_CROPPER_ENABLE: {
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_CROPPER_BYPASS, (param) ? (0x00) : (0x01)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS: {
+					if (param >= 480) {
+						return (false);
+					}
+
+					uint8_t group = U8T(param / 8);
+					uint8_t mask  = U8T(0x00FF << (param % 8));
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, group);
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, mask));
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS: {
+					if (param >= 480) {
+						return (false);
+					}
+
+					uint8_t group = U8T(param / 8);
+					uint8_t mask  = U8T(0x00FF >> (7 - (param % 8)));
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, group);
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, mask));
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_X_START_ADDRESS: {
+					if (param >= 640) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, U8T(param >> 8));
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_X_END_ADDRESS: {
+					if (param >= 640) {
+						return (false);
+					}
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, U8T(param >> 8));
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, U8T(param)));
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_ACTIVITY_DECISION:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE: {
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_BYPASS, (param) ? (0x00) : (0x01)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_POS_THRESHOLD: {
+					if (param >= 65536) {
+						return (false);
+					}
+
+					spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD, U8T(param >> 8));
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD + 1, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_NEG_THRESHOLD: {
+					if (param >= 65536) {
+						return (false);
+					}
+
+					spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD, U8T(param >> 8));
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD + 1, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_RATE: {
+					if (param >= 16) {
+						return (false);
+					}
+
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_RATE, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME: {
+					if (param >= 32) {
+						return (false);
+					}
+
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_TIME, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT: {
+					if (param >= 65536) {
+						return (false);
+					}
+
+					spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT, U8T(param >> 8));
+					return (spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT + 1, U8T(param)));
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_BIAS:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOG: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST,
+						(param) ? U8T(currVal | 0x08) : U8T(U8T(currVal) & ~0x08)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_SF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST,
+						(param) ? U8T(currVal | 0x04) : U8T(U8T(currVal) & ~0x04)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_ON: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST,
+						(param) ? U8T(currVal | 0x02) : U8T(U8T(currVal) & ~0x02)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_nRST: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST,
+						(param) ? U8T(currVal | 0x01) : U8T(U8T(currVal) & ~0x01)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOGA: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR,
+							(param) ? U8T(currVal | 0x10) : U8T(U8T(currVal) & ~0x10)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOGD: {
+					if (param >= 4) {
+						return (false);
+					}
+
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					return (
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR,
+							U8T((U8T(currVal) & ~0x0C) | U8T(param << 2))));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_LEVEL_SF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF,
+						(param) ? U8T(currVal | 0x10) : U8T(U8T(currVal) & ~0x10)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_LEVEL_nOFF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF,
+						(param) ? U8T(currVal | 0x02) : U8T(U8T(currVal) & ~0x02)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_AMP: {
+					if (param >= 9) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_ON: {
+					if (param >= 9) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_OFF: {
+					if (param >= 9) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, U8T(param)));
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_SIMPLE:
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, 0x04);
+					spiConfigSend(
+						&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, 0x14);
+
+					switch (param) {
+						case DVX_DVS_CHIP_BIAS_SIMPLE_VERY_LOW: {
+							spiConfigSend(
+								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7D);
+
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, 0x06);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, 0x02);
+							break;
+						}
+
+						case DVX_DVS_CHIP_BIAS_SIMPLE_LOW: {
+							spiConfigSend(
+								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7D);
+
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, 0x03);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, 0x05);
+							break;
+						}
+
+						case DVX_DVS_CHIP_BIAS_SIMPLE_HIGH: {
+							spiConfigSend(
+								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x04);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7F);
+
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, 0x05);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, 0x03);
+							break;
+						}
+
+						case DVX_DVS_CHIP_BIAS_SIMPLE_VERY_HIGH: {
+							spiConfigSend(
+								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x04);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7F);
+
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, 0x02);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, 0x06);
+							break;
+						}
+
+						case DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT:
+						default: {
+							spiConfigSend(
+								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7D);
+
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, 0x00);
+							spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, 0x08);
+							break;
+						}
+					}
+					break;
 
 				default:
 					return (false);
@@ -794,6 +1564,717 @@ bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 			}
 			break;
 
+		case DVX_DVS_CHIP:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_MODE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_MODE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_FLATTEN: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x40) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_ON_ONLY: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x20) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_EVENT_OFF_ONLY: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x04) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_AREA_BLOCKING_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_DUAL_BINNING_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_VERTICAL: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x38) >> 3);
+					break;
+				}
+
+				case DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal & 0x07);
+					break;
+				}
+
+				case DVX_DVS_CHIP_AREA_BLOCKING_0:
+				case DVX_DVS_CHIP_AREA_BLOCKING_1:
+				case DVX_DVS_CHIP_AREA_BLOCKING_2:
+				case DVX_DVS_CHIP_AREA_BLOCKING_3:
+				case DVX_DVS_CHIP_AREA_BLOCKING_4:
+				case DVX_DVS_CHIP_AREA_BLOCKING_5:
+				case DVX_DVS_CHIP_AREA_BLOCKING_6:
+				case DVX_DVS_CHIP_AREA_BLOCKING_7:
+				case DVX_DVS_CHIP_AREA_BLOCKING_8:
+				case DVX_DVS_CHIP_AREA_BLOCKING_9:
+				case DVX_DVS_CHIP_AREA_BLOCKING_10:
+				case DVX_DVS_CHIP_AREA_BLOCKING_11:
+				case DVX_DVS_CHIP_AREA_BLOCKING_12:
+				case DVX_DVS_CHIP_AREA_BLOCKING_13:
+				case DVX_DVS_CHIP_AREA_BLOCKING_14:
+				case DVX_DVS_CHIP_AREA_BLOCKING_15:
+				case DVX_DVS_CHIP_AREA_BLOCKING_16:
+				case DVX_DVS_CHIP_AREA_BLOCKING_17:
+				case DVX_DVS_CHIP_AREA_BLOCKING_18:
+				case DVX_DVS_CHIP_AREA_BLOCKING_19: {
+					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
+
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, regAddr, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, U16T(regAddr + 1), &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMESTAMP_RESET: {
+					*param = false;
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_RESET_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_RESET_DURING_READOUT: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_GLOBAL_RESET_READOUT, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_GLOBAL_HOLD_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x01) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_FIXED_READ_TIME_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_FIXED_READ_TIME, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_EXTERNAL_TRIGGER, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_ED: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param *= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GH2GRS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param *= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GRS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, &currVal)) {
+						return (false);
+					}
+
+					*param *= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_GH2SEL: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_FIRST_SELX_START, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SELW: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_WIDTH, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2AY_R: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_START, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2AY_F: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2R_R: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_SEL2R_F: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_NEXT_SEL: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_NEXT_GH: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_CNT, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_TIMING_READ_FIXED: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_CROPPER:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_CROPPER_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_BYPASS, &currVal)) {
+						return (false);
+					}
+
+					*param = !currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, &currVal)) {
+						return (false);
+					}
+
+					*param += zeroBitCountRight(U8T(currVal));
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, &currVal)) {
+						return (false);
+					}
+
+					*param = (currVal * 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, &currVal)) {
+						return (false);
+					}
+
+					*param += (zeroBitCountRight(U8T(~currVal)) - 1);
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_X_START_ADDRESS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_CROPPER_X_END_ADDRESS: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_ACTIVITY_DECISION:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_BYPASS, &currVal)) {
+						return (false);
+					}
+
+					*param = !currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_POS_THRESHOLD: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_THRESHOLD + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_NEG_THRESHOLD: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_NEG_THRESHOLD + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_RATE: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_RATE, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_DEC_TIME, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT, &currVal)) {
+						return (false);
+					}
+
+					*param = U32T(currVal << 8);
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_POS_MAX_COUNT + 1, &currVal)) {
+						return (false);
+					}
+
+					*param |= currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
+		case DVX_DVS_CHIP_BIAS:
+			switch (paramAddr) {
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOG: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x08) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_SF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x04) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_ON: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_nRST: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(
+							&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x01) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOGA: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_RANGE_LOGD: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS,
+							REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x0C) >> 2);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_LEVEL_SF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x10) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_LEVEL_nOFF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
+						return (false);
+					}
+
+					*param = ((currVal & 0x02) == true);
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_AMP: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_ON: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				case DVX_DVS_CHIP_BIAS_CURRENT_OFF: {
+					uint32_t currVal = 0;
+
+					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, &currVal)) {
+						return (false);
+					}
+
+					*param = currVal;
+					break;
+				}
+
+				default:
+					return (false);
+					break;
+			}
+			break;
+
 		default:
 			return (false);
 			break;
@@ -872,8 +2353,6 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
 	dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
 
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN_CHIP, false);
-
 	// Then wait 10ms for FPGA device side buffers to clear.
 	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&clearSleep, NULL);
@@ -890,12 +2369,6 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN_CHIP, true);
-
-		// Wait 200 ms for biases to stabilize.
-		struct timespec biasEnSleep = {.tv_sec = 0, .tv_nsec = 200000000};
-		thrd_sleep(&biasEnSleep, NULL);
-
 		dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, true);
 		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, true);
 		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, true);
@@ -909,6 +2382,9 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, true);
 		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, true);
 		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, true);
+
+		// Enable streaming from DVS chip.
+		dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_STREAM);
 	}
 
 	return (true);
@@ -919,6 +2395,9 @@ bool dvExplorerDataStop(caerDeviceHandle cdh) {
 	dvExplorerState state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
+		// Disable streaming from DVS chip.
+		dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_OFF);
+
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
 		dvExplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, false);
 		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, false);
@@ -929,8 +2408,6 @@ bool dvExplorerDataStop(caerDeviceHandle cdh) {
 		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
 		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
 		dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
-
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN_CHIP, false);
 	}
 
 	usbDataTransfersStop(&state->usbState);
@@ -1212,7 +2689,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 					}
 					break;
 
-				case 1: { // Y column address. 10 bits (9 - 0) contain address, bit 11 start of frame marker.
+				case 1: { // X column address. 10 bits (9 - 0) contain address, bit 11 Start of Frame marker.
 					uint16_t columnAddr = data & 0x03FF;
 					bool startOfFrame   = data & 0x0800;
 
@@ -1221,14 +2698,14 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 					}
 
 					// Check range conformity.
-					if (columnAddr >= state->dvs.sizeY) {
+					if (columnAddr >= state->dvs.sizeX) {
 						dvExplorerLog(CAER_LOG_ALERT, handle,
-							"DVS: Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
-							state->dvs.sizeY - 1, columnAddr);
-						break; // Skip invalid Y address (don't update lastY).
+							"DVS: X address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
+							state->dvs.sizeX - 1, columnAddr);
+						break; // Skip invalid X address (don't update lastX).
 					}
 
-					state->dvs.lastY = columnAddr;
+					state->dvs.lastX = columnAddr;
 					break;
 				}
 
@@ -1245,6 +2722,8 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								continue;
 							}
 
+							uint16_t offset = 7 - i;
+
 							// Received event!
 							caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
 								state->currentPackets.polarity, state->currentPackets.polarityPosition);
@@ -1253,12 +2732,12 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 							caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
 							caerPolarityEventSetPolarity(currentPolarityEvent, polarity);
 							if (state->dvs.invertXY) {
-								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastX + i);
-								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastY);
+								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastY + offset);
+								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastX);
 							}
 							else {
-								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastY);
-								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastX + i);
+								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastX);
+								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastY + offset);
 							}
 							caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
 							state->currentPackets.polarityPosition++;
@@ -1274,11 +2753,20 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						// SGROUP address.
 						uint16_t rowAddress = data & 0x003F;
 						rowAddress *= 8; // 8 pixels per group.
-						state->dvs.lastX = rowAddress;
+
+						// Check range conformity.
+						if (rowAddress >= state->dvs.sizeY) {
+							dvExplorerLog(CAER_LOG_ALERT, handle,
+								"DVS: Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
+								state->dvs.sizeY - 1, rowAddress);
+							break; // Skip invalid Y address (don't update lastY).
+						}
+
+						state->dvs.lastY = rowAddress;
 					}
 					else {
-						// TODO: support MGROUP encoding.
-						dvExplorerLog(CAER_LOG_ALERT, handle, "Got MGROUP event.");
+						// TODO: MGROUP support.
+						dvExplorerLog(CAER_LOG_CRITICAL, handle, "MGROUP not handled.");
 					}
 					break;
 				}
