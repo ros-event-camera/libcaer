@@ -1433,10 +1433,16 @@ bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 					return (spiConfigReceive(&state->usbState, DVX_DVS, paramAddr, param));
 					break;
 
-				case DVX_DVS_STATISTICS_TRANSACTIONS_SUCCESS:
-				case DVX_DVS_STATISTICS_TRANSACTIONS_SUCCESS + 1:
-				case DVX_DVS_STATISTICS_TRANSACTIONS_SKIPPED:
-				case DVX_DVS_STATISTICS_TRANSACTIONS_SKIPPED + 1:
+				case DVX_DVS_STATISTICS_COLUMN:
+				case DVX_DVS_STATISTICS_COLUMN + 1:
+				case DVX_DVS_STATISTICS_SGROUP:
+				case DVX_DVS_STATISTICS_SGROUP + 1:
+				case DVX_DVS_STATISTICS_MGROUP:
+				case DVX_DVS_STATISTICS_MGROUP + 1:
+				case DVX_DVS_STATISTICS_ERROR_COLUMN:
+				case DVX_DVS_STATISTICS_ERROR_COLUMN + 1:
+				case DVX_DVS_STATISTICS_ERROR_GROUP:
+				case DVX_DVS_STATISTICS_ERROR_GROUP + 1:
 					if (handle->info.dvsHasStatistics) {
 						return (spiConfigReceive(&state->usbState, DVX_DVS, paramAddr, param));
 					}

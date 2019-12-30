@@ -196,20 +196,44 @@ extern "C" {
 #define DVX_DVS_HAS_STATISTICS 80
 /**
  * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of event
+ * read-only parameter, representing the number of column
  * transactions completed successfully on the device.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DVX_DVS_STATISTICS_TRANSACTIONS_SUCCESS 81
+#define DVX_DVS_STATISTICS_COLUMN 81
 /**
  * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of dropped
- * transaction sequences on the device due to full buffers.
+ * read-only parameter, representing the number of SGroup
+ * transactions completed successfully on the device.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DVX_DVS_STATISTICS_TRANSACTIONS_SKIPPED 83
+#define DVX_DVS_STATISTICS_SGROUP 83
+/**
+ * Parameter address for module DVX_DVS:
+ * read-only parameter, representing the number of MGroup
+ * transactions completed successfully on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DVX_DVS_STATISTICS_MGROUP 85
+/**
+ * Parameter address for module DVX_DVS:
+ * read-only parameter, representing the number of column size
+ * errors on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DVX_DVS_STATISTICS_ERROR_COLUMN 87
+/**
+ * Parameter address for module DVX_DVS:
+ * read-only parameter, representing the number of group size
+ * errors on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DVX_DVS_STATISTICS_ERROR_GROUP 89
 
 /**
  * Parameter address for module DVX_IMU:
