@@ -558,9 +558,6 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 			}
 			break;
 
-		case DVX_BIAS:
-			break;
-
 		case DVX_SYSINFO:
 			// No SystemInfo parameters can ever be set!
 			return (false);
@@ -763,9 +760,6 @@ bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 					return (false);
 					break;
 			}
-			break;
-
-		case DVX_BIAS:
 			break;
 
 		case DVX_SYSINFO:
