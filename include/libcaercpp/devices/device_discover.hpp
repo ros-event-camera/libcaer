@@ -5,6 +5,8 @@
 
 #include "davis.hpp"
 #include "device.hpp"
+#include "dv_explorer.hpp"
+#include "dv_explorer_s.hpp"
 #include "dvs128.hpp"
 #include "dvs132s.hpp"
 #include "dynapse.hpp"
@@ -95,6 +97,20 @@ public:
 			case CAER_DEVICE_DVS132S: {
 				const struct caer_dvs132s_info *info = &discoveredDevice.deviceInfo.dvs132sInfo;
 				return (std::unique_ptr<libcaer::devices::dvs132s>(new libcaer::devices::dvs132s(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
+				break;
+			}
+
+			case CAER_DEVICE_DV_EXPLORER: {
+				const struct caer_dvx_info *info = &discoveredDevice.deviceInfo.dvExplorerInfo;
+				return (std::unique_ptr<libcaer::devices::dvExplorer>(new libcaer::devices::dvExplorer(
+					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
+				break;
+			}
+
+			case CAER_DEVICE_DV_EXPLORER_S: {
+				const struct caer_dvx_s_info *info = &discoveredDevice.deviceInfo.dvExplorerSInfo;
+				return (std::unique_ptr<libcaer::devices::dvExplorerS>(new libcaer::devices::dvExplorerS(
 					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}

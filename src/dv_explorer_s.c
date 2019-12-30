@@ -318,6 +318,8 @@ struct caer_dvx_s_info caerDVExplorerSInfoGet(caerDeviceHandle cdh) {
 }
 
 bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
+	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
+
 	// Set default biases.
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_BIAS, DVX_S_DVS_BIAS_SIMPLE, DVX_S_DVS_BIAS_SIMPLE_DEFAULT);
 
@@ -391,6 +393,9 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE, 1);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME, 3);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
+
+	// DTAG restart after config.
+	i2cConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, 0x02);
 
 	return (true);
 }

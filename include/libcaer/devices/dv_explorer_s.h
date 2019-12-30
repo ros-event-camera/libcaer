@@ -25,7 +25,7 @@ extern "C" {
  * Samsung chip identifier.
  * 640x480, semi-synchronous readout.
  */
-#define DV_EXPLORER_S_CHIP_ID 16
+#define DV_EXPLORER_S_CHIP_ID 20
 
 #define DVX_S_DVS 20
 #define DVX_S_DVS_MODE 0
