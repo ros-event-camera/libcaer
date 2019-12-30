@@ -516,6 +516,9 @@ bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME, 3);
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
 
+	// DTAG restart after config.
+	spiConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, 0x02);
+
 	return (true);
 }
 
