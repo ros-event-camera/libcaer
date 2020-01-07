@@ -15,22 +15,6 @@ static void dvExplorerSLog(enum caer_log_level logLevel, dvExplorerSHandle handl
 	va_end(argumentList);
 }
 
-static inline uint32_t zeroBitCountRight(uint8_t currVal) {
-	uint32_t bitCount;
-
-	if (currVal) {
-		currVal = (currVal ^ (currVal - 1)) >> 1; // Set value's trailing 0s to 1s and zero rest.
-		for (bitCount = 0; currVal; bitCount++) {
-			currVal >>= 1;
-		}
-	}
-	else {
-		bitCount = 8;
-	}
-
-	return (bitCount);
-}
-
 ssize_t dvExplorerSFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Set to NULL initially (for error return).
 	*discoveredDevices = NULL;
@@ -765,29 +749,44 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_Y_START_ADDRESS: {
-					if (param >= 480) {
-						return (false);
-					}
-
-					uint8_t group = U8T(param / 8);
-					uint8_t mask  = U8T(0x00FF << (param % 8));
-
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, group);
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, mask));
-					break;
-				}
-
+				case DVX_S_DVS_CROPPER_Y_START_ADDRESS:
 				case DVX_S_DVS_CROPPER_Y_END_ADDRESS: {
 					if (param >= 480) {
 						return (false);
 					}
 
-					uint8_t group = U8T(param / 8);
-					uint8_t mask  = U8T(0x00FF >> (7 - (param % 8)));
+					// Cropper has a special corner case:
+					// if both start and end pixels are in the same group,
+					// only the mask in the END register is actually applied.
+					// We must track the addresses, detect this, and properly
+					// update all the masks as needed.
+					if (paramAddr == DVX_S_DVS_CROPPER_Y_START_ADDRESS) {
+						state->dvs.cropperYStart = U16T(param);
+					}
 
-					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, group);
-					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, mask));
+					if (paramAddr == DVX_S_DVS_CROPPER_Y_END_ADDRESS) {
+						state->dvs.cropperYEnd = U16T(param);
+					}
+
+					uint8_t startGroup = U8T(state->dvs.cropperYStart / 8);
+					uint8_t startMask  = U8T(0x00FF << (state->dvs.cropperYStart % 8));
+
+					uint8_t endGroup = U8T(state->dvs.cropperYEnd / 8);
+					uint8_t endMask  = U8T(0x00FF >> (7 - (state->dvs.cropperYEnd % 8)));
+
+					if (startGroup == endGroup) {
+						// StartMask doesn't matter in this case, reset to 0xFF.
+						startMask = 0xFF;
+
+						// EndMask must let pass only the unblocked pixels (set to 1).
+						endMask = startMask & endMask;
+					}
+
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, startGroup);
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, startMask);
+
+					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, endGroup);
+					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, endMask));
 					break;
 				}
 
@@ -1529,36 +1528,12 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 				}
 
 				case DVX_S_DVS_CROPPER_Y_START_ADDRESS: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, &currVal)) {
-						return (false);
-					}
-
-					*param = (currVal * 8);
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_MASK, &currVal)) {
-						return (false);
-					}
-
-					*param += zeroBitCountRight(currVal);
+					*param = state->dvs.cropperYStart;
 					break;
 				}
 
 				case DVX_S_DVS_CROPPER_Y_END_ADDRESS: {
-					uint8_t currVal = 0;
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_GROUP, &currVal)) {
-						return (false);
-					}
-
-					*param = (currVal * 8);
-
-					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_END_MASK, &currVal)) {
-						return (false);
-					}
-
-					*param += (zeroBitCountRight(~currVal) - 1);
+					*param = state->dvs.cropperYEnd;
 					break;
 				}
 
