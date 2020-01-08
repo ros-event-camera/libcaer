@@ -124,6 +124,8 @@ struct dv_explorer_state {
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
+		uint16_t cropperYStart;
+		uint16_t cropperYEnd;
 	} dvs;
 	struct {
 		// IMU specific fields

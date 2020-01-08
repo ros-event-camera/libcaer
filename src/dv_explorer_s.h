@@ -120,6 +120,8 @@ struct dv_explorer_s_state {
 	struct {
 		// DVS specific fields
 		uint16_t lastX;
+		uint16_t cropperYStart;
+		uint16_t cropperYEnd;
 	} dvs;
 	// Packet Container state
 	struct container_generation container;
