@@ -1040,11 +1040,11 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 					uint8_t endMask  = U8T(0x00FF >> (7 - (state->dvs.cropperYEnd % 8)));
 
 					if (startGroup == endGroup) {
-						// StartMask doesn't matter in this case, reset to 0xFF.
-						startMask = 0xFF;
-
 						// EndMask must let pass only the unblocked pixels (set to 1).
 						endMask = startMask & endMask;
+
+						// StartMask doesn't matter in this case, reset to 0xFF.
+						startMask = 0xFF;
 					}
 
 					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_Y_START_GROUP, startGroup);
