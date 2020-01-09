@@ -323,8 +323,8 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_ENABLE, false);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_ENABLE, false);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_DUAL_BINNING_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_VERTICAL, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_HORIZONTAL, 0);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_VERTICAL, DVX_S_DVS_SUBSAMPLE_VERTICAL_NONE);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_HORIZONTAL, DVX_S_DVS_SUBSAMPLE_HORIZONTAL_NONE);
 
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_0, 0x7FFF);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_1, 0x7FFF);
