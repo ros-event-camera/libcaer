@@ -445,8 +445,8 @@ bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_ENABLE, false);
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_ENABLE, false);
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_DUAL_BINNING_ENABLE, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL, 0);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL, 0);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL_NONE);
+	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL_NONE);
 
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_0, 0x7FFF);
 	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_1, 0x7FFF);
@@ -769,7 +769,7 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x38) | U8T(param << 3);
+					currVal = U8T(U8T(currVal) & ~0x38) | U8T(param << 3);
 
 					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;
@@ -786,7 +786,7 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x07) | U8T(param);
+					currVal = U8T(U8T(currVal) & ~0x07) | U8T(param);
 
 					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;

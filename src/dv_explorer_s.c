@@ -323,8 +323,8 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_ENABLE, false);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_ENABLE, false);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_DUAL_BINNING_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_VERTICAL, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_HORIZONTAL, 0);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_VERTICAL, DVX_S_DVS_SUBSAMPLE_VERTICAL_NONE);
+	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_HORIZONTAL, DVX_S_DVS_SUBSAMPLE_HORIZONTAL_NONE);
 
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_0, 0x7FFF);
 	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_1, 0x7FFF);
@@ -504,7 +504,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x38) | U8T(param << 3);
+					currVal = U8T(U8T(currVal) & ~0x38) | U8T(param << 3);
 
 					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;
@@ -521,7 +521,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x07) | U8T(param);
+					currVal = U8T(U8T(currVal) & ~0x07) | U8T(param);
 
 					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;
