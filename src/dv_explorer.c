@@ -769,7 +769,7 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x38) | U8T(param << 3);
+					currVal = U8T(U8T(currVal) & ~0x38) | U8T(param << 3);
 
 					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;
@@ -786,7 +786,7 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					currVal = U8T(currVal & 0x07) | U8T(param);
+					currVal = U8T(U8T(currVal) & ~0x07) | U8T(param);
 
 					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, currVal));
 					break;
