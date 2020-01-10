@@ -318,8 +318,7 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
-	spiConfigSend(
-		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80 to enable MGROUP compression.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x80); // Enable MGROUP compression.
 
 	// Digital settings.
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
@@ -2695,63 +2694,72 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 				case 2:
 				case 3: { // 8-pixel group event presence and polarity.
-						  // 2 is OFF polarity, 3 is ON.
-					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
+						  // Code 2 is MGROUP Group 2 (SGROUP OFF), Code 3 is MGROUP Group 1 (SGROUP ON).
+					if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
 							(size_t) state->currentPackets.polarityPosition, 8, handle)) {
-						bool polarity = code & 0x01;
+						break;
+					}
 
-						for (uint16_t i = 0, mask = 0x0080; i < 8; i++, mask >>= 1) {
-							// Check if event present first.
-							if ((data & mask) == 0) {
-								continue;
-							}
+					bool polarity  = !(data & 0x0100);
+					uint16_t lastY = (code == 3) ? (state->dvs.lastYG1) : (state->dvs.lastYG2);
 
-							uint16_t offset = 7 - i;
-
-							// Received event!
-							caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
-								state->currentPackets.polarity, state->currentPackets.polarityPosition);
-
-							// Timestamp at event-stream insertion point.
-							caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
-							caerPolarityEventSetPolarity(currentPolarityEvent, polarity);
-							if (state->dvs.invertXY) {
-								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastY + offset);
-								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastX);
-							}
-							else {
-								caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastX);
-								caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastY + offset);
-							}
-							caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
-							state->currentPackets.polarityPosition++;
+					for (uint16_t i = 0, mask = 0x0001; i < 8; i++, mask <<= 1) {
+						// Check if event present first.
+						if ((data & mask) == 0) {
+							continue;
 						}
+
+						// Received event!
+						caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
+							state->currentPackets.polarity, state->currentPackets.polarityPosition);
+
+						// Timestamp at event-stream insertion point.
+						caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
+						caerPolarityEventSetPolarity(currentPolarityEvent, polarity);
+						if (state->dvs.invertXY) {
+							caerPolarityEventSetX(currentPolarityEvent, lastY + i);
+							caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastX);
+						}
+						else {
+							caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastX);
+							caerPolarityEventSetY(currentPolarityEvent, lastY + i);
+						}
+						caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
+						state->currentPackets.polarityPosition++;
 					}
 
 					break;
 				}
 
 				case 4: {
-					// Handle SGROUP and MGROUP events.
-					if ((data & 0x0FC0) == 0) {
-						// SGROUP address.
-						uint16_t rowAddress = data & 0x003F;
-						rowAddress *= 8; // 8 pixels per group.
+					// Decode address.
+					uint16_t group1Address = data & 0x003F;
+					uint16_t group2Offset  = (data >> 6) & 0x001F;
+					uint16_t group2Address
+						= (data & 0x0800) ? (group1Address - group2Offset) : (group1Address + group2Offset);
 
-						// Check range conformity.
-						if (rowAddress >= state->dvs.sizeY) {
-							dvExplorerLog(CAER_LOG_ALERT, handle,
-								"DVS: Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
-								state->dvs.sizeY - 1, rowAddress);
-							break; // Skip invalid Y address (don't update lastY).
-						}
+					// 8 pixels per group.
+					group1Address *= 8;
+					group2Address *= 8;
 
-						state->dvs.lastY = rowAddress;
+					// Check range conformity.
+					if (group1Address >= state->dvs.sizeY) {
+						dvExplorerLog(CAER_LOG_ALERT, handle,
+							"DVS: Group1 Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
+							state->dvs.sizeY - 1, group1Address);
+						break; // Skip invalid G1 Y address (don't update lastYs).
 					}
-					else {
-						// TODO: MGROUP support.
-						dvExplorerLog(CAER_LOG_CRITICAL, handle, "MGROUP not handled.");
+
+					if (group2Address >= state->dvs.sizeY) {
+						dvExplorerLog(CAER_LOG_ALERT, handle,
+							"DVS: Group2 Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
+							state->dvs.sizeY - 1, group2Address);
+						break; // Skip invalid G2 Y address (don't update lastYs).
 					}
+
+					state->dvs.lastYG1 = group1Address;
+					state->dvs.lastYG2 = group2Address;
+
 					break;
 				}
 

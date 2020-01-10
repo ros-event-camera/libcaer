@@ -120,7 +120,8 @@ struct dv_explorer_state {
 	struct {
 		// DVS specific fields
 		uint16_t lastX;
-		uint16_t lastY;
+		uint16_t lastYG1;
+		uint16_t lastYG2;
 		int16_t sizeX;
 		int16_t sizeY;
 		bool invertXY;
