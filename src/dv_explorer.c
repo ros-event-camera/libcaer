@@ -318,8 +318,7 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
-	spiConfigSend(
-		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80 to enable MGROUP compression.
+	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x80); // Enable MGROUP compression.
 
 	// Digital settings.
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
@@ -2733,7 +2732,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 				case 4: {
 					// Handle SGROUP and MGROUP events.
-					if ((data & 0x0FC0) == 0) {
+					if ((data & 0x07C0) == 0) {
 						// SGROUP address.
 						uint16_t rowAddress = data & 0x003F;
 						rowAddress *= 8; // 8 pixels per group.
