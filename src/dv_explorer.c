@@ -2678,6 +2678,16 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 					if (startOfFrame) {
 						dvExplorerLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
+
+						if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+								(size_t) state->currentPackets.specialPosition, 1, handle)) {
+							caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+								state->currentPackets.special, state->currentPackets.specialPosition);
+							caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+							caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
+							caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+							state->currentPackets.specialPosition++;
+						}
 					}
 
 					// Check range conformity.

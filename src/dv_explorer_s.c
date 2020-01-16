@@ -2030,10 +2030,6 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 				uint16_t timestampSub = (event >> 11) & 0x03FF;
 				bool startOfFrame     = (event >> 21) & 0x01;
 
-				if (startOfFrame) {
-					dvExplorerSLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
-				}
-
 				state->dvs.lastX = columnAddr;
 
 				// Timestamp handling
@@ -2051,6 +2047,20 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 					&state->deviceLogLevel);
 
 				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
+				if (startOfFrame) {
+					dvExplorerSLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
+
+					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+							(size_t) state->currentPackets.specialPosition, 1, handle)) {
+						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+							state->currentPackets.special, state->currentPackets.specialPosition);
+						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
+					}
+				}
 			}
 
 			// TIMESTAMP event.
