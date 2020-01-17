@@ -5,12 +5,12 @@
 
 #include "davis.hpp"
 #include "device.hpp"
-#include "dv_explorer.hpp"
-#include "dv_explorer_s.hpp"
 #include "dvs128.hpp"
 #include "dvs132s.hpp"
+#include "dvxplorer.hpp"
 #include "dynapse.hpp"
 #include "edvs.hpp"
+#include "samsung_evk.hpp"
 
 #include <memory>
 #include <vector>
@@ -101,16 +101,16 @@ public:
 				break;
 			}
 
-			case CAER_DEVICE_DV_EXPLORER: {
-				const struct caer_dvx_info *info = &discoveredDevice.deviceInfo.dvExplorerInfo;
-				return (std::unique_ptr<libcaer::devices::dvExplorer>(new libcaer::devices::dvExplorer(
+			case CAER_DEVICE_DVXPLORER: {
+				const struct caer_dvx_info *info = &discoveredDevice.deviceInfo.dvXplorerInfo;
+				return (std::unique_ptr<libcaer::devices::dvXplorer>(new libcaer::devices::dvXplorer(
 					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}
 
-			case CAER_DEVICE_DV_EXPLORER_S: {
-				const struct caer_dvx_s_info *info = &discoveredDevice.deviceInfo.dvExplorerSInfo;
-				return (std::unique_ptr<libcaer::devices::dvExplorerS>(new libcaer::devices::dvExplorerS(
+			case CAER_DEVICE_SAMSUNG_EVK: {
+				const struct caer_samsung_evk_info *info = &discoveredDevice.deviceInfo.samsungEVKInfo;
+				return (std::unique_ptr<libcaer::devices::samsungEVK>(new libcaer::devices::samsungEVK(
 					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}

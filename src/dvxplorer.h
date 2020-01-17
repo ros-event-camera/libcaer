@@ -1,31 +1,37 @@
-#ifndef LIBCAER_SRC_DV_EXPLORER_S_H_
-#define LIBCAER_SRC_DV_EXPLORER_S_H_
+#ifndef LIBCAER_SRC_DVXPLORER_H_
+#define LIBCAER_SRC_DVXPLORER_H_
 
 #include "libcaer/devices/device_discover.h"
-#include "libcaer/devices/dv_explorer_s.h"
+#include "libcaer/devices/dvxplorer.h"
 
 #include "container_generation.h"
 #include "data_exchange.h"
 #include "usb_utils.h"
 
-#define DV_EXPLORER_S_EVENT_TYPES 2
+#define IMU_TYPE_TEMP 0x01
+#define IMU_TYPE_GYRO 0x02
+#define IMU_TYPE_ACCEL 0x04
+#define IMU_TOTAL_COUNT 14
 
-#define DV_EXPLORER_S_POLARITY_DEFAULT_SIZE 8192
-#define DV_EXPLORER_S_SPECIAL_DEFAULT_SIZE 128
+#define IMU6_EVENT_PKT_POS 2
+#define DVXPLORER_EVENT_TYPES 3
 
-#define DV_EXPLORER_S_DEVICE_NAME "DV Explorer S"
+#define DVXPLORER_POLARITY_DEFAULT_SIZE 8192
+#define SAMSUNG_EVKPECIAL_DEFAULT_SIZE 128
+#define DVXPLORER_IMU_DEFAULT_SIZE 64
 
-#define DV_EXPLORER_S_DEVICE_VID 0x04B4
-#define DV_EXPLORER_S_DEVICE_PID 0x00F1
+#define DVXPLORER_DEVICE_NAME "DVXplorer"
 
-#define DV_EXPLORER_S_DATA_ENDPOINT 0x81
+#define DVXPLORER_DEVICE_PID 0x8419
+#define DVXPLORER_REQUIRED_LOGIC_VERSION 18
+#define DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL 1
+#define DVXPLORER_REQUIRED_FIRMWARE_VERSION 6
 
-#define VENDOR_REQUEST_I2C_WRITE 0xBA
-#define VENDOR_REQUEST_I2C_READ 0xBB
-#define VENDOR_REQUEST_RESET 0xBC
+#define DEBUG_ENDPOINT 0x81
+#define DEBUG_TRANSFER_NUM 4
+#define DEBUG_TRANSFER_SIZE 64
 
-#define DEVICE_FPGA 0x0040
-#define DEVICE_DVS 0x0020
+#define DEVICE_DVS 5
 
 #define REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST 0x000B
 #define REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR 0x000C
@@ -102,7 +108,7 @@
 
 #define REGISTER_SPATIAL_HISTOGRAM_OFF 0x3600
 
-struct dv_explorer_s_state {
+struct dvxplorer_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
@@ -110,59 +116,88 @@ struct dv_explorer_s_state {
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
-	struct {
-		uint32_t lastSub;
-		uint32_t lastReference;
-		uint32_t currentReference;
-		int32_t last;
-		int32_t current;
-	} timestamps;
+	struct timestamps_state_new_logic timestamps;
 	struct {
 		// DVS specific fields
 		uint16_t lastX;
+		uint16_t lastYG1;
+		uint16_t lastYG2;
+		int16_t sizeX;
+		int16_t sizeY;
+		bool invertXY;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
 	} dvs;
+	struct {
+		// IMU specific fields
+		bool ignoreEvents;
+		bool flipX;
+		bool flipY;
+		bool flipZ;
+		uint8_t type;
+		uint8_t count;
+		uint8_t tmpData;
+		float accelScale;
+		float gyroScale;
+		// Current composite events, for later copy, to not loose them on commits.
+		struct caer_imu6_event currentEvent;
+	} imu;
 	// Packet Container state
 	struct container_generation container;
 	struct {
 		// Polarity Packet state
 		caerPolarityEventPacket polarity;
 		int32_t polarityPosition;
+		// IMU6 Packet state
+		caerIMU6EventPacket imu6;
+		int32_t imu6Position;
 		// Special Packet state
 		caerSpecialEventPacket special;
 		int32_t specialPosition;
 	} currentPackets;
+	// Device timing data.
+	struct {
+		uint16_t logicClock;
+		uint16_t usbClock;
+		uint16_t clockDeviationFactor;
+		float logicClockActual;
+		float usbClockActual;
+	} deviceClocks;
+	struct {
+		// Debug transfer support (FX3 only).
+		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
+		atomic_uint_fast32_t activeDebugTransfers;
+	} fx3Support;
 };
 
-typedef struct dv_explorer_s_state *dvExplorerSState;
+typedef struct dvxplorer_state *dvXplorerState;
 
-struct dv_explorer_s_handle {
+struct dvxplorer_handle {
 	uint16_t deviceType;
 	// Information fields
-	struct caer_dvx_s_info info;
-	// State for data management, common to all DV_EXPLORER_S.
-	struct dv_explorer_s_state state;
+	struct caer_dvx_info info;
+	// State for data management, common to all DVXPLORER.
+	struct dvxplorer_state state;
 };
 
-typedef struct dv_explorer_s_handle *dvExplorerSHandle;
+typedef struct dvxplorer_handle *dvXplorerHandle;
 
-ssize_t dvExplorerSFind(caerDeviceDiscoveryResult *discoveredDevices);
+ssize_t dvXplorerFind(caerDeviceDiscoveryResult *discoveredDevices);
 
-caerDeviceHandle dvExplorerSOpen(
+caerDeviceHandle dvXplorerOpen(
 	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
-bool dvExplorerSClose(caerDeviceHandle cdh);
+bool dvXplorerClose(caerDeviceHandle cdh);
 
-bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh);
+bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh);
 // Negative addresses are used for host-side configuration.
 // Positive addresses (including zero) are used for device-side configuration.
-bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
-bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
+bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
+bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
-bool dvExplorerSDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
+bool dvXplorerDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr);
-bool dvExplorerSDataStop(caerDeviceHandle handle);
-caerEventPacketContainer dvExplorerSDataGet(caerDeviceHandle handle);
+bool dvXplorerDataStop(caerDeviceHandle handle);
+caerEventPacketContainer dvXplorerDataGet(caerDeviceHandle handle);
 
-#endif /* LIBCAER_SRC_DV_EXPLORER_S_H_ */
+#endif /* LIBCAER_SRC_DVXPLORER_H_ */

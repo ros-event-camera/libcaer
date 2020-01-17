@@ -1,4 +1,4 @@
-#include <libcaercpp/devices/dv_explorer.hpp>
+#include <libcaercpp/devices/samsung_evk.hpp>
 
 #include <atomic>
 #include <csignal>
@@ -63,7 +63,7 @@ int main(void) {
 #endif
 
 	// Open a DVS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	libcaer::devices::dvExplorer handle = libcaer::devices::dvExplorer(1);
+	auto handle = libcaer::devices::samsungEVK(1);
 
 	// Let's take a look at the information we have on the device.
 	auto info = handle.infoGet();

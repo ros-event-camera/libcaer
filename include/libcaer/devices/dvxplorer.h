@@ -1,11 +1,11 @@
 /**
- * @file dv_explorer.h
+ * @file dvxplorer.h
  *
- * DV_EXPLORER specific configuration defines and information structures.
+ * DVXPLORER specific configuration defines and information structures.
  */
 
-#ifndef LIBCAER_DEVICES_DV_EXPLORER_H_
-#define LIBCAER_DEVICES_DV_EXPLORER_H_
+#ifndef LIBCAER_DEVICES_DVXPLORER_H_
+#define LIBCAER_DEVICES_DVXPLORER_H_
 
 #include "../events/imu6.h"
 #include "../events/polarity.h"
@@ -19,15 +19,15 @@ extern "C" {
 #endif
 
 /**
- * Device type definition for iniVation DV_EXPLORER.
+ * Device type definition for iniVation DVXplorer.
  */
-#define CAER_DEVICE_DV_EXPLORER 8
+#define CAER_DEVICE_DVXPLORER 8
 
 /**
  * Samsung chip identifier.
  * 640x480, semi-synchronous readout.
  */
-#define DV_EXPLORER_CHIP_ID 20
+#define DVXPLORER_CHIP_ID 20
 
 /**
  * Module address: device-side Multiplexer configuration.
@@ -65,7 +65,7 @@ extern "C" {
  * as currently installed logic revision or clock speeds.
  * All its parameters are read-only.
  * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_dvexplorer_info'
+ * anything other than libcaer. Please see the 'struct caer_dvx_info'
  * documentation for more details on what information is available.
  */
 #define DVX_SYSINFO 6
@@ -435,7 +435,7 @@ extern "C" {
  * read-only parameter, the version of the logic currently
  * running on the device's FPGA/CPLD.
  * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_dvexplorer_info'
+ * anything other than libcaer. Please see the 'struct caer_dvx_info'
  * documentation to get this information.
  */
 #define DVX_SYSINFO_LOGIC_VERSION 0
@@ -444,7 +444,7 @@ extern "C" {
  * read-only parameter, an integer used to identify the different
  * types of sensor chips used on the device.
  * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_dvexplorer_info'
+ * anything other than libcaer. Please see the 'struct caer_dvx_info'
  * documentation to get this information.
  */
 #define DVX_SYSINFO_CHIP_IDENTIFIER 1
@@ -453,7 +453,7 @@ extern "C" {
  * read-only parameter, whether the device is currently a timestamp
  * master or slave when synchronizing multiple devices together.
  * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_dvexplorer_info'
+ * anything other than libcaer. Please see the 'struct caer_dvx_info'
  * documentation to get this information.
  */
 #define DVX_SYSINFO_DEVICE_IS_MASTER 2
@@ -633,7 +633,7 @@ extern "C" {
 #define DVX_DVS_CHIP_BIAS_SIMPLE_VERY_HIGH 4
 
 /**
- * DV_EXPLORER device-related information.
+ * DVXPLORER device-related information.
  */
 struct caer_dvx_info {
 	/// Unique device identifier. Also 'source' for events.
@@ -680,10 +680,10 @@ struct caer_dvx_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dvx_info caerDVExplorerInfoGet(caerDeviceHandle handle);
+struct caer_dvx_info caerDVXplorerInfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* LIBCAER_DEVICES_DV_EXPLORER_H_ */
+#endif /* LIBCAER_DEVICES_DVXPLORER_H_ */

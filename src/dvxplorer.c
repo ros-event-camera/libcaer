@@ -1,19 +1,19 @@
-#include "dv_explorer.h"
+#include "dvxplorer.h"
 
 #include <math.h>
 
-static void dvExplorerLog(enum caer_log_level logLevel, dvExplorerHandle handle, const char *format, ...)
+static void dvXplorerLog(enum caer_log_level logLevel, dvXplorerHandle handle, const char *format, ...)
 	ATTRIBUTE_FORMAT(3);
-static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
-static void dvExplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
+static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
+static void dvXplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
 
 // FX3 Debug Transfer Support
-static void allocateDebugTransfers(dvExplorerHandle handle);
-static void cancelAndDeallocateDebugTransfers(dvExplorerHandle handle);
+static void allocateDebugTransfers(dvXplorerHandle handle);
+static void cancelAndDeallocateDebugTransfers(dvXplorerHandle handle);
 static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer);
-static void debugTranslator(dvExplorerHandle handle, const uint8_t *buffer, size_t bytesSent);
+static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_t bytesSent);
 
-static void dvExplorerLog(enum caer_log_level logLevel, dvExplorerHandle handle, const char *format, ...) {
+static void dvXplorerLog(enum caer_log_level logLevel, dvXplorerHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
 	caerLogVAFull(atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel,
@@ -21,14 +21,14 @@ static void dvExplorerLog(enum caer_log_level logLevel, dvExplorerHandle handle,
 	va_end(argumentList);
 }
 
-ssize_t dvExplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
+ssize_t dvXplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Set to NULL initially (for error return).
 	*discoveredDevices = NULL;
 
-	struct usb_info *foundDVExplorer = NULL;
+	struct usb_info *foundDVXplorer = NULL;
 
-	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DV_EXPLORER_DEVICE_PID, DV_EXPLORER_REQUIRED_LOGIC_VERSION,
-		DV_EXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DV_EXPLORER_REQUIRED_FIRMWARE_VERSION, &foundDVExplorer);
+	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVXPLORER_DEVICE_PID, DVXPLORER_REQUIRED_LOGIC_VERSION,
+		DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, &foundDVXplorer);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -38,44 +38,44 @@ ssize_t dvExplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Allocate memory for discovered devices in expected format.
 	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
 	if (*discoveredDevices == NULL) {
-		free(foundDVExplorer);
+		free(foundDVXplorer);
 		return (-1);
 	}
 
 	// Transform from generic USB format into device discovery one.
 	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a DV_EXPLORER.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DV_EXPLORER;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundDVExplorer[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundDVExplorer[i].errorVersion;
-		struct caer_dvx_info *dvExplorerInfoPtr    = &((*discoveredDevices)[i].deviceInfo.dvExplorerInfo);
+		// This is a DVXPLORER.
+		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVXPLORER;
+		(*discoveredDevices)[i].deviceErrorOpen    = foundDVXplorer[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion = foundDVXplorer[i].errorVersion;
+		struct caer_dvx_info *dvXplorerInfoPtr    = &((*discoveredDevices)[i].deviceInfo.dvXplorerInfo);
 
-		dvExplorerInfoPtr->deviceUSBBusNumber     = foundDVExplorer[i].busNumber;
-		dvExplorerInfoPtr->deviceUSBDeviceAddress = foundDVExplorer[i].devAddress;
-		strncpy(dvExplorerInfoPtr->deviceSerialNumber, foundDVExplorer[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+		dvXplorerInfoPtr->deviceUSBBusNumber     = foundDVXplorer[i].busNumber;
+		dvXplorerInfoPtr->deviceUSBDeviceAddress = foundDVXplorer[i].devAddress;
+		strncpy(dvXplorerInfoPtr->deviceSerialNumber, foundDVXplorer[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
-		dvExplorerInfoPtr->firmwareVersion = foundDVExplorer[i].firmwareVersion;
-		dvExplorerInfoPtr->logicVersion    = (!foundDVExplorer[i].errorOpen) ? (foundDVExplorer[i].logicVersion) : (-1);
+		dvXplorerInfoPtr->firmwareVersion = foundDVXplorer[i].firmwareVersion;
+		dvXplorerInfoPtr->logicVersion    = (!foundDVXplorer[i].errorOpen) ? (foundDVXplorer[i].logicVersion) : (-1);
 
-		// Reopen DV_EXPLORER device to get additional info, if possible at all.
-		if (!foundDVExplorer[i].errorOpen && !foundDVExplorer[i].errorVersion) {
-			caerDeviceHandle dvs = dvExplorerOpen(
-				0, dvExplorerInfoPtr->deviceUSBBusNumber, dvExplorerInfoPtr->deviceUSBDeviceAddress, NULL);
+		// Reopen DVXPLORER device to get additional info, if possible at all.
+		if (!foundDVXplorer[i].errorOpen && !foundDVXplorer[i].errorVersion) {
+			caerDeviceHandle dvs = dvXplorerOpen(
+				0, dvXplorerInfoPtr->deviceUSBBusNumber, dvXplorerInfoPtr->deviceUSBDeviceAddress, NULL);
 			if (dvs != NULL) {
-				*dvExplorerInfoPtr = caerDVExplorerInfoGet(dvs);
+				*dvXplorerInfoPtr = caerDVXplorerInfoGet(dvs);
 
-				dvExplorerClose(dvs);
+				dvXplorerClose(dvs);
 			}
 		}
 
 		// Set/Reset to invalid values, not part of discovery.
-		dvExplorerInfoPtr->deviceID     = -1;
-		dvExplorerInfoPtr->deviceString = NULL;
+		dvXplorerInfoPtr->deviceID     = -1;
+		dvXplorerInfoPtr->deviceString = NULL;
 	}
 	caerLogDisable(false);
 
-	free(foundDVExplorer);
+	free(foundDVXplorer);
 	return (result);
 }
 
@@ -105,7 +105,7 @@ static inline float calculateIMUGyroScale(uint8_t imuGyroScale) {
 	return (gyroScale);
 }
 
-static inline void freeAllDataMemory(dvExplorerState state) {
+static inline void freeAllDataMemory(dvXplorerState state) {
 	dataExchangeDestroy(&state->dataExchange);
 
 	// Since the current event packets aren't necessarily
@@ -135,13 +135,13 @@ static inline void freeAllDataMemory(dvExplorerState state) {
 	containerGenerationDestroy(&state->container);
 }
 
-caerDeviceHandle dvExplorerOpen(
+caerDeviceHandle dvXplorerOpen(
 	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	errno = 0;
 
-	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DV_EXPLORER_DEVICE_NAME);
+	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DVXPLORER_DEVICE_NAME);
 
-	dvExplorerHandle handle = calloc(1, sizeof(*handle));
+	dvXplorerHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
@@ -150,9 +150,9 @@ caerDeviceHandle dvExplorerOpen(
 	}
 
 	// Set main deviceType correctly right away.
-	handle->deviceType = CAER_DEVICE_DV_EXPLORER;
+	handle->deviceType = CAER_DEVICE_DVXPLORER;
 
-	dvExplorerState state = &handle->state;
+	dvXplorerState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
 	dataExchangeSettingsInit(&state->dataExchange);
@@ -167,24 +167,24 @@ caerDeviceHandle dvExplorerOpen(
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
-	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s %" PRIu16, DV_EXPLORER_DEVICE_NAME, deviceID);
+	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s %" PRIu16, DVXPLORER_DEVICE_NAME, deviceID);
 	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
 	usbSetThreadName(&state->usbState, usbThreadName);
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
-	// Try to open a DV_EXPLORER device on a specific USB port.
+	// Try to open a DVXPLORER device on a specific USB port.
 	struct usb_info usbInfo;
 
-	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DV_EXPLORER_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, DV_EXPLORER_REQUIRED_LOGIC_VERSION,
-			DV_EXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DV_EXPLORER_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVXPLORER_DEVICE_PID, busNumberRestrict,
+			devAddressRestrict, serialNumberRestrict, DVXPLORER_REQUIRED_LOGIC_VERSION,
+			DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
-			dvExplorerLog(
+			dvXplorerLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dvExplorerLog(CAER_LOG_CRITICAL, handle,
+			dvXplorerLog(CAER_LOG_CRITICAL, handle,
 				"Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
@@ -194,9 +194,9 @@ caerDeviceHandle dvExplorerOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DV_EXPLORER_DEVICE_NAME, deviceID);
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, DVXPLORER_DEVICE_NAME, deviceID);
 	if (usbInfoString == NULL) {
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
 		usbDeviceClose(&state->usbState);
 		free(handle);
@@ -206,7 +206,7 @@ caerDeviceHandle dvExplorerOpen(
 	}
 
 	// Setup USB.
-	usbSetDataCallback(&state->usbState, &dvExplorerEventTranslator, handle);
+	usbSetDataCallback(&state->usbState, &dvXplorerEventTranslator, handle);
 	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 8192);
@@ -250,7 +250,7 @@ caerDeviceHandle dvExplorerOpen(
 	state->deviceClocks.usbClockActual   = (float) ((double) state->deviceClocks.usbClock
                                                   * ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "Clock frequencies: LOGIC %f, USB %f.",
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "Clock frequencies: LOGIC %f, USB %f.",
 		(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.usbClockActual);
 
 	spiConfigReceive(&state->usbState, DVX_DVS, DVX_DVS_SIZE_COLUMNS, &param32);
@@ -261,7 +261,7 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigReceive(&state->usbState, DVX_DVS, DVX_DVS_ORIENTATION_INFO, &param32);
 	state->dvs.invertXY = param32 & 0x04;
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
 		state->dvs.invertXY);
 
 	if (state->dvs.invertXY) {
@@ -281,7 +281,7 @@ caerDeviceHandle dvExplorerOpen(
 	state->imu.flipY = param32 & 0x02;
 	state->imu.flipZ = param32 & 0x01;
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
 
 	// Extra features:
@@ -311,7 +311,7 @@ caerDeviceHandle dvExplorerOpen(
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
 	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
-	dvExplorerConfigSet(
+	dvXplorerConfigSet(
 		(caerDeviceHandle) handle, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
 
 	// System settings.
@@ -336,17 +336,17 @@ caerDeviceHandle dvExplorerOpen(
 	// On FX3, start the debug transfers once everything else is ready.
 	allocateDebugTransfers(handle);
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
 		usbInfo.busNumber, usbInfo.devAddress);
 
 	return ((caerDeviceHandle) handle);
 }
 
-bool dvExplorerClose(caerDeviceHandle cdh) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+bool dvXplorerClose(caerDeviceHandle cdh) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, false); // Put DVS in reset.
 
@@ -359,7 +359,7 @@ bool dvExplorerClose(caerDeviceHandle cdh) {
 	// Finally, close the device fully.
 	usbDeviceClose(&state->usbState);
 
-	dvExplorerLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
+	dvXplorerLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	// Free memory.
 	free(handle->info.deviceString);
@@ -368,8 +368,8 @@ bool dvExplorerClose(caerDeviceHandle cdh) {
 	return (true);
 }
 
-struct caer_dvx_info caerDVExplorerInfoGet(caerDeviceHandle cdh) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
+struct caer_dvx_info caerDVXplorerInfoGet(caerDeviceHandle cdh) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
@@ -378,7 +378,7 @@ struct caer_dvx_info caerDVExplorerInfoGet(caerDeviceHandle cdh) {
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DV_EXPLORER) {
+	if (handle->deviceType != CAER_DEVICE_DVXPLORER) {
 		struct caer_dvx_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
@@ -387,115 +387,115 @@ struct caer_dvx_info caerDVExplorerInfoGet(caerDeviceHandle cdh) {
 	return (handle->info);
 }
 
-bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
+bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
 
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RESET, false);
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_DVS_ON_TRANSFER_STALL, false);
+	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RESET, false);
+	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
+	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_DVS_ON_TRANSFER_STALL, false);
 
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_DATA_RATE, BOSCH_ACCEL_800HZ); // 800 Hz.
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_FILTER, BOSCH_ACCEL_NORMAL);   // Normal mode.
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_RANGE, BOSCH_ACCEL_4G);        // +- 4 g.
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_DATA_RATE, BOSCH_GYRO_800HZ);   // 800 Hz.
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_FILTER, BOSCH_GYRO_NORMAL);     // Normal mode.
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_RANGE, BOSCH_GYRO_500DPS);      // +- 500 °/s
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_DATA_RATE, BOSCH_ACCEL_800HZ); // 800 Hz.
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_FILTER, BOSCH_ACCEL_NORMAL);   // Normal mode.
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_RANGE, BOSCH_ACCEL_4G);        // +- 4 g.
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_DATA_RATE, BOSCH_GYRO_800HZ);   // 800 Hz.
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_FILTER, BOSCH_GYRO_NORMAL);     // Normal mode.
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_RANGE, BOSCH_GYRO_500DPS);      // +- 500 °/s
 
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_RISING_EDGES, false);
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_FALLING_EDGES, false);
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSES, true);
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_POLARITY, true);
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_LENGTH,
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_RISING_EDGES, false);
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_FALLING_EDGES, false);
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSES, true);
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_POLARITY, true);
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_LENGTH,
 		10); // in µs, converted to cycles @ LogicClock later
 
 	if (handle->info.extInputHasGenerator) {
 		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_GENERATOR, false);
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_POLARITY, true);
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_INTERVAL,
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_GENERATOR, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_POLARITY, true);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_INTERVAL,
 			10); // in µs, converted to cycles @ LogicClock later
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_LENGTH,
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_LENGTH,
 			5); // in µs, converted to cycles @ LogicClock later
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE, false);
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE, false);
 	}
 
-	dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_EARLY_PACKET_DELAY,
+	dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_EARLY_PACKET_DELAY,
 		8); // in 125µs time-slices (defaults to 1ms)
 
 	// Set default biases.
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
 
 	// External trigger.
-	dvExplorerConfigSet(
+	dvXplorerConfigSet(
 		cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE, DVX_DVS_CHIP_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
 
 	// Digital readout configuration.
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_HOLD_ENABLE, true);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_ENABLE, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_DURING_READOUT, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_FIXED_READ_TIME_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_HOLD_ENABLE, true);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_GLOBAL_RESET_DURING_READOUT, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_FIXED_READ_TIME_ENABLE, false);
 
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_FLATTEN, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_ON_ONLY, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_OFF_ONLY, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_ENABLE, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_ENABLE, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_DUAL_BINNING_ENABLE, false);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL_NONE);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL_NONE);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_FLATTEN, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_ON_ONLY, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_EVENT_OFF_ONLY, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_DUAL_BINNING_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL, DVX_DVS_CHIP_SUBSAMPLE_VERTICAL_NONE);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL, DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL_NONE);
 
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_0, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_1, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_2, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_3, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_4, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_5, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_6, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_7, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_8, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_9, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_10, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_11, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_12, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_13, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_14, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_15, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_16, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_17, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_18, 0x7FFF);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_19, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_0, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_1, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_2, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_3, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_4, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_5, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_6, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_7, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_8, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_9, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_10, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_11, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_12, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_13, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_14, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_15, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_16, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_17, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_18, 0x7FFF);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_AREA_BLOCKING_19, 0x7FFF);
 
 	// Timing settings.
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_ED, 2);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2GRS, 0);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GRS, 1);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2SEL, 4);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SELW, 6);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_R, 4);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_F, 6);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_R, 8);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_F, 10);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_SEL, 15);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_GH, 10);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_READ_FIXED, 48000);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_ED, 2);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2GRS, 0);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GRS, 1);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_GH2SEL, 4);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SELW, 6);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_R, 4);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2AY_F, 6);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_R, 8);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_F, 10);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_SEL, 15);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_GH, 10);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_READ_FIXED, 48000);
 
 	// Crop block.
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_ENABLE, false);
 
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_START_ADDRESS, 0);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS, 0);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_END_ADDRESS, 639);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS, 479);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_START_ADDRESS, 0);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS, 0);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_END_ADDRESS, 639);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS, 479);
 
 	// Activity decision block.
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE, false);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE, false);
 
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_THRESHOLD, 300);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_RATE, 1);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME, 3);
-	dvExplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_THRESHOLD, 300);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_RATE, 1);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_DEC_TIME, 3);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
 
 	// DTAG restart after config.
 	spiConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, 0x02);
@@ -503,9 +503,9 @@ bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	return (true);
 }
 
-bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -1359,9 +1359,9 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 	return (true);
 }
 
-bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -2260,11 +2260,11 @@ bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 	return (true);
 }
 
-bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
+bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
 	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
@@ -2274,42 +2274,42 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 	containerGenerationCommitTimestampReset(&state->container);
 
 	if (!dataExchangeBufferInit(&state->dataExchange)) {
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
 
 	// Allocate packets.
-	if (!containerGenerationAllocate(&state->container, DV_EXPLORER_EVENT_TYPES)) {
+	if (!containerGenerationAllocate(&state->container, DVXPLORER_EVENT_TYPES)) {
 		freeAllDataMemory(state);
 
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 		return (false);
 	}
 
 	state->currentPackets.polarity
-		= caerPolarityEventPacketAllocate(DV_EXPLORER_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerPolarityEventPacketAllocate(DVXPLORER_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
 	state->currentPackets.special
-		= caerSpecialEventPacketAllocate(DV_EXPLORER_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerSpecialEventPacketAllocate(SAMSUNG_EVKPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
 	state->currentPackets.imu6
-		= caerIMU6EventPacketAllocate(DV_EXPLORER_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerIMU6EventPacketAllocate(DVXPLORER_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.imu6 == NULL) {
 		freeAllDataMemory(state);
 
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 		return (false);
 	}
 
@@ -2320,15 +2320,15 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 
 	// Ensure no data is left over from previous runs, if the camera
 	// wasn't shut-down properly. First ensure it is shut down completely.
-	dvExplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, false);
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, false);
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, false);
-	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
-	dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
+	dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, false);
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, false);
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, false);
+	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
+	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
 
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
-	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
-	dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
+	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
+	dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
 
 	// Then wait 10ms for FPGA device side buffers to clear.
 	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -2340,51 +2340,51 @@ bool dvExplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
 		return (false);
 	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		// Enable data transfer on USB end-point 2.
-		dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, true);
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, true);
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, true);
+		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, true);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, true);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, true);
 
 		// Wait 50 ms for data transfer to be ready.
 		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
 		thrd_sleep(&noDataSleep, NULL);
 
-		dvExplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, true);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, true);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, true);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, true);
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, true);
+		dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, true);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, true);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, true);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, true);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, true);
 
 		// Enable streaming from DVS chip.
-		dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_STREAM);
+		dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_STREAM);
 	}
 
 	return (true);
 }
 
-bool dvExplorerDataStop(caerDeviceHandle cdh) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+bool dvXplorerDataStop(caerDeviceHandle cdh) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
 		// Disable streaming from DVS chip.
-		dvExplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_OFF);
+		dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_OFF);
 
 		// Disable data transfer on USB end-point 2. Reverse order of enabling.
-		dvExplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, false);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, false);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, false);
-		dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
-		dvExplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
+		dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, false);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, false);
+		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
 
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
-		dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
-		dvExplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
 	}
 
 	usbDataTransfersStop(&state->usbState);
@@ -2405,9 +2405,9 @@ bool dvExplorerDataStop(caerDeviceHandle cdh) {
 	return (true);
 }
 
-caerEventPacketContainer dvExplorerDataGet(caerDeviceHandle cdh) {
-	dvExplorerHandle handle = (dvExplorerHandle) cdh;
-	dvExplorerState state   = &handle->state;
+caerEventPacketContainer dvXplorerDataGet(caerDeviceHandle cdh) {
+	dvXplorerHandle handle = (dvXplorerHandle) cdh;
+	dvXplorerState state   = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
@@ -2415,7 +2415,7 @@ caerEventPacketContainer dvExplorerDataGet(caerDeviceHandle cdh) {
 #define TS_WRAP_ADD 0x8000
 
 static inline bool ensureSpaceForEvents(
-	caerEventPacketHeader *packet, size_t position, size_t numEvents, dvExplorerHandle handle) {
+	caerEventPacketHeader *packet, size_t position, size_t numEvents, dvXplorerHandle handle) {
 	if ((position + numEvents) <= (size_t) caerEventPacketHeaderGetEventCapacity(*packet)) {
 		return (true);
 	}
@@ -2423,7 +2423,7 @@ static inline bool ensureSpaceForEvents(
 	caerEventPacketHeader grownPacket
 		= caerEventPacketGrow(*packet, caerEventPacketHeaderGetEventCapacity(*packet) * 2);
 	if (grownPacket == NULL) {
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
 			caerEventPacketHeaderGetEventType(*packet));
 		return (false);
 	}
@@ -2432,9 +2432,9 @@ static inline bool ensureSpaceForEvents(
 	return (true);
 }
 
-static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
-	dvExplorerHandle handle = vhd;
-	dvExplorerState state   = &handle->state;
+static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
+	dvXplorerHandle handle = vhd;
+	dvXplorerState state   = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -2446,41 +2446,41 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 	// Truncate off any extra partial event.
 	if ((bufferSize & 0x01) != 0) {
-		dvExplorerLog(
+		dvXplorerLog(
 			CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bufferSize);
 		bufferSize &= ~((size_t) 0x01);
 	}
 
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 2) {
 		// Allocate new packets for next iteration as needed.
-		if (!containerGenerationAllocate(&state->container, DV_EXPLORER_EVENT_TYPES)) {
-			dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+		if (!containerGenerationAllocate(&state->container, DVXPLORER_EVENT_TYPES)) {
+			dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 			return;
 		}
 
 		if (state->currentPackets.special == NULL) {
 			state->currentPackets.special = caerSpecialEventPacketAllocate(
-				DV_EXPLORER_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				SAMSUNG_EVKPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
-				dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
 
 		if (state->currentPackets.polarity == NULL) {
 			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
-				DV_EXPLORER_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				DVXPLORER_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
-				dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
 
 		if (state->currentPackets.imu6 == NULL) {
 			state->currentPackets.imu6 = caerIMU6EventPacketAllocate(
-				DV_EXPLORER_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				DVXPLORER_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.imu6 == NULL) {
-				dvExplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
 				return;
 			}
 		}
@@ -2505,7 +2505,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 				case 0: // Special event
 					switch (data) {
 						case 0: // Ignore this, but log it.
-							dvExplorerLog(CAER_LOG_ERROR, handle, "Caught special reserved event!");
+							dvXplorerLog(CAER_LOG_ERROR, handle, "Caught special reserved event!");
 							break;
 
 						case 1: { // Timetamp reset
@@ -2523,13 +2523,13 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 							// Update Master/Slave status on incoming TS resets.
 							// Async call to not deadlock here.
 							spiConfigReceiveAsync(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_DEVICE_IS_MASTER,
-								&dvExplorerTSMasterStatusUpdater, &handle->info);
+								&dvXplorerTSMasterStatusUpdater, &handle->info);
 
 							break;
 						}
 
 						case 2: { // External input (falling edge)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "External input (falling edge) event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "External input (falling edge) event received.");
 
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 									(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2545,7 +2545,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						case 3: { // External input (rising edge)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "External input (rising edge) event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "External input (rising edge) event received.");
 
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 									(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2561,7 +2561,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						case 4: { // External input (pulse)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "External input (pulse) event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "External input (pulse) event received.");
 
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 									(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2577,7 +2577,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						case 5: { // IMU Start (6 axes)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "IMU6 Start event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU6 Start event received.");
 
 							state->imu.ignoreEvents = false;
 							state->imu.count        = 0;
@@ -2592,7 +2592,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 							if (state->imu.ignoreEvents) {
 								break;
 							}
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "IMU End event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU End event received.");
 
 							if (state->imu.count == IMU_TOTAL_COUNT) {
 								// Timestamp at event-stream insertion point.
@@ -2619,7 +2619,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								}
 							}
 							else {
-								dvExplorerLog(CAER_LOG_INFO, handle,
+								dvXplorerLog(CAER_LOG_INFO, handle,
 									"IMU End: failed to validate IMU sample count (%" PRIu8 "), discarding samples.",
 									state->imu.count);
 							}
@@ -2628,7 +2628,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						case 16: { // External generator (falling edge)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "External generator (falling edge) event received.");
 
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 									(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2644,7 +2644,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						case 17: { // External generator (rising edge)
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "External generator (rising edge) event received.");
 
 							if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 									(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2660,7 +2660,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 						}
 
 						default:
-							dvExplorerLog(
+							dvXplorerLog(
 								CAER_LOG_ERROR, handle, "Caught special event that can't be handled: %d.", data);
 							break;
 					}
@@ -2671,7 +2671,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 					bool startOfFrame   = data & 0x0800;
 
 					if (startOfFrame) {
-						dvExplorerLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
+						dvXplorerLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
 
 						if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
 								(size_t) state->currentPackets.specialPosition, 1, handle)) {
@@ -2686,7 +2686,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 					// Check range conformity.
 					if (columnAddr >= state->dvs.sizeX) {
-						dvExplorerLog(CAER_LOG_ALERT, handle,
+						dvXplorerLog(CAER_LOG_ALERT, handle,
 							"DVS: X address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
 							state->dvs.sizeX - 1, columnAddr);
 						break; // Skip invalid X address (don't update lastX).
@@ -2748,14 +2748,14 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 					// Check range conformity.
 					if (group1Address >= state->dvs.sizeY) {
-						dvExplorerLog(CAER_LOG_ALERT, handle,
+						dvXplorerLog(CAER_LOG_ALERT, handle,
 							"DVS: Group1 Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
 							state->dvs.sizeY - 1, group1Address);
 						break; // Skip invalid G1 Y address (don't update lastYs).
 					}
 
 					if (group2Address >= state->dvs.sizeY) {
-						dvExplorerLog(CAER_LOG_ALERT, handle,
+						dvXplorerLog(CAER_LOG_ALERT, handle,
 							"DVS: Group2 Y address out of range (0-%d): %" PRIu16 ", due to USB communication issue.",
 							state->dvs.sizeY - 1, group2Address);
 						break; // Skip invalid G2 Y address (don't update lastYs).
@@ -2777,7 +2777,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 							if (state->imu.ignoreEvents) {
 								break;
 							}
-							dvExplorerLog(CAER_LOG_DEBUG, handle, "IMU Data event (%" PRIu8 ") received.", misc8Data);
+							dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU Data event (%" PRIu8 ") received.", misc8Data);
 
 							// IMU data event.
 							switch (state->imu.count) {
@@ -2876,7 +2876,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								}
 
 								default:
-									dvExplorerLog(CAER_LOG_ERROR, handle, "Got invalid IMU update sequence.");
+									dvXplorerLog(CAER_LOG_ERROR, handle, "Got invalid IMU update sequence.");
 									break;
 							}
 
@@ -2888,7 +2888,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 							if (state->imu.ignoreEvents) {
 								break;
 							}
-							dvExplorerLog(
+							dvXplorerLog(
 								CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu16 ") received.", data);
 
 							// Set correct IMU accel and gyro scales, used to interpret subsequent
@@ -2916,14 +2916,14 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								// Nothing, should never happen.
 								state->imu.count = 14;
 
-								dvExplorerLog(CAER_LOG_ERROR, handle, "IMU Scale Config: no IMU sensors enabled.");
+								dvXplorerLog(CAER_LOG_ERROR, handle, "IMU Scale Config: no IMU sensors enabled.");
 							}
 
 							break;
 						}
 
 						default:
-							dvExplorerLog(CAER_LOG_ERROR, handle, "Caught Misc8 event that can't be handled.");
+							dvXplorerLog(CAER_LOG_ERROR, handle, "Caught Misc8 event that can't be handled.");
 							break;
 					}
 
@@ -2953,7 +2953,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 				}
 
 				default:
-					dvExplorerLog(CAER_LOG_ERROR, handle, "Caught event that can't be handled.");
+					dvXplorerLog(CAER_LOG_ERROR, handle, "Caught event that can't be handled.");
 					break;
 			}
 		}
@@ -3022,7 +3022,7 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 	}
 }
 
-static void dvExplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param) {
+static void dvXplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param) {
 	// If any USB error happened, discard.
 	if (status != LIBUSB_TRANSFER_COMPLETED) {
 		return;
@@ -3039,12 +3039,12 @@ static void dvExplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint3
 //////////////////////////////////
 /// FX3 Debug Transfer Support ///
 //////////////////////////////////
-static void allocateDebugTransfers(dvExplorerHandle handle) {
+static void allocateDebugTransfers(dvXplorerHandle handle) {
 	// Allocate transfers and set them up.
 	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
 		handle->state.fx3Support.debugTransfers[i] = libusb_alloc_transfer(0);
 		if (handle->state.fx3Support.debugTransfers[i] == NULL) {
-			dvExplorerLog(CAER_LOG_CRITICAL, handle,
+			dvXplorerLog(CAER_LOG_CRITICAL, handle,
 				"Unable to allocate further libusb transfers (debug channel, %zu of %" PRIu32 ").", i,
 				DEBUG_TRANSFER_NUM);
 			continue;
@@ -3054,7 +3054,7 @@ static void allocateDebugTransfers(dvExplorerHandle handle) {
 		handle->state.fx3Support.debugTransfers[i]->length = DEBUG_TRANSFER_SIZE;
 		handle->state.fx3Support.debugTransfers[i]->buffer = malloc(DEBUG_TRANSFER_SIZE);
 		if (handle->state.fx3Support.debugTransfers[i]->buffer == NULL) {
-			dvExplorerLog(CAER_LOG_CRITICAL, handle,
+			dvXplorerLog(CAER_LOG_CRITICAL, handle,
 				"Unable to allocate buffer for libusb transfer %zu (debug channel). Error: %d.", i, errno);
 
 			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
@@ -3076,7 +3076,7 @@ static void allocateDebugTransfers(dvExplorerHandle handle) {
 			atomic_fetch_add(&handle->state.fx3Support.activeDebugTransfers, 1);
 		}
 		else {
-			dvExplorerLog(CAER_LOG_CRITICAL, handle,
+			dvXplorerLog(CAER_LOG_CRITICAL, handle,
 				"Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).", i, libusb_strerror(errno),
 				errno);
 
@@ -3089,11 +3089,11 @@ static void allocateDebugTransfers(dvExplorerHandle handle) {
 
 	if (atomic_load(&handle->state.fx3Support.activeDebugTransfers) == 0) {
 		// Didn't manage to allocate any USB transfers, log failure.
-		dvExplorerLog(CAER_LOG_CRITICAL, handle, "Unable to allocate any libusb transfers (debug channel).");
+		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Unable to allocate any libusb transfers (debug channel).");
 	}
 }
 
-static void cancelAndDeallocateDebugTransfers(dvExplorerHandle handle) {
+static void cancelAndDeallocateDebugTransfers(dvXplorerHandle handle) {
 	// Wait for all transfers to go away.
 	struct timespec waitForTerminationSleep = {.tv_sec = 0, .tv_nsec = 1000000};
 
@@ -3104,7 +3104,7 @@ static void cancelAndDeallocateDebugTransfers(dvExplorerHandle handle) {
 			if (handle->state.fx3Support.debugTransfers[i] != NULL) {
 				errno = libusb_cancel_transfer(handle->state.fx3Support.debugTransfers[i]);
 				if ((errno != LIBUSB_SUCCESS) && (errno != LIBUSB_ERROR_NOT_FOUND)) {
-					dvExplorerLog(CAER_LOG_CRITICAL, handle,
+					dvXplorerLog(CAER_LOG_CRITICAL, handle,
 						"Unable to cancel libusb transfer %zu (debug channel). Error: %s (%d).", i,
 						libusb_strerror(errno), errno);
 					// Proceed with trying to cancel all transfers regardless of errors.
@@ -3126,7 +3126,7 @@ static void cancelAndDeallocateDebugTransfers(dvExplorerHandle handle) {
 }
 
 static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
-	dvExplorerHandle handle = transfer->user_data;
+	dvXplorerHandle handle = transfer->user_data;
 
 	// Completed or cancelled transfers are what we expect to handle here, so
 	// if they do have data attached, try to parse them.
@@ -3149,15 +3149,15 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 	atomic_fetch_sub(&handle->state.fx3Support.activeDebugTransfers, 1);
 }
 
-static void debugTranslator(dvExplorerHandle handle, const uint8_t *buffer, size_t bytesSent) {
+static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_t bytesSent) {
 	// Check if this is a debug message (length 7-64 bytes).
 	if ((bytesSent >= 7) && (buffer[0] == 0x00)) {
 		// Debug message, log this.
-		dvExplorerLog(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
+		dvXplorerLog(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
 			*((const uint32_t *) &buffer[2]));
 	}
 	else {
 		// Unknown/invalid debug message, log this.
-		dvExplorerLog(CAER_LOG_WARNING, handle, "Unknown/invalid debug message.");
+		dvXplorerLog(CAER_LOG_WARNING, handle, "Unknown/invalid debug message.");
 	}
 }

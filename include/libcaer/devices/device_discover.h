@@ -9,12 +9,12 @@
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_H_
 
 #include "davis.h"
-#include "dv_explorer.h"
-#include "dv_explorer_s.h"
 #include "dvs128.h"
 #include "dvs132s.h"
+#include "dvxplorer.h"
 #include "dynapse.h"
 #include "edvs.h"
+#include "samsung_evk.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,8 +38,8 @@ struct caer_device_discovery_result {
 		struct caer_davis_info davisInfo;
 		struct caer_dynapse_info dynapseInfo;
 		struct caer_dvs132s_info dvs132sInfo;
-		struct caer_dvx_info dvExplorerInfo;
-		struct caer_dvx_s_info dvExplorerSInfo;
+		struct caer_dvx_info dvXplorerInfo;
+		struct caer_samsung_evk_info samsungEVKInfo;
 	} deviceInfo;
 };
 

@@ -2,11 +2,11 @@
 
 #include "davis.h"
 #include "davis_rpi.h"
-#include "dv_explorer.h"
-#include "dv_explorer_s.h"
 #include "dvs128.h"
 #include "dvs132s.h"
+#include "dvxplorer.h"
 #include "dynapse.h"
+#include "samsung_evk.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 #	include "edvs.h"
@@ -31,9 +31,9 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 #else
 	[CAER_DEVICE_DAVIS_RPI] = NULL,
 #endif
-	[CAER_DEVICE_DVS132S]       = &dvs132sFind,
-	[CAER_DEVICE_DV_EXPLORER]   = &dvExplorerFind,
-	[CAER_DEVICE_DV_EXPLORER_S] = &dvExplorerSFind,
+	[CAER_DEVICE_DVS132S]     = &dvs132sFind,
+	[CAER_DEVICE_DVXPLORER]   = &dvXplorerFind,
+	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKFind,
 };
 
 ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices) {
@@ -166,15 +166,15 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 			break;
 		}
 
-		case CAER_DEVICE_DV_EXPLORER: {
-			struct caer_dvx_info *info = &discoveredDevice->deviceInfo.dvExplorerInfo;
+		case CAER_DEVICE_DVXPLORER: {
+			struct caer_dvx_info *info = &discoveredDevice->deviceInfo.dvXplorerInfo;
 			return (caerDeviceOpen(
 				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
 		}
 
-		case CAER_DEVICE_DV_EXPLORER_S: {
-			struct caer_dvx_s_info *info = &discoveredDevice->deviceInfo.dvExplorerSInfo;
+		case CAER_DEVICE_SAMSUNG_EVK: {
+			struct caer_samsung_evk_info *info = &discoveredDevice->deviceInfo.samsungEVKInfo;
 			return (caerDeviceOpen(
 				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;
