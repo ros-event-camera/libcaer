@@ -394,8 +394,6 @@ bool dvExplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
 	dvExplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_DVS_ON_TRANSFER_STALL, false);
 
-	dvExplorerConfigSet(cdh, DVX_DVS, DVX_DVS_WAIT_ON_TRANSFER_STALL, true);
-
 	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_DATA_RATE, BOSCH_ACCEL_800HZ); // 800 Hz.
 	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_FILTER, BOSCH_ACCEL_NORMAL);   // Normal mode.
 	dvExplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_RANGE, BOSCH_ACCEL_4G);        // +- 4 g.
@@ -575,7 +573,6 @@ bool dvExplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 		case DVX_DVS:
 			switch (paramAddr) {
 				case DVX_DVS_RUN:
-				case DVX_DVS_WAIT_ON_TRANSFER_STALL:
 					return (spiConfigSend(&state->usbState, DVX_DVS, paramAddr, param));
 					break;
 
@@ -1427,20 +1424,17 @@ bool dvExplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 		case DVX_DVS:
 			switch (paramAddr) {
 				case DVX_DVS_RUN:
-				case DVX_DVS_WAIT_ON_TRANSFER_STALL:
 					return (spiConfigReceive(&state->usbState, DVX_DVS, paramAddr, param));
 					break;
 
 				case DVX_DVS_STATISTICS_COLUMN:
 				case DVX_DVS_STATISTICS_COLUMN + 1:
-				case DVX_DVS_STATISTICS_SGROUP:
-				case DVX_DVS_STATISTICS_SGROUP + 1:
-				case DVX_DVS_STATISTICS_MGROUP:
-				case DVX_DVS_STATISTICS_MGROUP + 1:
-				case DVX_DVS_STATISTICS_ERROR_COLUMN:
-				case DVX_DVS_STATISTICS_ERROR_COLUMN + 1:
-				case DVX_DVS_STATISTICS_ERROR_GROUP:
-				case DVX_DVS_STATISTICS_ERROR_GROUP + 1:
+				case DVX_DVS_STATISTICS_GROUP:
+				case DVX_DVS_STATISTICS_GROUP + 1:
+				case DVX_DVS_STATISTICS_DROPPED_COLUMN:
+				case DVX_DVS_STATISTICS_DROPPED_COLUMN + 1:
+				case DVX_DVS_STATISTICS_DROPPED_GROUP:
+				case DVX_DVS_STATISTICS_DROPPED_GROUP + 1:
 					if (handle->info.dvsHasStatistics) {
 						return (spiConfigReceive(&state->usbState, DVX_DVS, paramAddr, param));
 					}

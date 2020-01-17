@@ -180,13 +180,6 @@ extern "C" {
 #define DVX_DVS_RUN 3
 /**
  * Parameter address for module DVX_DVS:
- * if the output FIFO for this module is full, stall the chip readout
- * and wait until it's free again, instead of just continuing
- * reading and dropping the resulting events.
- */
-#define DVX_DVS_WAIT_ON_TRANSFER_STALL 4
-/**
- * Parameter address for module DVX_DVS:
  * read-only parameter, information about the presence of the
  * statistics feature.
  * This is reserved for internal use and should not be used by
@@ -204,36 +197,28 @@ extern "C" {
 #define DVX_DVS_STATISTICS_COLUMN 81
 /**
  * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of SGroup
+ * read-only parameter, representing the number of SGroup/MGroup
  * transactions completed successfully on the device.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DVX_DVS_STATISTICS_SGROUP 83
+#define DVX_DVS_STATISTICS_GROUP 83
 /**
  * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of MGroup
- * transactions completed successfully on the device.
+ * read-only parameter, representing the number of dropped
+ * column transactions on the device.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DVX_DVS_STATISTICS_MGROUP 85
+#define DVX_DVS_STATISTICS_DROPPED_COLUMN 85
 /**
  * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of column size
- * errors on the device.
+ * read-only parameter, representing the number of dropped
+ * SGroup/MGroup transactions on the device.
  * This is a 64bit value, and should always be read using the
  * function: caerDeviceConfigGet64().
  */
-#define DVX_DVS_STATISTICS_ERROR_COLUMN 87
-/**
- * Parameter address for module DVX_DVS:
- * read-only parameter, representing the number of group size
- * errors on the device.
- * This is a 64bit value, and should always be read using the
- * function: caerDeviceConfigGet64().
- */
-#define DVX_DVS_STATISTICS_ERROR_GROUP 89
+#define DVX_DVS_STATISTICS_DROPPED_GROUP 87
 
 /**
  * Parameter address for module DVX_IMU:
