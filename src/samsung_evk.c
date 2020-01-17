@@ -1,13 +1,13 @@
-#include "dv_explorer_s.h"
+#include "samsung_evk.h"
 
-static void dvExplorerSLog(enum caer_log_level logLevel, dvExplorerSHandle handle, const char *format, ...)
+static void samsungEVKLog(enum caer_log_level logLevel, samsungEVKHandle handle, const char *format, ...)
 	ATTRIBUTE_FORMAT(3);
-static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
+static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 
 static bool i2cConfigSend(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t param);
 static bool i2cConfigReceive(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t *param);
 
-static void dvExplorerSLog(enum caer_log_level logLevel, dvExplorerSHandle handle, const char *format, ...) {
+static void samsungEVKLog(enum caer_log_level logLevel, samsungEVKHandle handle, const char *format, ...) {
 	va_list argumentList;
 	va_start(argumentList, format);
 	caerLogVAFull(atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed), logLevel,
@@ -15,13 +15,13 @@ static void dvExplorerSLog(enum caer_log_level logLevel, dvExplorerSHandle handl
 	va_end(argumentList);
 }
 
-ssize_t dvExplorerSFind(caerDeviceDiscoveryResult *discoveredDevices) {
+ssize_t samsungEVKFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Set to NULL initially (for error return).
 	*discoveredDevices = NULL;
 
-	struct usb_info *foundDVExplorerS = NULL;
+	struct usb_info *foundSamsungEVK = NULL;
 
-	ssize_t result = usbDeviceFind(DV_EXPLORER_S_DEVICE_VID, DV_EXPLORER_S_DEVICE_PID, -1, -1, -1, &foundDVExplorerS);
+	ssize_t result = usbDeviceFind(SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, -1, -1, -1, &foundSamsungEVK);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -31,45 +31,45 @@ ssize_t dvExplorerSFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	// Allocate memory for discovered devices in expected format.
 	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
 	if (*discoveredDevices == NULL) {
-		free(foundDVExplorerS);
+		free(foundSamsungEVK);
 		return (-1);
 	}
 
 	// Transform from generic USB format into device discovery one.
 	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a DV_EXPLORER_S.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DV_EXPLORER_S;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundDVExplorerS[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundDVExplorerS[i].errorVersion;
-		struct caer_dvx_s_info *dvExplorerSInfoPtr = &((*discoveredDevices)[i].deviceInfo.dvExplorerSInfo);
+		// This is a SAMSUNG_EVK.
+		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_SAMSUNG_EVK;
+		(*discoveredDevices)[i].deviceErrorOpen    = foundSamsungEVK[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion = foundSamsungEVK[i].errorVersion;
+		struct caer_samsung_evk_info *samsungEVKInfoPtr = &((*discoveredDevices)[i].deviceInfo.samsungEVKInfo);
 
-		dvExplorerSInfoPtr->deviceUSBBusNumber     = foundDVExplorerS[i].busNumber;
-		dvExplorerSInfoPtr->deviceUSBDeviceAddress = foundDVExplorerS[i].devAddress;
-		strncpy(dvExplorerSInfoPtr->deviceSerialNumber, foundDVExplorerS[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+		samsungEVKInfoPtr->deviceUSBBusNumber     = foundSamsungEVK[i].busNumber;
+		samsungEVKInfoPtr->deviceUSBDeviceAddress = foundSamsungEVK[i].devAddress;
+		strncpy(samsungEVKInfoPtr->deviceSerialNumber, foundSamsungEVK[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
-		// Reopen DV_EXPLORER_S device to get additional info, if possible at all.
-		if (!foundDVExplorerS[i].errorOpen && !foundDVExplorerS[i].errorVersion) {
-			caerDeviceHandle dvs = dvExplorerSOpen(
-				0, dvExplorerSInfoPtr->deviceUSBBusNumber, dvExplorerSInfoPtr->deviceUSBDeviceAddress, NULL);
+		// Reopen SAMSUNG_EVK device to get additional info, if possible at all.
+		if (!foundSamsungEVK[i].errorOpen && !foundSamsungEVK[i].errorVersion) {
+			caerDeviceHandle dvs = samsungEVKOpen(
+				0, samsungEVKInfoPtr->deviceUSBBusNumber, samsungEVKInfoPtr->deviceUSBDeviceAddress, NULL);
 			if (dvs != NULL) {
-				*dvExplorerSInfoPtr = caerDVExplorerSInfoGet(dvs);
+				*samsungEVKInfoPtr = caerSamsungEVKInfoGet(dvs);
 
-				dvExplorerSClose(dvs);
+				samsungEVKClose(dvs);
 			}
 		}
 
 		// Set/Reset to invalid values, not part of discovery.
-		dvExplorerSInfoPtr->deviceID     = -1;
-		dvExplorerSInfoPtr->deviceString = NULL;
+		samsungEVKInfoPtr->deviceID     = -1;
+		samsungEVKInfoPtr->deviceString = NULL;
 	}
 	caerLogDisable(false);
 
-	free(foundDVExplorerS);
+	free(foundSamsungEVK);
 	return (result);
 }
 
-static inline void freeAllDataMemory(dvExplorerSState state) {
+static inline void freeAllDataMemory(samsungEVKState state) {
 	dataExchangeDestroy(&state->dataExchange);
 
 	// Since the current event packets aren't necessarily
@@ -92,13 +92,13 @@ static inline void freeAllDataMemory(dvExplorerSState state) {
 	containerGenerationDestroy(&state->container);
 }
 
-caerDeviceHandle dvExplorerSOpen(
+caerDeviceHandle samsungEVKOpen(
 	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict) {
 	errno = 0;
 
-	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", DV_EXPLORER_S_DEVICE_NAME);
+	caerLog(CAER_LOG_DEBUG, __func__, "Initializing %s.", SAMSUNG_EVK_DEVICE_NAME);
 
-	dvExplorerSHandle handle = calloc(1, sizeof(*handle));
+	samsungEVKHandle handle = calloc(1, sizeof(*handle));
 	if (handle == NULL) {
 		// Failed to allocate memory for device handle!
 		caerLog(CAER_LOG_CRITICAL, __func__, "Failed to allocate memory for device handle.");
@@ -107,9 +107,9 @@ caerDeviceHandle dvExplorerSOpen(
 	}
 
 	// Set main deviceType correctly right away.
-	handle->deviceType = CAER_DEVICE_DV_EXPLORER_S;
+	handle->deviceType = CAER_DEVICE_SAMSUNG_EVK;
 
-	dvExplorerSState state = &handle->state;
+	samsungEVKState state = &handle->state;
 
 	// Initialize state variables to default values (if not zero, taken care of by calloc above).
 	dataExchangeSettingsInit(&state->dataExchange);
@@ -124,23 +124,23 @@ caerDeviceHandle dvExplorerSOpen(
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
-	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s %" PRIu16, DV_EXPLORER_S_DEVICE_NAME, deviceID);
+	snprintf(usbThreadName, MAX_THREAD_NAME_LENGTH + 1, "%s %" PRIu16, SAMSUNG_EVK_DEVICE_NAME, deviceID);
 	usbThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
 
 	usbSetThreadName(&state->usbState, usbThreadName);
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
-	// Try to open a DV_EXPLORER_S device on a specific USB port.
+	// Try to open a SAMSUNG_EVK device on a specific USB port.
 	struct usb_info usbInfo;
 
-	if (!usbDeviceOpen(&state->usbState, DV_EXPLORER_S_DEVICE_VID, DV_EXPLORER_S_DEVICE_PID, busNumberRestrict,
+	if (!usbDeviceOpen(&state->usbState, SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
-			dvExplorerSLog(
+			samsungEVKLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
 		else {
-			dvExplorerSLog(CAER_LOG_CRITICAL, handle,
+			samsungEVKLog(CAER_LOG_CRITICAL, handle,
 				"Failed to open device, see above log message for more information (errno=%d).", errno);
 		}
 
@@ -150,9 +150,9 @@ caerDeviceHandle dvExplorerSOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DV_EXPLORER_S_DEVICE_NAME, deviceID);
+	char *usbInfoString = usbGenerateDeviceString(usbInfo, SAMSUNG_EVK_DEVICE_NAME, deviceID);
 	if (usbInfoString == NULL) {
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
 		usbDeviceClose(&state->usbState);
 		free(handle);
@@ -162,8 +162,8 @@ caerDeviceHandle dvExplorerSOpen(
 	}
 
 	// Setup USB.
-	usbSetDataCallback(&state->usbState, &dvExplorerSEventTranslator, handle);
-	usbSetDataEndpoint(&state->usbState, DV_EXPLORER_S_DATA_ENDPOINT);
+	usbSetDataCallback(&state->usbState, &samsungEVKEventTranslator, handle);
+	usbSetDataEndpoint(&state->usbState, SAMSUNG_EVK_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 8192);
 
@@ -188,7 +188,7 @@ caerDeviceHandle dvExplorerSOpen(
 	i2cConfigReceive(&state->usbState, DEVICE_FPGA, 0xFF00, &firmwareVersion);
 
 	handle->info.firmwareVersion = firmwareVersion;
-	handle->info.chipID          = DV_EXPLORER_S_CHIP_ID;
+	handle->info.chipID          = SAMSUNG_EVK_CHIP_ID;
 	handle->info.dvsSizeX        = 640;
 	handle->info.dvsSizeY        = 480;
 
@@ -222,8 +222,8 @@ caerDeviceHandle dvExplorerSOpen(
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
-	dvExplorerSConfigSet(
-		(caerDeviceHandle) handle, DVX_S_DVS_BIAS, DVX_S_DVS_BIAS_SIMPLE, DVX_S_DVS_BIAS_SIMPLE_DEFAULT);
+	samsungEVKConfigSet(
+		(caerDeviceHandle) handle, SAMSUNG_EVK_DVS_BIAS, SAMSUNG_EVK_DVS_BIAS_SIMPLE, SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT);
 
 	// System settings.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
@@ -252,17 +252,17 @@ caerDeviceHandle dvExplorerSOpen(
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325A, 0x00);
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325B, 0x01);
 
-	dvExplorerSLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+	samsungEVKLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
 		usbInfo.busNumber, usbInfo.devAddress);
 
 	return ((caerDeviceHandle) handle);
 }
 
-bool dvExplorerSClose(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+bool samsungEVKClose(caerDeviceHandle cdh) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
-	dvExplorerSLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
+	samsungEVKLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0004, 0x00); // Put DVS in reset.
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0000, 0x10); // Disable FX3 transfer.
@@ -273,7 +273,7 @@ bool dvExplorerSClose(caerDeviceHandle cdh) {
 	// Finally, close the device fully.
 	usbDeviceClose(&state->usbState);
 
-	dvExplorerSLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
+	samsungEVKLog(CAER_LOG_DEBUG, handle, "Shutdown successful.");
 
 	// Free memory.
 	free(handle->info.deviceString);
@@ -282,18 +282,18 @@ bool dvExplorerSClose(caerDeviceHandle cdh) {
 	return (true);
 }
 
-struct caer_dvx_s_info caerDVExplorerSInfoGet(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
+struct caer_samsung_evk_info caerSamsungEVKInfoGet(caerDeviceHandle cdh) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
 
 	// Check if the pointer is valid.
 	if (handle == NULL) {
-		struct caer_dvx_s_info emptyInfo = {0, .deviceString = NULL};
+		struct caer_samsung_evk_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
 	// Check if device type is supported.
-	if (handle->deviceType != CAER_DEVICE_DV_EXPLORER_S) {
-		struct caer_dvx_s_info emptyInfo = {0, .deviceString = NULL};
+	if (handle->deviceType != CAER_DEVICE_SAMSUNG_EVK) {
+		struct caer_samsung_evk_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
 
@@ -301,82 +301,82 @@ struct caer_dvx_s_info caerDVExplorerSInfoGet(caerDeviceHandle cdh) {
 	return (handle->info);
 }
 
-bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
+bool samsungEVKSendDefaultConfig(caerDeviceHandle cdh) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
 
 	// Set default biases.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_BIAS, DVX_S_DVS_BIAS_SIMPLE, DVX_S_DVS_BIAS_SIMPLE_DEFAULT);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_BIAS, SAMSUNG_EVK_DVS_BIAS_SIMPLE, SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT);
 
 	// External trigger.
-	dvExplorerSConfigSet(
-		cdh, DVX_S_DVS, DVX_S_DVS_EXTERNAL_TRIGGER_MODE, DVX_S_DVS_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
+	samsungEVKConfigSet(
+		cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE, SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
 
 	// Digital readout configuration.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_GLOBAL_HOLD_ENABLE, true);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_GLOBAL_RESET_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_GLOBAL_RESET_DURING_READOUT, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_FIXED_READ_TIME_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_GLOBAL_HOLD_ENABLE, true);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_GLOBAL_RESET_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_GLOBAL_RESET_DURING_READOUT, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_FIXED_READ_TIME_ENABLE, false);
 
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_EVENT_FLATTEN, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_EVENT_ON_ONLY, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_EVENT_OFF_ONLY, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_DUAL_BINNING_ENABLE, false);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_VERTICAL, DVX_S_DVS_SUBSAMPLE_VERTICAL_NONE);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_SUBSAMPLE_HORIZONTAL, DVX_S_DVS_SUBSAMPLE_HORIZONTAL_NONE);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EVENT_FLATTEN, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EVENT_ON_ONLY, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EVENT_OFF_ONLY, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_DUAL_BINNING_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL_NONE);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL_NONE);
 
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_0, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_1, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_2, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_3, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_4, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_5, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_6, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_7, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_8, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_9, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_10, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_11, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_12, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_13, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_14, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_15, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_16, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_17, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_18, 0x7FFF);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_AREA_BLOCKING_19, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_0, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_1, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_2, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_3, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_4, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_5, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_6, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_7, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_8, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_9, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_10, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_11, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_12, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_13, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_14, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_15, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_16, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_17, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_18, 0x7FFF);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_19, 0x7FFF);
 
 	// Timing settings.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_ED, 2);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH2GRS, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GRS, 1);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_GH2SEL, 4);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SELW, 6);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2AY_R, 4);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2AY_F, 6);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2R_R, 8);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_SEL2R_F, 10);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_SEL, 15);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_NEXT_GH, 10);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMING_READ_FIXED, 48000);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_ED, 2);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_GH2GRS, 0);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_GRS, 1);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_GH2SEL, 4);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_SELW, 6);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_SEL2AY_R, 4);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_SEL2AY_F, 6);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_SEL2R_R, 8);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_SEL2R_F, 10);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_NEXT_SEL, 15);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_NEXT_GH, 10);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMING_READ_FIXED, 48000);
 
 	// Crop block.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_ENABLE, false);
 
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_X_START_ADDRESS, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_Y_START_ADDRESS, 0);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_X_END_ADDRESS, 639);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_CROPPER, DVX_S_DVS_CROPPER_Y_END_ADDRESS, 479);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_X_START_ADDRESS, 0);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS, 0);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS, 639);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS, 479);
 
 	// Activity decision block.
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_ENABLE, false);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_ENABLE, false);
 
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_POS_THRESHOLD, 300);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE, 1);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME, 3);
-	dvExplorerSConfigSet(cdh, DVX_S_DVS_ACTIVITY_DECISION, DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_THRESHOLD, 300);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_NEG_THRESHOLD, 20);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_RATE, 1);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_TIME, 3);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
 
 	// DTAG restart after config.
 	i2cConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, 0x02);
@@ -384,9 +384,9 @@ bool dvExplorerSSendDefaultConfig(caerDeviceHandle cdh) {
 	return (true);
 }
 
-bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+bool samsungEVKConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -416,9 +416,9 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS:
+		case SAMSUNG_EVK_DVS:
 			switch (paramAddr) {
-				case DVX_S_DVS_MODE: {
+				case SAMSUNG_EVK_DVS_MODE: {
 					if (param >= 3) {
 						return (false);
 					}
@@ -427,7 +427,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_FLATTEN: {
+				case SAMSUNG_EVK_DVS_EVENT_FLATTEN: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -439,7 +439,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_ON_ONLY: {
+				case SAMSUNG_EVK_DVS_EVENT_ON_ONLY: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -451,7 +451,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_OFF_ONLY: {
+				case SAMSUNG_EVK_DVS_EVENT_OFF_ONLY: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -463,7 +463,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_ENABLE: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -475,7 +475,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_AREA_BLOCKING_ENABLE: {
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -487,13 +487,13 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_DUAL_BINNING_ENABLE: {
+				case SAMSUNG_EVK_DVS_DUAL_BINNING_ENABLE: {
 					return (i2cConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_DUAL_BINNING, (param) ? (0x01) : (0x00)));
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_VERTICAL: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL: {
 					if (param >= 8) {
 						return (false);
 					}
@@ -510,7 +510,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_HORIZONTAL: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL: {
 					if (param >= 8) {
 						return (false);
 					}
@@ -527,27 +527,27 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_AREA_BLOCKING_0:
-				case DVX_S_DVS_AREA_BLOCKING_1:
-				case DVX_S_DVS_AREA_BLOCKING_2:
-				case DVX_S_DVS_AREA_BLOCKING_3:
-				case DVX_S_DVS_AREA_BLOCKING_4:
-				case DVX_S_DVS_AREA_BLOCKING_5:
-				case DVX_S_DVS_AREA_BLOCKING_6:
-				case DVX_S_DVS_AREA_BLOCKING_7:
-				case DVX_S_DVS_AREA_BLOCKING_8:
-				case DVX_S_DVS_AREA_BLOCKING_9:
-				case DVX_S_DVS_AREA_BLOCKING_10:
-				case DVX_S_DVS_AREA_BLOCKING_11:
-				case DVX_S_DVS_AREA_BLOCKING_12:
-				case DVX_S_DVS_AREA_BLOCKING_13:
-				case DVX_S_DVS_AREA_BLOCKING_14:
-				case DVX_S_DVS_AREA_BLOCKING_15:
-				case DVX_S_DVS_AREA_BLOCKING_16:
-				case DVX_S_DVS_AREA_BLOCKING_17:
-				case DVX_S_DVS_AREA_BLOCKING_18:
-				case DVX_S_DVS_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_S_DVS_AREA_BLOCKING_0));
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_0:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_1:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_2:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_3:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_4:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_5:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_6:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_7:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_8:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_9:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_10:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_11:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_12:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_13:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_14:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_15:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_16:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_17:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_18:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_19: {
+					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
 
 					if (!i2cConfigSend(&state->usbState, DEVICE_DVS, regAddr, U8T(param >> 8))) {
 						return (false);
@@ -557,7 +557,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMESTAMP_RESET: {
+				case SAMSUNG_EVK_DVS_TIMESTAMP_RESET: {
 					if (param) {
 						i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_RESET, 0x01);
 						return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_RESET, 0x00));
@@ -565,7 +565,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_RESET_ENABLE: {
+				case SAMSUNG_EVK_DVS_GLOBAL_RESET_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
@@ -577,13 +577,13 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_RESET_DURING_READOUT: {
+				case SAMSUNG_EVK_DVS_GLOBAL_RESET_DURING_READOUT: {
 					return (i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_GLOBAL_RESET_READOUT,
 						(param) ? (0x01) : (0x00)));
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_HOLD_ENABLE: {
+				case SAMSUNG_EVK_DVS_GLOBAL_HOLD_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
@@ -595,13 +595,13 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_FIXED_READ_TIME_ENABLE: {
+				case SAMSUNG_EVK_DVS_FIXED_READ_TIME_ENABLE: {
 					return (i2cConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_FIXED_READ_TIME, (param) ? (0x01) : (0x00)));
 					break;
 				}
 
-				case DVX_S_DVS_EXTERNAL_TRIGGER_MODE: {
+				case SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE: {
 					if (param >= 3) {
 						return (false);
 					}
@@ -610,7 +610,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_ED: {
+				case SAMSUNG_EVK_DVS_TIMING_ED: {
 					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
@@ -622,7 +622,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GH2GRS: {
+				case SAMSUNG_EVK_DVS_TIMING_GH2GRS: {
 					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
@@ -634,7 +634,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS: {
+				case SAMSUNG_EVK_DVS_TIMING_GRS: {
 					// TODO: figure this out.
 					if (param >= 128000) {
 						return (false);
@@ -646,7 +646,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GH2SEL: {
+				case SAMSUNG_EVK_DVS_TIMING_GH2SEL: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -655,7 +655,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SELW: {
+				case SAMSUNG_EVK_DVS_TIMING_SELW: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -664,7 +664,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2AY_R: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2AY_R: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -673,7 +673,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2AY_F: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2AY_F: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -682,7 +682,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2R_R: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2R_R: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -691,7 +691,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2R_F: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2R_F: {
 					if (param >= 256) {
 						return (false);
 					}
@@ -700,7 +700,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_SEL: {
+				case SAMSUNG_EVK_DVS_TIMING_NEXT_SEL: {
 					if ((param >= 65536) || (param < 5)) {
 						return (false);
 					}
@@ -715,7 +715,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_GH: {
+				case SAMSUNG_EVK_DVS_TIMING_NEXT_GH: {
 					if (param >= 128) {
 						return (false);
 					}
@@ -724,7 +724,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_READ_FIXED: {
+				case SAMSUNG_EVK_DVS_TIMING_READ_FIXED: {
 					if (param >= 65536) {
 						return (false);
 					}
@@ -741,16 +741,16 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_CROPPER:
+		case SAMSUNG_EVK_DVS_CROPPER:
 			switch (paramAddr) {
-				case DVX_S_DVS_CROPPER_ENABLE: {
+				case SAMSUNG_EVK_DVS_CROPPER_ENABLE: {
 					return (i2cConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_CROPPER_BYPASS, (param) ? (0x00) : (0x01)));
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_Y_START_ADDRESS:
-				case DVX_S_DVS_CROPPER_Y_END_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS:
+				case SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS: {
 					if (param >= 480) {
 						return (false);
 					}
@@ -760,11 +760,11 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					// only the mask in the END register is actually applied.
 					// We must track the addresses, detect this, and properly
 					// update all the masks as needed.
-					if (paramAddr == DVX_S_DVS_CROPPER_Y_START_ADDRESS) {
+					if (paramAddr == SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS) {
 						state->dvs.cropperYStart = U16T(param);
 					}
 
-					if (paramAddr == DVX_S_DVS_CROPPER_Y_END_ADDRESS) {
+					if (paramAddr == SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS) {
 						state->dvs.cropperYEnd = U16T(param);
 					}
 
@@ -790,7 +790,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_X_START_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_X_START_ADDRESS: {
 					if (param >= 640) {
 						return (false);
 					}
@@ -801,7 +801,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_X_END_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS: {
 					if (param >= 640) {
 						return (false);
 					}
@@ -818,15 +818,15 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_ACTIVITY_DECISION:
+		case SAMSUNG_EVK_DVS_ACTIVITY_DECISION:
 			switch (paramAddr) {
-				case DVX_S_DVS_ACTIVITY_DECISION_ENABLE: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_ENABLE: {
 					return (i2cConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_BYPASS, (param) ? (0x00) : (0x01)));
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_POS_THRESHOLD: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_THRESHOLD: {
 					if (param >= 65536) {
 						return (false);
 					}
@@ -838,7 +838,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_NEG_THRESHOLD: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_NEG_THRESHOLD: {
 					if (param >= 65536) {
 						return (false);
 					}
@@ -850,7 +850,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_RATE: {
 					if (param >= 16) {
 						return (false);
 					}
@@ -860,7 +860,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_TIME: {
 					if (param >= 32) {
 						return (false);
 					}
@@ -870,7 +870,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_MAX_COUNT: {
 					if (param >= 65536) {
 						return (false);
 					}
@@ -888,9 +888,9 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_BIAS:
+		case SAMSUNG_EVK_DVS_BIAS:
 			switch (paramAddr) {
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOG: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOG: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -903,7 +903,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_SF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_SF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -916,7 +916,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_ON: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_ON: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -929,7 +929,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_nRST: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_nRST: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -942,7 +942,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGA: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOGA: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS,
@@ -956,7 +956,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGD: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOGD: {
 					if (param >= 4) {
 						return (false);
 					}
@@ -973,7 +973,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_LEVEL_SF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_LEVEL_SF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
@@ -985,7 +985,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_LEVEL_nOFF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_LEVEL_nOFF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
@@ -997,7 +997,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_AMP: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_AMP: {
 					if (param >= 9) {
 						return (false);
 					}
@@ -1006,7 +1006,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_ON: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_ON: {
 					if (param >= 9) {
 						return (false);
 					}
@@ -1015,7 +1015,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_OFF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_OFF: {
 					if (param >= 9) {
 						return (false);
 					}
@@ -1024,13 +1024,13 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_SIMPLE:
+				case SAMSUNG_EVK_DVS_BIAS_SIMPLE:
 					i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, 0x04);
 					i2cConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGALOGD_MONITOR, 0x14);
 
 					switch (param) {
-						case DVX_S_DVS_BIAS_SIMPLE_VERY_LOW: {
+						case SAMSUNG_EVK_DVS_BIAS_SIMPLE_VERY_LOW: {
 							i2cConfigSend(
 								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
 							i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7D);
@@ -1040,7 +1040,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 							break;
 						}
 
-						case DVX_S_DVS_BIAS_SIMPLE_LOW: {
+						case SAMSUNG_EVK_DVS_BIAS_SIMPLE_LOW: {
 							i2cConfigSend(
 								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
 							i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7D);
@@ -1050,7 +1050,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 							break;
 						}
 
-						case DVX_S_DVS_BIAS_SIMPLE_HIGH: {
+						case SAMSUNG_EVK_DVS_BIAS_SIMPLE_HIGH: {
 							i2cConfigSend(
 								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x04);
 							i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7F);
@@ -1060,7 +1060,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 							break;
 						}
 
-						case DVX_S_DVS_BIAS_SIMPLE_VERY_HIGH: {
+						case SAMSUNG_EVK_DVS_BIAS_SIMPLE_VERY_HIGH: {
 							i2cConfigSend(
 								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x04);
 							i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, 0x7F);
@@ -1070,7 +1070,7 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 							break;
 						}
 
-						case DVX_S_DVS_BIAS_SIMPLE_DEFAULT:
+						case SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT:
 						default: {
 							i2cConfigSend(
 								&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST, 0x06);
@@ -1097,9 +1097,9 @@ bool dvExplorerSConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 	return (true);
 }
 
-bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
 	switch (modAddr) {
 		case CAER_HOST_CONFIG_USB:
@@ -1126,9 +1126,9 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS:
+		case SAMSUNG_EVK_DVS:
 			switch (paramAddr) {
-				case DVX_S_DVS_MODE: {
+				case SAMSUNG_EVK_DVS_MODE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_MODE, &currVal)) {
@@ -1139,7 +1139,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_FLATTEN: {
+				case SAMSUNG_EVK_DVS_EVENT_FLATTEN: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -1150,7 +1150,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_ON_ONLY: {
+				case SAMSUNG_EVK_DVS_EVENT_ON_ONLY: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -1161,7 +1161,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EVENT_OFF_ONLY: {
+				case SAMSUNG_EVK_DVS_EVENT_OFF_ONLY: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, &currVal)) {
@@ -1172,7 +1172,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_ENABLE: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -1183,7 +1183,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_AREA_BLOCKING_ENABLE: {
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -1194,7 +1194,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_DUAL_BINNING_ENABLE: {
+				case SAMSUNG_EVK_DVS_DUAL_BINNING_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -1205,7 +1205,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_VERTICAL: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
@@ -1216,7 +1216,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_SUBSAMPLE_HORIZONTAL: {
+				case SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_SUBSAMPLE_RATIO, &currVal)) {
@@ -1227,27 +1227,27 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_AREA_BLOCKING_0:
-				case DVX_S_DVS_AREA_BLOCKING_1:
-				case DVX_S_DVS_AREA_BLOCKING_2:
-				case DVX_S_DVS_AREA_BLOCKING_3:
-				case DVX_S_DVS_AREA_BLOCKING_4:
-				case DVX_S_DVS_AREA_BLOCKING_5:
-				case DVX_S_DVS_AREA_BLOCKING_6:
-				case DVX_S_DVS_AREA_BLOCKING_7:
-				case DVX_S_DVS_AREA_BLOCKING_8:
-				case DVX_S_DVS_AREA_BLOCKING_9:
-				case DVX_S_DVS_AREA_BLOCKING_10:
-				case DVX_S_DVS_AREA_BLOCKING_11:
-				case DVX_S_DVS_AREA_BLOCKING_12:
-				case DVX_S_DVS_AREA_BLOCKING_13:
-				case DVX_S_DVS_AREA_BLOCKING_14:
-				case DVX_S_DVS_AREA_BLOCKING_15:
-				case DVX_S_DVS_AREA_BLOCKING_16:
-				case DVX_S_DVS_AREA_BLOCKING_17:
-				case DVX_S_DVS_AREA_BLOCKING_18:
-				case DVX_S_DVS_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_S_DVS_AREA_BLOCKING_0));
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_0:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_1:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_2:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_3:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_4:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_5:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_6:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_7:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_8:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_9:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_10:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_11:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_12:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_13:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_14:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_15:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_16:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_17:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_18:
+				case SAMSUNG_EVK_DVS_AREA_BLOCKING_19: {
+					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
 
 					uint8_t currVal = 0;
 
@@ -1265,12 +1265,12 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMESTAMP_RESET: {
+				case SAMSUNG_EVK_DVS_TIMESTAMP_RESET: {
 					*param = false;
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_RESET_ENABLE: {
+				case SAMSUNG_EVK_DVS_GLOBAL_RESET_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
@@ -1281,7 +1281,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_RESET_DURING_READOUT: {
+				case SAMSUNG_EVK_DVS_GLOBAL_RESET_DURING_READOUT: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1293,7 +1293,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_GLOBAL_HOLD_ENABLE: {
+				case SAMSUNG_EVK_DVS_GLOBAL_HOLD_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, &currVal)) {
@@ -1304,7 +1304,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_FIXED_READ_TIME_ENABLE: {
+				case SAMSUNG_EVK_DVS_FIXED_READ_TIME_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_FIXED_READ_TIME, &currVal)) {
@@ -1315,7 +1315,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_EXTERNAL_TRIGGER_MODE: {
+				case SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_EXTERNAL_TRIGGER, &currVal)) {
@@ -1326,7 +1326,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_ED: {
+				case SAMSUNG_EVK_DVS_TIMING_ED: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, &currVal)) {
@@ -1349,7 +1349,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GH2GRS: {
+				case SAMSUNG_EVK_DVS_TIMING_GH2GRS: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, &currVal)) {
@@ -1372,7 +1372,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GRS: {
+				case SAMSUNG_EVK_DVS_TIMING_GRS: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, &currVal)) {
@@ -1395,7 +1395,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_GH2SEL: {
+				case SAMSUNG_EVK_DVS_TIMING_GH2SEL: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_FIRST_SELX_START, &currVal)) {
@@ -1406,7 +1406,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SELW: {
+				case SAMSUNG_EVK_DVS_TIMING_SELW: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_SELX_WIDTH, &currVal)) {
@@ -1417,7 +1417,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2AY_R: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2AY_R: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_START, &currVal)) {
@@ -1428,7 +1428,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2AY_F: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2AY_F: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_AY_END, &currVal)) {
@@ -1439,7 +1439,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2R_R: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2R_R: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_START, &currVal)) {
@@ -1450,7 +1450,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_SEL2R_F: {
+				case SAMSUNG_EVK_DVS_TIMING_SEL2R_F: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_R_END, &currVal)) {
@@ -1461,7 +1461,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_SEL: {
+				case SAMSUNG_EVK_DVS_TIMING_NEXT_SEL: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_SELX_START, &currVal)) {
@@ -1479,7 +1479,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_NEXT_GH: {
+				case SAMSUNG_EVK_DVS_TIMING_NEXT_GH: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_NEXT_GH_CNT, &currVal)) {
@@ -1490,7 +1490,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_TIMING_READ_FIXED: {
+				case SAMSUNG_EVK_DVS_TIMING_READ_FIXED: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_TIMING_READ_TIME_INTERVAL, &currVal)) {
@@ -1514,9 +1514,9 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_CROPPER:
+		case SAMSUNG_EVK_DVS_CROPPER:
 			switch (paramAddr) {
-				case DVX_S_DVS_CROPPER_ENABLE: {
+				case SAMSUNG_EVK_DVS_CROPPER_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_BYPASS, &currVal)) {
@@ -1527,17 +1527,17 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_Y_START_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS: {
 					*param = state->dvs.cropperYStart;
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_Y_END_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS: {
 					*param = state->dvs.cropperYEnd;
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_X_START_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_X_START_ADDRESS: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, &currVal)) {
@@ -1555,7 +1555,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_CROPPER_X_END_ADDRESS: {
+				case SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, &currVal)) {
@@ -1578,9 +1578,9 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_ACTIVITY_DECISION:
+		case SAMSUNG_EVK_DVS_ACTIVITY_DECISION:
 			switch (paramAddr) {
-				case DVX_S_DVS_ACTIVITY_DECISION_ENABLE: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_ENABLE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_ACTIVITY_DECISION_BYPASS, &currVal)) {
@@ -1591,7 +1591,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_POS_THRESHOLD: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_THRESHOLD: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1610,7 +1610,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_NEG_THRESHOLD: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_NEG_THRESHOLD: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1629,7 +1629,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_DEC_RATE: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_RATE: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1641,7 +1641,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_DEC_TIME: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_DEC_TIME: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1653,7 +1653,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_ACTIVITY_DECISION_POS_MAX_COUNT: {
+				case SAMSUNG_EVK_DVS_ACTIVITY_DECISION_POS_MAX_COUNT: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1678,9 +1678,9 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 			}
 			break;
 
-		case DVX_S_DVS_BIAS:
+		case SAMSUNG_EVK_DVS_BIAS:
 			switch (paramAddr) {
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOG: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOG: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1692,7 +1692,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_SF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_SF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1704,7 +1704,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_ON: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_ON: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1716,7 +1716,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_nRST: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_nRST: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(
@@ -1728,7 +1728,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGA: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOGA: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS,
@@ -1740,7 +1740,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_RANGE_LOGD: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_RANGE_LOGD: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS,
@@ -1752,7 +1752,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_LEVEL_SF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_LEVEL_SF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
@@ -1763,7 +1763,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_LEVEL_nOFF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_LEVEL_nOFF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_LEVEL_SFOFF, &currVal)) {
@@ -1774,7 +1774,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_AMP: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_AMP: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_AMP, &currVal)) {
@@ -1785,7 +1785,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_ON: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_ON: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_ON, &currVal)) {
@@ -1796,7 +1796,7 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 					break;
 				}
 
-				case DVX_S_DVS_BIAS_CURRENT_OFF: {
+				case SAMSUNG_EVK_DVS_BIAS_CURRENT_OFF: {
 					uint8_t currVal = 0;
 
 					if (!i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_BIAS_CURRENT_OFF, &currVal)) {
@@ -1821,11 +1821,11 @@ bool dvExplorerSConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAdd
 	return (true);
 }
 
-bool dvExplorerSDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
+bool samsungEVKDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),
 	void *dataShutdownUserPtr) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
 	usbSetShutdownCallback(&state->usbState, dataShutdownNotify, dataShutdownUserPtr);
 
@@ -1835,60 +1835,60 @@ bool dvExplorerSDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void 
 	containerGenerationCommitTimestampReset(&state->container);
 
 	if (!dataExchangeBufferInit(&state->dataExchange)) {
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to initialize data exchange buffer.");
 		return (false);
 	}
 
 	// Allocate packets.
-	if (!containerGenerationAllocate(&state->container, DV_EXPLORER_S_EVENT_TYPES)) {
+	if (!containerGenerationAllocate(&state->container, SAMSUNG_EVK_EVENT_TYPES)) {
 		freeAllDataMemory(state);
 
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 		return (false);
 	}
 
 	state->currentPackets.polarity
-		= caerPolarityEventPacketAllocate(DV_EXPLORER_S_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerPolarityEventPacketAllocate(SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.polarity == NULL) {
 		freeAllDataMemory(state);
 
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 		return (false);
 	}
 
 	state->currentPackets.special
-		= caerSpecialEventPacketAllocate(DV_EXPLORER_S_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerSpecialEventPacketAllocate(SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 		return (false);
 	}
 
 	// And reset the USB side of things.
-	usbControlResetDataEndpoint(&state->usbState, DV_EXPLORER_S_DATA_ENDPOINT);
+	usbControlResetDataEndpoint(&state->usbState, SAMSUNG_EVK_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
 
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to start data transfers.");
 		return (false);
 	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
-		dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_MODE, DVX_S_DVS_MODE_STREAM);
-		dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_TIMESTAMP_RESET, true);
+		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_MODE, SAMSUNG_EVK_DVS_MODE_STREAM);
+		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMESTAMP_RESET, true);
 	}
 
 	return (true);
 }
 
-bool dvExplorerSDataStop(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+bool samsungEVKDataStop(caerDeviceHandle cdh) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
 	if (dataExchangeStopProducers(&state->dataExchange)) {
-		dvExplorerSConfigSet(cdh, DVX_S_DVS, DVX_S_DVS_MODE, DVX_S_DVS_MODE_OFF);
+		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_MODE, SAMSUNG_EVK_DVS_MODE_OFF);
 	}
 
 	usbDataTransfersStop(&state->usbState);
@@ -1905,15 +1905,15 @@ bool dvExplorerSDataStop(caerDeviceHandle cdh) {
 	return (true);
 }
 
-caerEventPacketContainer dvExplorerSDataGet(caerDeviceHandle cdh) {
-	dvExplorerSHandle handle = (dvExplorerSHandle) cdh;
-	dvExplorerSState state   = &handle->state;
+caerEventPacketContainer samsungEVKDataGet(caerDeviceHandle cdh) {
+	samsungEVKHandle handle = (samsungEVKHandle) cdh;
+	samsungEVKState state   = &handle->state;
 
 	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
 
 static inline bool ensureSpaceForEvents(
-	caerEventPacketHeader *packet, size_t position, size_t numEvents, dvExplorerSHandle handle) {
+	caerEventPacketHeader *packet, size_t position, size_t numEvents, samsungEVKHandle handle) {
 	if ((position + numEvents) <= (size_t) caerEventPacketHeaderGetEventCapacity(*packet)) {
 		return (true);
 	}
@@ -1921,7 +1921,7 @@ static inline bool ensureSpaceForEvents(
 	caerEventPacketHeader grownPacket
 		= caerEventPacketGrow(*packet, caerEventPacketHeaderGetEventCapacity(*packet) * 2);
 	if (grownPacket == NULL) {
-		dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
+		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to grow event packet of type %d.",
 			caerEventPacketHeaderGetEventType(*packet));
 		return (false);
 	}
@@ -1930,9 +1930,9 @@ static inline bool ensureSpaceForEvents(
 	return (true);
 }
 
-static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
-	dvExplorerSHandle handle = vhd;
-	dvExplorerSState state   = &handle->state;
+static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
+	samsungEVKHandle handle = vhd;
+	samsungEVKState state   = &handle->state;
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -1944,32 +1944,32 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 
 	// Truncate off any extra partial event.
 	if ((bufferSize & 0x03) != 0) {
-		dvExplorerSLog(
+		samsungEVKLog(
 			CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bufferSize);
 		bufferSize &= ~((size_t) 0x03);
 	}
 
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
 		// Allocate new packets for next iteration as needed.
-		if (!containerGenerationAllocate(&state->container, DV_EXPLORER_S_EVENT_TYPES)) {
-			dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+		if (!containerGenerationAllocate(&state->container, SAMSUNG_EVK_EVENT_TYPES)) {
+			samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
 			return;
 		}
 
 		if (state->currentPackets.special == NULL) {
 			state->currentPackets.special
-				= caerSpecialEventPacketAllocate(DV_EXPLORER_S_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+				= caerSpecialEventPacketAllocate(SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 			if (state->currentPackets.special == NULL) {
-				dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
+				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
 			}
 		}
 
 		if (state->currentPackets.polarity == NULL) {
 			state->currentPackets.polarity
-				= caerPolarityEventPacketAllocate(DV_EXPLORER_S_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+				= caerPolarityEventPacketAllocate(SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 			if (state->currentPackets.polarity == NULL) {
-				dvExplorerSLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
+				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
 			}
 		}
@@ -1988,7 +1988,7 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 			// SGROUP or MGROUP event.
 			if (event & 0x76000000) {
 				// TODO: MGROUP support.
-				dvExplorerSLog(CAER_LOG_CRITICAL, handle, "MGROUP not handled.");
+				samsungEVKLog(CAER_LOG_CRITICAL, handle, "MGROUP not handled.");
 			}
 			else {
 				// SGROUP address.
@@ -2030,10 +2030,6 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 				uint16_t timestampSub = (event >> 11) & 0x03FF;
 				bool startOfFrame     = (event >> 21) & 0x01;
 
-				if (startOfFrame) {
-					dvExplorerSLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
-				}
-
 				state->dvs.lastX = columnAddr;
 
 				// Timestamp handling
@@ -2051,6 +2047,20 @@ static void dvExplorerSEventTranslator(void *vhd, const uint8_t *buffer, size_t 
 					&state->deviceLogLevel);
 
 				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
+				if (startOfFrame) {
+					samsungEVKLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
+
+					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+							(size_t) state->currentPackets.specialPosition, 1, handle)) {
+						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+							state->currentPackets.special, state->currentPackets.specialPosition);
+						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
+					}
+				}
 			}
 
 			// TIMESTAMP event.

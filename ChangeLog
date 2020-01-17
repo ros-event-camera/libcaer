@@ -1,7 +1,12 @@
-Release 3.3.0 - XX.01.2020
+Release 3.3.1 - 17.01.2020
 
 NEW FEATURES
-- Support for new DV Explorer (S) devices added.
+- Support for new DVXplorer and Samsung EVK devices added.
+
+
+Release 3.3.0 - 24.12.2019
+
+NEW FEATURES
 - Support for mini-eDVS serial device added to eDVS code.
 
 BUG FIXES

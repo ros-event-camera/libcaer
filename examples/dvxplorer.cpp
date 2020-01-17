@@ -1,4 +1,4 @@
-#include <libcaercpp/devices/dv_explorer.hpp>
+#include <libcaercpp/devices/dvxplorer.hpp>
 
 #include <atomic>
 #include <csignal>
@@ -63,13 +63,13 @@ int main(void) {
 #endif
 
 	// Open a DVS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-	libcaer::devices::dvExplorer handle = libcaer::devices::dvExplorer(1);
+	auto handle = libcaer::devices::dvXplorer(1);
 
 	// Let's take a look at the information we have on the device.
 	auto info = handle.infoGet();
 
-	printf("%s --- ID: %d, DVS X: %d, DVS Y: %d, Firmware: %d.\n", info.deviceString, info.deviceID, info.dvsSizeX,
-		info.dvsSizeY, info.firmwareVersion);
+	printf("%s --- ID: %d, DVS X: %d, DVS Y: %d, Firmware: %d, Logic: %d.\n", info.deviceString, info.deviceID,
+		info.dvsSizeX, info.dvsSizeY, info.firmwareVersion, info.logicVersion);
 
 	// Send the default configuration before using the device.
 	// No configuration is sent automatically!
