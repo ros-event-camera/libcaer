@@ -2798,20 +2798,22 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 									break;
 
 								case 1: {
-									int16_t accelX = I16T((state->imu.tmpData << 8) | misc8Data);
-									if (state->imu.flipX) {
-										accelX = I16T(-accelX);
-									}
-									caerIMU6EventSetAccelX(&state->imu.currentEvent, accelX / state->imu.accelScale);
-									break;
-								}
-
-								case 3: {
+									// X/Y axes are inverted due to IMU chip rotation.
 									int16_t accelY = I16T((state->imu.tmpData << 8) | misc8Data);
 									if (state->imu.flipY) {
 										accelY = I16T(-accelY);
 									}
 									caerIMU6EventSetAccelY(&state->imu.currentEvent, accelY / state->imu.accelScale);
+									break;
+								}
+
+								case 3: {
+									// X/Y axes are inverted due to IMU chip rotation.
+									int16_t accelX = I16T((state->imu.tmpData << 8) | misc8Data);
+									if (state->imu.flipX) {
+										accelX = I16T(-accelX);
+									}
+									caerIMU6EventSetAccelX(&state->imu.currentEvent, accelX / state->imu.accelScale);
 									break;
 								}
 
@@ -2851,20 +2853,22 @@ static void dvExplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								}
 
 								case 9: {
-									int16_t gyroX = I16T((state->imu.tmpData << 8) | misc8Data);
-									if (state->imu.flipX) {
-										gyroX = I16T(-gyroX);
-									}
-									caerIMU6EventSetGyroX(&state->imu.currentEvent, gyroX / state->imu.gyroScale);
-									break;
-								}
-
-								case 11: {
+									// X/Y axes are inverted due to IMU chip rotation.
 									int16_t gyroY = I16T((state->imu.tmpData << 8) | misc8Data);
 									if (state->imu.flipY) {
 										gyroY = I16T(-gyroY);
 									}
 									caerIMU6EventSetGyroY(&state->imu.currentEvent, gyroY / state->imu.gyroScale);
+									break;
+								}
+
+								case 11: {
+									// X/Y axes are inverted due to IMU chip rotation.
+									int16_t gyroX = I16T((state->imu.tmpData << 8) | misc8Data);
+									if (state->imu.flipX) {
+										gyroX = I16T(-gyroX);
+									}
+									caerIMU6EventSetGyroX(&state->imu.currentEvent, gyroX / state->imu.gyroScale);
 									break;
 								}
 
