@@ -49,7 +49,7 @@ ssize_t dvXplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
 		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVXPLORER;
 		(*discoveredDevices)[i].deviceErrorOpen    = foundDVXplorer[i].errorOpen;
 		(*discoveredDevices)[i].deviceErrorVersion = foundDVXplorer[i].errorVersion;
-		struct caer_dvx_info *dvXplorerInfoPtr    = &((*discoveredDevices)[i].deviceInfo.dvXplorerInfo);
+		struct caer_dvx_info *dvXplorerInfoPtr     = &((*discoveredDevices)[i].deviceInfo.dvXplorerInfo);
 
 		dvXplorerInfoPtr->deviceUSBBusNumber     = foundDVXplorer[i].busNumber;
 		dvXplorerInfoPtr->deviceUSBDeviceAddress = foundDVXplorer[i].devAddress;
@@ -2446,8 +2446,7 @@ static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bu
 
 	// Truncate off any extra partial event.
 	if ((bufferSize & 0x01) != 0) {
-		dvXplorerLog(
-			CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bufferSize);
+		dvXplorerLog(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of two.", bufferSize);
 		bufferSize &= ~((size_t) 0x01);
 	}
 
@@ -2893,8 +2892,8 @@ static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bu
 
 							// Set correct IMU accel and gyro scales, used to interpret subsequent
 							// IMU samples from the device.
-							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 2) & 0x03);
-							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x03);
+							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 3) & 0x03);
+							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x07);
 
 							// Set expected type of data to come from IMU (accel, gyro, temp).
 							state->imu.type = (data >> 5) & 0x07;

@@ -1573,8 +1573,8 @@ static void dvs132sEventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 
 							// Set correct IMU accel and gyro scales, used to interpret subsequent
 							// IMU samples from the device.
-							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 2) & 0x03);
-							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x03);
+							state->imu.accelScale = calculateIMUAccelScale(U16T(data >> 3) & 0x03);
+							state->imu.gyroScale  = calculateIMUGyroScale(data & 0x07);
 
 							// Set expected type of data to come from IMU (accel, gyro, temp).
 							state->imu.type = (data >> 5) & 0x07;
