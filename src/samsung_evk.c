@@ -39,9 +39,9 @@ ssize_t samsungEVKFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	caerLogDisable(true);
 	for (size_t i = 0; i < (size_t) result; i++) {
 		// This is a SAMSUNG_EVK.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_SAMSUNG_EVK;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundSamsungEVK[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundSamsungEVK[i].errorVersion;
+		(*discoveredDevices)[i].deviceType              = CAER_DEVICE_SAMSUNG_EVK;
+		(*discoveredDevices)[i].deviceErrorOpen         = foundSamsungEVK[i].errorOpen;
+		(*discoveredDevices)[i].deviceErrorVersion      = foundSamsungEVK[i].errorVersion;
 		struct caer_samsung_evk_info *samsungEVKInfoPtr = &((*discoveredDevices)[i].deviceInfo.samsungEVKInfo);
 
 		samsungEVKInfoPtr->deviceUSBBusNumber     = foundSamsungEVK[i].busNumber;
@@ -222,8 +222,8 @@ caerDeviceHandle samsungEVKOpen(
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
-	samsungEVKConfigSet(
-		(caerDeviceHandle) handle, SAMSUNG_EVK_DVS_BIAS, SAMSUNG_EVK_DVS_BIAS_SIMPLE, SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT);
+	samsungEVKConfigSet((caerDeviceHandle) handle, SAMSUNG_EVK_DVS_BIAS, SAMSUNG_EVK_DVS_BIAS_SIMPLE,
+		SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT);
 
 	// System settings.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
@@ -308,8 +308,8 @@ bool samsungEVKSendDefaultConfig(caerDeviceHandle cdh) {
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_BIAS, SAMSUNG_EVK_DVS_BIAS_SIMPLE, SAMSUNG_EVK_DVS_BIAS_SIMPLE_DEFAULT);
 
 	// External trigger.
-	samsungEVKConfigSet(
-		cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE, SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
+	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE,
+		SAMSUNG_EVK_DVS_EXTERNAL_TRIGGER_MODE_TIMESTAMP_RESET);
 
 	// Digital readout configuration.
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_GLOBAL_HOLD_ENABLE, true);
@@ -323,8 +323,10 @@ bool samsungEVKSendDefaultConfig(caerDeviceHandle cdh) {
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_ENABLE, false);
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_ENABLE, false);
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_DUAL_BINNING_ENABLE, false);
-	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL_NONE);
-	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL_NONE);
+	samsungEVKConfigSet(
+		cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL, SAMSUNG_EVK_DVS_SUBSAMPLE_VERTICAL_NONE);
+	samsungEVKConfigSet(
+		cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL, SAMSUNG_EVK_DVS_SUBSAMPLE_HORIZONTAL_NONE);
 
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_0, 0x7FFF);
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_AREA_BLOCKING_1, 0x7FFF);
@@ -547,7 +549,8 @@ bool samsungEVKConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_17:
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_18:
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
+					uint16_t regAddr
+						= REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
 
 					if (!i2cConfigSend(&state->usbState, DEVICE_DVS, regAddr, U8T(param >> 8))) {
 						return (false);
@@ -1247,7 +1250,8 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_17:
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_18:
 				case SAMSUNG_EVK_DVS_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
+					uint16_t regAddr
+						= REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - SAMSUNG_EVK_DVS_AREA_BLOCKING_0));
 
 					uint8_t currVal = 0;
 
@@ -2034,6 +2038,14 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 				// Timestamp handling
 				if (timestampSub != state->timestamps.lastSub) {
+					if (state->timestamps.currentReference == state->timestamps.lastReference
+						&& timestampSub < state->timestamps.lastSub) {
+						// Reference did not change, but sub-timestamp did wrap around.
+						// We must have lost a main reference timestamp due to high traffic.
+						// In this case we increase manually by 1ms, as if we'd received it.
+						state->timestamps.lastReference += 1000;
+					}
+
 					state->timestamps.currentReference = state->timestamps.lastReference;
 				}
 
