@@ -1,3 +1,11 @@
+Release 3.3.2 - 24.01.2020
+
+BUG FIXES
+- DVXplorer/DVS132S: fix IMU accel/gyro scale detection.
+- Samsung EVK: fix non-monotonic timestamps when a reference timestamp
+  event is lost due to high USB traffic.
+
+
 Release 3.3.1 - 17.01.2020
 
 NEW FEATURES
