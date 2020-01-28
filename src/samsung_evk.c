@@ -368,8 +368,10 @@ bool samsungEVKSendDefaultConfig(caerDeviceHandle cdh) {
 
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_X_START_ADDRESS, 0);
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS, 0);
-	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS, 639);
-	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS, 479);
+	samsungEVKConfigSet(
+		cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS, U32T(handle->info.dvsSizeX - 1));
+	samsungEVKConfigSet(
+		cdh, SAMSUNG_EVK_DVS_CROPPER, SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS, U32T(handle->info.dvsSizeY - 1));
 
 	// Activity decision block.
 	samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS_ACTIVITY_DECISION, SAMSUNG_EVK_DVS_ACTIVITY_DECISION_ENABLE, false);
@@ -754,7 +756,7 @@ bool samsungEVKConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 
 				case SAMSUNG_EVK_DVS_CROPPER_Y_START_ADDRESS:
 				case SAMSUNG_EVK_DVS_CROPPER_Y_END_ADDRESS: {
-					if (param >= 480) {
+					if (param >= U32T(handle->info.dvsSizeY)) {
 						return (false);
 					}
 
@@ -794,7 +796,7 @@ bool samsungEVKConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 				}
 
 				case SAMSUNG_EVK_DVS_CROPPER_X_START_ADDRESS: {
-					if (param >= 640) {
+					if (param >= U32T(handle->info.dvsSizeX)) {
 						return (false);
 					}
 
@@ -805,7 +807,7 @@ bool samsungEVKConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 				}
 
 				case SAMSUNG_EVK_DVS_CROPPER_X_END_ADDRESS: {
-					if (param >= 640) {
+					if (param >= U32T(handle->info.dvsSizeX)) {
 						return (false);
 					}
 
@@ -1880,8 +1882,8 @@ bool samsungEVKDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *
 	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
-		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_MODE, SAMSUNG_EVK_DVS_MODE_STREAM);
 		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_TIMESTAMP_RESET, true);
+		samsungEVKConfigSet(cdh, SAMSUNG_EVK_DVS, SAMSUNG_EVK_DVS_MODE, SAMSUNG_EVK_DVS_MODE_STREAM);
 	}
 
 	return (true);
