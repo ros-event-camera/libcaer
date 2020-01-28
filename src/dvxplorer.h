@@ -124,6 +124,8 @@ struct dvxplorer_state {
 		uint16_t lastYG2;
 		int16_t sizeX;
 		int16_t sizeY;
+		bool flipX;
+		bool flipY;
 		bool invertXY;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
