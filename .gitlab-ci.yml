@@ -201,6 +201,7 @@ release_ubuntu:
     - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
   script:
+    - if [[ -z "${CI_COMMIT_TAG}" ]] ; then exit 0; fi
     - cd packaging/debian-source-package/
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
@@ -222,6 +223,7 @@ release_fedora:
     - mkdir -p ~/.config/
     - cp "${COPR_API_KEY}" ~/.config/copr
   script:
+    - if [[ -z "${CI_COMMIT_TAG}" ]] ; then exit 0; fi
     - cd packaging/fedora-source-package/
     - ./packageFedora.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
     - copr-cli build --nowait inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc31.src.rpm"
@@ -242,6 +244,7 @@ release_gentoo_arch_brew:
     - ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
     - cp "${GITCI_SSH_CONF}" ~/.gitconfig
   script:
+    - if [[ -z "${CI_COMMIT_TAG}" ]] ; then exit 0; fi
     - cd packaging/linux/
     # Gentoo release
     - ./gentoo-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --pkg-category dev-libs
