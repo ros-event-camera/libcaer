@@ -260,6 +260,8 @@ caerDeviceHandle dvXplorerOpen(
 
 	spiConfigReceive(&state->usbState, DVX_DVS, DVX_DVS_ORIENTATION_INFO, &param32);
 	state->dvs.invertXY = param32 & 0x04;
+	state->dvs.flipX    = param32 & 0x02;
+	state->dvs.flipY    = param32 & 0x01;
 
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
 		state->dvs.invertXY);
@@ -485,8 +487,8 @@ bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
 
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_START_ADDRESS, 0);
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS, 0);
-	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_END_ADDRESS, 639);
-	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS, 479);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_X_END_ADDRESS, U32T(handle->info.dvsSizeX - 1));
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS, U32T(handle->info.dvsSizeY - 1));
 
 	// Activity decision block.
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_ENABLE, false);
@@ -1012,8 +1014,12 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 
 				case DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS:
 				case DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS: {
-					if (param >= 480) {
+					if (param >= U32T(handle->info.dvsSizeY)) {
 						return (false);
+					}
+
+					if (state->dvs.flipY) {
+						param = U32T(handle->info.dvsSizeY) - 1 - param;
 					}
 
 					// Cropper has a special corner case:
@@ -1022,11 +1028,21 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 					// We must track the addresses, detect this, and properly
 					// update all the masks as needed.
 					if (paramAddr == DVX_DVS_CHIP_CROPPER_Y_START_ADDRESS) {
-						state->dvs.cropperYStart = U16T(param);
+						if (state->dvs.flipY) {
+							state->dvs.cropperYEnd = U16T(param);
+						}
+						else {
+							state->dvs.cropperYStart = U16T(param);
+						}
 					}
 
 					if (paramAddr == DVX_DVS_CHIP_CROPPER_Y_END_ADDRESS) {
-						state->dvs.cropperYEnd = U16T(param);
+						if (state->dvs.flipY) {
+							state->dvs.cropperYStart = U16T(param);
+						}
+						else {
+							state->dvs.cropperYEnd = U16T(param);
+						}
 					}
 
 					uint8_t startGroup = U8T(state->dvs.cropperYStart / 8);
@@ -1052,24 +1068,42 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				}
 
 				case DVX_DVS_CHIP_CROPPER_X_START_ADDRESS: {
-					if (param >= 640) {
+					if (param >= U32T(handle->info.dvsSizeX)) {
 						return (false);
 					}
 
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, U8T(param >> 8));
-					return (
-						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, U8T(param)));
+					if (state->dvs.flipX) {
+						param = U32T(handle->info.dvsSizeX) - 1 - param;
+
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, U8T(param >> 8));
+						return (spiConfigSend(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, U8T(param)));
+					}
+					else {
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, U8T(param >> 8));
+						return (spiConfigSend(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, U8T(param)));
+					}
 					break;
 				}
 
 				case DVX_DVS_CHIP_CROPPER_X_END_ADDRESS: {
-					if (param >= 640) {
+					if (param >= U32T(handle->info.dvsSizeX)) {
 						return (false);
 					}
 
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, U8T(param >> 8));
-					return (
-						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, U8T(param)));
+					if (state->dvs.flipX) {
+						param = U32T(handle->info.dvsSizeX) - 1 - param;
+
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS, U8T(param >> 8));
+						return (spiConfigSend(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_START_ADDRESS + 1, U8T(param)));
+					}
+					else {
+						spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS, U8T(param >> 8));
+						return (spiConfigSend(
+							&state->usbState, DEVICE_DVS, REGISTER_CROPPER_X_END_ADDRESS + 1, U8T(param)));
+					}
 					break;
 				}
 
