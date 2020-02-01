@@ -1,3 +1,10 @@
+Release 3.3.3 - 01.02.2020
+
+BUG FIXES
+- Samsung EVK: fix possible non-monotonic timestamp at startup.
+- DVXplorer: fix crop start/end address inversion.
+
+
 Release 3.3.2 - 24.01.2020
 
 BUG FIXES
