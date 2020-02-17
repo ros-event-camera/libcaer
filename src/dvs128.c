@@ -126,7 +126,7 @@ caerDeviceHandle dvs128Open(
 	// Logging settings (initialize to global log-level).
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
-	atomic_store(&state->usbState.usbLogLevel, globalLogLevel);
+	usbSetLogLevel(&state->usbState, globalLogLevel);
 
 	// Always master by default.
 	atomic_store(&state->dvs.isMaster, true);
@@ -287,7 +287,7 @@ bool dvs128ConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, ui
 					atomic_store(&state->deviceLogLevel, U8T(param));
 
 					// Set USB log-level to this value too.
-					atomic_store(&state->usbState.usbLogLevel, U8T(param));
+					usbSetLogLevel(&state->usbState, param);
 					break;
 
 				default:
