@@ -317,7 +317,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 		return (false);
 	}
 
+#if LIBUSB_API_VERSION >= 0x01000107
 	libusb_set_log_cb(state->deviceContext, &libusbUSBLog, LIBUSB_LOG_CB_CONTEXT);
+#endif
 	usbSetLogLevel(state, atomic_load(&state->usbLogLevel));
 
 	bool openingSpecificUSBAddr = ((busNumber > 0) && (devAddress > 0));
@@ -681,6 +683,7 @@ void usbSetLogLevel(usbState state, enum caer_log_level level) {
 	// Set USB log-level to this value too.
 	atomic_store(&state->usbLogLevel, level);
 
+#if LIBUSB_API_VERSION >= 0x01000107
 	if (state->deviceContext != NULL) {
 		switch (level) {
 			case CAER_LOG_ERROR:
@@ -708,6 +711,7 @@ void usbSetLogLevel(usbState state, enum caer_log_level level) {
 				break;
 		}
 	}
+#endif
 }
 
 void usbSetThreadName(usbState state, const char *threadName) {
