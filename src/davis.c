@@ -189,7 +189,7 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	// Logging settings (initialize to global log-level).
 	enum caer_log_level globalLogLevel = caerLogLevelGet();
 	atomic_store(&state->deviceLogLevel, globalLogLevel);
-	atomic_store(&handle->usbState.usbLogLevel, globalLogLevel);
+	usbSetLogLevel(&handle->usbState, globalLogLevel);
 
 	// Set device thread name. Maximum length of 15 chars due to Linux limitations.
 	char usbThreadName[MAX_THREAD_NAME_LENGTH + 1];
@@ -337,7 +337,7 @@ bool davisConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uin
 	}
 	else if (modAddr == CAER_HOST_CONFIG_LOG && paramAddr == CAER_HOST_CONFIG_LOG_LEVEL) {
 		// Set USB log-level to this value too.
-		atomic_store(&handle->usbState.usbLogLevel, U8T(param));
+		usbSetLogLevel(&handle->usbState, param);
 
 		// Also set standard device log-level.
 		return (davisCommonConfigSet(&handle->cHandle, CAER_HOST_CONFIG_LOG, CAER_HOST_CONFIG_LOG_LEVEL, param));

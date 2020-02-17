@@ -71,6 +71,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	struct usb_info *deviceUSBInfo);
 void usbDeviceClose(usbState state);
 
+void usbSetLogLevel(usbState state, enum caer_log_level level);
 void usbSetThreadName(usbState state, const char *threadName);
 void usbSetDataCallback(usbState state,
 	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent),

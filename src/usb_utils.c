@@ -67,6 +67,15 @@ static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char 
 	va_end(argumentList);
 }
 
+static void LIBUSB_CALL libusbUSBLog(libusb_context *ctx, enum libusb_log_level level, const char *str) {
+	if (level == LIBUSB_LOG_LEVEL_ERROR || level == LIBUSB_LOG_LEVEL_WARNING) {
+		caerLog(level + 2, "USB", "%s", str);
+	}
+	else if (level == LIBUSB_LOG_LEVEL_INFO || level == LIBUSB_LOG_LEVEL_DEBUG) {
+		caerLog(level + 3, "USB", "%s", str);
+	}
+}
+
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
 	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices) {
 	// Set to NULL initially (for error return).
@@ -307,6 +316,11 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 		errno = CAER_ERROR_RESOURCE_ALLOCATION;
 		return (false);
 	}
+
+#if LIBUSB_API_VERSION >= 0x01000107
+	libusb_set_log_cb(state->deviceContext, &libusbUSBLog, LIBUSB_LOG_CB_CONTEXT);
+#endif
+	usbSetLogLevel(state, atomic_load(&state->usbLogLevel));
 
 	bool openingSpecificUSBAddr = ((busNumber > 0) && (devAddress > 0));
 	bool openingSpecificSerial  = ((serialNumber != NULL) && !caerStrEquals(serialNumber, ""));
@@ -663,6 +677,41 @@ void usbDeviceClose(usbState state) {
 	libusb_close(state->deviceHandle);
 
 	libusb_exit(state->deviceContext);
+}
+
+void usbSetLogLevel(usbState state, enum caer_log_level level) {
+	// Set USB log-level to this value too.
+	atomic_store(&state->usbLogLevel, level);
+
+#if LIBUSB_API_VERSION >= 0x01000107
+	if (state->deviceContext != NULL) {
+		switch (level) {
+			case CAER_LOG_ERROR:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_ERROR);
+				break;
+
+			case CAER_LOG_WARNING:
+			case CAER_LOG_NOTICE:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
+				break;
+
+			case CAER_LOG_INFO:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_INFO);
+				break;
+
+			case CAER_LOG_DEBUG:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_DEBUG);
+				break;
+
+			default:
+			case CAER_LOG_EMERGENCY:
+			case CAER_LOG_ALERT:
+			case CAER_LOG_CRITICAL:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
+				break;
+		}
+	}
+#endif
 }
 
 void usbSetThreadName(usbState state, const char *threadName) {
