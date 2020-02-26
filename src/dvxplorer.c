@@ -751,12 +751,21 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				}
 
 				case DVX_DVS_CHIP_DUAL_BINNING_ENABLE: {
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						// Feature not available on LITE.
+						return (false);
+					}
+
 					return (spiConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_DUAL_BINNING, (param) ? (0x01) : (0x00)));
 					break;
 				}
 
 				case DVX_DVS_CHIP_SUBSAMPLE_VERTICAL: {
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						param = (param << 1) | 0x01;
+					}
+
 					if (param >= 8) {
 						return (false);
 					}
@@ -774,6 +783,10 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				}
 
 				case DVX_DVS_CHIP_SUBSAMPLE_HORIZONTAL: {
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						param = (param << 1) | 0x01;
+					}
+
 					if (param >= 8) {
 						return (false);
 					}
@@ -1668,6 +1681,11 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				}
 
 				case DVX_DVS_CHIP_DUAL_BINNING_ENABLE: {
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						// Feature not available on LITE.
+						return (false);
+					}
+
 					uint32_t currVal = 0;
 
 					if (!spiConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_ENABLE, &currVal)) {
@@ -1686,6 +1704,10 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 					}
 
 					*param = ((currVal & 0x38) >> 3);
+
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						*param = (*param >> 1);
+					}
 					break;
 				}
 
@@ -1697,6 +1719,10 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 					}
 
 					*param = (currVal & 0x07);
+
+					if (handle->info.chipID == DVXPLORER_LITE_CHIP_ID) {
+						*param = (*param >> 1);
+					}
 					break;
 				}
 
