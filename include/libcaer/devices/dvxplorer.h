@@ -28,6 +28,11 @@ extern "C" {
  * 640x480, semi-synchronous readout.
  */
 #define DVXPLORER_CHIP_ID 20
+/**
+ * Samsung chip identifier.
+ * 320x240, semi-synchronous readout.
+ */
+#define DVXPLORER_LITE_CHIP_ID 19
 
 /**
  * Module address: device-side Multiplexer configuration.
