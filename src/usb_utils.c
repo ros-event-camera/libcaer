@@ -156,16 +156,25 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			(*foundUSBDevices)[matches].busNumber  = libusb_get_bus_number(devicesList[i]);
 			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
 
+			// Unknown serial number.
+			(*foundUSBDevices)[matches].serialNumber[0] = 'N';
+			(*foundUSBDevices)[matches].serialNumber[1] = '/';
+			(*foundUSBDevices)[matches].serialNumber[2] = 'A';
+			// Zero-init means already NUL-terminated.
+
 			// Verify device firmware version before opening, so that firmwareVersion
 			// is always defined, even on open errors.
 			bool firmwareVersionOK = true;
 
 			if (requiredFirmwareVersion >= 0) {
-				if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
+				uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
+
+				if (firmwareVersion != U8T(requiredFirmwareVersion)) {
 					firmwareVersionOK = false;
 				}
 
-				(*foundUSBDevices)[matches].firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
+				(*foundUSBDevices)[matches].firmwareVersion = I16T(firmwareVersion);
+				(*foundUSBDevices)[matches].errorVersion    = true;
 			}
 
 			libusb_device_handle *devHandle = NULL;
@@ -176,21 +185,27 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				continue;
 			}
 
-			// Get serial number.
-			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {'N', 'O', '_', 'S', 'N', 0};
-			int getStringDescResult                         = libusb_get_string_descriptor_ascii(
-                devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+			if (devDesc.iSerialNumber != 0) {
+				// Get serial number.
+				char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
+				int getStringDescResult                         = libusb_get_string_descriptor_ascii(
+                    devHandle, devDesc.iSerialNumber, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
-			// Check serial number success and length.
-			if (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
-				libusb_close(devHandle);
+				// Check serial number success and length.
+				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+					libusb_close(devHandle);
 
-				(*foundUSBDevices)[matches].errorOpen = true;
-				matches++;
-				continue;
+					(*foundUSBDevices)[matches].errorOpen = true;
+					matches++;
+					continue;
+				}
+
+				// Copy serial number characters.
+				if (getStringDescResult > 0) {
+					memcpy((*foundUSBDevices)[matches].serialNumber, serialNumber, (size_t) getStringDescResult);
+					(*foundUSBDevices)[matches].serialNumber[getStringDescResult] = 0x00;
+				}
 			}
-
-			strncpy((*foundUSBDevices)[matches].serialNumber, serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 			// Check that the active configuration is set to number 1. If not, do so.
 			// Then claim interface 0 (default).
@@ -388,60 +403,73 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					}
 				}
 
-				// Get the device's serial number.
-				char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {'N', 'O', '_', 'S', 'N', 0};
-				int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
-					(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+				// Unknown serial number.
+				deviceUSBInfo->serialNumber[0] = 'N';
+				deviceUSBInfo->serialNumber[1] = '/';
+				deviceUSBInfo->serialNumber[2] = 'A';
+				deviceUSBInfo->serialNumber[3] = 0x00;
 
-				// Check serial number success and length.
-				if (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH) {
-					libusb_close(devHandle);
-					devHandle = NULL;
+				if (devDesc.iSerialNumber != 0) {
+					// Get the device's serial number.
+					char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
 
-					errno = CAER_ERROR_COMMUNICATION;
+					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
+						(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
-					if (openingSpecificUSBAddr) {
-						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
+					// Check serial number success and length.
+					if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+						libusb_close(devHandle);
+						devHandle = NULL;
 
-						// This is the only device that can match a specific USB address.
-						// So if we fail here, we can stop and error out.
-						break;
+						errno = CAER_ERROR_COMMUNICATION;
+
+						if (openingSpecificUSBAddr) {
+							caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
+
+							// This is the only device that can match a specific USB address.
+							// So if we fail here, we can stop and error out.
+							break;
+						}
+						else {
+							caerUSBLog(
+								CAER_LOG_ERROR, state, "Failed to get a valid USB serial number. Trying next device.");
+
+							continue;
+						}
 					}
-					else {
-						caerUSBLog(
-							CAER_LOG_ERROR, state, "Failed to get a valid USB serial number. Trying next device.");
 
-						continue;
+					// Check the serial number restriction, if any is present.
+					if (openingSpecificSerial
+						&& !caerStrEqualsUpTo(serialNumber, deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH)) {
+						libusb_close(devHandle);
+						devHandle = NULL;
+
+						if (openingSpecificUSBAddr) {
+							caerUSBLog(CAER_LOG_CRITICAL, state,
+								"USB serial number restriction is present (%s) in addition to USB bus/address "
+								"restrictions, this single candidate device didn't match it (%s).",
+								serialNumber, deviceSerialNumber);
+
+							// This is the only device that can match a specific USB address.
+							// So if we fail here, we can stop and error out.
+							errno = CAER_ERROR_OPEN_ACCESS;
+							break;
+						}
+						else {
+							caerUSBLog(CAER_LOG_DEBUG, state,
+								"USB serial number restriction is present (%s), this device didn't match it (%s).",
+								serialNumber, deviceSerialNumber);
+
+							continue;
+						}
+					}
+
+					// Copy serial number over.
+					if (getStringDescResult > 0) {
+						memcpy(deviceUSBInfo->serialNumber, deviceSerialNumber, (size_t) getStringDescResult);
+						deviceUSBInfo->serialNumber[getStringDescResult] = 0x00;
 					}
 				}
-
-				// Check the serial number restriction, if any is present.
-				if (openingSpecificSerial && !caerStrEquals(serialNumber, deviceSerialNumber)) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					if (openingSpecificUSBAddr) {
-						caerUSBLog(CAER_LOG_CRITICAL, state,
-							"USB serial number restriction is present (%s) in addition to USB bus/address "
-							"restrictions, this single candidate device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						// This is the only device that can match a specific USB address.
-						// So if we fail here, we can stop and error out.
-						errno = CAER_ERROR_OPEN_ACCESS;
-						break;
-					}
-					else {
-						caerUSBLog(CAER_LOG_DEBUG, state,
-							"USB serial number restriction is present (%s), this device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						continue;
-					}
-				}
-
-				// Copy serial number over.
-				strncpy((char *) &deviceUSBInfo->serialNumber, deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 				// Check that the active configuration is set to number 1. If not, do so.
 				// Then claim interface 0 (default).
@@ -472,18 +500,20 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				bool firmwareVersionOK = true;
 
 				if (requiredFirmwareVersion >= 0) {
-					if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
+					uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
+
+					if (firmwareVersion != U8T(requiredFirmwareVersion)) {
 						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device firmware version incorrect. You have version %" PRIu8 "; but version %" PRIu8
 							" is required. Please update by following the Flashy documentation at "
 							"'https://inivation.com/support/software/reflashing/'.",
-							U8T(devDesc.bcdDevice & 0x00FF), U8T(requiredFirmwareVersion));
+							firmwareVersion, U8T(requiredFirmwareVersion));
 
 						firmwareVersionOK = false;
 						errno             = CAER_ERROR_FW_VERSION;
 					}
 
-					deviceUSBInfo->firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
+					deviceUSBInfo->firmwareVersion = I16T(firmwareVersion);
 				}
 
 				// Verify device logic version.
