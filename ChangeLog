@@ -1,3 +1,15 @@
+Release 3.3.5 - 12.03.2020
+
+INCOMPATIBLE CHANGES
+- DVXplorer (Lite): firmware update to version 8.
+  Use Flashy to update as per documentation:
+  https://inivation.gitlab.io/dv/dv-docs/docs/update-firmware/
+
+BUG FIXES
+- USB: improve detection of device serial number.
+- USB: optimize setting number/size of USB transfers.
+
+
 Release 3.3.4 - 04.03.2020
 
 INCOMPATIBLE CHANGES
