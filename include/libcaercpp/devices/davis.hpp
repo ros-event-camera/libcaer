@@ -20,8 +20,8 @@ protected:
 	}
 
 	davis(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: usb(deviceID, deviceType, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		usb(deviceID, deviceType, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 public:
@@ -29,8 +29,8 @@ public:
 	}
 
 	davis(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: usb(deviceID, CAER_DEVICE_DAVIS, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		usb(deviceID, CAER_DEVICE_DAVIS, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 	struct caer_davis_info infoGet() const noexcept {
@@ -89,8 +89,8 @@ public:
 	}
 
 	davisfx2(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: davis(deviceID, CAER_DEVICE_DAVIS_FX2, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		davis(deviceID, CAER_DEVICE_DAVIS_FX2, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 };
 
@@ -100,8 +100,8 @@ public:
 	}
 
 	davisfx3(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: davis(deviceID, CAER_DEVICE_DAVIS_FX3, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		davis(deviceID, CAER_DEVICE_DAVIS_FX3, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 };
 

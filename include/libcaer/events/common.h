@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #ifndef CAER_EVENTS_HEADER_ONLY
-#define caerLogEHO caerLog
+#	define caerLogEHO caerLog
 #else
 static inline void caerLogEHO(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
 	// Ignore logLevel, all event packet messages are critical.
@@ -49,7 +49,7 @@ static inline void caerLogEHO(enum caer_log_level logLevel, const char *subSyste
  */
 //@{
 #define VALID_MARK_SHIFT 0
-#define VALID_MARK_MASK 0x00000001
+#define VALID_MARK_MASK  0x00000001
 //@}
 
 /**
@@ -484,9 +484,9 @@ static inline bool caerGenericEventCopy(void *eventPtrDestination, const void *e
 	caerEventPacketHeaderConst headerPtrDestination, caerEventPacketHeaderConst headerPtrSource) {
 	if ((caerEventPacketHeaderGetEventType(headerPtrDestination) != caerEventPacketHeaderGetEventType(headerPtrSource))
 		|| (caerEventPacketHeaderGetEventSize(headerPtrDestination)
-			   != caerEventPacketHeaderGetEventSize(headerPtrSource))
+			!= caerEventPacketHeaderGetEventSize(headerPtrSource))
 		|| (caerEventPacketHeaderGetEventTSOverflow(headerPtrDestination)
-			   != caerEventPacketHeaderGetEventTSOverflow(headerPtrSource))) {
+			!= caerEventPacketHeaderGetEventTSOverflow(headerPtrSource))) {
 		return (false);
 	}
 
@@ -788,9 +788,10 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
 
 	if (newEventCapacity <= oldEventCapacity) {
-		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet", "Called caerEventPacketGrow() with a new capacity value (%" PRIi32
-													  ") that is equal or smaller than the old one (%" PRIi32 "). "
-													  "Only strictly growing an event packet is supported!",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
+			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32
+			") that is equal or smaller than the old one (%" PRIi32 "). "
+			"Only strictly growing an event packet is supported!",
 			newEventCapacity, oldEventCapacity);
 		return (NULL);
 	}
@@ -880,8 +881,9 @@ static inline caerEventPacketHeader caerEventPacketAppend(
 	// Zero out remaining event memory (all events invalid).
 	memset(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE
 			   + ((packetEventNumber + appendPacketEventNumber) * eventSize),
-		0, (size_t)(((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
-					* eventSize));
+		0,
+		(size_t)(((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
+				 * eventSize));
 
 	// Update header fields.
 	caerEventPacketHeaderSetEventValid(packet, (packetEventValid + appendPacketEventValid));

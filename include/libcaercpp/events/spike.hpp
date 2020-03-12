@@ -2,6 +2,7 @@
 #define LIBCAER_EVENTS_SPIKE_HPP_
 
 #include <libcaer/events/spike.h>
+
 #include "common.hpp"
 
 namespace libcaer {
@@ -112,7 +113,7 @@ protected:
 		return (*evt);
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_SPIKE_HPP_ */

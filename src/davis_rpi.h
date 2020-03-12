@@ -8,7 +8,7 @@
 #define DAVIS_RPI_REQUIRED_LOGIC_REVISION 18
 
 #define DAVIS_RPI_MAX_TRANSACTION_NUM 4096
-#define DAVIS_RPI_MAX_WAIT_REQ_COUNT 100
+#define DAVIS_RPI_MAX_WAIT_REQ_COUNT  100
 
 /**
  * Support benchmarking the GPIO data exchange performance on RPi,
@@ -28,7 +28,7 @@ enum benchmarkMode {
 
 // Alternative, simplified biasing support.
 #define DAVIS_BIAS_ADDRESS_MAX 36
-#define DAVIS_CHIP_REG_LENGTH 7
+#define DAVIS_CHIP_REG_LENGTH  7
 
 struct davis_rpi_gpio {
 	volatile uint32_t *gpioReg;

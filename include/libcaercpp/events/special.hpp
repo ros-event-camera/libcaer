@@ -2,6 +2,7 @@
 #define LIBCAER_EVENTS_SPECIAL_HPP_
 
 #include <libcaer/events/special.h>
+
 #include "common.hpp"
 
 namespace libcaer {
@@ -154,7 +155,7 @@ public:
 		return (*evt);
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_SPECIAL_HPP_ */

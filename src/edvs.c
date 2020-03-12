@@ -805,7 +805,7 @@ caerEventPacketContainer edvsDataGet(caerDeviceHandle cdh) {
 	return (dataExchangeGet(&state->dataExchange, &state->serialState.serialThreadState));
 }
 
-#define TS_WRAP_ADD 0x10000
+#define TS_WRAP_ADD   0x10000
 #define HIGH_BIT_MASK 0x80
 #define LOW_BITS_MASK 0x7F
 

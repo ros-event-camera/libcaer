@@ -2,8 +2,10 @@
 #define LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 
 #include <libcaer/events/packetContainer.h>
+
 #include "common.hpp"
 #include "utils.hpp"
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -11,7 +13,8 @@
 namespace libcaer {
 namespace events {
 
-template<class InteralIterator, class SharedPtrType> class EventPacketContainerCopyIterator {
+template<class InteralIterator, class SharedPtrType>
+class EventPacketContainerCopyIterator {
 private:
 	// Original vector iterator or const_iterator.
 	InteralIterator eventPacketsIterator;
@@ -40,8 +43,8 @@ public:
 		// - currElement() => empty/nullptr shared_ptr
 	}
 
-	EventPacketContainerCopyIterator(InteralIterator _eventPacketsIterator)
-		: eventPacketsIterator(_eventPacketsIterator) {
+	EventPacketContainerCopyIterator(InteralIterator _eventPacketsIterator) :
+		eventPacketsIterator(_eventPacketsIterator) {
 		// Don't initialize currElement, it is initialized/updated
 		// right before every use.
 	}
@@ -177,8 +180,8 @@ public:
 	/**
 	 * Construct a new EventPacketContainer.
 	 */
-	EventPacketContainer()
-		: lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
+	EventPacketContainer() :
+		lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
 	}
 
 	/**
@@ -190,8 +193,8 @@ public:
 	 *                           that can be stored in this container.
 	 *                           Must be equal to one or higher.
 	 */
-	EventPacketContainer(size_type eventPacketsNumber)
-		: lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
+	EventPacketContainer(size_type eventPacketsNumber) :
+		lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
 		if (eventPacketsNumber <= 0) {
 			throw std::invalid_argument("Negative or zero capacity not allowed on explicit construction.");
 		}
@@ -659,11 +662,11 @@ public:
 
 	// Iterator support (the returned shared_ptr are always read-only copies, so actual modifications to
 	// what is pointed to can only happen through setEventPacket() and addEventPacket()).
-	using iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::iterator,
-		std::shared_ptr<EventPacket>>;
-	using const_iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::const_iterator,
-		std::shared_ptr<const EventPacket>>;
-	using reverse_iterator       = std::reverse_iterator<iterator>;
+	using iterator         = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::iterator,
+        std::shared_ptr<EventPacket>>;
+	using const_iterator   = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::const_iterator,
+        std::shared_ptr<const EventPacket>>;
+	using reverse_iterator = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	iterator begin() noexcept {
@@ -714,7 +717,7 @@ public:
 		return (const_reverse_iterator(cbegin()));
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_PACKETCONTAINER_HPP_ */

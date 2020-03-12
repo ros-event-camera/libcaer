@@ -3,7 +3,9 @@
 
 #include "../events/special.hpp"
 #include "../events/spike.hpp"
+
 #include <libcaer/devices/dynapse.h>
+
 #include "usb.hpp"
 
 namespace libcaer {
@@ -15,8 +17,8 @@ public:
 	}
 
 	dynapse(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		usb(deviceID, CAER_DEVICE_DYNAPSE, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 	struct caer_dynapse_info infoGet() const noexcept {
@@ -142,7 +144,7 @@ public:
 		return (*spCpp);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_DYNAPSE_HPP_ */

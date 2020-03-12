@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 #define PIZERO_PERI_BASE 0x20000000
-#define GPIO_REG_BASE (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
-#define GPIO_REG_LEN 0xB4
+#define GPIO_REG_BASE    (PIZERO_PERI_BASE + 0x200000) /* GPIO controller */
+#define GPIO_REG_LEN     0xB4
 
 // GPIO setup macros. Always use GPIO_INP(x) before using GPIO_OUT(x) or GPIO_ALT(x, y).
 //#define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId) / 10] &= U32T(~(7 << (((gpioId) % 10) * 3)))
@@ -22,9 +22,9 @@
 
 #define GPIO_GET(gpioReg, gpioId) (gpioReg[13] & U32T(1 << (gpioId))) // 0 if LOW, (1<<g) if HIGH
 
-#define SPI_DEVICE0_CS0 "/dev/spidev0.0"
+#define SPI_DEVICE0_CS0   "/dev/spidev0.0"
 #define SPI_BITS_PER_WORD 8
-#define SPI_SPEED_HZ (8 * 1000 * 1000)
+#define SPI_SPEED_HZ      (8 * 1000 * 1000)
 
 #define GPIO_AER_REQ 5
 #define GPIO_AER_ACK 3

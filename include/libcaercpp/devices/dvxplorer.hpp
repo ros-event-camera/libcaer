@@ -1,9 +1,9 @@
 #ifndef LIBCAER_DEVICES_DVXPLORER_HPP_
 #define LIBCAER_DEVICES_DVXPLORER_HPP_
 
+#include "../events/imu6.hpp"
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
-#include "../events/imu6.hpp"
 
 #include <libcaer/devices/dvxplorer.h>
 

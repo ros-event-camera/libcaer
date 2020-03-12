@@ -3,7 +3,9 @@
 
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
+
 #include <libcaer/devices/dvs132s.h>
+
 #include "usb.hpp"
 
 namespace libcaer {
@@ -15,8 +17,8 @@ public:
 	}
 
 	dvs132s(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-		const std::string &serialNumberRestrict)
-		: usb(deviceID, CAER_DEVICE_DVS132S, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+		const std::string &serialNumberRestrict) :
+		usb(deviceID, CAER_DEVICE_DVS132S, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
 	}
 
 	struct caer_dvs132s_info infoGet() const noexcept {
@@ -27,7 +29,7 @@ public:
 		return (infoGet().deviceString);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_DVS132S_HPP_ */

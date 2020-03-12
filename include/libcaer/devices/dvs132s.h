@@ -575,17 +575,17 @@ extern "C" {
  * - caerBiasCoarseFine1024Generate() for coarse-fine (current) biases.
  * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS132S_CONFIG_BIAS_PRBP 0
-#define DVS132S_CONFIG_BIAS_PRSFBP 1
-#define DVS132S_CONFIG_BIAS_BLPUBP 2
+#define DVS132S_CONFIG_BIAS_PRBP      0
+#define DVS132S_CONFIG_BIAS_PRSFBP    1
+#define DVS132S_CONFIG_BIAS_BLPUBP    2
 #define DVS132S_CONFIG_BIAS_BIASBUFBP 3
-#define DVS132S_CONFIG_BIAS_OFFBN 4
-#define DVS132S_CONFIG_BIAS_DIFFBN 5
-#define DVS132S_CONFIG_BIAS_ONBN 6
-#define DVS132S_CONFIG_BIAS_CASBN 7
-#define DVS132S_CONFIG_BIAS_DPBN 8
+#define DVS132S_CONFIG_BIAS_OFFBN     4
+#define DVS132S_CONFIG_BIAS_DIFFBN    5
+#define DVS132S_CONFIG_BIAS_ONBN      6
+#define DVS132S_CONFIG_BIAS_CASBN     7
+#define DVS132S_CONFIG_BIAS_DPBN      8
 #define DVS132S_CONFIG_BIAS_BIASBUFBN 9
-#define DVS132S_CONFIG_BIAS_ABUFBN 10
+#define DVS132S_CONFIG_BIAS_ABUFBN    10
 //@}
 
 /**

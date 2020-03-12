@@ -14,7 +14,8 @@
 namespace libcaer {
 namespace ringbuffer {
 
-template<typename T> class RingBuffer {
+template<typename T>
+class RingBuffer {
 private:
 	alignas(CACHELINE_SIZE) size_t putPos;
 	alignas(CACHELINE_SIZE) size_t getPos;

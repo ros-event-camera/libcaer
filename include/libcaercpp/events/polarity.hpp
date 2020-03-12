@@ -2,6 +2,7 @@
 #define LIBCAER_EVENTS_POLARITY_HPP_
 
 #include <libcaer/events/polarity.h>
+
 #include "common.hpp"
 
 namespace libcaer {
@@ -113,7 +114,7 @@ protected:
 		return (*evt);
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_POLARITY_HPP_ */

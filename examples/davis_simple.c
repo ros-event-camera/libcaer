@@ -1,5 +1,7 @@
 #include <libcaer/libcaer.h>
+
 #include <libcaer/devices/davis.h>
+
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>

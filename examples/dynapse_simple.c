@@ -1,10 +1,13 @@
 /*
-*   Author: Federico Corradi, 2017
-*  compile with:  gcc -std=c11 -pedantic -Wall -Wextra -O2 -o dynapse_simple dynapse_simple.c -D_DEFAULT_SOURCE=1 -lcaer
-*/
+ *   Author: Federico Corradi, 2017
+ *  compile with:  gcc -std=c11 -pedantic -Wall -Wextra -O2 -o dynapse_simple dynapse_simple.c -D_DEFAULT_SOURCE=1
+ * -lcaer
+ */
 
 #include <libcaer/libcaer.h>
+
 #include <libcaer/devices/dynapse.h>
+
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>
