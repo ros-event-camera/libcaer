@@ -769,6 +769,11 @@ void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint) {
 }
 
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
+	// Value already set, don't do expensive operation.
+	if (atomic_load(&state->usbBufferNumber) == transfersNumber) {
+		return;
+	}
+
 	atomic_store(&state->usbBufferNumber, transfersNumber);
 
 	// Cancel transfers, wait for them to terminate, deallocate, and
@@ -786,6 +791,11 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
 }
 
 void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
+	// Value already set, don't do expensive operation.
+	if (atomic_load(&state->usbBufferSize) == transfersSize) {
+		return;
+	}
+
 	atomic_store(&state->usbBufferSize, transfersSize);
 
 	// Cancel transfers, wait for them to terminate, deallocate, and
