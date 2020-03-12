@@ -2,6 +2,7 @@
 #define LIBCAER_EVENTS_IMU9_HPP_
 
 #include <libcaer/events/imu9.h>
+
 #include "common.hpp"
 
 namespace libcaer {
@@ -168,7 +169,7 @@ protected:
 		return (*evt);
 	}
 };
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_IMU9_HPP_ */

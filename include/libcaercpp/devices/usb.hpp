@@ -2,6 +2,7 @@
 #define LIBCAER_DEVICES_USB_HPP_
 
 #include <libcaer/devices/usb.h>
+
 #include "device.hpp"
 
 namespace libcaer {
@@ -36,7 +37,7 @@ protected:
 		handle = std::shared_ptr<struct caer_device_handle>(h, deleteDeviceHandle);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_USB_HPP_ */

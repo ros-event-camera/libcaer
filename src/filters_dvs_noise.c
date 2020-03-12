@@ -41,8 +41,8 @@ struct dvs_pixel_with_count {
 	uint32_t count;
 };
 
-#define GET_TS(X) ((X) >> 1)
-#define GET_POL(X) ((X) &0x01)
+#define GET_TS(X)          ((X) >> 1)
+#define GET_POL(X)         ((X) &0x01)
 #define SET_TSPOL(TS, POL) (((TS) << 1) | ((POL) &0x01))
 
 static void filterDVSNoiseLog(enum caer_log_level logLevel, caerFilterDVSNoise handle, const char *format, ...)

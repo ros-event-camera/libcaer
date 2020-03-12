@@ -67,7 +67,7 @@ public:
 		sourceID = source;
 	}
 };
-}
-}
+} // namespace network
+} // namespace libcaer
 
 #endif /* LIBCAER_NETWORK_HPP_ */

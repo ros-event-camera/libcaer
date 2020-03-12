@@ -769,11 +769,18 @@ void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint) {
 }
 
 void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
+	mtx_lock(&state->dataTransfersLock);
+
+	// Value already set, don't do expensive operation.
+	if (atomic_load(&state->usbBufferNumber) == transfersNumber) {
+		mtx_unlock(&state->dataTransfersLock);
+		return;
+	}
+
 	atomic_store(&state->usbBufferNumber, transfersNumber);
 
 	// Cancel transfers, wait for them to terminate, deallocate, and
 	// then reallocate with new size/number.
-	mtx_lock(&state->dataTransfersLock);
 	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
 
@@ -782,15 +789,23 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber) {
 			usbAllocateTransfers(state);
 		}
 	}
+
 	mtx_unlock(&state->dataTransfersLock);
 }
 
 void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
+	mtx_lock(&state->dataTransfersLock);
+
+	// Value already set, don't do expensive operation.
+	if (atomic_load(&state->usbBufferSize) == transfersSize) {
+		mtx_unlock(&state->dataTransfersLock);
+		return;
+	}
+
 	atomic_store(&state->usbBufferSize, transfersSize);
 
 	// Cancel transfers, wait for them to terminate, deallocate, and
 	// then reallocate with new size/number.
-	mtx_lock(&state->dataTransfersLock);
 	if (usbDataTransfersAreRunning(state)) {
 		usbCancelAndDeallocateTransfers(state);
 
@@ -799,6 +814,7 @@ void usbSetTransfersSize(usbState state, uint32_t transfersSize) {
 			usbAllocateTransfers(state);
 		}
 	}
+
 	mtx_unlock(&state->dataTransfersLock);
 }
 

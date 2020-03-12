@@ -12,7 +12,8 @@
 namespace libcaer {
 namespace events {
 
-template<class T> class EventPacketIterator {
+template<class T>
+class EventPacketIterator {
 private:
 	// Select proper pointer type (const or not) depending on template type.
 	using eventPtrType = typename std::conditional<std::is_const<T>::value, const uint8_t *, uint8_t *>::type;
@@ -629,7 +630,8 @@ protected:
 	}
 };
 
-template<class PKT, class EVT> class EventPacketCommon : public EventPacket {
+template<class PKT, class EVT>
+class EventPacketCommon : public EventPacket {
 public:
 	// Container traits.
 	using value_type       = EVT;

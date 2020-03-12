@@ -2,15 +2,15 @@
 #define PORTABLE_TIME_H_
 
 #if defined(__APPLE__)
-#include <mach/clock.h>
-#include <mach/clock_types.h>
-#include <mach/mach.h>
-#include <mach/mach_host.h>
-#include <mach/mach_port.h>
-#include <mach/mach_time.h>
-#include <stdbool.h>
-#include <sys/time.h>
-#include <time.h>
+#	include <mach/clock.h>
+#	include <mach/clock_types.h>
+#	include <mach/mach.h>
+#	include <mach/mach_host.h>
+#	include <mach/mach_port.h>
+#	include <mach/mach_time.h>
+#	include <stdbool.h>
+#	include <sys/time.h>
+#	include <time.h>
 
 static inline bool portable_clock_gettime_monotonic(struct timespec *monoTime) {
 	kern_return_t kRet;
@@ -71,8 +71,8 @@ static inline bool portable_clock_gettime_realtime(struct timespec *realTime) {
 }
 #elif ((defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L) || (defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 600) \
 	   || (defined(_WIN32) && defined(__MINGW32__)))
-#include <stdbool.h>
-#include <time.h>
+#	include <stdbool.h>
+#	include <time.h>
 
 static inline bool portable_clock_gettime_monotonic(struct timespec *monoTime) {
 	return (clock_gettime(CLOCK_MONOTONIC, monoTime) == 0);
@@ -82,7 +82,7 @@ static inline bool portable_clock_gettime_realtime(struct timespec *realTime) {
 	return (clock_gettime(CLOCK_REALTIME, realTime) == 0);
 }
 #else
-#error "No portable way of getting absolute monotonic time found."
+#	error "No portable way of getting absolute monotonic time found."
 #endif
 
 #endif /* PORTABLE_TIME_H_ */

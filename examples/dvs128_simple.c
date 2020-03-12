@@ -1,5 +1,7 @@
 #include <libcaer/libcaer.h>
+
 #include <libcaer/devices/dvs128.h>
+
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>

@@ -2,6 +2,7 @@
 #define LIBCAER_DEVICES_SERIAL_HPP_
 
 #include <libcaer/devices/serial.h>
+
 #include "device.hpp"
 
 namespace libcaer {
@@ -30,7 +31,7 @@ protected:
 		handle = std::shared_ptr<struct caer_device_handle>(h, deleteDeviceHandle);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_SERIAL_HPP_ */

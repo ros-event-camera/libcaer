@@ -2,7 +2,9 @@
 #define LIBCAER_FILTERS_DVS_NOISE_HPP_
 
 #include "../events/polarity.hpp"
+
 #include <libcaer/filters/dvs_noise.h>
+
 #include <memory>
 #include <string>
 #include <vector>

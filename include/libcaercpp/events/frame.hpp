@@ -192,7 +192,7 @@ struct FrameEvent : public caer_frame_event {
 		size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY) * cNumberEnum);
 
 		if (neededMemory > caerFrameEventPacketGetPixelsSize(
-							   reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()))) {
+				reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()))) {
 			throw std::invalid_argument("Given values result in memory usage higher than allocated frame event size.");
 		}
 

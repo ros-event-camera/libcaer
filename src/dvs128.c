@@ -553,16 +553,16 @@ caerEventPacketContainer dvs128DataGet(caerDeviceHandle cdh) {
 	return (dataExchangeGet(&state->dataExchange, &state->usbState.dataTransfersRun));
 }
 
-#define DVS128_TIMESTAMP_WRAP_MASK 0x80
+#define DVS128_TIMESTAMP_WRAP_MASK  0x80
 #define DVS128_TIMESTAMP_RESET_MASK 0x40
-#define DVS128_POLARITY_SHIFT 0
-#define DVS128_POLARITY_MASK 0x0001
-#define DVS128_Y_ADDR_SHIFT 8
-#define DVS128_Y_ADDR_MASK 0x007F
-#define DVS128_X_ADDR_SHIFT 1
-#define DVS128_X_ADDR_MASK 0x007F
-#define DVS128_SYNC_EVENT_MASK 0x8000
-#define TS_WRAP_ADD 0x4000
+#define DVS128_POLARITY_SHIFT       0
+#define DVS128_POLARITY_MASK        0x0001
+#define DVS128_Y_ADDR_SHIFT         8
+#define DVS128_Y_ADDR_MASK          0x007F
+#define DVS128_X_ADDR_SHIFT         1
+#define DVS128_X_ADDR_MASK          0x007F
+#define DVS128_SYNC_EVENT_MASK      0x8000
+#define TS_WRAP_ADD                 0x4000
 
 static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent) {
 	dvs128Handle handle = vhd;

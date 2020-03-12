@@ -9,6 +9,7 @@
 
 #include "../events/polarity.h"
 #include "../events/special.h"
+
 #include "serial.h"
 
 #ifdef __cplusplus

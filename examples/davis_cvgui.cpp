@@ -1,11 +1,12 @@
 #include <libcaercpp/devices/davis.hpp>
+
 #include <atomic>
 #include <csignal>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #if !defined(LIBCAER_HAVE_OPENCV) || LIBCAER_HAVE_OPENCV == 0
-#error "This example requires OpenCV support in libcaer to be enabled."
+#	error "This example requires OpenCV support in libcaer to be enabled."
 #endif
 
 using namespace std;

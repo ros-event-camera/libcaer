@@ -21,10 +21,10 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #	if defined(__USE_MINGW_ANSI_STDIO)
-#		define ATTRIBUTE_FORMAT(N) __attribute__((format(gnu_printf, N, (N + 1))))
+#		define ATTRIBUTE_FORMAT(N)    __attribute__((format(gnu_printf, N, (N + 1))))
 #		define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(gnu_printf, N, 0)))
 #	else
-#		define ATTRIBUTE_FORMAT(N) __attribute__((format(printf, N, (N + 1))))
+#		define ATTRIBUTE_FORMAT(N)    __attribute__((format(printf, N, (N + 1))))
 #		define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(printf, N, 0)))
 #	endif
 #else

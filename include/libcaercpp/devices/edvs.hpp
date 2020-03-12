@@ -3,7 +3,9 @@
 
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
+
 #include <libcaer/devices/edvs.h>
+
 #include "serial.hpp"
 
 namespace libcaer {
@@ -11,8 +13,8 @@ namespace devices {
 
 class edvs : public serial {
 public:
-	edvs(uint16_t deviceID, const std::string &serialPortName, uint32_t serialBaudRate)
-		: serial(deviceID, CAER_DEVICE_EDVS, serialPortName, serialBaudRate) {
+	edvs(uint16_t deviceID, const std::string &serialPortName, uint32_t serialBaudRate) :
+		serial(deviceID, CAER_DEVICE_EDVS, serialPortName, serialBaudRate) {
 	}
 
 	struct caer_edvs_info infoGet() const noexcept {
@@ -23,7 +25,7 @@ public:
 		return (infoGet().deviceString);
 	}
 };
-}
-}
+} // namespace devices
+} // namespace libcaer
 
 #endif /* LIBCAER_DEVICES_EDVS_HPP_ */
