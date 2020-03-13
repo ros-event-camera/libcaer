@@ -170,11 +170,11 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
 
 				if (firmwareVersion != U8T(requiredFirmwareVersion)) {
-					firmwareVersionOK = false;
+					firmwareVersionOK                        = false;
+					(*foundUSBDevices)[matches].errorVersion = true;
 				}
 
 				(*foundUSBDevices)[matches].firmwareVersion = I16T(firmwareVersion);
-				(*foundUSBDevices)[matches].errorVersion    = true;
 			}
 
 			libusb_device_handle *devHandle = NULL;
