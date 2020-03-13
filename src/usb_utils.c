@@ -207,16 +207,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				}
 			}
 
-			// Check that the active configuration is set to number 1. If not, do so.
-			// Then claim interface 0 (default).
-			if (!checkActiveConfigAndClaim(devHandle)) {
-				libusb_close(devHandle);
-
-				(*foundUSBDevices)[matches].errorOpen = true;
-				matches++;
-				continue;
-			}
-
 			// Verify device logic version.
 			bool logicVersionOK = true;
 
@@ -231,7 +221,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
 					!= sizeof(spiConfig)) {
-					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 
 					(*foundUSBDevices)[matches].errorOpen = true;
@@ -266,7 +255,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 						VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
 					!= sizeof(spiConfig)) {
-					libusb_release_interface(devHandle, 0);
 					libusb_close(devHandle);
 
 					(*foundUSBDevices)[matches].errorOpen = true;
@@ -290,7 +278,6 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				(*foundUSBDevices)[matches].errorVersion = true;
 			}
 
-			libusb_release_interface(devHandle, 0);
 			libusb_close(devHandle);
 
 			matches++;
