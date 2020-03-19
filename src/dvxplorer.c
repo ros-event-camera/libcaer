@@ -2356,7 +2356,7 @@ bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *p
 	}
 
 	state->currentPackets.special
-		= caerSpecialEventPacketAllocate(SAMSUNG_EVKPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+		= caerSpecialEventPacketAllocate(DVXPLORER_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
 	if (state->currentPackets.special == NULL) {
 		freeAllDataMemory(state);
 
@@ -2519,7 +2519,7 @@ static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bu
 
 		if (state->currentPackets.special == NULL) {
 			state->currentPackets.special = caerSpecialEventPacketAllocate(
-				SAMSUNG_EVKPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+				DVXPLORER_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
