@@ -6,6 +6,7 @@
 #include "dvs132s.h"
 #include "dvxplorer.h"
 #include "dynapse.h"
+#include "mipi_cx3.h"
 #include "samsung_evk.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -34,6 +35,7 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 	[CAER_DEVICE_DVS132S]     = &dvs132sFind,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerFind,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKFind,
+	[CAER_DEVICE_MIPI_CX3]    = &mipiCx3Find,
 };
 
 ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices) {
@@ -175,6 +177,13 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 
 		case CAER_DEVICE_SAMSUNG_EVK: {
 			struct caer_samsung_evk_info *info = &discoveredDevice->deviceInfo.samsungEVKInfo;
+			return (caerDeviceOpen(
+				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
+			break;
+		}
+
+		case CAER_DEVICE_MIPI_CX3: {
+			struct caer_mipi_cx3_info *info = &discoveredDevice->deviceInfo.mipiCx3Info;
 			return (caerDeviceOpen(
 				deviceID, discoveredDevice->deviceType, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, NULL));
 			break;

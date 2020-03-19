@@ -6,6 +6,7 @@
 #include "dvs132s.h"
 #include "dvxplorer.h"
 #include "dynapse.h"
+#include "mipi_cx3.h"
 #include "samsung_evk.h"
 
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
@@ -32,6 +33,7 @@ static caerDeviceHandle (*usbConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 		[CAER_DEVICE_DVS132S]     = &dvs132sOpen,
 		[CAER_DEVICE_DVXPLORER]   = &dvXplorerOpen,
 		[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKOpen,
+		[CAER_DEVICE_MIPI_CX3]    = &mipiCx3Open,
 };
 
 static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -51,6 +53,7 @@ static caerDeviceHandle (*serialConstructors[CAER_SUPPORTED_DEVICES_NUMBER])(
 		[CAER_DEVICE_DVS132S]     = NULL,
 		[CAER_DEVICE_DVXPLORER]   = NULL,
 		[CAER_DEVICE_SAMSUNG_EVK] = NULL,
+		[CAER_DEVICE_MIPI_CX3]    = NULL,
 };
 
 static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -72,6 +75,7 @@ static bool (*destructors[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handl
 	[CAER_DEVICE_DVS132S]     = &dvs132sClose,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerClose,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKClose,
+	[CAER_DEVICE_MIPI_CX3]    = &mipiCx3Close,
 };
 
 static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -93,6 +97,7 @@ static bool (*defaultConfigSenders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHan
 	[CAER_DEVICE_DVS132S]     = &dvs132sSendDefaultConfig,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerSendDefaultConfig,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKSendDefaultConfig,
+	[CAER_DEVICE_MIPI_CX3]    = &mipiCx3SendDefaultConfig,
 };
 
 static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -116,6 +121,7 @@ static bool (*configSetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 		[CAER_DEVICE_DVS132S]     = &dvs132sConfigSet,
 		[CAER_DEVICE_DVXPLORER]   = &dvXplorerConfigSet,
 		[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKConfigSet,
+		[CAER_DEVICE_MIPI_CX3]    = &mipiCx3ConfigSet,
 };
 
 static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
@@ -139,6 +145,7 @@ static bool (*configGetters[CAER_SUPPORTED_DEVICES_NUMBER])(
 		[CAER_DEVICE_DVS132S]     = &dvs132sConfigGet,
 		[CAER_DEVICE_DVXPLORER]   = &dvXplorerConfigGet,
 		[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKConfigGet,
+		[CAER_DEVICE_MIPI_CX3]    = &mipiCx3ConfigGet,
 };
 
 static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle,
@@ -163,6 +170,7 @@ static bool (*dataStarters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 		[CAER_DEVICE_DVS132S]     = &dvs132sDataStart,
 		[CAER_DEVICE_DVXPLORER]   = &dvXplorerDataStart,
 		[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKDataStart,
+		[CAER_DEVICE_MIPI_CX3]    = &mipiCx3DataStart,
 };
 
 static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -184,6 +192,7 @@ static bool (*dataStoppers[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle hand
 	[CAER_DEVICE_DVS132S]     = &dvs132sDataStop,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerDataStop,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKDataStop,
+	[CAER_DEVICE_MIPI_CX3]    = &mipiCx3DataStop,
 };
 
 static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceHandle handle) = {
@@ -205,6 +214,7 @@ static caerEventPacketContainer (*dataGetters[CAER_SUPPORTED_DEVICES_NUMBER])(ca
 	[CAER_DEVICE_DVS132S]     = &dvs132sDataGet,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerDataGet,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKDataGet,
+	[CAER_DEVICE_MIPI_CX3]    = &mipiCx3DataGet,
 };
 
 // Add empty InfoGet for optional devices, such as serial ones.
