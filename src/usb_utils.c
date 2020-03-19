@@ -77,7 +77,7 @@ static void LIBUSB_CALL libusbUSBLog(libusb_context *ctx, enum libusb_log_level 
 }
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
-	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices) {
+	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices) {
 	// Set to NULL initially (for error return).
 	*foundUSBDevices = NULL;
 
@@ -292,7 +292,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
-	struct usb_info *deviceUSBInfo) {
+	caerDeviceDiscoveryResult deviceInfo) {
 	errno = 0;
 
 	// Ensure no content.

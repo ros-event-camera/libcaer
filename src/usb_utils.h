@@ -3,6 +3,7 @@
 
 #include "libcaer/libcaer.h"
 
+#include "libcaer/devices/device_discover.h"
 #include "libcaer/devices/usb.h"
 
 #include <libusb.h>
@@ -64,11 +65,11 @@ struct usb_info {
 };
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
-	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices);
+	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices);
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
-	struct usb_info *deviceUSBInfo);
+	caerDeviceDiscoveryResult deviceInfo);
 void usbDeviceClose(usbState state);
 
 void usbSetLogLevel(usbState state, enum caer_log_level level);

@@ -4,6 +4,20 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
 
+void populateInfo(struct caer_dvs128_info *info, struct usb_info *usbInfo) {
+	info->deviceID     = -1;
+	info->deviceString = NULL;
+
+	strncpy(info->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	info->deviceUSBBusNumber     = usbInfo->busNumber;
+	info->deviceUSBDeviceAddress = usbInfo->devAddress;
+
+	info->firmwareVersion = usbInfo->firmwareVersion;
+	info->deviceIsMaster  = true;
+	info->dvsSizeX        = DVS_ARRAY_SIZE_X;
+	info->dvsSizeY        = DVS_ARRAY_SIZE_Y;
+}
+
 static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) {
 	// Only log messages above the specified severity level.
 	uint8_t systemLogLevel = atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed);
