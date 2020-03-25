@@ -3,6 +3,12 @@
 static void mipiCx3Log(enum caer_log_level logLevel, mipiCx3Handle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 
+// FX3 Debug Transfer Support
+static void allocateDebugTransfers(mipiCx3Handle handle);
+static void cancelAndDeallocateDebugTransfers(mipiCx3Handle handle);
+static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer);
+static void debugTranslator(mipiCx3Handle handle, const uint8_t *buffer, size_t bytesSent);
+
 static bool i2cConfigSend(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t param);
 static bool i2cConfigReceive(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t *param);
 
@@ -20,7 +26,8 @@ ssize_t mipiCx3Find(caerDeviceDiscoveryResult *discoveredDevices) {
 
 	struct usb_info *foundMipiCx3 = NULL;
 
-	ssize_t result = usbDeviceFind(MIPI_CX3_DEVICE_VID, MIPI_CX3_DEVICE_PID, -1, -1, -1, &foundMipiCx3);
+	ssize_t result = usbDeviceFind(
+		USB_DEFAULT_DEVICE_VID, MIPI_CX3_DEVICE_PID, -1, -1, MIPI_CX3_REQUIRED_FIRMWARE_VERSION, &foundMipiCx3);
 
 	if (result <= 0) {
 		// Error or nothing found, return right away.
@@ -132,8 +139,8 @@ caerDeviceHandle mipiCx3Open(
 	// Try to open a MIPI_CX3 device on a specific USB port.
 	struct usb_info usbInfo;
 
-	if (!usbDeviceOpen(&state->usbState, MIPI_CX3_DEVICE_VID, MIPI_CX3_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &usbInfo)) {
+	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, MIPI_CX3_DEVICE_PID, busNumberRestrict,
+			devAddressRestrict, serialNumberRestrict, -1, -1, MIPI_CX3_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			mipiCx3Log(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -162,7 +169,7 @@ caerDeviceHandle mipiCx3Open(
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
-	usbSetDataEndpoint(&state->usbState, MIPI_CX3_DATA_ENDPOINT);
+	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 8192);
 
@@ -183,36 +190,17 @@ caerDeviceHandle mipiCx3Open(
 	handle->info.deviceString           = usbInfoString;
 
 	// Get USB firmware version.
-	uint8_t firmwareVersion = 0;
-	i2cConfigReceive(&state->usbState, DEVICE_FPGA, 0xFF00, &firmwareVersion);
-
-	handle->info.firmwareVersion = firmwareVersion;
+	handle->info.firmwareVersion = usbInfo.firmwareVersion;
 	handle->info.chipID          = MIPI_CX3_CHIP_ID;
 	handle->info.dvsSizeX        = 640;
 	handle->info.dvsSizeY        = 480;
-
-	// Send initialization commands.
-	usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET, 0, 0, NULL, 0); // Reset FPGA.
-	usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET, 1, 0, NULL, 0); // Reset FX3 FIFO SM.
-
-	// Wait 10ms for FPGA / FX3 to reset.
-	struct timespec resetSleep = {.tv_sec = 0, .tv_nsec = 10000000};
-	thrd_sleep(&resetSleep, NULL);
-
-	// FPGA settings.
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x020C, 0x3F); // MI2C
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x020D, 0x04); // MI2C
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0200, 0x00); // Turn all IMU features off.
-
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0000, 0x11); // Big endian transfer, enable FX3 transfer.
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0004, 0x01); // Take DVS out of reset.
 
 	// Wait 10ms for DVS to start.
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&dvsSleep, NULL);
 
 	// Bias reset.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
+	// i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
 
 	// Bias enable.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGP, 0x07);
@@ -222,14 +210,35 @@ caerDeviceHandle mipiCx3Open(
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
 	mipiCx3ConfigSet(
-		(caerDeviceHandle) handle, MIPI_CX3_DVS_BIAS, MIPI_CX3_DVS_BIAS_SIMPLE, MIPI_CX3_DVS_BIAS_SIMPLE_DEFAULT);
+		(caerDeviceHandle) handle, MIPI_CX3_DVS_BIAS, MIPI_CX3_DVS_BIAS_SIMPLE, MIPI_CX3_DVS_BIAS_SIMPLE_VERY_HIGH);
 
-	// System settings.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
-	i2cConfigSend(
-		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80 to enable MGROUP compression.
+	//	// System settings.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PLL_S, 2);
+	//	i2cConfigSend(
+	//		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 2); // SYS_CLK: divide PLL freq by 5.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x00); // Disable parallel
+	// output. 	i2cConfigSend( 		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80
+	// to enable MGROUP compression.
+
+	//	// MIPI settings.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_WORD_COUNT_LOW, 0x00);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_WORD_COUNT_HIGH, 0x20);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_DATA_TYPE, 0x2A);
+	//	i2cConfigSend(
+	//		&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINE_SPACING, 0xFF); // ~2 µs. TODO: too short? 4-5 µs min.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FRAME_SPACING_LOW, 0x00);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FRAME_SPACING_HIGH, 0x80); // ~260 µs.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINES_PER_FRAME_LOW, 0x01);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINES_PER_FRAME_HIGH, 0x00);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FIFO_CONTROL, 0x00); // No FIFO timeout.
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3908, 0x1F);
+	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_CONTROL, 0xF0); // MIPI enabled, 4 lane.
+
+	uint8_t tp = 0;
+	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PLL_S, &tp);
+	printf("REGISTER_CONTROL_PLL_S: %X\n", tp);
+	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, &tp);
+	printf("REGISTER_CONTROL_CLOCK_DIVIDER_SYS: %X\n", tp);
 
 	// Digital settings.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
@@ -251,6 +260,9 @@ caerDeviceHandle mipiCx3Open(
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325A, 0x00);
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325B, 0x01);
 
+	// On FX3, start the debug transfers once everything else is ready.
+	allocateDebugTransfers(handle);
+
 	mipiCx3Log(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
 		usbInfo.busNumber, usbInfo.devAddress);
 
@@ -263,8 +275,8 @@ bool mipiCx3Close(caerDeviceHandle cdh) {
 
 	mipiCx3Log(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0004, 0x00); // Put DVS in reset.
-	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0000, 0x10); // Disable FX3 transfer.
+	// Stop debug transfers on FX3 devices.
+	cancelAndDeallocateDebugTransfers(handle);
 
 	// Shut down USB handling thread.
 	usbThreadStop(&state->usbState);
@@ -304,7 +316,7 @@ bool mipiCx3SendDefaultConfig(caerDeviceHandle cdh) {
 	mipiCx3Handle handle = (mipiCx3Handle) cdh;
 
 	// Set default biases.
-	mipiCx3ConfigSet(cdh, MIPI_CX3_DVS_BIAS, MIPI_CX3_DVS_BIAS_SIMPLE, MIPI_CX3_DVS_BIAS_SIMPLE_DEFAULT);
+	mipiCx3ConfigSet(cdh, MIPI_CX3_DVS_BIAS, MIPI_CX3_DVS_BIAS_SIMPLE, MIPI_CX3_DVS_BIAS_SIMPLE_VERY_HIGH);
 
 	// External trigger.
 	mipiCx3ConfigSet(
@@ -1865,7 +1877,7 @@ bool mipiCx3DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	}
 
 	// And reset the USB side of things.
-	usbControlResetDataEndpoint(&state->usbState, MIPI_CX3_DATA_ENDPOINT);
+	// TODO: usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
@@ -1946,6 +1958,13 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		mipiCx3Log(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bufferSize);
 		bufferSize &= ~((size_t) 0x03);
 	}
+
+	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
+		printf("%X %X %X %X\n", buffer[bufferPos + 0], buffer[bufferPos + 1], buffer[bufferPos + 2],
+			buffer[bufferPos + 3]);
+	}
+
+	return;
 
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
 		// Allocate new packets for next iteration as needed.
@@ -2124,9 +2143,135 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 }
 
 static bool i2cConfigSend(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t param) {
-	return (usbControlTransferOut(state, VENDOR_REQUEST_I2C_WRITE, deviceAddr, byteAddr, &param, 1));
+	return (usbControlTransferOut(state, VENDOR_REQUEST_I2C_TRANSFER, 0x0000, byteAddr, &param, 1));
 }
 
 static bool i2cConfigReceive(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t *param) {
-	return (usbControlTransferIn(state, VENDOR_REQUEST_I2C_READ, deviceAddr, byteAddr, param, 1));
+	return (usbControlTransferIn(state, VENDOR_REQUEST_I2C_TRANSFER, 0x0000, byteAddr, param, 1));
+}
+
+//////////////////////////////////
+/// FX3 Debug Transfer Support ///
+//////////////////////////////////
+static void allocateDebugTransfers(mipiCx3Handle handle) {
+	// Allocate transfers and set them up.
+	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
+		handle->state.fx3Support.debugTransfers[i] = libusb_alloc_transfer(0);
+		if (handle->state.fx3Support.debugTransfers[i] == NULL) {
+			mipiCx3Log(CAER_LOG_CRITICAL, handle,
+				"Unable to allocate further libusb transfers (debug channel, %zu of %" PRIu32 ").", i,
+				DEBUG_TRANSFER_NUM);
+			continue;
+		}
+
+		// Create data buffer.
+		handle->state.fx3Support.debugTransfers[i]->length = DEBUG_TRANSFER_SIZE;
+		handle->state.fx3Support.debugTransfers[i]->buffer = malloc(DEBUG_TRANSFER_SIZE);
+		if (handle->state.fx3Support.debugTransfers[i]->buffer == NULL) {
+			mipiCx3Log(CAER_LOG_CRITICAL, handle,
+				"Unable to allocate buffer for libusb transfer %zu (debug channel). Error: %d.", i, errno);
+
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
+
+			continue;
+		}
+
+		// Initialize Transfer.
+		handle->state.fx3Support.debugTransfers[i]->dev_handle = handle->state.usbState.deviceHandle;
+		handle->state.fx3Support.debugTransfers[i]->endpoint   = DEBUG_ENDPOINT;
+		handle->state.fx3Support.debugTransfers[i]->type       = LIBUSB_TRANSFER_TYPE_INTERRUPT;
+		handle->state.fx3Support.debugTransfers[i]->callback   = &libUsbDebugCallback;
+		handle->state.fx3Support.debugTransfers[i]->user_data  = handle;
+		handle->state.fx3Support.debugTransfers[i]->timeout    = 0;
+		handle->state.fx3Support.debugTransfers[i]->flags      = LIBUSB_TRANSFER_FREE_BUFFER;
+
+		if ((errno = libusb_submit_transfer(handle->state.fx3Support.debugTransfers[i])) == LIBUSB_SUCCESS) {
+			atomic_fetch_add(&handle->state.fx3Support.activeDebugTransfers, 1);
+		}
+		else {
+			mipiCx3Log(CAER_LOG_CRITICAL, handle,
+				"Unable to submit libusb transfer %zu (debug channel). Error: %s (%d).", i, libusb_strerror(errno),
+				errno);
+
+			// The transfer buffer is freed automatically here thanks to
+			// the LIBUSB_TRANSFER_FREE_BUFFER flag set above.
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
+		}
+	}
+
+	if (atomic_load(&handle->state.fx3Support.activeDebugTransfers) == 0) {
+		// Didn't manage to allocate any USB transfers, log failure.
+		mipiCx3Log(CAER_LOG_CRITICAL, handle, "Unable to allocate any libusb transfers (debug channel).");
+	}
+}
+
+static void cancelAndDeallocateDebugTransfers(mipiCx3Handle handle) {
+	// Wait for all transfers to go away.
+	struct timespec waitForTerminationSleep = {.tv_sec = 0, .tv_nsec = 1000000};
+
+	while (atomic_load(&handle->state.fx3Support.activeDebugTransfers) > 0) {
+		// Continue trying to cancel all transfers until there are none left.
+		// It seems like one cancel pass is not enough and some hang around.
+		for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
+			if (handle->state.fx3Support.debugTransfers[i] != NULL) {
+				errno = libusb_cancel_transfer(handle->state.fx3Support.debugTransfers[i]);
+				if ((errno != LIBUSB_SUCCESS) && (errno != LIBUSB_ERROR_NOT_FOUND)) {
+					mipiCx3Log(CAER_LOG_CRITICAL, handle,
+						"Unable to cancel libusb transfer %zu (debug channel). Error: %s (%d).", i,
+						libusb_strerror(errno), errno);
+					// Proceed with trying to cancel all transfers regardless of errors.
+				}
+			}
+		}
+
+		// Sleep for 1ms to avoid busy loop.
+		thrd_sleep(&waitForTerminationSleep, NULL);
+	}
+
+	// No more transfers in flight, deallocate them all here.
+	for (size_t i = 0; i < DEBUG_TRANSFER_NUM; i++) {
+		if (handle->state.fx3Support.debugTransfers[i] != NULL) {
+			libusb_free_transfer(handle->state.fx3Support.debugTransfers[i]);
+			handle->state.fx3Support.debugTransfers[i] = NULL;
+		}
+	}
+}
+
+static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
+	mipiCx3Handle handle = transfer->user_data;
+
+	// Completed or cancelled transfers are what we expect to handle here, so
+	// if they do have data attached, try to parse them.
+	if (((transfer->status == LIBUSB_TRANSFER_COMPLETED) || (transfer->status == LIBUSB_TRANSFER_CANCELLED))
+		&& (transfer->actual_length > 0)) {
+		// Handle debug data.
+		debugTranslator(handle, transfer->buffer, (size_t) transfer->actual_length);
+	}
+
+	if (transfer->status == LIBUSB_TRANSFER_COMPLETED) {
+		// Submit transfer again.
+		if (libusb_submit_transfer(transfer) == LIBUSB_SUCCESS) {
+			return;
+		}
+	}
+
+	// Cannot recover (cancelled, no device, or other critical error).
+	// Signal this by adjusting the counter and exiting.
+	// Freeing the transfers is taken care of by cancelAndDeallocateDebugTransfers().
+	atomic_fetch_sub(&handle->state.fx3Support.activeDebugTransfers, 1);
+}
+
+static void debugTranslator(mipiCx3Handle handle, const uint8_t *buffer, size_t bytesSent) {
+	// Check if this is a debug message (length 7-64 bytes).
+	if ((bytesSent >= 7) && (buffer[0] == 0x00)) {
+		// Debug message, log this.
+		mipiCx3Log(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
+			*((const uint32_t *) &buffer[2]));
+	}
+	else {
+		// Unknown/invalid debug message, log this.
+		mipiCx3Log(CAER_LOG_WARNING, handle, "Unknown/invalid debug message.");
+	}
 }
