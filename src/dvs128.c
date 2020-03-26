@@ -4,20 +4,6 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 static void dvs128EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static bool dvs128SendBiases(dvs128State state);
 
-void populateInfo(struct caer_dvs128_info *info, struct usb_info *usbInfo) {
-	info->deviceID     = -1;
-	info->deviceString = NULL;
-
-	strncpy(info->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	info->deviceUSBBusNumber     = usbInfo->busNumber;
-	info->deviceUSBDeviceAddress = usbInfo->devAddress;
-
-	info->firmwareVersion = usbInfo->firmwareVersion;
-	info->deviceIsMaster  = true;
-	info->dvsSizeX        = DVS_ARRAY_SIZE_X;
-	info->dvsSizeY        = DVS_ARRAY_SIZE_Y;
-}
-
 static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const char *format, ...) {
 	// Only log messages above the specified severity level.
 	uint8_t systemLogLevel = atomic_load_explicit(&handle->state.deviceLogLevel, memory_order_relaxed);
@@ -32,61 +18,34 @@ static void dvs128Log(enum caer_log_level logLevel, dvs128Handle handle, const c
 	va_end(argumentList);
 }
 
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a DVS128.
+	result->deviceType         = CAER_DEVICE_DVS128;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
+
+	struct caer_dvs128_info *dvs128InfoPtr = &(result->deviceInfo.dvs128Info);
+
+	// SN, BusNumber, DevAddress and FirmwareVersion always defined.
+	strncpy(dvs128InfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	dvs128InfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	dvs128InfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	dvs128InfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+
+	// Fixed information.
+	dvs128InfoPtr->deviceIsMaster = true;
+	dvs128InfoPtr->dvsSizeX       = DVS_ARRAY_SIZE_X;
+	dvs128InfoPtr->dvsSizeY       = DVS_ARRAY_SIZE_Y;
+
+	// Always unset here.
+	dvs128InfoPtr->deviceID     = -1;
+	dvs128InfoPtr->deviceString = NULL;
+}
+
 ssize_t dvs128Find(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
-
-	struct usb_info *foundDVS128 = NULL;
-
-	ssize_t result
-		= usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION, &foundDVS128);
-
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
-
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundDVS128);
-		return (-1);
-	}
-
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a DVS128.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVS128;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundDVS128[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundDVS128[i].errorVersion;
-		struct caer_dvs128_info *dvs128InfoPtr     = &((*discoveredDevices)[i].deviceInfo.dvs128Info);
-
-		dvs128InfoPtr->deviceUSBBusNumber     = foundDVS128[i].busNumber;
-		dvs128InfoPtr->deviceUSBDeviceAddress = foundDVS128[i].devAddress;
-		strncpy(dvs128InfoPtr->deviceSerialNumber, foundDVS128[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		dvs128InfoPtr->firmwareVersion = foundDVS128[i].firmwareVersion;
-
-		// Reopen DVS128 device to get additional info, if possible at all.
-		if (!foundDVS128[i].errorOpen && !foundDVS128[i].errorVersion) {
-			caerDeviceHandle dvs
-				= dvs128Open(0, dvs128InfoPtr->deviceUSBBusNumber, dvs128InfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*dvs128InfoPtr = caerDVS128InfoGet(dvs);
-
-				dvs128Close(dvs);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		dvs128InfoPtr->deviceID     = -1;
-		dvs128InfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
-
-	free(foundDVS128);
-	return (result);
+	return (usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION,
+		discoveredDevices, &populateDeviceInfo));
 }
 
 static inline void freeAllDataMemory(dvs128State state) {
@@ -154,10 +113,10 @@ caerDeviceHandle dvs128Open(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DVS128 device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS_DEVICE_PID, busNumberRestrict, devAddressRestrict,
-			serialNumberRestrict, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			serialNumberRestrict, -1, -1, DVS_REQUIRED_FIRMWARE_VERSION, &deviceInfo, &populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
 		}
@@ -172,7 +131,9 @@ caerDeviceHandle dvs128Open(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DVS_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		dvs128Log(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -182,6 +143,10 @@ caerDeviceHandle dvs128Open(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE, DVS_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceID, deviceInfo.deviceInfo.dvs128Info.deviceSerialNumber,
+		deviceInfo.deviceInfo.dvs128Info.deviceUSBBusNumber, deviceInfo.deviceInfo.dvs128Info.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &dvs128EventTranslator, handle);
@@ -200,18 +165,13 @@ caerDeviceHandle dvs128Open(
 	}
 
 	// Populate info variables based on data from device.
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
-	handle->info.firmwareVersion        = usbInfo.firmwareVersion;
-	handle->info.deviceIsMaster         = true;
-	handle->info.dvsSizeX               = DVS_ARRAY_SIZE_X;
-	handle->info.dvsSizeY               = DVS_ARRAY_SIZE_Y;
+	handle->info = deviceInfo.deviceInfo.dvs128Info;
+
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
 
 	dvs128Log(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }

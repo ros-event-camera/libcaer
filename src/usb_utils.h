@@ -22,6 +22,8 @@
 #define VENDOR_REQUEST_FPGA_CONFIG          0xBF
 #define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
 
+#define USB_INFO_STRING_SIZE 64
+
 enum { TRANS_STOPPED = 0, TRANS_RUNNING = 1 };
 
 struct usb_state {
@@ -65,11 +67,15 @@ struct usb_info {
 };
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
-	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices);
+	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle));
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
-	caerDeviceDiscoveryResult deviceInfo);
+	caerDeviceDiscoveryResult deviceInfo,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle));
 void usbDeviceClose(usbState state);
 
 void usbSetLogLevel(usbState state, enum caer_log_level level);
@@ -120,8 +126,6 @@ static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *par
 
 	return (true);
 }
-
-char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID);
 
 bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);
