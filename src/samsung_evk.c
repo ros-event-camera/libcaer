@@ -15,58 +15,45 @@ static void samsungEVKLog(enum caer_log_level logLevel, samsungEVKHandle handle,
 	va_end(argumentList);
 }
 
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a Samsung EVK.
+	result->deviceType         = CAER_DEVICE_SAMSUNG_EVK;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
+
+	struct caer_samsung_evk_info *evkInfoPtr = &(result->deviceInfo.samsungEVKInfo);
+
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion always zero in this case.
+	strncpy(evkInfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	evkInfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	evkInfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	evkInfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+
+	// Fixed information.
+	evkInfoPtr->chipID   = SAMSUNG_EVK_CHIP_ID;
+	evkInfoPtr->dvsSizeX = 640;
+	evkInfoPtr->dvsSizeY = 480;
+
+	if (devHandle != NULL) {
+		// Populate info variables based on data from device.
+		// Get USB firmware version.
+		uint8_t firmwareVersion = 0;
+		libusb_control_transfer(devHandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_I2C_READ, DEVICE_FPGA, 0xFF00, &firmwareVersion, 1, 0);
+
+		evkInfoPtr->firmwareVersion = firmwareVersion;
+	}
+
+	// Always unset here.
+	evkInfoPtr->deviceID     = -1;
+	evkInfoPtr->deviceString = NULL;
+}
+
 ssize_t samsungEVKFind(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
-
-	struct usb_info *foundSamsungEVK = NULL;
-
-	ssize_t result = usbDeviceFind(SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, -1, -1, -1, &foundSamsungEVK);
-
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
-
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundSamsungEVK);
-		return (-1);
-	}
-
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a SAMSUNG_EVK.
-		(*discoveredDevices)[i].deviceType              = CAER_DEVICE_SAMSUNG_EVK;
-		(*discoveredDevices)[i].deviceErrorOpen         = foundSamsungEVK[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion      = foundSamsungEVK[i].errorVersion;
-		struct caer_samsung_evk_info *samsungEVKInfoPtr = &((*discoveredDevices)[i].deviceInfo.samsungEVKInfo);
-
-		samsungEVKInfoPtr->deviceUSBBusNumber     = foundSamsungEVK[i].busNumber;
-		samsungEVKInfoPtr->deviceUSBDeviceAddress = foundSamsungEVK[i].devAddress;
-		strncpy(samsungEVKInfoPtr->deviceSerialNumber, foundSamsungEVK[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		// Reopen SAMSUNG_EVK device to get additional info, if possible at all.
-		if (!foundSamsungEVK[i].errorOpen && !foundSamsungEVK[i].errorVersion) {
-			caerDeviceHandle dvs = samsungEVKOpen(
-				0, samsungEVKInfoPtr->deviceUSBBusNumber, samsungEVKInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*samsungEVKInfoPtr = caerSamsungEVKInfoGet(dvs);
-
-				samsungEVKClose(dvs);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		samsungEVKInfoPtr->deviceID     = -1;
-		samsungEVKInfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
-
-	free(foundSamsungEVK);
-	return (result);
+	return (usbDeviceFind(
+		SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, -1, -1, -1, discoveredDevices, &populateDeviceInfo));
 }
 
 static inline void freeAllDataMemory(samsungEVKState state) {
@@ -131,10 +118,10 @@ caerDeviceHandle samsungEVKOpen(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a SAMSUNG_EVK device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &usbInfo)) {
+			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &deviceInfo, &populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			samsungEVKLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -150,7 +137,9 @@ caerDeviceHandle samsungEVKOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, SAMSUNG_EVK_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -160,6 +149,12 @@ caerDeviceHandle samsungEVKOpen(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE,
+		SAMSUNG_EVK_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceID,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceSerialNumber,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceUSBBusNumber,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &samsungEVKEventTranslator, handle);
@@ -177,20 +172,11 @@ caerDeviceHandle samsungEVKOpen(
 		return (NULL);
 	}
 
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
+	// Populate info variables based on data from device.
+	handle->info = deviceInfo.deviceInfo.samsungEVKInfo;
 
-	// Get USB firmware version.
-	uint8_t firmwareVersion = 0;
-	i2cConfigReceive(&state->usbState, DEVICE_FPGA, 0xFF00, &firmwareVersion);
-
-	handle->info.firmwareVersion = firmwareVersion;
-	handle->info.chipID          = SAMSUNG_EVK_CHIP_ID;
-	handle->info.dvsSizeX        = 640;
-	handle->info.dvsSizeY        = 480;
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
 
 	// Send initialization commands.
 	usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET, 0, 0, NULL, 0); // Reset FPGA.
@@ -253,7 +239,7 @@ caerDeviceHandle samsungEVKOpen(
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325B, 0x01);
 
 	samsungEVKLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }

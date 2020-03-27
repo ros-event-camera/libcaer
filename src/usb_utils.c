@@ -185,7 +185,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 			if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 				currUSBInfo.errorOpen = true;
-				(*deviceInfoFunc)(&(*foundUSBDevices)[i], &currUSBInfo, NULL);
+				(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
 
 				matches++;
 				continue;
@@ -202,7 +202,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 					libusb_close(devHandle);
 
 					currUSBInfo.errorOpen = true;
-					(*deviceInfoFunc)(&(*foundUSBDevices)[i], &currUSBInfo, NULL);
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
 
 					matches++;
 					continue;
@@ -223,25 +223,15 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint32_t param32 = 0;
 
 				// Get logic version from generic SYSINFO module.
-				uint8_t spiConfig[4] = {0};
-
-				if (libusb_control_transfer(devHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
-					!= sizeof(spiConfig)) {
+				if (!startupSPIConfigReceive(devHandle, 6, 0, &param32)) {
 					libusb_close(devHandle);
 
 					currUSBInfo.errorOpen = true;
-					(*deviceInfoFunc)(&(*foundUSBDevices)[i], &currUSBInfo, NULL);
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
 
 					matches++;
 					continue;
 				}
-
-				param32 |= U32T(spiConfig[0] << 24);
-				param32 |= U32T(spiConfig[1] << 16);
-				param32 |= U32T(spiConfig[2] << 8);
-				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic version.
 				if (param32 != U32T(requiredLogicVersion)) {
@@ -259,25 +249,15 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint32_t param32 = 0;
 
 				// Get logic patch level from generic SYSINFO module.
-				uint8_t spiConfig[4] = {0};
-
-				if (libusb_control_transfer(devHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
-					!= sizeof(spiConfig)) {
+				if (!startupSPIConfigReceive(devHandle, 6, 7, &param32)) {
 					libusb_close(devHandle);
 
 					currUSBInfo.errorOpen = true;
-					(*deviceInfoFunc)(&(*foundUSBDevices)[i], &currUSBInfo, NULL);
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
 
 					matches++;
 					continue;
 				}
-
-				param32 |= U32T(spiConfig[0] << 24);
-				param32 |= U32T(spiConfig[1] << 16);
-				param32 |= U32T(spiConfig[2] << 8);
-				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic minimum patch level.
 				if (param32 < U32T(minimumLogicPatch)) {
@@ -291,7 +271,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			}
 
 			// Get additional per-device information.
-			(*deviceInfoFunc)(&(*foundUSBDevices)[i], &currUSBInfo, devHandle);
+			(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, devHandle);
 
 			libusb_close(devHandle);
 
@@ -530,12 +510,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					uint32_t param32 = 0;
 
 					// Get logic version from generic SYSINFO module.
-					uint8_t spiConfig[4] = {0};
-
-					if (libusb_control_transfer(devHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
-						!= sizeof(spiConfig)) {
+					if (!startupSPIConfigReceive(devHandle, 6, 0, &param32)) {
 						libusb_release_interface(devHandle, 0);
 						libusb_close(devHandle);
 						devHandle = NULL;
@@ -556,11 +531,6 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 							continue;
 						}
 					}
-
-					param32 |= U32T(spiConfig[0] << 24);
-					param32 |= U32T(spiConfig[1] << 16);
-					param32 |= U32T(spiConfig[2] << 8);
-					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic version.
 					if (param32 != U32T(requiredLogicVersion)) {
@@ -585,12 +555,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					uint32_t param32 = 0;
 
 					// Get logic patch level from generic SYSINFO module.
-					uint8_t spiConfig[4] = {0};
-
-					if (libusb_control_transfer(devHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
-						!= sizeof(spiConfig)) {
+					if (!startupSPIConfigReceive(devHandle, 6, 7, &param32)) {
 						libusb_release_interface(devHandle, 0);
 						libusb_close(devHandle);
 						devHandle = NULL;
@@ -611,11 +576,6 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 							continue;
 						}
 					}
-
-					param32 |= U32T(spiConfig[0] << 24);
-					param32 |= U32T(spiConfig[1] << 16);
-					param32 |= U32T(spiConfig[2] << 8);
-					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic minimum patch level.
 					if (param32 < U32T(minimumLogicPatch)) {

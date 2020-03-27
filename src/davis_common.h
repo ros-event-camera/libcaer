@@ -516,10 +516,6 @@ static void davisCommonInit(davisCommonHandle handle) {
 	// Populate info variables based on data from device.
 	uint32_t param32 = 0;
 
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
-	handle->info.chipID = I16T(param32);
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
-	handle->info.deviceIsMaster = param32;
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
 	state->deviceClocks.logicClock = U16T(param32);
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_ADC_CLOCK, &param32);
@@ -541,30 +537,6 @@ static void davisCommonInit(davisCommonHandle handle) {
 		(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.adcClockActual,
 		(double) state->deviceClocks.usbClockActual);
 
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
-	handle->info.dvsHasPixelFilter = param32;
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
-	handle->info.dvsHasBackgroundActivityFilter = param32;
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
-	handle->info.dvsHasROIFilter = param32;
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
-	handle->info.dvsHasSkipFilter = param32;
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER, &param32);
-	handle->info.dvsHasPolarityFilter = param32;
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
-	handle->info.dvsHasStatistics = param32;
-
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
-	handle->info.apsColorFilter = U8T(param32);
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
-	handle->info.apsHasGlobalShutter = param32;
-
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
-	handle->info.extInputHasGenerator = param32;
-
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
-	handle->info.muxHasStatistics = param32;
-
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
 	state->dvs.sizeX = U16T(param32);
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
@@ -575,15 +547,6 @@ static void davisCommonInit(davisCommonHandle handle) {
 
 	davisLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
 		state->dvs.invertXY);
-
-	if (state->dvs.invertXY) {
-		handle->info.dvsSizeX = I16T(state->dvs.sizeY);
-		handle->info.dvsSizeY = I16T(state->dvs.sizeX);
-	}
-	else {
-		handle->info.dvsSizeX = I16T(state->dvs.sizeX);
-		handle->info.dvsSizeY = I16T(state->dvs.sizeY);
-	}
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
 	state->aps.sizeX = U16T(param32);
@@ -597,18 +560,6 @@ static void davisCommonInit(davisCommonHandle handle) {
 
 	davisLog(CAER_LOG_DEBUG, handle, "APS Size X: %d, Size Y: %d, Invert: %d, Flip X: %d, Flip Y: %d.",
 		state->aps.sizeX, state->aps.sizeY, state->aps.invertXY, state->aps.flipX, state->aps.flipY);
-
-	if (state->aps.invertXY) {
-		handle->info.apsSizeX = I16T(state->aps.sizeY);
-		handle->info.apsSizeY = I16T(state->aps.sizeX);
-	}
-	else {
-		handle->info.apsSizeX = I16T(state->aps.sizeX);
-		handle->info.apsSizeY = I16T(state->aps.sizeY);
-	}
-
-	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_TYPE, &param32);
-	handle->info.imuType = U8T(param32);
 
 	spiConfigReceive(handle->spiConfigPtr, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_ORIENTATION_INFO, &param32);
 	state->imu.flipX = param32 & 0x04;

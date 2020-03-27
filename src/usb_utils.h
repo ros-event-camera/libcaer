@@ -206,6 +206,25 @@ static bool spiConfigSendAsync(void *state, uint16_t moduleAddr, uint16_t paramA
 		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
 }
 
+static bool startupSPIConfigReceive(
+	libusb_device_handle *devHandle, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
+	uint8_t spiConfig[4] = {0};
+
+	if (libusb_control_transfer(devHandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0)
+		!= sizeof(spiConfig)) {
+		return (false);
+	}
+
+	*param = 0;
+	*param |= U32T(spiConfig[0] << 24);
+	*param |= U32T(spiConfig[1] << 16);
+	*param |= U32T(spiConfig[2] << 8);
+	*param |= U32T(spiConfig[3] << 0);
+
+	return (true);
+}
+
 static bool spiConfigReceive(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
 	uint8_t spiConfig[4] = {0};
 
