@@ -21,62 +21,72 @@ static void dvXplorerLog(enum caer_log_level logLevel, dvXplorerHandle handle, c
 	va_end(argumentList);
 }
 
-ssize_t dvXplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a DVXplorer.
+	result->deviceType         = CAER_DEVICE_DVXPLORER;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
 
-	struct usb_info *foundDVXplorer = NULL;
+	struct caer_dvx_info *dvxInfoPtr = &(result->deviceInfo.dvXplorerInfo);
 
-	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVXPLORER_DEVICE_PID, DVXPLORER_REQUIRED_LOGIC_VERSION,
-		DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, &foundDVXplorer);
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion and LogicVersion either defined or zero.
+	strncpy(dvxInfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	dvxInfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	dvxInfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	dvxInfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+	dvxInfoPtr->logicVersion           = usbInfo->logicVersion;
 
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
+	if (devHandle != NULL) {
+		// Populate info variables based on data from device.
+		uint32_t param32 = 0;
 
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundDVXplorer);
-		return (-1);
-	}
+		startupSPIConfigReceive(devHandle, DVX_SYSINFO, DVX_SYSINFO_CHIP_IDENTIFIER, &param32);
+		dvxInfoPtr->chipID = I16T(param32);
+		startupSPIConfigReceive(devHandle, DVX_SYSINFO, DVX_SYSINFO_DEVICE_IS_MASTER, &param32);
+		dvxInfoPtr->deviceIsMaster = param32;
 
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a DVXPLORER.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVXPLORER;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundDVXplorer[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundDVXplorer[i].errorVersion;
-		struct caer_dvx_info *dvXplorerInfoPtr     = &((*discoveredDevices)[i].deviceInfo.dvXplorerInfo);
+		startupSPIConfigReceive(devHandle, DVX_DVS, DVX_DVS_SIZE_COLUMNS, &param32);
+		int16_t dvsSizeX = I16T(param32);
+		startupSPIConfigReceive(devHandle, DVX_DVS, DVX_DVS_SIZE_ROWS, &param32);
+		int16_t dvsSizeY = I16T(param32);
 
-		dvXplorerInfoPtr->deviceUSBBusNumber     = foundDVXplorer[i].busNumber;
-		dvXplorerInfoPtr->deviceUSBDeviceAddress = foundDVXplorer[i].devAddress;
-		strncpy(dvXplorerInfoPtr->deviceSerialNumber, foundDVXplorer[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+		startupSPIConfigReceive(devHandle, DVX_DVS, DVX_DVS_ORIENTATION_INFO, &param32);
+		bool dvsInvertXY = param32 & 0x04;
 
-		dvXplorerInfoPtr->firmwareVersion = foundDVXplorer[i].firmwareVersion;
-		dvXplorerInfoPtr->logicVersion    = (!foundDVXplorer[i].errorOpen) ? (foundDVXplorer[i].logicVersion) : (-1);
-
-		// Reopen DVXPLORER device to get additional info, if possible at all.
-		if (!foundDVXplorer[i].errorOpen && !foundDVXplorer[i].errorVersion) {
-			caerDeviceHandle dvs = dvXplorerOpen(
-				0, dvXplorerInfoPtr->deviceUSBBusNumber, dvXplorerInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*dvXplorerInfoPtr = caerDVXplorerInfoGet(dvs);
-
-				dvXplorerClose(dvs);
-			}
+		if (dvsInvertXY) {
+			dvxInfoPtr->dvsSizeX = dvsSizeY;
+			dvxInfoPtr->dvsSizeY = dvsSizeX;
+		}
+		else {
+			dvxInfoPtr->dvsSizeX = dvsSizeX;
+			dvxInfoPtr->dvsSizeY = dvsSizeY;
 		}
 
-		// Set/Reset to invalid values, not part of discovery.
-		dvXplorerInfoPtr->deviceID     = -1;
-		dvXplorerInfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
+		startupSPIConfigReceive(devHandle, DVX_IMU, DVX_IMU_TYPE, &param32);
+		dvxInfoPtr->imuType = U8T(param32);
 
-	free(foundDVXplorer);
-	return (result);
+		// Extra features:
+		startupSPIConfigReceive(devHandle, DVX_MUX, DVX_MUX_HAS_STATISTICS, &param32);
+		dvxInfoPtr->muxHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DVX_DVS, DVX_DVS_HAS_STATISTICS, &param32);
+		dvxInfoPtr->dvsHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DVX_EXTINPUT, DVX_EXTINPUT_HAS_GENERATOR, &param32);
+		dvxInfoPtr->extInputHasGenerator = param32;
+	}
+
+	// Always unset here.
+	dvxInfoPtr->deviceID     = -1;
+	dvxInfoPtr->deviceString = NULL;
+}
+
+ssize_t dvXplorerFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	return (usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVXPLORER_DEVICE_PID, DVXPLORER_REQUIRED_LOGIC_VERSION,
+		DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, discoveredDevices,
+		&populateDeviceInfo));
 }
 
 static inline float calculateIMUAccelScale(uint8_t imuAccelScale) {
@@ -174,11 +184,12 @@ caerDeviceHandle dvXplorerOpen(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DVXPLORER device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVXPLORER_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DVXPLORER_REQUIRED_LOGIC_VERSION,
-			DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			DVXPLORER_REQUIRED_LOGIC_PATCH_LEVEL, DVXPLORER_REQUIRED_FIRMWARE_VERSION, &deviceInfo,
+			&populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvXplorerLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -194,7 +205,9 @@ caerDeviceHandle dvXplorerOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DVXPLORER_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -204,6 +217,11 @@ caerDeviceHandle dvXplorerOpen(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE, DVXPLORER_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceID, deviceInfo.deviceInfo.dvXplorerInfo.deviceSerialNumber,
+		deviceInfo.deviceInfo.dvXplorerInfo.deviceUSBBusNumber,
+		deviceInfo.deviceInfo.dvXplorerInfo.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &dvXplorerEventTranslator, handle);
@@ -222,21 +240,13 @@ caerDeviceHandle dvXplorerOpen(
 	}
 
 	// Populate info variables based on data from device.
+	handle->info = deviceInfo.deviceInfo.dvXplorerInfo;
+
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
+
 	uint32_t param32 = 0;
 
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
-
-	handle->info.firmwareVersion = usbInfo.firmwareVersion;
-	handle->info.logicVersion    = usbInfo.logicVersion;
-
-	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_CHIP_IDENTIFIER, &param32);
-	handle->info.chipID = I16T(param32);
-	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_DEVICE_IS_MASTER, &param32);
-	handle->info.deviceIsMaster = param32;
 	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_LOGIC_CLOCK, &param32);
 	state->deviceClocks.logicClock = U16T(param32);
 	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_USB_CLOCK, &param32);
@@ -266,18 +276,6 @@ caerDeviceHandle dvXplorerOpen(
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
 		state->dvs.invertXY);
 
-	if (state->dvs.invertXY) {
-		handle->info.dvsSizeX = state->dvs.sizeY;
-		handle->info.dvsSizeY = state->dvs.sizeX;
-	}
-	else {
-		handle->info.dvsSizeX = state->dvs.sizeX;
-		handle->info.dvsSizeY = state->dvs.sizeY;
-	}
-
-	spiConfigReceive(&state->usbState, DVX_IMU, DVX_IMU_TYPE, &param32);
-	handle->info.imuType = U8T(param32);
-
 	spiConfigReceive(&state->usbState, DVX_IMU, DVX_IMU_ORIENTATION_INFO, &param32);
 	state->imu.flipX = param32 & 0x04;
 	state->imu.flipY = param32 & 0x02;
@@ -285,16 +283,6 @@ caerDeviceHandle dvXplorerOpen(
 
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
-
-	// Extra features:
-	spiConfigReceive(&state->usbState, DVX_MUX, DVX_MUX_HAS_STATISTICS, &param32);
-	handle->info.muxHasStatistics = param32;
-
-	spiConfigReceive(&state->usbState, DVX_DVS, DVX_DVS_HAS_STATISTICS, &param32);
-	handle->info.dvsHasStatistics = param32;
-
-	spiConfigReceive(&state->usbState, DVX_EXTINPUT, DVX_EXTINPUT_HAS_GENERATOR, &param32);
-	handle->info.extInputHasGenerator = param32;
 
 	// Initialize Samsung DVS chip.
 	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, true); // Take DVS out of reset.
@@ -339,7 +327,7 @@ caerDeviceHandle dvXplorerOpen(
 	allocateDebugTransfers(handle);
 
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }

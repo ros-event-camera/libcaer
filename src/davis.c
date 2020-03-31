@@ -13,6 +13,99 @@ static void cancelAndDeallocateDebugTransfers(davisHandle handle);
 static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer);
 static void debugTranslator(davisHandle handle, const uint8_t *buffer, size_t bytesSent);
 
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a DAVIS.
+	result->deviceType         = CAER_DEVICE_DAVIS;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
+
+	struct caer_davis_info *davisInfoPtr = &(result->deviceInfo.davisInfo);
+
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion and LogicVersion either defined or zero.
+	strncpy(davisInfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	davisInfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	davisInfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	davisInfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+	davisInfoPtr->logicVersion           = usbInfo->logicVersion;
+
+	if (devHandle != NULL) {
+		// Populate info variables based on data from device.
+		uint32_t param32 = 0;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+		davisInfoPtr->chipID = I16T(param32);
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_SYSINFO, DAVIS_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+		davisInfoPtr->deviceIsMaster = param32;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_PIXEL_FILTER, &param32);
+		davisInfoPtr->dvsHasPixelFilter = param32;
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER, &param32);
+		davisInfoPtr->dvsHasBackgroundActivityFilter = param32;
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_ROI_FILTER, &param32);
+		davisInfoPtr->dvsHasROIFilter = param32;
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_SKIP_FILTER, &param32);
+		davisInfoPtr->dvsHasSkipFilter = param32;
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_POLARITY_FILTER, &param32);
+		davisInfoPtr->dvsHasPolarityFilter = param32;
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_HAS_STATISTICS, &param32);
+		davisInfoPtr->dvsHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_COLOR_FILTER, &param32);
+		davisInfoPtr->apsColorFilter = U8T(param32);
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_HAS_GLOBAL_SHUTTER, &param32);
+		davisInfoPtr->apsHasGlobalShutter = param32;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
+		davisInfoPtr->extInputHasGenerator = param32;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_HAS_STATISTICS, &param32);
+		davisInfoPtr->muxHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_COLUMNS, &param32);
+		uint16_t dvsSizeX = U16T(param32);
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_SIZE_ROWS, &param32);
+		uint16_t dvsSizeY = U16T(param32);
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_ORIENTATION_INFO, &param32);
+		bool dvsInvertXY = param32 & 0x04;
+
+		if (dvsInvertXY) {
+			davisInfoPtr->dvsSizeX = I16T(dvsSizeY);
+			davisInfoPtr->dvsSizeY = I16T(dvsSizeX);
+		}
+		else {
+			davisInfoPtr->dvsSizeX = I16T(dvsSizeX);
+			davisInfoPtr->dvsSizeY = I16T(dvsSizeY);
+		}
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_COLUMNS, &param32);
+		uint16_t apsSizeX = U16T(param32);
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_SIZE_ROWS, &param32);
+		uint16_t apsSizeY = U16T(param32);
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_ORIENTATION_INFO, &param32);
+		bool apsInvertXY = param32 & 0x04;
+
+		if (apsInvertXY) {
+			davisInfoPtr->apsSizeX = I16T(apsSizeY);
+			davisInfoPtr->apsSizeY = I16T(apsSizeX);
+		}
+		else {
+			davisInfoPtr->apsSizeX = I16T(apsSizeX);
+			davisInfoPtr->apsSizeY = I16T(apsSizeY);
+		}
+
+		startupSPIConfigReceive(devHandle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_TYPE, &param32);
+		davisInfoPtr->imuType = U8T(param32);
+	}
+
+	// Always unset here.
+	davisInfoPtr->deviceID     = -1;
+	davisInfoPtr->deviceString = NULL;
+}
+
 ssize_t davisFindAll(caerDeviceDiscoveryResult *discoveredDevices) {
 	return (davisFindInternal(CAER_DEVICE_DAVIS, discoveredDevices));
 }
@@ -29,20 +122,22 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 	// Set to NULL initially (for error return).
 	*discoveredDevices = NULL;
 
-	ssize_t resultFX2              = 0;
-	struct usb_info *foundDavisFX2 = NULL;
+	ssize_t resultFX2                       = 0;
+	caerDeviceDiscoveryResult foundDavisFX2 = NULL;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		resultFX2 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, DAVIS_FX2_REQUIRED_LOGIC_VERSION,
-			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &foundDavisFX2);
+			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &foundDavisFX2,
+			&populateDeviceInfo);
 	}
 
-	ssize_t resultFX3              = 0;
-	struct usb_info *foundDavisFX3 = NULL;
+	ssize_t resultFX3                       = 0;
+	caerDeviceDiscoveryResult foundDavisFX3 = NULL;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3)) {
 		resultFX3 = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, DAVIS_FX3_REQUIRED_LOGIC_VERSION,
-			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &foundDavisFX3);
+			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &foundDavisFX3,
+			&populateDeviceInfo);
 	}
 
 	if ((resultFX2 < 0) || (resultFX3 < 0)) {
@@ -61,8 +156,20 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		return (0);
 	}
 
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc(resultAll, sizeof(struct caer_device_discovery_result));
+	if (resultFX2 == 0) {
+		// Only FX3 devices found, return them directly.
+		*discoveredDevices = foundDavisFX3;
+		return (resultFX3);
+	}
+
+	if (resultFX3 == 0) {
+		// Only FX2 devices found, return them directly.
+		*discoveredDevices = foundDavisFX2;
+		return (resultFX2);
+	}
+
+	// Both found, append FX3 devices to FX2 ones.
+	*discoveredDevices = realloc(foundDavisFX2, resultAll * sizeof(struct caer_device_discovery_result));
 	if (*discoveredDevices == NULL) {
 		free(foundDavisFX2);
 		free(foundDavisFX3);
@@ -70,73 +177,12 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		return (-1);
 	}
 
-	// Transform from generic USB format into device discovery one.
-	size_t j = 0;
-
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) resultFX2; i++, j++) {
-		// This is a DAVIS FX2.
-		(*discoveredDevices)[j].deviceType         = CAER_DEVICE_DAVIS_FX2;
-		(*discoveredDevices)[j].deviceErrorOpen    = foundDavisFX2[i].errorOpen;
-		(*discoveredDevices)[j].deviceErrorVersion = foundDavisFX2[i].errorVersion;
-		struct caer_davis_info *davisInfoPtr       = &((*discoveredDevices)[j].deviceInfo.davisInfo);
-
-		davisInfoPtr->deviceUSBBusNumber     = foundDavisFX2[i].busNumber;
-		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX2[i].devAddress;
-		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX2[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		davisInfoPtr->firmwareVersion = foundDavisFX2[i].firmwareVersion;
-		davisInfoPtr->logicVersion    = (!foundDavisFX2[i].errorOpen) ? (foundDavisFX2[i].logicVersion) : (-1);
-
-		// Reopen DAVIS device to get additional info, if possible at all.
-		if (!foundDavisFX2[i].errorOpen && !foundDavisFX2[i].errorVersion) {
-			caerDeviceHandle davis
-				= davisOpenFX2(0, davisInfoPtr->deviceUSBBusNumber, davisInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (davis != NULL) {
-				*davisInfoPtr = caerDavisInfoGet(davis);
-
-				davisClose(davis);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		davisInfoPtr->deviceID     = -1;
-		davisInfoPtr->deviceString = NULL;
+	for (size_t i = (size_t) resultFX2, j = 0; i < resultAll; i++, j++) {
+		(*discoveredDevices)[i] = foundDavisFX3[j];
 	}
 
-	for (size_t i = 0; i < (size_t) resultFX3; i++, j++) {
-		// This is a DAVIS FX3.
-		(*discoveredDevices)[j].deviceType         = CAER_DEVICE_DAVIS_FX3;
-		(*discoveredDevices)[j].deviceErrorOpen    = foundDavisFX3[i].errorOpen;
-		(*discoveredDevices)[j].deviceErrorVersion = foundDavisFX3[i].errorVersion;
-		struct caer_davis_info *davisInfoPtr       = &((*discoveredDevices)[j].deviceInfo.davisInfo);
-
-		davisInfoPtr->deviceUSBBusNumber     = foundDavisFX3[i].busNumber;
-		davisInfoPtr->deviceUSBDeviceAddress = foundDavisFX3[i].devAddress;
-		strncpy(davisInfoPtr->deviceSerialNumber, foundDavisFX3[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		davisInfoPtr->firmwareVersion = foundDavisFX3[i].firmwareVersion;
-		davisInfoPtr->logicVersion    = (!foundDavisFX3[i].errorOpen) ? (foundDavisFX3[i].logicVersion) : (-1);
-
-		// Reopen DAVIS device to get additional info, if possible at all.
-		if (!foundDavisFX3[i].errorOpen && !foundDavisFX3[i].errorVersion) {
-			caerDeviceHandle davis
-				= davisOpenFX3(0, davisInfoPtr->deviceUSBBusNumber, davisInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (davis != NULL) {
-				*davisInfoPtr = caerDavisInfoGet(davis);
-
-				davisClose(davis);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		davisInfoPtr->deviceID     = -1;
-		davisInfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
-
-	free(foundDavisFX2);
 	free(foundDavisFX3);
+
 	return ((ssize_t) resultAll);
 }
 
@@ -200,19 +246,21 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	handle->cHandle.info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DAVIS device on a specific USB port.
-	bool deviceFound        = false;
-	struct usb_info usbInfo = {0, 0, "", false, false, 0, 0};
+	bool deviceFound = false;
+	struct caer_device_discovery_result deviceInfo;
 
 	if ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX2)) {
 		deviceFound = usbDeviceOpen(&handle->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX2_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX2_REQUIRED_LOGIC_VERSION,
-			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &usbInfo);
+			DAVIS_FX2_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX2_REQUIRED_FIRMWARE_VERSION, &deviceInfo,
+			&populateDeviceInfo);
 	}
 
 	if ((!deviceFound) && ((deviceType == CAER_DEVICE_DAVIS) || (deviceType == CAER_DEVICE_DAVIS_FX3))) {
 		deviceFound = usbDeviceOpen(&handle->usbState, USB_DEFAULT_DEVICE_VID, DAVIS_FX3_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DAVIS_FX3_REQUIRED_LOGIC_VERSION,
-			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &usbInfo);
+			DAVIS_FX3_REQUIRED_LOGIC_PATCH_LEVEL, DAVIS_FX3_REQUIRED_FIRMWARE_VERSION, &deviceInfo,
+			&populateDeviceInfo);
 
 		if (deviceFound) {
 			handle->fx3Support.enabled = true;
@@ -235,7 +283,9 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DAVIS_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		davisLog(CAER_LOG_CRITICAL, &handle->cHandle, "Failed to generate USB information string.");
 
@@ -245,6 +295,10 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE, DAVIS_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceID, deviceInfo.deviceInfo.davisInfo.deviceSerialNumber,
+		deviceInfo.deviceInfo.davisInfo.deviceUSBBusNumber, deviceInfo.deviceInfo.davisInfo.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&handle->usbState, &davisEventTranslator, handle);
@@ -263,14 +317,10 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	}
 
 	// Populate info variables based on data from device.
-	handle->cHandle.info.deviceID = I16T(deviceID);
-	strncpy(handle->cHandle.info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->cHandle.info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->cHandle.info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->cHandle.info.deviceString           = usbInfoString;
+	handle->cHandle.info = deviceInfo.deviceInfo.davisInfo;
 
-	handle->cHandle.info.firmwareVersion = usbInfo.firmwareVersion;
-	handle->cHandle.info.logicVersion    = usbInfo.logicVersion;
+	handle->cHandle.info.deviceID     = I16T(deviceID);
+	handle->cHandle.info.deviceString = usbInfoString;
 
 	davisCommonInit(&handle->cHandle);
 
@@ -280,8 +330,8 @@ static caerDeviceHandle davisOpenInternal(uint16_t deviceType, uint16_t deviceID
 	}
 
 	davisLog(CAER_LOG_DEBUG, &handle->cHandle,
-		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".", usbInfo.busNumber,
-		usbInfo.devAddress);
+		"Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
+		handle->cHandle.info.deviceUSBBusNumber, handle->cHandle.info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }

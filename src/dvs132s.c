@@ -22,62 +22,71 @@ static void dvs132sLog(enum caer_log_level logLevel, dvs132sHandle handle, const
 	va_end(argumentList);
 }
 
-ssize_t dvs132sFind(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a DVS132S.
+	result->deviceType         = CAER_DEVICE_DVS132S;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
 
-	struct usb_info *foundDVS132S = NULL;
+	struct caer_dvs132s_info *dvs132sInfoPtr = &(result->deviceInfo.dvs132sInfo);
 
-	ssize_t result = usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS132S_DEVICE_PID, DVS132S_REQUIRED_LOGIC_VERSION,
-		DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, &foundDVS132S);
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion and LogicVersion either defined or zero.
+	strncpy(dvs132sInfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	dvs132sInfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	dvs132sInfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	dvs132sInfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+	dvs132sInfoPtr->logicVersion           = usbInfo->logicVersion;
 
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
+	if (devHandle != NULL) {
+		// Populate info variables based on data from device.
+		uint32_t param32 = 0;
 
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundDVS132S);
-		return (-1);
-	}
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
+		dvs132sInfoPtr->chipID = I16T(param32);
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
+		dvs132sInfoPtr->deviceIsMaster = param32;
 
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a DVS132S.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_DVS132S;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundDVS132S[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundDVS132S[i].errorVersion;
-		struct caer_dvs132s_info *dvs132sInfoPtr   = &((*discoveredDevices)[i].deviceInfo.dvs132sInfo);
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_SIZE_COLUMNS, &param32);
+		int16_t dvsSizeX = I16T(param32);
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_SIZE_ROWS, &param32);
+		int16_t dvsSizeY = I16T(param32);
 
-		dvs132sInfoPtr->deviceUSBBusNumber     = foundDVS132S[i].busNumber;
-		dvs132sInfoPtr->deviceUSBDeviceAddress = foundDVS132S[i].devAddress;
-		strncpy(dvs132sInfoPtr->deviceSerialNumber, foundDVS132S[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_ORIENTATION_INFO, &param32);
+		bool dvsInvertXY = param32 & 0x04;
 
-		dvs132sInfoPtr->firmwareVersion = foundDVS132S[i].firmwareVersion;
-		dvs132sInfoPtr->logicVersion    = (!foundDVS132S[i].errorOpen) ? (foundDVS132S[i].logicVersion) : (-1);
-
-		// Reopen DVS128 device to get additional info, if possible at all.
-		if (!foundDVS132S[i].errorOpen && !foundDVS132S[i].errorVersion) {
-			caerDeviceHandle dvs
-				= dvs132sOpen(0, dvs132sInfoPtr->deviceUSBBusNumber, dvs132sInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*dvs132sInfoPtr = caerDVS132SInfoGet(dvs);
-
-				dvs132sClose(dvs);
-			}
+		if (dvsInvertXY) {
+			dvs132sInfoPtr->dvsSizeX = dvsSizeY;
+			dvs132sInfoPtr->dvsSizeY = dvsSizeX;
+		}
+		else {
+			dvs132sInfoPtr->dvsSizeX = dvsSizeX;
+			dvs132sInfoPtr->dvsSizeY = dvsSizeY;
 		}
 
-		// Set/Reset to invalid values, not part of discovery.
-		dvs132sInfoPtr->deviceID     = -1;
-		dvs132sInfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_TYPE, &param32);
+		dvs132sInfoPtr->imuType = U8T(param32);
 
-	free(foundDVS132S);
-	return (result);
+		// Extra features:
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_MUX, DVS132S_CONFIG_MUX_HAS_STATISTICS, &param32);
+		dvs132sInfoPtr->muxHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_HAS_STATISTICS, &param32);
+		dvs132sInfoPtr->dvsHasStatistics = param32;
+
+		startupSPIConfigReceive(devHandle, DVS132S_CONFIG_EXTINPUT, DVS132S_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
+		dvs132sInfoPtr->extInputHasGenerator = param32;
+	}
+
+	// Always unset here.
+	dvs132sInfoPtr->deviceID     = -1;
+	dvs132sInfoPtr->deviceString = NULL;
+}
+
+ssize_t dvs132sFind(caerDeviceDiscoveryResult *discoveredDevices) {
+	return (usbDeviceFind(USB_DEFAULT_DEVICE_VID, DVS132S_DEVICE_PID, DVS132S_REQUIRED_LOGIC_VERSION,
+		DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, discoveredDevices, &populateDeviceInfo));
 }
 
 static inline float calculateIMUAccelScale(uint8_t imuAccelScale) {
@@ -175,11 +184,11 @@ caerDeviceHandle dvs132sOpen(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a DVS132S device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, DVS132S_DEVICE_PID, busNumberRestrict,
 			devAddressRestrict, serialNumberRestrict, DVS132S_REQUIRED_LOGIC_VERSION,
-			DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			DVS132S_REQUIRED_LOGIC_PATCH_LEVEL, DVS132S_REQUIRED_FIRMWARE_VERSION, &deviceInfo, &populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			dvs132sLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -195,7 +204,9 @@ caerDeviceHandle dvs132sOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, DVS132S_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		dvs132sLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -205,6 +216,10 @@ caerDeviceHandle dvs132sOpen(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE, DVS132S_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceID, deviceInfo.deviceInfo.dvs132sInfo.deviceSerialNumber,
+		deviceInfo.deviceInfo.dvs132sInfo.deviceUSBBusNumber, deviceInfo.deviceInfo.dvs132sInfo.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &dvs132sEventTranslator, handle);
@@ -223,21 +238,13 @@ caerDeviceHandle dvs132sOpen(
 	}
 
 	// Populate info variables based on data from device.
+	handle->info = deviceInfo.deviceInfo.dvs132sInfo;
+
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
+
 	uint32_t param32 = 0;
 
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
-
-	handle->info.firmwareVersion = usbInfo.firmwareVersion;
-	handle->info.logicVersion    = usbInfo.logicVersion;
-
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_CHIP_IDENTIFIER, &param32);
-	handle->info.chipID = I16T(param32);
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_DEVICE_IS_MASTER, &param32);
-	handle->info.deviceIsMaster = param32;
 	spiConfigReceive(&state->usbState, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_LOGIC_CLOCK, &param32);
 	state->deviceClocks.logicClock = U16T(param32);
 	spiConfigReceive(&state->usbState, DVS132S_CONFIG_SYSINFO, DVS132S_CONFIG_SYSINFO_USB_CLOCK, &param32);
@@ -265,18 +272,6 @@ caerDeviceHandle dvs132sOpen(
 	dvs132sLog(CAER_LOG_DEBUG, handle, "DVS Size X: %d, Size Y: %d, Invert: %d.", state->dvs.sizeX, state->dvs.sizeY,
 		state->dvs.invertXY);
 
-	if (state->dvs.invertXY) {
-		handle->info.dvsSizeX = state->dvs.sizeY;
-		handle->info.dvsSizeY = state->dvs.sizeX;
-	}
-	else {
-		handle->info.dvsSizeX = state->dvs.sizeX;
-		handle->info.dvsSizeY = state->dvs.sizeY;
-	}
-
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_TYPE, &param32);
-	handle->info.imuType = U8T(param32);
-
 	spiConfigReceive(&state->usbState, DVS132S_CONFIG_IMU, DVS132S_CONFIG_IMU_ORIENTATION_INFO, &param32);
 	state->imu.flipX = param32 & 0x04;
 	state->imu.flipY = param32 & 0x02;
@@ -285,21 +280,11 @@ caerDeviceHandle dvs132sOpen(
 	dvs132sLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
 
-	// Extra features:
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_MUX, DVS132S_CONFIG_MUX_HAS_STATISTICS, &param32);
-	handle->info.muxHasStatistics = param32;
-
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_DVS, DVS132S_CONFIG_DVS_HAS_STATISTICS, &param32);
-	handle->info.dvsHasStatistics = param32;
-
-	spiConfigReceive(&state->usbState, DVS132S_CONFIG_EXTINPUT, DVS132S_CONFIG_EXTINPUT_HAS_GENERATOR, &param32);
-	handle->info.extInputHasGenerator = param32;
-
 	// On FX3, start the debug transfers once everything else is ready.
 	allocateDebugTransfers(handle);
 
 	dvs132sLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }

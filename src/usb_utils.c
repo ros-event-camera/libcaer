@@ -77,7 +77,9 @@ static void LIBUSB_CALL libusbUSBLog(libusb_context *ctx, enum libusb_log_level 
 }
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
-	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices) {
+	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle)) {
 	// Set to NULL initially (for error return).
 	*foundUSBDevices = NULL;
 
@@ -133,7 +135,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 	// Now that we know how many there are, we can allocate the proper
 	// amount of memory to hold the result.
-	*foundUSBDevices = calloc(matches, sizeof(struct usb_info));
+	*foundUSBDevices = calloc(matches, sizeof(struct caer_device_discovery_result));
 	if (*foundUSBDevices == NULL) {
 		libusb_free_device_list(devicesList, true);
 		libusb_exit(NULL);
@@ -152,15 +154,17 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 		// Check if this is the device we want (VID/PID).
 		if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+			struct usb_info currUSBInfo = {0};
+
 			// Get USB bus number and device address from descriptors.
-			(*foundUSBDevices)[matches].busNumber  = libusb_get_bus_number(devicesList[i]);
-			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
+			currUSBInfo.busNumber  = libusb_get_bus_number(devicesList[i]);
+			currUSBInfo.devAddress = libusb_get_device_address(devicesList[i]);
 
 			// Unknown serial number.
-			(*foundUSBDevices)[matches].serialNumber[0] = 'N';
-			(*foundUSBDevices)[matches].serialNumber[1] = '/';
-			(*foundUSBDevices)[matches].serialNumber[2] = 'A';
-			// Zero-init means already NUL-terminated.
+			currUSBInfo.serialNumber[0] = 'N';
+			currUSBInfo.serialNumber[1] = '/';
+			currUSBInfo.serialNumber[2] = 'A';
+			currUSBInfo.serialNumber[3] = 0x00;
 
 			// Verify device firmware version before opening, so that firmwareVersion
 			// is always defined, even on open errors.
@@ -170,17 +174,19 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
 
 				if (firmwareVersion != U8T(requiredFirmwareVersion)) {
-					firmwareVersionOK = false;
+					firmwareVersionOK        = false;
+					currUSBInfo.errorVersion = true;
 				}
 
-				(*foundUSBDevices)[matches].firmwareVersion = I16T(firmwareVersion);
-				(*foundUSBDevices)[matches].errorVersion    = true;
+				currUSBInfo.firmwareVersion = I16T(firmwareVersion);
 			}
 
 			libusb_device_handle *devHandle = NULL;
 
 			if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
-				(*foundUSBDevices)[matches].errorOpen = true;
+				currUSBInfo.errorOpen = true;
+				(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
+
 				matches++;
 				continue;
 			}
@@ -195,26 +201,18 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
 					libusb_close(devHandle);
 
-					(*foundUSBDevices)[matches].errorOpen = true;
+					currUSBInfo.errorOpen = true;
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
+
 					matches++;
 					continue;
 				}
 
 				// Copy serial number characters.
 				if (getStringDescResult > 0) {
-					memcpy((*foundUSBDevices)[matches].serialNumber, serialNumber, (size_t) getStringDescResult);
-					(*foundUSBDevices)[matches].serialNumber[getStringDescResult] = 0x00;
+					memcpy(currUSBInfo.serialNumber, serialNumber, (size_t) getStringDescResult);
+					currUSBInfo.serialNumber[getStringDescResult] = 0x00;
 				}
-			}
-
-			// Check that the active configuration is set to number 1. If not, do so.
-			// Then claim interface 0 (default).
-			if (!checkActiveConfigAndClaim(devHandle)) {
-				libusb_close(devHandle);
-
-				(*foundUSBDevices)[matches].errorOpen = true;
-				matches++;
-				continue;
 			}
 
 			// Verify device logic version.
@@ -225,31 +223,22 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint32_t param32 = 0;
 
 				// Get logic version from generic SYSINFO module.
-				uint8_t spiConfig[4] = {0};
-
-				if (libusb_control_transfer(devHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
-					!= sizeof(spiConfig)) {
-					libusb_release_interface(devHandle, 0);
+				if (!startupSPIConfigReceive(devHandle, 6, 0, &param32)) {
 					libusb_close(devHandle);
 
-					(*foundUSBDevices)[matches].errorOpen = true;
+					currUSBInfo.errorOpen = true;
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
+
 					matches++;
 					continue;
 				}
-
-				param32 |= U32T(spiConfig[0] << 24);
-				param32 |= U32T(spiConfig[1] << 16);
-				param32 |= U32T(spiConfig[2] << 8);
-				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic version.
 				if (param32 != U32T(requiredLogicVersion)) {
 					logicVersionOK = false;
 				}
 
-				(*foundUSBDevices)[matches].logicVersion = I16T(param32);
+				currUSBInfo.logicVersion = I16T(param32);
 			}
 
 			// Verify device logic minimum patch level.
@@ -260,24 +249,15 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				uint32_t param32 = 0;
 
 				// Get logic patch level from generic SYSINFO module.
-				uint8_t spiConfig[4] = {0};
-
-				if (libusb_control_transfer(devHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
-					!= sizeof(spiConfig)) {
-					libusb_release_interface(devHandle, 0);
+				if (!startupSPIConfigReceive(devHandle, 6, 7, &param32)) {
 					libusb_close(devHandle);
 
-					(*foundUSBDevices)[matches].errorOpen = true;
+					currUSBInfo.errorOpen = true;
+					(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, NULL);
+
 					matches++;
 					continue;
 				}
-
-				param32 |= U32T(spiConfig[0] << 24);
-				param32 |= U32T(spiConfig[1] << 16);
-				param32 |= U32T(spiConfig[2] << 8);
-				param32 |= U32T(spiConfig[3] << 0);
 
 				// Verify device logic minimum patch level.
 				if (param32 < U32T(minimumLogicPatch)) {
@@ -287,10 +267,12 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 			// If any of the version checks failed, stop.
 			if (!firmwareVersionOK || !logicVersionOK || !logicPatchOK) {
-				(*foundUSBDevices)[matches].errorVersion = true;
+				currUSBInfo.errorVersion = true;
 			}
 
-			libusb_release_interface(devHandle, 0);
+			// Get additional per-device information.
+			(*deviceInfoFunc)(&(*foundUSBDevices)[matches], &currUSBInfo, devHandle);
+
 			libusb_close(devHandle);
 
 			matches++;
@@ -305,11 +287,13 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
-	struct usb_info *deviceUSBInfo) {
+	caerDeviceDiscoveryResult deviceInfo,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle)) {
 	errno = 0;
 
 	// Ensure no content.
-	memset(deviceUSBInfo, 0, sizeof(struct usb_info));
+	memset(deviceInfo, 0, sizeof(struct caer_device_discovery_result));
 
 	// Search for device and open it.
 	// Initialize libusb using a separate context for each device.
@@ -356,6 +340,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 			// Check if this is the device we want (VID/PID).
 			if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+				struct usb_info currUSBInfo = {0};
+
 				// If a USB port restriction is given, honor it first.
 				uint8_t devBusNumber = libusb_get_bus_number(devicesList[i]);
 				if ((busNumber > 0) && (devBusNumber != busNumber)) {
@@ -365,7 +351,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					continue;
 				}
-				deviceUSBInfo->busNumber = devBusNumber;
+				currUSBInfo.busNumber = devBusNumber;
 
 				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
 				if ((devAddress > 0) && (devDevAddress != devAddress)) {
@@ -376,7 +362,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					continue;
 				}
-				deviceUSBInfo->devAddress = devDevAddress;
+				currUSBInfo.devAddress = devDevAddress;
 
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
@@ -404,10 +390,10 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Unknown serial number.
-				deviceUSBInfo->serialNumber[0] = 'N';
-				deviceUSBInfo->serialNumber[1] = '/';
-				deviceUSBInfo->serialNumber[2] = 'A';
-				deviceUSBInfo->serialNumber[3] = 0x00;
+				currUSBInfo.serialNumber[0] = 'N';
+				currUSBInfo.serialNumber[1] = '/';
+				currUSBInfo.serialNumber[2] = 'A';
+				currUSBInfo.serialNumber[3] = 0x00;
 
 				if (devDesc.iSerialNumber != 0) {
 					// Get the device's serial number.
@@ -466,8 +452,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 					// Copy serial number over.
 					if (getStringDescResult > 0) {
-						memcpy(deviceUSBInfo->serialNumber, deviceSerialNumber, (size_t) getStringDescResult);
-						deviceUSBInfo->serialNumber[getStringDescResult] = 0x00;
+						memcpy(currUSBInfo.serialNumber, deviceSerialNumber, (size_t) getStringDescResult);
+						currUSBInfo.serialNumber[getStringDescResult] = 0x00;
 					}
 				}
 
@@ -513,7 +499,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						errno             = CAER_ERROR_FW_VERSION;
 					}
 
-					deviceUSBInfo->firmwareVersion = I16T(firmwareVersion);
+					currUSBInfo.firmwareVersion = I16T(firmwareVersion);
 				}
 
 				// Verify device logic version.
@@ -524,12 +510,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					uint32_t param32 = 0;
 
 					// Get logic version from generic SYSINFO module.
-					uint8_t spiConfig[4] = {0};
-
-					if (libusb_control_transfer(devHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
-						!= sizeof(spiConfig)) {
+					if (!startupSPIConfigReceive(devHandle, 6, 0, &param32)) {
 						libusb_release_interface(devHandle, 0);
 						libusb_close(devHandle);
 						devHandle = NULL;
@@ -551,11 +532,6 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						}
 					}
 
-					param32 |= U32T(spiConfig[0] << 24);
-					param32 |= U32T(spiConfig[1] << 16);
-					param32 |= U32T(spiConfig[2] << 8);
-					param32 |= U32T(spiConfig[3] << 0);
-
 					// Verify device logic version.
 					if (param32 != U32T(requiredLogicVersion)) {
 						caerUSBLog(CAER_LOG_CRITICAL, state,
@@ -568,7 +544,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						errno          = CAER_ERROR_LOGIC_VERSION;
 					}
 
-					deviceUSBInfo->logicVersion = I16T(param32);
+					currUSBInfo.logicVersion = I16T(param32);
 				}
 
 				// Verify device logic minimum patch level.
@@ -579,12 +555,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					uint32_t param32 = 0;
 
 					// Get logic patch level from generic SYSINFO module.
-					uint8_t spiConfig[4] = {0};
-
-					if (libusb_control_transfer(devHandle,
-							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-							VENDOR_REQUEST_FPGA_CONFIG, 6, 7, spiConfig, sizeof(spiConfig), 0)
-						!= sizeof(spiConfig)) {
+					if (!startupSPIConfigReceive(devHandle, 6, 7, &param32)) {
 						libusb_release_interface(devHandle, 0);
 						libusb_close(devHandle);
 						devHandle = NULL;
@@ -605,11 +576,6 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 							continue;
 						}
 					}
-
-					param32 |= U32T(spiConfig[0] << 24);
-					param32 |= U32T(spiConfig[1] << 16);
-					param32 |= U32T(spiConfig[2] << 8);
-					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic minimum patch level.
 					if (param32 < U32T(minimumLogicPatch)) {
@@ -664,6 +630,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					}
 				}
 
+				// All done.
+				(*deviceInfoFunc)(deviceInfo, &currUSBInfo, devHandle);
+
 				break;
 			}
 		}
@@ -716,13 +685,17 @@ void usbSetLogLevel(usbState state, enum caer_log_level level) {
 #if LIBUSB_API_VERSION >= 0x01000107
 	if (state->deviceContext != NULL) {
 		switch (level) {
-			case CAER_LOG_ERROR:
-				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_ERROR);
+			default:
+			case CAER_LOG_EMERGENCY:
+			case CAER_LOG_ALERT:
+			case CAER_LOG_CRITICAL:
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
 				break;
 
+			case CAER_LOG_ERROR:
 			case CAER_LOG_WARNING:
 			case CAER_LOG_NOTICE:
-				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING);
+				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_ERROR);
 				break;
 
 			case CAER_LOG_INFO:
@@ -731,13 +704,6 @@ void usbSetLogLevel(usbState state, enum caer_log_level level) {
 
 			case CAER_LOG_DEBUG:
 				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_DEBUG);
-				break;
-
-			default:
-			case CAER_LOG_EMERGENCY:
-			case CAER_LOG_ALERT:
-			case CAER_LOG_CRITICAL:
-				libusb_set_option(state->deviceContext, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
 				break;
 		}
 	}
@@ -824,23 +790,6 @@ uint32_t usbGetTransfersNumber(usbState state) {
 
 uint32_t usbGetTransfersSize(usbState state) {
 	return (U32T(atomic_load(&state->usbBufferSize)));
-}
-
-char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID) {
-	// At this point we can get some more precise data on the device and update
-	// the logging string to reflect that and be more informative.
-	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-		deviceName, deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
-
-	char *fullLogString = malloc(fullLogStringLength + 1);
-	if (fullLogString == NULL) {
-		return (NULL);
-	}
-
-	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
-		deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
-
-	return (fullLogString);
 }
 
 bool usbThreadStart(usbState state) {
