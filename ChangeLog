@@ -1,4 +1,4 @@
-Release 3.3.6 - XX.03.2020
+Release 3.3.6 - 14.04.2020
 
 NEW FEATURES
 - MacOS X: set default CMake destination to /usr/local on Apple systems.
