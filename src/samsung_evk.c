@@ -194,6 +194,11 @@ caerDeviceHandle samsungEVKOpen(
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0000, 0x11); // Big endian transfer, enable FX3 transfer.
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0004, 0x01); // Take DVS out of reset.
 
+	// Enable FX3 timeout, set to 1ms.
+	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0002, 0xFF); // 8 lower bits of timeout.
+	i2cConfigSend(
+		&state->usbState, DEVICE_FPGA, 0x0003, 0x83); // bit 7 enable timeout, bits 1-0 are bits 9-8 of timeout.
+
 	// Wait 10ms for DVS to start.
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&dvsSleep, NULL);
