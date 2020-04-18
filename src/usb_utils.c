@@ -68,6 +68,8 @@ static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char 
 }
 
 static void LIBUSB_CALL libusbUSBLog(libusb_context *ctx, enum libusb_log_level level, const char *str) {
+	(void) ctx;
+
 	if (level == LIBUSB_LOG_LEVEL_ERROR || level == LIBUSB_LOG_LEVEL_WARNING) {
 		caerLog(level + 2, "USB", "%s", str);
 	}
