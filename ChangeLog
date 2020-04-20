@@ -1,11 +1,14 @@
-Release 3.3.6 - 14.04.2020
+Release 3.3.6 - 18.04.2020
 
 NEW FEATURES
 - MacOS X: set default CMake destination to /usr/local on Apple systems.
+- Ubuntu: support for release 20.04 LTS 'Focal Fossa'.
 
 BUG FIXES
 - USB: do not claim device interface on discovery, not needed for
   simple info requests on control ep0 (issue dv-gui#291).
+- Samsung EVK: enable USB transfer timeout (set to 500us), so that
+  even on low event rates, data keeps coming in with low latency.
 
 
 Release 3.3.5 - 12.03.2020
