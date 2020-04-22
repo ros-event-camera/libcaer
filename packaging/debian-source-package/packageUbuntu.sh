@@ -33,7 +33,7 @@ done
 SRC_URI="https://gitlab.com/inivation/dv/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
 PPA_REPO="inivation-ppa/inivation"
 
-if [[ ${DISTRO} == "xenial" ]] ; then
+if [ "${DISTRO}" = "xenial" ] ; then
 	PPA_REPO="inivation-ppa/inivation-xenial"
 fi
 
