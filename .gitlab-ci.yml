@@ -202,7 +202,7 @@ release_ubuntu:
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
   script:
     - if [[ -z "${CI_COMMIT_TAG}" ]] ; then exit 0; fi
-    - cd packaging/debian-source-package/
+    - cd packaging/ubuntu-source-package/
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro bionic --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
