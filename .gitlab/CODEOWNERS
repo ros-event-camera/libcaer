@@ -1,0 +1,6 @@
+# https://docs.gitlab.com/ee/user/project/code_owners.html#the-syntax-of-code-owners-files
+
+# Default code owners
+* @llongi
+
+# Directory specific code owners
