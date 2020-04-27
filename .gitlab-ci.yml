@@ -1,4 +1,4 @@
-.external_build_dir: &external_build_dir
+.change_build_dir: &change_build_dir
   - mkdir build
   - cd build
 
@@ -12,27 +12,28 @@
     - apt-get -y update
     - apt-get -y upgrade
   script:
-    - *external_build_dir
+    - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
-
-.stop_no_tag: &stop_no_tag
-  - if [[ -z "${CI_COMMIT_TAG}" ]] ; then exit 0; fi
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH
 
 build_macosx:
   stage: build
   tags:
     - macosx
     - build
-  before_script:
-    - brew update
-    - brew upgrade
   script:
-    - mkdir build
-    - cd build
+    - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j1
-    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then sudo make install; fi
+    - make -j2
+    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
+    - rm -Rf /usr/local/lib/libcaer.so* /usr/local/include/libcaer/ /usr/local/include/libcaercpp/ /usr/local/share/caer/
+    - sudo make install
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH
 
 build_windows:
   stage: build
@@ -41,15 +42,17 @@ build_windows:
     - build
   variables:
     MSYSTEM: MINGW64
-  before_script:
-    - pacman -Syuu --noconfirm
   script:
     - source /usr/bin/init-paths
-    - mkdir build
-    - cd build
+    - *change_build_dir
     - cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j1
-    - if [[ "${CI_COMMIT_REF_NAME}" == "master" ]] ; then make install; fi
+    - make -j2
+    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
+    - rm -Rf /mingw64/lib/libcaer.dll* /mingw64/include/libcaer/ /mingw64/include/libcaercpp/ /mingw64/share/caer/
+    - make install
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH
 
 build_raspbian:
   stage: build
@@ -57,19 +60,23 @@ build_raspbian:
     - docker
     - raspbian
     - build
-  image: inivation/raspbian
+  image: inivation/raspbian:buster
   before_script:
     - sudo apt-get -y update
     - sudo apt-get -y upgrade
   script:
-    - *external_build_dir
+    - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j2
-    - if [[ "$CI_COMMIT_REF_NAME" != "master" ]] && [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
+    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] && [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
     # Package artifact using CPack
     - cpack -G DEB
     - mv "libcaer.armv7l.deb" "libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
     - aws s3 cp "libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/libcaer/raspbian/libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
 
 build_ubuntu_1604:
   variables:
@@ -78,10 +85,10 @@ build_ubuntu_1604:
   <<: *ubuntu_curr_builder
   image: inivation/ubuntu:16.04
   script:
-    - *external_build_dir
+    - *change_build_dir
     # libserialport on Ubuntu 16.04 too old, disable serial devices support.
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=0 -DEXAMPLES_INSTALL=1 ..
-    - make -j1
+    - make -j2
 
 build_ubuntu_1804:
   <<: *ubuntu_curr_builder
@@ -147,15 +154,15 @@ pages:
     - gitlab-org-docker
   image: inivation/ubuntu:rolling
   script:
-    - *external_build_dir
+    - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 ..
     - make doc
     - mv docs/html ../public
   artifacts:
     paths:
       - public
-  only:
-    - master
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
 
 release_ubuntu:
   stage: deploy
@@ -167,7 +174,6 @@ release_ubuntu:
     - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
   script:
-    - *stop_no_tag
     - cd packaging/ubuntu-source-package/
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
@@ -176,9 +182,8 @@ release_ubuntu:
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro eoan --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
     - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro focal --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
-  only:
-    - tags
-    - web
+  rules:
+    - if: $CI_COMMIT_TAG
 
 release_fedora:
   stage: deploy
@@ -190,13 +195,11 @@ release_fedora:
     - mkdir -p ~/.config/
     - cp "${COPR_API_KEY}" ~/.config/copr
   script:
-    - *stop_no_tag
     - cd packaging/fedora-source-package/
     - ./packageFedora.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
     - copr-cli build --nowait inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc31.src.rpm"
-  only:
-    - tags
-    - web
+  rules:
+    - if: $CI_COMMIT_TAG
 
 release_gentoo_arch_brew:
   stage: deploy
@@ -212,7 +215,6 @@ release_gentoo_arch_brew:
     - ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
     - cp "${GITCI_SSH_CONF}" ~/.gitconfig
   script:
-    - *stop_no_tag
     - cd packaging/linux/
     # Gentoo release
     - ./gentoo-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --pkg-category dev-libs
@@ -220,6 +222,5 @@ release_gentoo_arch_brew:
     - ./arch-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
     # Brew release
     - ./brew-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
-  only:
-    - tags
-    - web
+  rules:
+    - if: $CI_COMMIT_TAG
