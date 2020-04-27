@@ -30,7 +30,7 @@ build_macosx:
     - make -j2
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
     - rm -Rf /usr/local/lib/libcaer.so* /usr/local/include/libcaer/ /usr/local/include/libcaercpp/ /usr/local/share/caer/
-    - sudo make install
+    - make install
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
@@ -62,8 +62,8 @@ build_raspbian:
     - build
   image: inivation/raspbian:buster
   before_script:
-    - sudo apt-get -y update
-    - sudo apt-get -y upgrade
+    - apt-get -y update
+    - apt-get -y upgrade
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
