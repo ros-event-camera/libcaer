@@ -39,4 +39,30 @@ If you are aware of tests that need to be written or adjusted apart from unit
 tests for the changed components, please list them here.
 -->
 
-/label ~enhancement
+### Links / references (optional)
+
+<!--
+E.g. related issues and merge requests, external resources.
+For relations to other issues in Gitlab, please use the standard Gitlab format
+'group/project#issue_number' to allow easy automatic linking.
+-->
+
+### Issue Planning (for developers only)
+
+<!-- Projected start date for handling this issue. -->
+StartDate: 2020-MM-DD
+
+<!-- Expected completion date for this issue. -->
+DueDate: 2020-MM-DD
+
+<!-- Issue impact, 1 (lowest) to 10 (highest). -->
+/weight 1
+
+<!-- Estimate of total time needed to solve this issue. -->
+/estimate 2d 5m
+
+<!-- Time already spent on this issue. -->
+/spend 5m
+
+<!-- Labels to add to this issue. Use ~"Short Term" for planning. -->
+/label ~enhancement, ~"Long Term"
