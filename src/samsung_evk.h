@@ -112,10 +112,11 @@ struct samsung_evk_state {
 	// Timestamp fields
 	struct {
 		uint32_t lastSub;
-		uint32_t lastReference;
+		uint32_t newReference;
 		uint32_t currentReference;
 		int32_t last;
 		int32_t current;
+		int32_t wrapOverflow;
 	} timestamps;
 	struct {
 		// DVS specific fields
