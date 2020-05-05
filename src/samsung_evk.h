@@ -111,11 +111,16 @@ struct samsung_evk_state {
 	struct usb_state usbState;
 	// Timestamp fields
 	struct {
-		uint32_t lastSub;
+		// evk timestamping.
+		uint64_t reference;
+		uint64_t referenceOverflow;
 		uint32_t lastReference;
-		uint32_t currentReference;
+		uint64_t lastUsedReference;
+		uint32_t lastUsedSub;
+		// libcaer timestamping.
 		int32_t last;
 		int32_t current;
+		int32_t wrapOverflow;
 	} timestamps;
 	struct {
 		// DVS specific fields

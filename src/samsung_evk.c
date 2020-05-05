@@ -1954,8 +1954,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 		}
 
 		if (state->currentPackets.special == NULL) {
-			state->currentPackets.special
-				= caerSpecialEventPacketAllocate(SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -1963,8 +1963,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 		}
 
 		if (state->currentPackets.polarity == NULL) {
-			state->currentPackets.polarity
-				= caerPolarityEventPacketAllocate(SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
 				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -2029,42 +2029,40 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 				state->dvs.lastX = columnAddr;
 
-				// Timestamp handling
-				if (timestampSub != state->timestamps.lastSub) {
-					if (state->timestamps.currentReference == state->timestamps.lastReference
-						&& timestampSub < state->timestamps.lastSub) {
+				if (startOfFrame) {
+					if (state->timestamps.reference == state->timestamps.lastUsedReference
+						&& timestampSub <= state->timestamps.lastUsedSub) {
 						// Reference did not change, but sub-timestamp did wrap around.
 						// We must have lost a main reference timestamp due to high traffic.
 						// In this case we increase manually by 1ms, as if we'd received it.
-						state->timestamps.lastReference += 1000;
+						state->timestamps.reference += 1000;
 					}
 
-					state->timestamps.currentReference = state->timestamps.lastReference;
-				}
+					// Get timestamp for rest of this frame.
+					uint64_t currTimestamp = state->timestamps.reference + U64T(timestampSub);
 
-				state->timestamps.lastSub = timestampSub;
+					state->timestamps.lastUsedReference = state->timestamps.reference;
+					state->timestamps.lastUsedSub       = timestampSub;
 
-				state->timestamps.last    = state->timestamps.current;
-				state->timestamps.current = I32T(state->timestamps.currentReference + timestampSub);
+					state->timestamps.last    = state->timestamps.current;
+					state->timestamps.current = (currTimestamp & 0x7FFFFFFF);
 
-				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
-					&state->deviceLogLevel);
+					int32_t currOverflow = ((currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					if (currOverflow != state->timestamps.wrapOverflow) {
+						state->timestamps.wrapOverflow = currOverflow;
+						state->timestamps.last         = 0;
+						tsBigWrap                      = true;
+					}
 
-				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+					// Check monotonicity of timestamps.
+					checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+						handle->info.deviceString, &state->deviceLogLevel);
 
-				if (startOfFrame) {
+					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
 					samsungEVKLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
 
-					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-							(size_t) state->currentPackets.specialPosition, 1, handle)) {
-						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentPackets.special, state->currentPackets.specialPosition);
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-						state->currentPackets.specialPosition++;
-					}
+					// TODO: EVENT_READOUT_START special event disabled for now, extra info not used by any client.
 				}
 			}
 
@@ -2072,10 +2070,18 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 			if (event & 0x08000000) {
 				uint32_t timestampRef = event & 0x003FFFFF;
 
-				// In ms, convert to µs.
-				timestampRef *= 1000;
+				// New reference timestamp is smaller, must have overflown its 22 bits.
+				if (timestampRef <= state->timestamps.lastReference) {
+					state->timestamps.referenceOverflow++;
+				}
 
 				state->timestamps.lastReference = timestampRef;
+
+				// Generate full 64bit reference timestamp, with overflow added.
+				state->timestamps.reference = (U64T(state->timestamps.referenceOverflow << 22) | U64T(timestampRef));
+
+				// In ms, convert to µs.
+				state->timestamps.reference *= 1000;
 			}
 		}
 
@@ -2087,8 +2093,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
 									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit
-			= containerGenerationIsCommitTimestampElapsed(&state->container, 0, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
 		// main-loop, when any of the required conditions are met.
@@ -2115,9 +2121,9 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 				emptyContainerCommit                  = false;
 			}
 
-			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, 0, state->timestamps.current,
-				&state->dataExchange, &state->usbState.dataTransfersRun, handle->info.deviceID,
-				handle->info.deviceString, &state->deviceLogLevel);
+			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
+				state->timestamps.current, &state->dataExchange, &state->usbState.dataTransfersRun,
+				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
 }
