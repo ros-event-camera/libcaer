@@ -24,7 +24,7 @@ Outline the tasks with issues that you need evaluated as a part of the implement
 ### Risks and Implementation Considerations
 
 <!--
-Idenitfy any risks found in the research, whether this is performance, impacts to
+Identify any risks found in the research, whether this is performance, impacts to
 other functionality or other bugs.
 -->
 
@@ -39,10 +39,10 @@ For relations to other issues in Gitlab, please use the standard Gitlab format
 ### Issue Planning (for developers only)
 
 <!-- Projected start date for handling this issue. -->
-StartDate: 2020-MM-DD
+StartDate: 2020-04-01
 
 <!-- Expected completion date for this issue. -->
-DueDate: 2020-MM-DD
+DueDate: 2020-04-01
 
 <!-- Issue impact, 1 (lowest) to 10 (highest). -->
 /weight 1
