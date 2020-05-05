@@ -2041,12 +2041,14 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 					// Handle reference overflow. Can happen when reference goes back to zero.
 					if (state->timestamps.newReference < state->timestamps.currentReference) {
 						state->timestamps.wrapOverflow++;
+						state->timestamps.current = 0;
 					}
 
 					// Or when reference crosses int32_max.
 					if (((state->timestamps.newReference >> 31) == 1)
 						&& ((state->timestamps.currentReference >> 31) == 0)) {
 						state->timestamps.wrapOverflow++;
+						state->timestamps.current = 0;
 					}
 
 					state->timestamps.currentReference = state->timestamps.newReference;
