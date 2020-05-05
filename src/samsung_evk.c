@@ -2030,34 +2030,29 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 				state->dvs.lastX = columnAddr;
 
 				if (startOfFrame) {
-					if (state->timestamps.newReference == state->timestamps.currentReference
-						&& timestampSub <= state->timestamps.lastSub) {
+					if (state->timestamps.reference == state->timestamps.lastUsedReference
+						&& timestampSub <= state->timestamps.lastUsedSub) {
 						// Reference did not change, but sub-timestamp did wrap around.
 						// We must have lost a main reference timestamp due to high traffic.
 						// In this case we increase manually by 1ms, as if we'd received it.
-						state->timestamps.newReference += 1000;
+						state->timestamps.reference += 1000;
 					}
-
-					// Handle reference overflow. Can happen when reference goes back to zero.
-					if (state->timestamps.newReference < state->timestamps.currentReference) {
-						state->timestamps.wrapOverflow++;
-						state->timestamps.current = 0;
-					}
-
-					// Or when reference crosses int32_max.
-					if (((state->timestamps.newReference >> 31) == 1)
-						&& ((state->timestamps.currentReference >> 31) == 0)) {
-						state->timestamps.wrapOverflow++;
-						state->timestamps.current = 0;
-					}
-
-					state->timestamps.currentReference = state->timestamps.newReference;
-					state->timestamps.lastSub          = timestampSub;
 
 					// Get timestamp for rest of this frame.
+					uint64_t currTimestamp = state->timestamps.reference + U64T(timestampSub);
+
+					state->timestamps.lastUsedReference = state->timestamps.reference;
+					state->timestamps.lastUsedSub       = timestampSub;
+
 					state->timestamps.last    = state->timestamps.current;
-					uint32_t nextTimestamp    = U32T(state->timestamps.currentReference + timestampSub);
-					state->timestamps.current = (nextTimestamp & 0x7FFFFFFF);
+					state->timestamps.current = (currTimestamp & 0x7FFFFFFF);
+
+					int32_t currOverflow = ((currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					if (currOverflow != state->timestamps.wrapOverflow) {
+						state->timestamps.wrapOverflow = currOverflow;
+						state->timestamps.last         = 0;
+						tsBigWrap                      = true;
+					}
 
 					// Check monotonicity of timestamps.
 					checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
@@ -2067,15 +2062,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 					samsungEVKLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
 
-					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-							(size_t) state->currentPackets.specialPosition, 1, handle)) {
-						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentPackets.special, state->currentPackets.specialPosition);
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-						state->currentPackets.specialPosition++;
-					}
+					// TODO: EVENT_READOUT_START special event disabled for now, extra info not used by any client.
 				}
 			}
 
@@ -2083,10 +2070,18 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 			if (event & 0x08000000) {
 				uint32_t timestampRef = event & 0x003FFFFF;
 
-				// In ms, convert to µs.
-				timestampRef *= 1000;
+				// New reference timestamp is smaller, must have overflown its 22 bits.
+				if (timestampRef <= state->timestamps.lastReference) {
+					state->timestamps.referenceOverflow++;
+				}
 
-				state->timestamps.newReference = timestampRef;
+				state->timestamps.lastReference = timestampRef;
+
+				// Generate full 64bit reference timestamp, with overflow added.
+				state->timestamps.reference = (U64T(state->timestamps.referenceOverflow << 22) | U64T(timestampRef));
+
+				// In ms, convert to µs.
+				state->timestamps.reference *= 1000;
 			}
 		}
 
