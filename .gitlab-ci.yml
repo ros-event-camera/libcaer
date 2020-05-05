@@ -14,10 +14,32 @@
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
+
+sonarcloud_analysis:
+  <<: *ubuntu_curr_builder
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    # Run the build inside the build wrapper
+    - /build-wrapper/build-wrapper-linux-x86-64 --out-dir bw-output make -j1
+    # Run the sonar-scanner CLI command
+    - cd ..
+    - /sonar-scanner/bin/sonar-scanner
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == "master"
+  cache:
+    key: sonar-cache
+    paths:
+      - .sonar/cache
+      - .sonar/c-cache
+    policy: pull-push
 
 build_macosx:
   stage: build
@@ -88,7 +110,7 @@ build_ubuntu_1604:
     - *change_build_dir
     # libserialport on Ubuntu 16.04 too old, disable serial devices support.
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=0 -DEXAMPLES_INSTALL=1 ..
-    - make -j2
+    - make -j1
 
 build_ubuntu_1804:
   <<: *ubuntu_curr_builder
