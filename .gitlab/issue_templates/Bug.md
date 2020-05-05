@@ -40,17 +40,14 @@ What you expect to happen instead.
 Information about your environment and the system you're running on.
 -->
 
-OS:
-OS version:
-
-libcaer version:
-and/or
-DV version:
-
-Installation type:
- [ ] package manager
- [ ] official download
- [ ] manual compile
+- OS:
+- OS version:
+- libcaer version:
+- DV version:
+- Installation type:
+  - [ ] package manager
+  - [ ] official download
+  - [ ] manual compile
 
 ### Relevant logs and/or screenshots (optional)
 
