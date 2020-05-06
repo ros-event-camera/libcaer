@@ -1,3 +1,9 @@
+Release 3.3.7 - 07.05.2020
+
+BUG FIXES
+- Samsung EVK: implement full 64bit timestamps (issue #99).
+
+
 Release 3.3.6 - 18.04.2020
 
 NEW FEATURES
