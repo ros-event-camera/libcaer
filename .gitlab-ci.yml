@@ -5,11 +5,11 @@
 .ubuntu_curr_builder: &ubuntu_curr_builder
   stage: build
   image: inivation/ubuntu:rolling
-  variables:
-    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
-    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
-    CCACHE_COMPILERCHECK: "content"
+  # Variables is not getting merged, so we use before_script to set CCACHE vars.
   before_script:
+    - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
+    - export CCACHE_BASEDIR="${CI_PROJECT_DIR}"
+    - export CCACHE_COMPILERCHECK="content"
     - apt-get -y update
     - apt-get -y upgrade
   script:
