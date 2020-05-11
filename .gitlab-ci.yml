@@ -11,8 +11,6 @@
     - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
     - export CCACHE_BASEDIR="${CI_PROJECT_DIR}"
     - export CCACHE_COMPILERCHECK="content"
-    - apt-get -y update
-    - apt-get -y upgrade
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
