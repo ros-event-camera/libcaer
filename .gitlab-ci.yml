@@ -79,6 +79,7 @@ build_windows:
     - build
   variables:
     MSYSTEM: MINGW64
+    CI_PROJECT_DIR: "$(pwd)"
     CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
     CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
     CCACHE_COMPILERCHECK: "content"
