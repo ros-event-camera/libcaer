@@ -79,10 +79,10 @@ build_windows:
     - build
   variables:
     MSYSTEM: MINGW64
-    CI_PROJECT_DIR: "$(pwd)"
-    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
-    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
     CCACHE_COMPILERCHECK: "content"
+  before_script:
+    - export CCACHE_DIR="$(pwd)/.ccache"
+    - export CCACHE_BASEDIR="$(pwd)"
   script:
     - source /usr/bin/init-paths
     - *change_build_dir
