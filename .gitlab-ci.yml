@@ -81,6 +81,7 @@ build_windows:
     MSYSTEM: MINGW64
     CCACHE_COMPILERCHECK: "content"
   before_script:
+    # Workaround for https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4524
     - export CCACHE_DIR="$(pwd)/.ccache"
     - export CCACHE_BASEDIR="$(pwd)"
   script:
