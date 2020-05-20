@@ -1,16 +1,16 @@
 .change_build_dir: &change_build_dir
+  - rm -Rf build
   - mkdir build
   - cd build
 
 .ubuntu_curr_builder: &ubuntu_curr_builder
   stage: build
-  tags:
-    - docker
-    - gitlab-org-docker
   image: inivation/ubuntu:rolling
+  # Variables is not getting merged, so we use before_script to set CCACHE vars.
   before_script:
-    - apt-get -y update
-    - apt-get -y upgrade
+    - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
+    - export CCACHE_BASEDIR="${CI_PROJECT_DIR}"
+    - export CCACHE_COMPILERCHECK="content"
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
@@ -18,6 +18,11 @@
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .ccache
+    policy: pull-push
 
 sonarcloud_analysis:
   <<: *ubuntu_curr_builder
@@ -35,10 +40,11 @@ sonarcloud_analysis:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH == "master"
   cache:
-    key: sonar-cache
+    key: "${CI_JOB_NAME}"
     paths:
       - .sonar/cache
       - .sonar/c-cache
+      - .ccache
     policy: pull-push
 
 build_macosx:
@@ -46,6 +52,10 @@ build_macosx:
   tags:
     - macosx
     - build
+  variables:
+    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
+    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
+    CCACHE_COMPILERCHECK: "content"
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
@@ -56,6 +66,11 @@ build_macosx:
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .ccache
+    policy: pull-push
 
 build_windows:
   stage: build
@@ -64,6 +79,11 @@ build_windows:
     - build
   variables:
     MSYSTEM: MINGW64
+    CCACHE_COMPILERCHECK: "content"
+  before_script:
+    # Workaround for https://gitlab.com/gitlab-org/gitlab-runner/-/issues/4524
+    - export CCACHE_DIR="$(pwd)/.ccache"
+    - export CCACHE_BASEDIR="$(pwd)"
   script:
     - source /usr/bin/init-paths
     - *change_build_dir
@@ -75,6 +95,11 @@ build_windows:
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .ccache
+    policy: pull-push
 
 build_raspbian:
   stage: build
@@ -83,9 +108,10 @@ build_raspbian:
     - raspbian
     - build
   image: inivation/raspbian:buster
-  before_script:
-    - apt-get -y update
-    - apt-get -y upgrade
+  variables:
+    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
+    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
+    CCACHE_COMPILERCHECK: "content"
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
@@ -99,6 +125,11 @@ build_raspbian:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .ccache
+    policy: pull-push
 
 build_ubuntu_1604:
   variables:
@@ -171,9 +202,6 @@ build_ubuntu_curr_clang10:
   <<: *ubuntu_curr_builder
 
 pages:
-  tags:
-    - docker
-    - gitlab-org-docker
   image: inivation/ubuntu:rolling
   script:
     - *change_build_dir
@@ -188,9 +216,6 @@ pages:
 
 release_ubuntu:
   stage: deploy
-  tags:
-    - docker
-    - gitlab-org-docker
   image: inivation/ubuntu:rolling
   before_script:
     - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
@@ -209,9 +234,6 @@ release_ubuntu:
 
 release_fedora:
   stage: deploy
-  tags:
-    - docker
-    - gitlab-org-docker
   image: inivation/fedora:latest
   before_script:
     - mkdir -p ~/.config/
@@ -225,9 +247,6 @@ release_fedora:
 
 release_gentoo_arch_brew:
   stage: deploy
-  tags:
-    - docker
-    - gitlab-org-docker
   image: inivation/gentoo:latest
   before_script:
     - mkdir -p ~/.ssh/
