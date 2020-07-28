@@ -199,66 +199,14 @@ caerDeviceHandle mipiCx3Open(
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&dvsSleep, NULL);
 
-	// Bias reset.
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
-
-	// Bias enable.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGP, 0x07);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGN, 0xFF);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFP, 0x03);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
-
-	mipiCx3ConfigSet(
-		(caerDeviceHandle) handle, MIPI_CX3_DVS_BIAS, MIPI_CX3_DVS_BIAS_SIMPLE, MIPI_CX3_DVS_BIAS_SIMPLE_VERY_HIGH);
-
-	//	// System settings.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PLL_S, 2);
-	//	i2cConfigSend(
-	//		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 2); // SYS_CLK: divide PLL freq by 5.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x00); // Disable parallel
-	// output. 	i2cConfigSend( 		&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x00); // TODO: 0x80
-	// to enable MGROUP compression.
-
-	//	// MIPI settings.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_WORD_COUNT_LOW, 0x00);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_WORD_COUNT_HIGH, 0x20);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_HEADER_DATA_TYPE, 0x2A);
-	//	i2cConfigSend(
-	//		&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINE_SPACING, 0xFF); // ~2 µs. TODO: too short? 4-5 µs min.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FRAME_SPACING_LOW, 0x00);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FRAME_SPACING_HIGH, 0x80); // ~260 µs.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINES_PER_FRAME_LOW, 0x01);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_LINES_PER_FRAME_HIGH, 0x00);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_FIFO_CONTROL, 0x00); // No FIFO timeout.
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3908, 0x1F);
-	//	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_MIPI_CONTROL, 0xF0); // MIPI enabled, 4 lane.
-
 	uint8_t tp = 0;
 	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PLL_S, &tp);
 	printf("REGISTER_CONTROL_PLL_S: %X\n", tp);
 	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, &tp);
 	printf("REGISTER_CONTROL_CLOCK_DIVIDER_SYS: %X\n", tp);
 
-	// Digital settings.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
-
-	// Fine clock counts based on clock frequency.
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
-	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
-
 	// Disable histogram, not currently used/mapped.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
-
-	// Commands in firmware but not documented, unused.
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3043, 0x01); // Bypass ESP.
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x3249, 0x00);
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x324A, 0x01);
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325A, 0x00);
-	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325B, 0x01);
 
 	// On FX3, start the debug transfers once everything else is ready.
 	allocateDebugTransfers(handle);
