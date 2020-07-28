@@ -1825,7 +1825,7 @@ bool mipiCx3DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	}
 
 	// And reset the USB side of things.
-	usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
+	// TODO: usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
