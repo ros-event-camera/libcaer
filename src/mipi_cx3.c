@@ -1825,7 +1825,7 @@ bool mipiCx3DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 	}
 
 	// And reset the USB side of things.
-	// TODO: usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
+	usbControlResetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 
 	if (!usbDataTransfersStart(&state->usbState)) {
 		freeAllDataMemory(state);
@@ -1836,7 +1836,7 @@ bool mipiCx3DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_TIMESTAMP_RESET, true);
-		// mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_MODE, MIPI_CX3_DVS_MODE_STREAM);
+		mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_MODE, MIPI_CX3_DVS_MODE_STREAM);
 	}
 
 	return (true);
