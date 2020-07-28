@@ -1892,7 +1892,7 @@ static inline bool ensureSpaceForEvents(
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
 	mipiCx3Handle handle = vhd;
 	mipiCx3State state   = &handle->state;
-
+	printf("Entered into callback\n");
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
