@@ -170,8 +170,8 @@ caerDeviceHandle mipiCx3Open(
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
 	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
-	usbSetTransfersNumber(&state->usbState, 8);
-	usbSetTransfersSize(&state->usbState, 8192);
+	usbSetTransfersNumber(&state->usbState, 16);
+	usbSetTransfersSize(&state->usbState, 3 * 4096);
 
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
@@ -1836,7 +1836,7 @@ bool mipiCx3DataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
 		mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_TIMESTAMP_RESET, true);
-		mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_MODE, MIPI_CX3_DVS_MODE_STREAM);
+		// mipiCx3ConfigSet(cdh, MIPI_CX3_DVS, MIPI_CX3_DVS_MODE, MIPI_CX3_DVS_MODE_STREAM);
 	}
 
 	return (true);
