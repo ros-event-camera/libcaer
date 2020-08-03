@@ -170,8 +170,8 @@ caerDeviceHandle mipiCx3Open(
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
 	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
-	usbSetTransfersNumber(&state->usbState, 16);
-	usbSetTransfersSize(&state->usbState, 3 * 4096);
+	usbSetTransfersNumber(&state->usbState, 32);
+	usbSetTransfersSize(&state->usbState, 8192);
 
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
@@ -1892,7 +1892,7 @@ static inline bool ensureSpaceForEvents(
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
 	mipiCx3Handle handle = vhd;
 	mipiCx3State state   = &handle->state;
-	printf("Entered into callback\n");
+
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
 	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
@@ -1907,12 +1907,12 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		bufferSize &= ~((size_t) 0x03);
 	}
 
-	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
-		printf("%X %X %X %X\n", buffer[bufferPos + 0], buffer[bufferPos + 1], buffer[bufferPos + 2],
-			buffer[bufferPos + 3]);
-	}
+	struct timespec t;
+	portable_clock_gettime_monotonic(&t);
 
-	return;
+	uint64_t usec = (uint64_t) t.tv_nsec / 1000UL;
+
+	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);
 
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
 		// Allocate new packets for next iteration as needed.
@@ -1942,7 +1942,7 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		bool tsReset   = false;
 		bool tsBigWrap = false;
 
-		uint32_t event = be32toh(*((const uint32_t *) (&buffer[bufferPos])));
+		uint32_t event = le32toh(*((const uint32_t *) (&buffer[bufferPos])));
 
 		if (event & 0x80000000) {
 			if (state->container.currentPacketContainerCommitTimestamp == -1) {

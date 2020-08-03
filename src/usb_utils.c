@@ -1025,7 +1025,7 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 
 static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer) {
 	usbState state = transfer->user_data;
-	printf("Entered USB callback with status: %d, length: %d\n", transfer->status, transfer->actual_length);
+
 	// Completed or cancelled transfers are what we expect to handle here, so
 	// if they do have data attached, try to parse them.
 	if (((transfer->status == LIBUSB_TRANSFER_COMPLETED) || (transfer->status == LIBUSB_TRANSFER_CANCELLED))

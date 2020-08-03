@@ -129,14 +129,14 @@ struct mipi_cx3_state {
 	struct usb_state usbState;
 	// Timestamp fields
 	struct {
-		uint32_t lastSub;
+		uint64_t reference;
+		uint64_t referenceOverflow;
 		uint32_t lastReference;
-		uint32_t currentReference;
-		int32_t last;
-		int32_t current;
+		uint64_t lastUsedReference;
+		uint32_t lastUsedSub;
 	} timestamps;
+	// DVS specific fields
 	struct {
-		// DVS specific fields
 		uint16_t lastX;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
