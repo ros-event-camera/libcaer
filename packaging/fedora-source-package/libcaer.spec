@@ -47,5 +47,5 @@ make install DESTDIR=%{buildroot}
 %{_libdir}/cmake/libcaer/
 
 %changelog
-* Fri Mar 23 2018 iniVation AG <support@inivation.com>
-See ChangeLog file in source or GitLab.
+* Mon Apr 20 2020 iniVation AG <support@inivation.com> - VERSION_REPLACE
+- See ChangeLog file in source or GitLab.

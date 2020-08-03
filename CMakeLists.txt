@@ -9,6 +9,8 @@ ENDIF()
 IF (NOT CMAKE_INSTALL_PREFIX)
 	IF (UNIX AND NOT APPLE)
 		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
+	ELSEIF (APPLE)
+		SET(CMAKE_INSTALL_PREFIX "/usr/local" CACHE STRING "CMake default install prefix, set to /usr/local on macOS")
 	ELSE()
 		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
 	ENDIF()
@@ -40,7 +42,7 @@ ENDIF()
 
 # Project name and version
 PROJECT(libcaer
-	VERSION 3.3.5
+	VERSION 3.3.7
 	LANGUAGES C CXX)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)

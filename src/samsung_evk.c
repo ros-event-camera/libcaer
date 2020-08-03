@@ -15,58 +15,45 @@ static void samsungEVKLog(enum caer_log_level logLevel, samsungEVKHandle handle,
 	va_end(argumentList);
 }
 
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a Samsung EVK.
+	result->deviceType         = CAER_DEVICE_SAMSUNG_EVK;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
+
+	struct caer_samsung_evk_info *evkInfoPtr = &(result->deviceInfo.samsungEVKInfo);
+
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion always zero in this case.
+	strncpy(evkInfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	evkInfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	evkInfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	evkInfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+
+	// Fixed information.
+	evkInfoPtr->chipID   = SAMSUNG_EVK_CHIP_ID;
+	evkInfoPtr->dvsSizeX = 640;
+	evkInfoPtr->dvsSizeY = 480;
+
+	if (devHandle != NULL) {
+		// Populate info variables based on data from device.
+		// Get USB firmware version.
+		uint8_t firmwareVersion = 0;
+		libusb_control_transfer(devHandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_I2C_READ, DEVICE_FPGA, 0xFF00, &firmwareVersion, 1, 0);
+
+		evkInfoPtr->firmwareVersion = firmwareVersion;
+	}
+
+	// Always unset here.
+	evkInfoPtr->deviceID     = -1;
+	evkInfoPtr->deviceString = NULL;
+}
+
 ssize_t samsungEVKFind(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
-
-	struct usb_info *foundSamsungEVK = NULL;
-
-	ssize_t result = usbDeviceFind(SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, -1, -1, -1, &foundSamsungEVK);
-
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
-
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundSamsungEVK);
-		return (-1);
-	}
-
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a SAMSUNG_EVK.
-		(*discoveredDevices)[i].deviceType              = CAER_DEVICE_SAMSUNG_EVK;
-		(*discoveredDevices)[i].deviceErrorOpen         = foundSamsungEVK[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion      = foundSamsungEVK[i].errorVersion;
-		struct caer_samsung_evk_info *samsungEVKInfoPtr = &((*discoveredDevices)[i].deviceInfo.samsungEVKInfo);
-
-		samsungEVKInfoPtr->deviceUSBBusNumber     = foundSamsungEVK[i].busNumber;
-		samsungEVKInfoPtr->deviceUSBDeviceAddress = foundSamsungEVK[i].devAddress;
-		strncpy(samsungEVKInfoPtr->deviceSerialNumber, foundSamsungEVK[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		// Reopen SAMSUNG_EVK device to get additional info, if possible at all.
-		if (!foundSamsungEVK[i].errorOpen && !foundSamsungEVK[i].errorVersion) {
-			caerDeviceHandle dvs = samsungEVKOpen(
-				0, samsungEVKInfoPtr->deviceUSBBusNumber, samsungEVKInfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*samsungEVKInfoPtr = caerSamsungEVKInfoGet(dvs);
-
-				samsungEVKClose(dvs);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		samsungEVKInfoPtr->deviceID     = -1;
-		samsungEVKInfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
-
-	free(foundSamsungEVK);
-	return (result);
+	return (usbDeviceFind(
+		SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, -1, -1, -1, discoveredDevices, &populateDeviceInfo));
 }
 
 static inline void freeAllDataMemory(samsungEVKState state) {
@@ -131,10 +118,10 @@ caerDeviceHandle samsungEVKOpen(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a SAMSUNG_EVK device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, SAMSUNG_EVK_DEVICE_VID, SAMSUNG_EVK_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &usbInfo)) {
+			devAddressRestrict, serialNumberRestrict, -1, -1, -1, &deviceInfo, &populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			samsungEVKLog(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -150,7 +137,9 @@ caerDeviceHandle samsungEVKOpen(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, SAMSUNG_EVK_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -160,6 +149,12 @@ caerDeviceHandle samsungEVKOpen(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE,
+		SAMSUNG_EVK_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceID,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceSerialNumber,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceUSBBusNumber,
+		deviceInfo.deviceInfo.samsungEVKInfo.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &samsungEVKEventTranslator, handle);
@@ -177,20 +172,11 @@ caerDeviceHandle samsungEVKOpen(
 		return (NULL);
 	}
 
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
+	// Populate info variables based on data from device.
+	handle->info = deviceInfo.deviceInfo.samsungEVKInfo;
 
-	// Get USB firmware version.
-	uint8_t firmwareVersion = 0;
-	i2cConfigReceive(&state->usbState, DEVICE_FPGA, 0xFF00, &firmwareVersion);
-
-	handle->info.firmwareVersion = firmwareVersion;
-	handle->info.chipID          = SAMSUNG_EVK_CHIP_ID;
-	handle->info.dvsSizeX        = 640;
-	handle->info.dvsSizeY        = 480;
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
 
 	// Send initialization commands.
 	usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET, 0, 0, NULL, 0); // Reset FPGA.
@@ -207,6 +193,11 @@ caerDeviceHandle samsungEVKOpen(
 
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0000, 0x11); // Big endian transfer, enable FX3 transfer.
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0004, 0x01); // Take DVS out of reset.
+
+	// Enable FX3 timeout, set to 500us.
+	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x0002, 0xF4); // 8 lower bits of timeout.
+	i2cConfigSend(
+		&state->usbState, DEVICE_FPGA, 0x0003, 0x81); // bit 7 enable timeout, bits 1-0 are bits 9-8 of timeout.
 
 	// Wait 10ms for DVS to start.
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -253,7 +244,7 @@ caerDeviceHandle samsungEVKOpen(
 	// i2cConfigSend(&state->usbState, DEVICE_DVS, 0x325B, 0x01);
 
 	samsungEVKLog(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }
@@ -1963,8 +1954,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 		}
 
 		if (state->currentPackets.special == NULL) {
-			state->currentPackets.special
-				= caerSpecialEventPacketAllocate(SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				SAMSUNG_EVK_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -1972,8 +1963,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 		}
 
 		if (state->currentPackets.polarity == NULL) {
-			state->currentPackets.polarity
-				= caerPolarityEventPacketAllocate(SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				SAMSUNG_EVK_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
 				samsungEVKLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -2038,42 +2029,40 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 
 				state->dvs.lastX = columnAddr;
 
-				// Timestamp handling
-				if (timestampSub != state->timestamps.lastSub) {
-					if (state->timestamps.currentReference == state->timestamps.lastReference
-						&& timestampSub < state->timestamps.lastSub) {
+				if (startOfFrame) {
+					if (state->timestamps.reference == state->timestamps.lastUsedReference
+						&& timestampSub <= state->timestamps.lastUsedSub) {
 						// Reference did not change, but sub-timestamp did wrap around.
 						// We must have lost a main reference timestamp due to high traffic.
 						// In this case we increase manually by 1ms, as if we'd received it.
-						state->timestamps.lastReference += 1000;
+						state->timestamps.reference += 1000;
 					}
 
-					state->timestamps.currentReference = state->timestamps.lastReference;
-				}
+					// Get timestamp for rest of this frame.
+					uint64_t currTimestamp = state->timestamps.reference + U64T(timestampSub);
 
-				state->timestamps.lastSub = timestampSub;
+					state->timestamps.lastUsedReference = state->timestamps.reference;
+					state->timestamps.lastUsedSub       = timestampSub;
 
-				state->timestamps.last    = state->timestamps.current;
-				state->timestamps.current = I32T(state->timestamps.currentReference + timestampSub);
+					state->timestamps.last    = state->timestamps.current;
+					state->timestamps.current = (currTimestamp & 0x7FFFFFFF);
 
-				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
-					&state->deviceLogLevel);
+					int32_t currOverflow = ((currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					if (currOverflow != state->timestamps.wrapOverflow) {
+						state->timestamps.wrapOverflow = currOverflow;
+						state->timestamps.last         = 0;
+						tsBigWrap                      = true;
+					}
 
-				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+					// Check monotonicity of timestamps.
+					checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+						handle->info.deviceString, &state->deviceLogLevel);
 
-				if (startOfFrame) {
+					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
 					samsungEVKLog(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
 
-					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-							(size_t) state->currentPackets.specialPosition, 1, handle)) {
-						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentPackets.special, state->currentPackets.specialPosition);
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-						state->currentPackets.specialPosition++;
-					}
+					// TODO: EVENT_READOUT_START special event disabled for now, extra info not used by any client.
 				}
 			}
 
@@ -2081,10 +2070,18 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 			if (event & 0x08000000) {
 				uint32_t timestampRef = event & 0x003FFFFF;
 
-				// In ms, convert to µs.
-				timestampRef *= 1000;
+				// New reference timestamp is smaller, must have overflown its 22 bits.
+				if (timestampRef <= state->timestamps.lastReference) {
+					state->timestamps.referenceOverflow++;
+				}
 
 				state->timestamps.lastReference = timestampRef;
+
+				// Generate full 64bit reference timestamp, with overflow added.
+				state->timestamps.reference = (U64T(state->timestamps.referenceOverflow << 22) | U64T(timestampRef));
+
+				// In ms, convert to µs.
+				state->timestamps.reference *= 1000;
 			}
 		}
 
@@ -2096,8 +2093,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
 									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit
-			= containerGenerationIsCommitTimestampElapsed(&state->container, 0, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
 		// main-loop, when any of the required conditions are met.
@@ -2124,9 +2121,9 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 				emptyContainerCommit                  = false;
 			}
 
-			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, 0, state->timestamps.current,
-				&state->dataExchange, &state->usbState.dataTransfersRun, handle->info.deviceID,
-				handle->info.deviceString, &state->deviceLogLevel);
+			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
+				state->timestamps.current, &state->dataExchange, &state->usbState.dataTransfersRun,
+				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
 }

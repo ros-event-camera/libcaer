@@ -3,6 +3,7 @@
 
 #include "libcaer/libcaer.h"
 
+#include "libcaer/devices/device_discover.h"
 #include "libcaer/devices/usb.h"
 
 #include <libusb.h>
@@ -20,6 +21,8 @@
 
 #define VENDOR_REQUEST_FPGA_CONFIG          0xBF
 #define VENDOR_REQUEST_FPGA_CONFIG_MULTIPLE 0xC2
+
+#define USB_INFO_STRING_SIZE 64
 
 enum { TRANS_STOPPED = 0, TRANS_RUNNING = 1 };
 
@@ -64,11 +67,15 @@ struct usb_info {
 };
 
 ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVersion, int32_t minimumLogicPatch,
-	int32_t requiredFirmwareVersion, struct usb_info **foundUSBDevices);
+	int32_t requiredFirmwareVersion, caerDeviceDiscoveryResult *foundUSBDevices,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle));
 
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
 	const char *serialNumber, int32_t requiredLogicVersion, int32_t minimumLogicPatch, int32_t requiredFirmwareVersion,
-	struct usb_info *deviceUSBInfo);
+	caerDeviceDiscoveryResult deviceInfo,
+	void (*deviceInfoFunc)(
+		caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle));
 void usbDeviceClose(usbState state);
 
 void usbSetLogLevel(usbState state, enum caer_log_level level);
@@ -119,8 +126,6 @@ static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *par
 
 	return (true);
 }
-
-char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID);
 
 bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);
@@ -199,6 +204,25 @@ static bool spiConfigSendAsync(void *state, uint16_t moduleAddr, uint16_t paramA
 
 	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
 		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
+}
+
+static bool startupSPIConfigReceive(
+	libusb_device_handle *devHandle, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
+	uint8_t spiConfig[4] = {0};
+
+	if (libusb_control_transfer(devHandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+			VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig), 0)
+		!= sizeof(spiConfig)) {
+		return (false);
+	}
+
+	*param = 0;
+	*param |= U32T(spiConfig[0] << 24);
+	*param |= U32T(spiConfig[1] << 16);
+	*param |= U32T(spiConfig[2] << 8);
+	*param |= U32T(spiConfig[3] << 0);
+
+	return (true);
 }
 
 static bool spiConfigReceive(void *state, uint16_t moduleAddr, uint16_t paramAddr, uint32_t *param) {
