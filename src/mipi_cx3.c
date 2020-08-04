@@ -1,7 +1,7 @@
 #include "mipi_cx3.h"
 
 static void mipiCx3Log(enum caer_log_level logLevel, mipiCx3Handle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
-static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
+static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bytesSent);
 
 // FX3 Debug Transfer Support
 static void allocateDebugTransfers(mipiCx3Handle handle);
@@ -20,59 +20,35 @@ static void mipiCx3Log(enum caer_log_level logLevel, mipiCx3Handle handle, const
 	va_end(argumentList);
 }
 
+static void populateDeviceInfo(
+	caerDeviceDiscoveryResult result, struct usb_info *usbInfo, libusb_device_handle *devHandle) {
+	// This is a CX3 MIPI device.
+	result->deviceType         = CAER_DEVICE_MIPI_CX3;
+	result->deviceErrorOpen    = usbInfo->errorOpen;
+	result->deviceErrorVersion = usbInfo->errorVersion;
+
+	struct caer_mipi_cx3_info *cx3InfoPtr = &(result->deviceInfo.mipiCx3Info);
+
+	// SN, BusNumber, DevAddress always defined.
+	// FirmwareVersion always zero in this case.
+	strncpy(cx3InfoPtr->deviceSerialNumber, usbInfo->serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+	cx3InfoPtr->deviceUSBBusNumber     = usbInfo->busNumber;
+	cx3InfoPtr->deviceUSBDeviceAddress = usbInfo->devAddress;
+	cx3InfoPtr->firmwareVersion        = usbInfo->firmwareVersion;
+
+	// Fixed information.
+	cx3InfoPtr->chipID   = SAMSUNG_EVK_CHIP_ID;
+	cx3InfoPtr->dvsSizeX = 640;
+	cx3InfoPtr->dvsSizeY = 480;
+
+	// Always unset here.
+	cx3InfoPtr->deviceID     = -1;
+	cx3InfoPtr->deviceString = NULL;
+}
+
 ssize_t mipiCx3Find(caerDeviceDiscoveryResult *discoveredDevices) {
-	// Set to NULL initially (for error return).
-	*discoveredDevices = NULL;
-
-	struct usb_info *foundMipiCx3 = NULL;
-
-	ssize_t result = usbDeviceFind(
-		USB_DEFAULT_DEVICE_VID, MIPI_CX3_DEVICE_PID, -1, -1, MIPI_CX3_REQUIRED_FIRMWARE_VERSION, &foundMipiCx3);
-
-	if (result <= 0) {
-		// Error or nothing found, return right away.
-		return (result);
-	}
-
-	// Allocate memory for discovered devices in expected format.
-	*discoveredDevices = calloc((size_t) result, sizeof(struct caer_device_discovery_result));
-	if (*discoveredDevices == NULL) {
-		free(foundMipiCx3);
-		return (-1);
-	}
-
-	// Transform from generic USB format into device discovery one.
-	caerLogDisable(true);
-	for (size_t i = 0; i < (size_t) result; i++) {
-		// This is a MIPI_CX3.
-		(*discoveredDevices)[i].deviceType         = CAER_DEVICE_MIPI_CX3;
-		(*discoveredDevices)[i].deviceErrorOpen    = foundMipiCx3[i].errorOpen;
-		(*discoveredDevices)[i].deviceErrorVersion = foundMipiCx3[i].errorVersion;
-		struct caer_mipi_cx3_info *mipiCx3InfoPtr  = &((*discoveredDevices)[i].deviceInfo.mipiCx3Info);
-
-		mipiCx3InfoPtr->deviceUSBBusNumber     = foundMipiCx3[i].busNumber;
-		mipiCx3InfoPtr->deviceUSBDeviceAddress = foundMipiCx3[i].devAddress;
-		strncpy(mipiCx3InfoPtr->deviceSerialNumber, foundMipiCx3[i].serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-
-		// Reopen MIPI_CX3 device to get additional info, if possible at all.
-		if (!foundMipiCx3[i].errorOpen && !foundMipiCx3[i].errorVersion) {
-			caerDeviceHandle dvs
-				= mipiCx3Open(0, mipiCx3InfoPtr->deviceUSBBusNumber, mipiCx3InfoPtr->deviceUSBDeviceAddress, NULL);
-			if (dvs != NULL) {
-				*mipiCx3InfoPtr = caerMipiCx3InfoGet(dvs);
-
-				mipiCx3Close(dvs);
-			}
-		}
-
-		// Set/Reset to invalid values, not part of discovery.
-		mipiCx3InfoPtr->deviceID     = -1;
-		mipiCx3InfoPtr->deviceString = NULL;
-	}
-	caerLogDisable(false);
-
-	free(foundMipiCx3);
-	return (result);
+	return (
+		usbDeviceFind(USB_DEFAULT_DEVICE_VID, MIPI_CX3_DEVICE_PID, -1, -1, -1, discoveredDevices, &populateDeviceInfo));
 }
 
 static inline void freeAllDataMemory(mipiCx3State state) {
@@ -137,10 +113,11 @@ caerDeviceHandle mipiCx3Open(
 	handle->info.deviceString = usbThreadName; // Temporary, until replaced by full string.
 
 	// Try to open a MIPI_CX3 device on a specific USB port.
-	struct usb_info usbInfo;
+	struct caer_device_discovery_result deviceInfo;
 
 	if (!usbDeviceOpen(&state->usbState, USB_DEFAULT_DEVICE_VID, MIPI_CX3_DEVICE_PID, busNumberRestrict,
-			devAddressRestrict, serialNumberRestrict, -1, -1, MIPI_CX3_REQUIRED_FIRMWARE_VERSION, &usbInfo)) {
+			devAddressRestrict, serialNumberRestrict, -1, -1, MIPI_CX3_REQUIRED_FIRMWARE_VERSION, &deviceInfo,
+			&populateDeviceInfo)) {
 		if (errno == CAER_ERROR_OPEN_ACCESS) {
 			mipiCx3Log(
 				CAER_LOG_CRITICAL, handle, "Failed to open device, no matching device could be found or opened.");
@@ -156,7 +133,9 @@ caerDeviceHandle mipiCx3Open(
 		return (NULL);
 	}
 
-	char *usbInfoString = usbGenerateDeviceString(usbInfo, MIPI_CX3_DEVICE_NAME, deviceID);
+	// At this point we can get some more precise data on the device and update
+	// the logging string to reflect that and be more informative.
+	char *usbInfoString = malloc(USB_INFO_STRING_SIZE);
 	if (usbInfoString == NULL) {
 		mipiCx3Log(CAER_LOG_CRITICAL, handle, "Failed to generate USB information string.");
 
@@ -166,6 +145,10 @@ caerDeviceHandle mipiCx3Open(
 		errno = CAER_ERROR_MEMORY_ALLOCATION;
 		return (NULL);
 	}
+
+	snprintf(usbInfoString, USB_INFO_STRING_SIZE, MIPI_CX3_DEVICE_NAME " ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
+		deviceID, deviceInfo.deviceInfo.mipiCx3Info.deviceSerialNumber,
+		deviceInfo.deviceInfo.mipiCx3Info.deviceUSBBusNumber, deviceInfo.deviceInfo.mipiCx3Info.deviceUSBDeviceAddress);
 
 	// Setup USB.
 	usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
@@ -183,17 +166,11 @@ caerDeviceHandle mipiCx3Open(
 		return (NULL);
 	}
 
-	handle->info.deviceID = I16T(deviceID);
-	strncpy(handle->info.deviceSerialNumber, usbInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	handle->info.deviceUSBBusNumber     = usbInfo.busNumber;
-	handle->info.deviceUSBDeviceAddress = usbInfo.devAddress;
-	handle->info.deviceString           = usbInfoString;
+	// Populate info variables based on data from device.
+	handle->info = deviceInfo.deviceInfo.mipiCx3Info;
 
-	// Get USB firmware version.
-	handle->info.firmwareVersion = usbInfo.firmwareVersion;
-	handle->info.chipID          = MIPI_CX3_CHIP_ID;
-	handle->info.dvsSizeX        = 640;
-	handle->info.dvsSizeY        = 480;
+	handle->info.deviceID     = I16T(deviceID);
+	handle->info.deviceString = usbInfoString;
 
 	// Wait 10ms for DVS to start.
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -212,7 +189,7 @@ caerDeviceHandle mipiCx3Open(
 	allocateDebugTransfers(handle);
 
 	mipiCx3Log(CAER_LOG_DEBUG, handle, "Initialized device successfully with USB Bus=%" PRIu8 ":Addr=%" PRIu8 ".",
-		usbInfo.busNumber, usbInfo.devAddress);
+		handle->info.deviceUSBBusNumber, handle->info.deviceUSBDeviceAddress);
 
 	return ((caerDeviceHandle) handle);
 }
@@ -1889,9 +1866,15 @@ static inline bool ensureSpaceForEvents(
 	return (true);
 }
 
-static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
+static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
 	mipiCx3Handle handle = vhd;
 	mipiCx3State state   = &handle->state;
+
+	// DEBUG CODE.
+	struct timespec t;
+	portable_clock_gettime_monotonic(&t);
+	uint64_t usec = (uint64_t) t.tv_nsec / 1000UL;
+	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -1901,20 +1884,20 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		return;
 	}
 
-	// Truncate off any extra partial event.
+	// Discard buffers with incorrect lengths.
 	if ((bufferSize & 0x03) != 0) {
 		mipiCx3Log(CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bufferSize);
-		bufferSize &= ~((size_t) 0x03);
+		return;
 	}
 
-	struct timespec t;
-	portable_clock_gettime_monotonic(&t);
-
-	uint64_t usec = (uint64_t) t.tv_nsec / 1000UL;
-
-	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);
-
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
+		const uint32_t event = le32toh(*((const uint32_t *) (&buffer[bufferPos])));
+
+		if (event == 0) {
+			// Padding event for MIPI, discard.
+			continue;
+		}
+
 		// Allocate new packets for next iteration as needed.
 		if (!containerGenerationAllocate(&state->container, MIPI_CX3_EVENT_TYPES)) {
 			mipiCx3Log(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
@@ -1922,8 +1905,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		}
 
 		if (state->currentPackets.special == NULL) {
-			state->currentPackets.special
-				= caerSpecialEventPacketAllocate(MIPI_CX3_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				MIPI_CX3_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.special == NULL) {
 				mipiCx3Log(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
 				return;
@@ -1931,8 +1914,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 		}
 
 		if (state->currentPackets.polarity == NULL) {
-			state->currentPackets.polarity
-				= caerPolarityEventPacketAllocate(MIPI_CX3_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), 0);
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				MIPI_CX3_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
 			if (state->currentPackets.polarity == NULL) {
 				mipiCx3Log(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
 				return;
@@ -1941,8 +1924,6 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 
 		bool tsReset   = false;
 		bool tsBigWrap = false;
-
-		uint32_t event = le32toh(*((const uint32_t *) (&buffer[bufferPos])));
 
 		if (event & 0x80000000) {
 			if (state->container.currentPacketContainerCommitTimestamp == -1) {
@@ -1997,42 +1978,40 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 
 				state->dvs.lastX = columnAddr;
 
-				// Timestamp handling
-				if (timestampSub != state->timestamps.lastSub) {
-					if (state->timestamps.currentReference == state->timestamps.lastReference
-						&& timestampSub < state->timestamps.lastSub) {
+				if (startOfFrame) {
+					if (state->timestamps.reference == state->timestamps.lastUsedReference
+						&& timestampSub <= state->timestamps.lastUsedSub) {
 						// Reference did not change, but sub-timestamp did wrap around.
 						// We must have lost a main reference timestamp due to high traffic.
 						// In this case we increase manually by 1ms, as if we'd received it.
-						state->timestamps.lastReference += 1000;
+						state->timestamps.reference += 1000;
 					}
 
-					state->timestamps.currentReference = state->timestamps.lastReference;
-				}
+					// Get timestamp for rest of this frame.
+					uint64_t currTimestamp = state->timestamps.reference + U64T(timestampSub);
 
-				state->timestamps.lastSub = timestampSub;
+					state->timestamps.lastUsedReference = state->timestamps.reference;
+					state->timestamps.lastUsedSub       = timestampSub;
 
-				state->timestamps.last    = state->timestamps.current;
-				state->timestamps.current = I32T(state->timestamps.currentReference + timestampSub);
+					state->timestamps.last    = state->timestamps.current;
+					state->timestamps.current = (currTimestamp & 0x7FFFFFFF);
 
-				// Check monotonicity of timestamps.
-				checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last, handle->info.deviceString,
-					&state->deviceLogLevel);
+					int32_t currOverflow = ((currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					if (currOverflow != state->timestamps.wrapOverflow) {
+						state->timestamps.wrapOverflow = currOverflow;
+						state->timestamps.last         = 0;
+						tsBigWrap                      = true;
+					}
 
-				containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+					// Check monotonicity of timestamps.
+					checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+						handle->info.deviceString, &state->deviceLogLevel);
 
-				if (startOfFrame) {
+					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
 					mipiCx3Log(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
 
-					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
-							(size_t) state->currentPackets.specialPosition, 1, handle)) {
-						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
-							state->currentPackets.special, state->currentPackets.specialPosition);
-						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
-						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
-						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
-						state->currentPackets.specialPosition++;
-					}
+					// TODO: EVENT_READOUT_START special event disabled for now, extra info not used by any client.
 				}
 			}
 
@@ -2040,10 +2019,18 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 			if (event & 0x08000000) {
 				uint32_t timestampRef = event & 0x003FFFFF;
 
-				// In ms, convert to µs.
-				timestampRef *= 1000;
+				// New reference timestamp is smaller, must have overflown its 22 bits.
+				if (timestampRef <= state->timestamps.lastReference) {
+					state->timestamps.referenceOverflow++;
+				}
 
 				state->timestamps.lastReference = timestampRef;
+
+				// Generate full 64bit reference timestamp, with overflow added.
+				state->timestamps.reference = (U64T(state->timestamps.referenceOverflow << 22) | U64T(timestampRef));
+
+				// In ms, convert to µs.
+				state->timestamps.reference *= 1000;
 			}
 		}
 
@@ -2055,8 +2042,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
 									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize));
 
-		bool containerTimeCommit
-			= containerGenerationIsCommitTimestampElapsed(&state->container, 0, state->timestamps.current);
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
 
 		// Commit packet containers to the ring-buffer, so they can be processed by the
 		// main-loop, when any of the required conditions are met.
@@ -2083,9 +2070,9 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, size_t buff
 				emptyContainerCommit                  = false;
 			}
 
-			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, 0, state->timestamps.current,
-				&state->dataExchange, &state->usbState.dataTransfersRun, handle->info.deviceID,
-				handle->info.deviceString, &state->deviceLogLevel);
+			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
+				state->timestamps.current, &state->dataExchange, &state->usbState.dataTransfersRun,
+				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
 		}
 	}
 }

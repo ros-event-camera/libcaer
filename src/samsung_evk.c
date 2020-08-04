@@ -2,7 +2,7 @@
 
 static void samsungEVKLog(enum caer_log_level logLevel, samsungEVKHandle handle, const char *format, ...)
 	ATTRIBUTE_FORMAT(3);
-static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
+static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const size_t bytesSent);
 
 static bool i2cConfigSend(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t param);
 static bool i2cConfigReceive(usbState state, uint16_t deviceAddr, uint16_t byteAddr, uint8_t *param);
@@ -1927,7 +1927,7 @@ static inline bool ensureSpaceForEvents(
 	return (true);
 }
 
-static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t bufferSize) {
+static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
 	samsungEVKHandle handle = vhd;
 	samsungEVKState state   = &handle->state;
 
@@ -1939,11 +1939,11 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, size_t b
 		return;
 	}
 
-	// Truncate off any extra partial event.
+	// Discard buffers with incorrect length.
 	if ((bufferSize & 0x03) != 0) {
 		samsungEVKLog(
 			CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bufferSize);
-		bufferSize &= ~((size_t) 0x03);
+		return;
 	}
 
 	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {

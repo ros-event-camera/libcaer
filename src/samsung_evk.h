@@ -115,8 +115,8 @@ struct samsung_evk_state {
 		uint64_t reference;
 		uint64_t referenceOverflow;
 		uint32_t lastReference;
-		uint64_t lastUsedReference;
 		uint32_t lastUsedSub;
+		uint64_t lastUsedReference;
 		// libcaer timestamping.
 		int32_t last;
 		int32_t current;
