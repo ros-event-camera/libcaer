@@ -112,19 +112,22 @@ struct samsung_evk_state {
 	// Timestamp fields
 	struct {
 		// evk timestamping.
-		uint64_t reference;
-		uint64_t referenceOverflow;
-		uint32_t lastReference;
-		uint32_t lastUsedSub;
-		uint64_t lastUsedReference;
+		int64_t reference;
+		int64_t referenceOverflow;
+		int32_t lastReference;
+		int32_t lastUsedSub;
+		int64_t lastUsedReference;
+		int64_t currTimestamp;
+		int64_t lastTimestamp;
 		// libcaer timestamping.
 		int32_t last;
 		int32_t current;
 		int32_t wrapOverflow;
 	} timestamps;
+	// DVS specific fields
 	struct {
-		// DVS specific fields
-		uint16_t lastX;
+		int16_t lastColumn;
+		int16_t lastGroupAddress;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
 	} dvs;

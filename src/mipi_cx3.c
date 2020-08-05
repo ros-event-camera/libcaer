@@ -155,7 +155,7 @@ caerDeviceHandle mipiCx3Open(
 	usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
 	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 32);
-	usbSetTransfersSize(&state->usbState, 8192);
+	usbSetTransfersSize(&state->usbState, 16384);
 
 	// Start USB handling thread.
 	if (!usbThreadStart(&state->usbState)) {
@@ -1885,18 +1885,12 @@ static void resetParser(mipiCx3Handle handle) {
 	state->timestamps.lastUsedSub       = -1;
 	state->timestamps.lastUsedReference = -1;
 
-	mipiCx3Log(CAER_LOG_ERROR, handle, "Parser reset (intermediate data lost).");
+	mipiCx3Log(CAER_LOG_INFO, handle, "Parser reset (intermediate data lost).");
 }
 
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
 	mipiCx3Handle handle = vhd;
 	mipiCx3State state   = &handle->state;
-
-	// DEBUG CODE.
-	/*struct timespec t;
-	portable_clock_gettime_monotonic(&t);
-	uint64_t usec = (uint64_t) t.tv_nsec / 1000UL;
-	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);*/
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
@@ -2100,7 +2094,7 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 
 					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
-					mipiCx3Log(CAER_LOG_DEBUG, handle, "Start of Frame column marker detected.");
+					mipiCx3Log(CAER_LOG_DEBUG, handle, "Start of Frame detected.");
 				}
 				// Start-of-frame not yet seen, ignore.
 				else if (state->dvs.lastColumn < 0) {
