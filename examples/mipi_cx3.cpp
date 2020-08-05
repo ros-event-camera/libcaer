@@ -92,16 +92,10 @@ int main(void) {
 			continue; // Skip if nothing there.
 		}
 
-		printf("\nGot event container with %d packets (allocated).\n", packetContainer->size());
-
 		for (auto &packet : *packetContainer) {
 			if (packet == nullptr) {
-				printf("Packet is empty (not present).\n");
 				continue; // Skip if nothing there.
 			}
-
-			printf("Packet of type %d -> %d events, %d capacity.\n", packet->getEventType(), packet->getEventNumber(),
-				packet->getEventCapacity());
 
 			if (packet->getEventType() == POLARITY_EVENT) {
 				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity

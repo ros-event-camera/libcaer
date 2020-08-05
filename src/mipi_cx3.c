@@ -1885,7 +1885,7 @@ static void resetParser(mipiCx3Handle handle) {
 	state->timestamps.lastUsedSub       = -1;
 	state->timestamps.lastUsedReference = -1;
 
-	mipiCx3Log(CAER_LOG_WARNING, handle, "Parser reset (intermediate data lost).");
+	mipiCx3Log(CAER_LOG_ERROR, handle, "Parser reset (intermediate data lost).");
 }
 
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
