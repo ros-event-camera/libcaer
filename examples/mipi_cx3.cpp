@@ -107,16 +107,6 @@ int main(void) {
 				std::shared_ptr<const libcaer::events::PolarityEventPacket> polarity
 					= std::static_pointer_cast<libcaer::events::PolarityEventPacket>(packet);
 
-				// Get full timestamp and addresses of first event.
-				const libcaer::events::PolarityEvent &firstEvent = (*polarity)[0];
-
-				int32_t ts = firstEvent.getTimestamp();
-				uint16_t x = firstEvent.getX();
-				uint16_t y = firstEvent.getY();
-				bool pol   = firstEvent.getPolarity();
-
-				printf("First polarity event - ts: %d, x: %d, y: %d, pol: %d.\n", ts, x, y, pol);
-
 				cv::Mat cvEvents(480, 640, CV_8UC3, cv::Vec3b{127, 127, 127});
 				for (const auto &e : *polarity) {
 					cvEvents.at<cv::Vec3b>(e.getY(), e.getX())

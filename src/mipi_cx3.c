@@ -1893,10 +1893,10 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 	mipiCx3State state   = &handle->state;
 
 	// DEBUG CODE.
-	struct timespec t;
+	/*struct timespec t;
 	portable_clock_gettime_monotonic(&t);
 	uint64_t usec = (uint64_t) t.tv_nsec / 1000UL;
-	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);
+	printf("[%lu.%lu] Got buffer with length %zu\n", t.tv_sec, usec, bufferSize);*/
 
 	// Return right away if not running anymore. This prevents useless work if many
 	// buffers are still waiting when shut down, as well as incorrect event sequences
