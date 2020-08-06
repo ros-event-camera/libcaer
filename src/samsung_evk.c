@@ -1938,7 +1938,6 @@ static inline bool ensureSpaceForEvents(
 static void resetParser(samsungEVKHandle handle, const char *reason) {
 	samsungEVKState state = &handle->state;
 
-	// lastGroupAddress always reset when setting lastColumn.
 	state->dvs.lastColumn       = -1;
 	state->timestamps.reference = -1;
 

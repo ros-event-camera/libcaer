@@ -1872,7 +1872,6 @@ static inline bool ensureSpaceForEvents(
 static void resetParser(mipiCx3Handle handle, const char *reason) {
 	mipiCx3State state = &handle->state;
 
-	// lastGroupAddress always reset when setting lastColumn.
 	state->dvs.lastColumn       = -1;
 	state->timestamps.reference = -1;
 
