@@ -2,7 +2,7 @@
 
 static void mipiCx3Log(enum caer_log_level logLevel, mipiCx3Handle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bytesSent);
-static void resetParser(mipiCx3Handle handle);
+static void resetParser(mipiCx3Handle handle, const char *reason);
 
 // FX3 Debug Transfer Support
 static void allocateDebugTransfers(mipiCx3Handle handle);
@@ -177,12 +177,6 @@ caerDeviceHandle mipiCx3Open(
 	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
 	thrd_sleep(&dvsSleep, NULL);
 
-	uint8_t tp = 0;
-	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PLL_S, &tp);
-	printf("REGISTER_CONTROL_PLL_S: %X\n", tp);
-	i2cConfigReceive(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, &tp);
-	printf("REGISTER_CONTROL_CLOCK_DIVIDER_SYS: %X\n", tp);
-
 	// Disable histogram, not currently used/mapped.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
 
@@ -190,7 +184,7 @@ caerDeviceHandle mipiCx3Open(
 	allocateDebugTransfers(handle);
 
 	// Setup data parser.
-	resetParser(handle);
+	resetParser(handle, "startup");
 
 	state->timestamps.referenceOverflow = 0;
 	state->timestamps.lastReference     = -1;
@@ -1875,7 +1869,7 @@ static inline bool ensureSpaceForEvents(
 	return (true);
 }
 
-static void resetParser(mipiCx3Handle handle) {
+static void resetParser(mipiCx3Handle handle, const char *reason) {
 	mipiCx3State state = &handle->state;
 
 	// lastGroupAddress always reset when setting lastColumn.
@@ -1885,7 +1879,7 @@ static void resetParser(mipiCx3Handle handle) {
 	state->timestamps.lastUsedSub       = -1;
 	state->timestamps.lastUsedReference = -1;
 
-	mipiCx3Log(CAER_LOG_INFO, handle, "Parser reset (intermediate data lost).");
+	mipiCx3Log(CAER_LOG_INFO, handle, "Parser reset, reason: %s.", reason);
 }
 
 static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
@@ -1959,26 +1953,19 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 
 			// Check range conformity.
 			if (group1Address >= handle->info.dvsSizeY) {
-				mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: Group1 Y address out of range (0-%d): %u.\n",
+				mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: Group1 Y address out of range (0-%d): %u.",
 					handle->info.dvsSizeY - 1, group1Address);
 				continue; // Skip invalid G1 Y address.
 			}
 
 			if (group2Address >= handle->info.dvsSizeY) {
-				mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: Group2 Y address out of range (0-%d): %u.\n",
+				mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: Group2 Y address out of range (0-%d): %u.",
 					handle->info.dvsSizeY - 1, group2Address);
 				continue; // Skip invalid G2 Y address.
 			}
 
-			// If the group address went back, we must have lost data.
-			// So we reset and wait to re-sync time and data.
-			if (group1Address <= state->dvs.lastGroupAddress) {
-				resetParser(handle);
-				continue;
-			}
-
-			// Take higher address as last (group2 may be < group1).
-			state->dvs.lastGroupAddress = I16T(group2Address);
+			// Group addresses can happen out of order when MGROUP compression is enabled.
+			// No extra checks can thus be done, and reordering may be required.
 
 			// Two 8-pixel groups, up to 16 events can be generated.
 			if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
@@ -2043,7 +2030,7 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 				int16_t columnAddr = event & 0x03FF;
 
 				if (columnAddr >= handle->info.dvsSizeX) {
-					mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: X address out of range (0-%d): %u.\n",
+					mipiCx3Log(CAER_LOG_ERROR, handle, "DVS: X address out of range (0-%d): %u.",
 						handle->info.dvsSizeX - 1, columnAddr);
 					continue; // Skip invalid X address (don't update lastX).
 				}
@@ -2056,7 +2043,7 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 						// Reference did not change, but sub-timestamp did wrap around.
 						// We must have lost a main reference timestamp due to high traffic.
 						// So we wait until the next reference timestamp comes in.
-						resetParser(handle);
+						resetParser(handle, "timestamp reference lost");
 						continue;
 					}
 
@@ -2105,13 +2092,12 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 					// If it jumps back, we must have lost data due to high traffic.
 					// So we reset and wait to re-sync time and data.
 					if (columnAddr <= state->dvs.lastColumn) {
-						resetParser(handle);
+						resetParser(handle, "column address illegal jump");
 						continue;
 					}
 				}
 
-				state->dvs.lastColumn       = columnAddr;
-				state->dvs.lastGroupAddress = -1; // Reset to invalid value.
+				state->dvs.lastColumn = columnAddr;
 			}
 			// TIMESTAMP event.
 			else if (event & 0x08000000) {

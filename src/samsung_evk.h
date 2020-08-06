@@ -127,7 +127,6 @@ struct samsung_evk_state {
 	// DVS specific fields
 	struct {
 		int16_t lastColumn;
-		int16_t lastGroupAddress;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
 	} dvs;

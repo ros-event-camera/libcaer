@@ -75,6 +75,8 @@ int main(void) {
 	// No configuration is sent automatically!
 	handle.sendDefaultConfig();
 
+	handle.configSet(CAER_HOST_CONFIG_LOG, CAER_HOST_CONFIG_LOG_LEVEL, 6);
+
 	// Now let's get start getting some data from the device. We just loop in blocking mode,
 	// no notification needed regarding new events. The shutdown notification, for example if
 	// the device is disconnected, should be listened to.
