@@ -173,7 +173,7 @@ int main(void) {
 				cv::imshow("PLOT_EVENTS", cvEvents);
 				cv::waitKey(1);
 
-				printf("Current max event rate: %f (momentary), %f (sustaiend) MEvt/s.\n", maxSmallMevts, maxBigMevts);
+				printf("Current max event rate: %f (momentary), %f (sustained) MEvt/s.\n", maxSmallMevts, maxBigMevts);
 			}
 		}
 	}
