@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# exit when any command fails
+set -e
+
 PKG_NAME=
 PKG_VERSION=0
 PKG_CATEGORY=
@@ -16,6 +19,8 @@ do
     esac
     shift
 done
+
+emerge --sync
 
 git clone "git@gitlab.com:inivation/gentoo-inivation.git"
 
