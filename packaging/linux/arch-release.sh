@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# exit when any command fails
+set -e
+
 PKG_NAME=
 PKG_VERSION=0
 
@@ -17,11 +20,16 @@ done
 PKG_FILE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
 PKG_FILE_PATH="/var/cache/distfiles/${PKG_FILE}"
 
+echo "Path is: ${PKG_FILE_PATH}"
+
 if ! [ -f "${PKG_FILE_PATH}" ] ; then
+	mkdir -p /var/cache/distfiles/
 	wget "https://gitlab.com/inivation/dv/${PKG_NAME}/-/archive/${PKG_VERSION}/${PKG_FILE}" -O "${PKG_FILE_PATH}"
 fi
 
 SHA256_FILE=$(sha256sum "${PKG_FILE_PATH}" | awk '{ print $1 }')
+
+echo "SHA256 checksum is: ${SHA256_FILE}"
 
 git clone "ssh://aur@aur.archlinux.org/${PKG_NAME}.git"
 
