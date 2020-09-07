@@ -165,7 +165,8 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			// Unknown serial number.
 			// Generate a repeatable serial number valid for this session using bus and device addresses.
 			uint16_t serialNumberNotAvailable = currUSBInfo.busNumber * currUSBInfo.devAddress;
-			snprintf(currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "%" PRIu16, serialNumberNotAvailable);
+			snprintf(
+				currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "TMP%05" PRIu16, serialNumberNotAvailable);
 
 			// Verify device firmware version before opening, so that firmwareVersion
 			// is always defined, even on open errors.
@@ -393,8 +394,8 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				// Unknown serial number.
 				// Generate a repeatable serial number valid for this session using bus and device addresses.
 				uint16_t serialNumberNotAvailable = currUSBInfo.busNumber * currUSBInfo.devAddress;
-				snprintf(
-					currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "%" PRIu16, serialNumberNotAvailable);
+				snprintf(currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "TMP%05" PRIu16,
+					serialNumberNotAvailable);
 
 				if (devDesc.iSerialNumber != 0) {
 					// Get the device's serial number.
