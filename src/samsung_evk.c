@@ -1150,7 +1150,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x40) == true);
+					*param = ((currVal & 0x40) != 0);
 					break;
 				}
 
@@ -1161,7 +1161,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x20) == true);
+					*param = ((currVal & 0x20) != 0);
 					break;
 				}
 
@@ -1172,7 +1172,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x10) == true);
+					*param = ((currVal & 0x10) != 0);
 					break;
 				}
 
@@ -1183,7 +1183,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x04) == true);
+					*param = ((currVal & 0x04) != 0);
 					break;
 				}
 
@@ -1194,7 +1194,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x02) == true);
+					*param = ((currVal & 0x02) != 0);
 					break;
 				}
 
@@ -1216,7 +1216,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x38) >> 3);
+					*param = (U8T(currVal & 0x38) >> 3);
 					break;
 				}
 
@@ -1282,7 +1282,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x02) == true);
+					*param = ((currVal & 0x02) != 0);
 					break;
 				}
 
@@ -1528,7 +1528,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = !currVal;
+					*param = (currVal == 0) ? (1) : (0);
 					break;
 				}
 
@@ -1592,7 +1592,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = !currVal;
+					*param = (currVal == 0) ? (1) : (0);
 					break;
 				}
 
@@ -1693,7 +1693,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x08) == true);
+					*param = ((currVal & 0x08) != 0);
 					break;
 				}
 
@@ -1705,7 +1705,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x04) == true);
+					*param = ((currVal & 0x04) != 0);
 					break;
 				}
 
@@ -1717,7 +1717,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x02) == true);
+					*param = ((currVal & 0x02) != 0);
 					break;
 				}
 
@@ -1729,7 +1729,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x01) == true);
+					*param = ((currVal & 0x01) != 0);
 					break;
 				}
 
@@ -1741,7 +1741,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x10) == true);
+					*param = ((currVal & 0x10) != 0);
 					break;
 				}
 
@@ -1753,7 +1753,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x0C) >> 2);
+					*param = (U8T(currVal & 0x0C) >> 2);
 					break;
 				}
 
@@ -1764,7 +1764,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x10) == true);
+					*param = ((currVal & 0x10) != 0);
 					break;
 				}
 
@@ -1775,7 +1775,7 @@ bool samsungEVKConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr
 						return (false);
 					}
 
-					*param = ((currVal & 0x02) == true);
+					*param = ((currVal & 0x02) != 0);
 					break;
 				}
 
@@ -2127,9 +2127,10 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 
 					// Get timestamp for rest of this frame.
 					state->timestamps.last    = state->timestamps.current;
-					state->timestamps.current = (state->timestamps.currTimestamp & 0x7FFFFFFF);
+					state->timestamps.current = (U64T(state->timestamps.currTimestamp) & 0x7FFFFFFF);
 
-					int32_t currOverflow = ((state->timestamps.currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					int32_t currOverflow
+						= (U64T(U64T(state->timestamps.currTimestamp) >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
 					if (currOverflow != state->timestamps.wrapOverflow) {
 						state->timestamps.wrapOverflow = currOverflow;
 						state->timestamps.last         = 0;
@@ -2172,7 +2173,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 				state->timestamps.lastReference = timestampRef;
 
 				// Generate full 64bit reference timestamp, with overflow added.
-				state->timestamps.reference = ((state->timestamps.referenceOverflow << 22) + timestampRef);
+				state->timestamps.reference = (I64T(U64T(state->timestamps.referenceOverflow) << 22) + timestampRef);
 
 				// In ms, convert to µs.
 				state->timestamps.reference *= 1000;
