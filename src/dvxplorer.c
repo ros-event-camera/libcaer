@@ -811,7 +811,8 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				case DVX_DVS_CHIP_AREA_BLOCKING_17:
 				case DVX_DVS_CHIP_AREA_BLOCKING_18:
 				case DVX_DVS_CHIP_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
+					uint16_t regAddr
+						= REGISTER_DIGITAL_AREA_BLOCK + U16T(2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
 
 					if (!spiConfigSend(&state->usbState, DEVICE_DVS, regAddr, U8T(param >> 8))) {
 						return (false);
@@ -1734,7 +1735,8 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 				case DVX_DVS_CHIP_AREA_BLOCKING_17:
 				case DVX_DVS_CHIP_AREA_BLOCKING_18:
 				case DVX_DVS_CHIP_AREA_BLOCKING_19: {
-					uint16_t regAddr = REGISTER_DIGITAL_AREA_BLOCK + (2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
+					uint16_t regAddr
+						= REGISTER_DIGITAL_AREA_BLOCK + U16T(2 * (paramAddr - DVX_DVS_CHIP_AREA_BLOCKING_0));
 
 					uint32_t currVal = 0;
 
