@@ -136,6 +136,35 @@ build_raspbian:
       - .ccache
     policy: pull-push
 
+build_mendel:
+  stage: build
+  before_script:
+    - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
+    - export CCACHE_BASEDIR="${CI_PROJECT_DIR}"
+    - export CCACHE_COMPILERCHECK="content"
+  tags:
+    - armv8
+    - mendel
+    - build
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_TCMALLOC=1 -DENABLE_VISUALIZER=1 ..
+    - make -j 1
+    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] && [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
+    - cpack -G DEB
+    - mv "${CI_PROJECT_NAME}.aarch64.deb" "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/libcaer/mendel/${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/libcaer/mendel/${CI_PROJECT_NAME}-mendel-eagle-latest.deb"
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+  cache:
+    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .ccache
+    policy: pull-push
+
 build_ubuntu_1604:
   variables:
     CC: gcc-7
