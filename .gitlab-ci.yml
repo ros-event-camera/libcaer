@@ -124,10 +124,10 @@ build_raspbian:
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] && [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
     # Package artifact using CPack
     - cpack -G DEB
-    - mv "${CI_PROJECT_NAME}.armv7l.deb" "${CI_PROJECT_NAME}-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
-    - aws s3 cp "${CI_PROJECT_NAME}-raspbian-buster-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/raspbian/${CI_PROJECT_NAME}-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
+    - mv "${CI_PROJECT_NAME}.armv7l.deb" "${CI_PROJECT_NAME}-raspbian-buster-${CI_COMMIT_REF_NAME}.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-raspbian-buster-${CI_COMMIT_REF_NAME}.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/raspbian/${CI_PROJECT_NAME}-raspbian-buster-${CI_COMMIT_REF_NAME}.deb"
     - if [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
-    - aws s3 cp "${CI_PROJECT_NAME}-raspbian-buster-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/raspbian/${CI_PROJECT_NAME}-raspbian-buster-latest.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-raspbian-buster-${CI_COMMIT_REF_NAME}.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/raspbian/${CI_PROJECT_NAME}-raspbian-buster-latest.deb"
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
@@ -156,10 +156,10 @@ build_mendel:
     - rm -Rf /usr/lib/${CI_PROJECT_NAME}.so* /usr/include/${CI_PROJECT_NAME}/ /usr/include/${CI_PROJECT_NAME}cpp/ /usr/share/caer/
     - make install
     - cpack -G DEB
-    - mv "${CI_PROJECT_NAME}.aarch64.deb" "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb"
-    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/mendel/${CI_PROJECT_NAME-mendel-eagle-$CI_COMMIT_REF_NAME.deb"
+    - mv "${CI_PROJECT_NAME}.aarch64.deb" "${CI_PROJECT_NAME}-mendel-eagle-${CI_COMMIT_REF_NAME}.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-${CI_COMMIT_REF_NAME}.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/mendel/${CI_PROJECT_NAME}-mendel-eagle-${CI_COMMIT_REF_NAME}.deb"
     - if [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
-    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/mendel/${CI_PROJECT_NAME}-mendel-eagle-latest.deb"
+    - aws s3 cp "${CI_PROJECT_NAME}-mendel-eagle-${CI_COMMIT_REF_NAME}.deb" "s3://release.inivation.com/${CI_PROJECT_NAME}/mendel/${CI_PROJECT_NAME}-mendel-eagle-latest.deb"
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
