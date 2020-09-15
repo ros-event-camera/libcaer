@@ -1996,7 +1996,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 
 		uint32_t event = be32toh(*((const uint32_t *) (&buffer[bufferPos])));
 
-		if ((event & 0x80000000) != 0) {
+		if ((event & 0x80000000U) != 0) {
 			if (state->dvs.lastColumn < 0) {
 				// Wait until first column start has come in, so that lastColumn
 				// and timestamps have been initialized properly.
@@ -2037,7 +2037,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 			uint8_t group1Events = (event >> 0) & 0x00FF;
 			bool group1Polarity  = (((event >> 16) & 0x01) == 0); // ON polarity is 0 here.
 
-			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
+			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask = U8T(mask << 1)) {
 				// Check if event present first.
 				if ((group1Events & mask) == 0) {
 					continue;
@@ -2059,7 +2059,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 			uint8_t group2Events = (event >> 8) & 0x00FF;
 			bool group2Polarity  = (((event >> 17) & 0x01) == 0); // ON polarity is 0 here.
 
-			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
+			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask = U8T(mask << 1)) {
 				// Check if event present first.
 				if ((group2Events & mask) == 0) {
 					continue;
@@ -2080,7 +2080,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 		}
 		else {
 			// COLUMN event.
-			if ((event & 0x04000000) != 0) {
+			if ((event & 0x04000000U) != 0) {
 				if (state->timestamps.reference < 0) {
 					// Wait until first timestamp reference in (every 1ms),
 					// so that time-relative fields have been initialized properly.
@@ -2162,7 +2162,7 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 				state->dvs.lastColumn = columnAddr;
 			}
 			// TIMESTAMP event.
-			else if ((event & 0x08000000) != 0) {
+			else if ((event & 0x08000000U) != 0) {
 				int32_t timestampRef = event & 0x003FFFFF;
 
 				// New reference timestamp is smaller, must have overflown its 22 bits.
