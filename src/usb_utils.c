@@ -163,10 +163,10 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			currUSBInfo.devAddress = libusb_get_device_address(devicesList[i]);
 
 			// Unknown serial number.
-			currUSBInfo.serialNumber[0] = 'N';
-			currUSBInfo.serialNumber[1] = '/';
-			currUSBInfo.serialNumber[2] = 'A';
-			currUSBInfo.serialNumber[3] = 0x00;
+			// Generate a repeatable serial number valid for this session using bus and device addresses.
+			uint16_t serialNumberNotAvailable = currUSBInfo.busNumber * currUSBInfo.devAddress;
+			snprintf(
+				currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "TMP%05" PRIu16, serialNumberNotAvailable);
 
 			// Verify device firmware version before opening, so that firmwareVersion
 			// is always defined, even on open errors.
@@ -392,10 +392,10 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				}
 
 				// Unknown serial number.
-				currUSBInfo.serialNumber[0] = 'N';
-				currUSBInfo.serialNumber[1] = '/';
-				currUSBInfo.serialNumber[2] = 'A';
-				currUSBInfo.serialNumber[3] = 0x00;
+				// Generate a repeatable serial number valid for this session using bus and device addresses.
+				uint16_t serialNumberNotAvailable = currUSBInfo.busNumber * currUSBInfo.devAddress;
+				snprintf(currUSBInfo.serialNumber, sizeof(currUSBInfo.serialNumber), "TMP%05" PRIu16,
+					serialNumberNotAvailable);
 
 				if (devDesc.iSerialNumber != 0) {
 					// Get the device's serial number.
@@ -426,36 +426,36 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						}
 					}
 
-					// Check the serial number restriction, if any is present.
-					if (openingSpecificSerial
-						&& !caerStrEqualsUpTo(serialNumber, deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						if (openingSpecificUSBAddr) {
-							caerUSBLog(CAER_LOG_CRITICAL, state,
-								"USB serial number restriction is present (%s) in addition to USB bus/address "
-								"restrictions, this single candidate device didn't match it (%s).",
-								serialNumber, deviceSerialNumber);
-
-							// This is the only device that can match a specific USB address.
-							// So if we fail here, we can stop and error out.
-							errno = CAER_ERROR_OPEN_ACCESS;
-							break;
-						}
-						else {
-							caerUSBLog(CAER_LOG_DEBUG, state,
-								"USB serial number restriction is present (%s), this device didn't match it (%s).",
-								serialNumber, deviceSerialNumber);
-
-							continue;
-						}
-					}
-
 					// Copy serial number over.
 					if (getStringDescResult > 0) {
 						memcpy(currUSBInfo.serialNumber, deviceSerialNumber, (size_t) getStringDescResult);
 						currUSBInfo.serialNumber[getStringDescResult] = 0x00;
+					}
+				}
+
+				// Check the serial number restriction, if any is present.
+				if (openingSpecificSerial
+					&& !caerStrEqualsUpTo(serialNumber, currUSBInfo.serialNumber, MAX_SERIAL_NUMBER_LENGTH)) {
+					libusb_close(devHandle);
+					devHandle = NULL;
+
+					if (openingSpecificUSBAddr) {
+						caerUSBLog(CAER_LOG_CRITICAL, state,
+							"USB serial number restriction is present (%s) in addition to USB bus/address "
+							"restrictions, this single candidate device didn't match it (%s).",
+							serialNumber, currUSBInfo.serialNumber);
+
+						// This is the only device that can match a specific USB address.
+						// So if we fail here, we can stop and error out.
+						errno = CAER_ERROR_OPEN_ACCESS;
+						break;
+					}
+					else {
+						caerUSBLog(CAER_LOG_DEBUG, state,
+							"USB serial number restriction is present (%s), this device didn't match it (%s).",
+							serialNumber, currUSBInfo.serialNumber);
+
+						continue;
 					}
 				}
 
