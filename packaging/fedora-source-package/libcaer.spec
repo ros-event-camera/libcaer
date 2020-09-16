@@ -27,11 +27,11 @@ Development files for libcaer, such as headers, pkg-config files, etc..
 %autosetup
 
 %build
-%cmake -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DUDEV_INSTALL=1 .
-make %{?_smp_mflags}
+%cmake -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DUDEV_INSTALL=1
+%cmake_build
 
 %install
-make install DESTDIR=%{buildroot}
+%cmake_install
 
 %files
 /lib/udev/rules.d/
