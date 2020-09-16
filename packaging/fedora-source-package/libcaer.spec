@@ -1,3 +1,5 @@
+%global __cmake_in_source_build 1
+
 Summary: Minimal C library to interact with neuromorphic sensors and processors
 Name:    libcaer
 Version: VERSION_REPLACE
