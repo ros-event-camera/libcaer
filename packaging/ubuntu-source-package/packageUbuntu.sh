@@ -2,6 +2,9 @@
 
 # Requirements: Ubuntu, GPG key (seahorse), devscripts, build-essential
 
+# exit when any command fails
+set -e
+
 GPG_KEY_ID=
 GPG_KEY_PASS=
 PKG_NAME=

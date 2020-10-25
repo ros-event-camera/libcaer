@@ -32,17 +32,13 @@ IF (NOT UDEV_INSTALL)
 	SET(UDEV_INSTALL 1 CACHE BOOL "Install udev rules on Linux")
 ENDIF()
 
-IF (NOT UDEV_SELINUX)
-	SET(UDEV_SELINUX 0 CACHE BOOL "Install SELinux-enabled udev rules on Linux")
-ENDIF()
-
 IF (NOT EXAMPLES_INSTALL)
 	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
 ENDIF()
 
 # Project name and version
 PROJECT(libcaer
-	VERSION 3.3.7
+	VERSION 3.3.8
 	LANGUAGES C CXX)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
@@ -136,15 +132,9 @@ UNSET(export_destination)
 IF (OS_LINUX AND UDEV_INSTALL)
 	MESSAGE(STATUS "Installing global udev rules into /lib/udev/rules.d/")
 
-	IF (UDEV_SELINUX)
-		INSTALL(FILES
-			docs/udev-rules/selinux/65-inivation.rules
-			DESTINATION "/lib/udev/rules.d/")
-	ELSE()
-		INSTALL(FILES
-			docs/udev-rules/65-inivation.rules
-			DESTINATION "/lib/udev/rules.d/")
-	ENDIF()
+	INSTALL(FILES
+		docs/65-inivation.rules
+		DESTINATION "/lib/udev/rules.d/")
 ENDIF()
 
 # Automatic documentation generation support

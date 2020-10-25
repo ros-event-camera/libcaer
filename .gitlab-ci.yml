@@ -5,7 +5,7 @@
 
 .ubuntu_curr_builder: &ubuntu_curr_builder
   stage: build
-  image: inivation/ubuntu_minimal:rolling
+  image: inivation/ubuntu_base:rolling
   # Variables is not getting merged, so we use before_script to set CCACHE vars.
   before_script:
     - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
@@ -66,7 +66,7 @@ build_macosx:
     - cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j4
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
-    - rm -Rf /usr/local/lib/libcaer.so* /usr/local/include/libcaer/ /usr/local/include/libcaercpp/ /usr/local/share/caer/
+    - rm -Rf /usr/local/lib/${CI_PROJECT_NAME}.so* /usr/local/include/${CI_PROJECT_NAME}/ /usr/local/include/${CI_PROJECT_NAME}cpp/ /usr/local/share/caer/
     - make install
   rules:
     - if: $CI_MERGE_REQUEST_ID
@@ -95,7 +95,7 @@ build_windows:
     - cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j8
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
-    - rm -Rf /mingw64/lib/libcaer.dll* /mingw64/include/libcaer/ /mingw64/include/libcaercpp/ /mingw64/share/caer/
+    - rm -Rf /mingw64/lib/${CI_PROJECT_NAME}.dll* /mingw64/include/${CI_PROJECT_NAME}/ /mingw64/include/${CI_PROJECT_NAME}cpp/ /mingw64/share/caer/
     - make install
   rules:
     - if: $CI_MERGE_REQUEST_ID
@@ -106,40 +106,10 @@ build_windows:
       - .ccache
     policy: pull-push
 
-build_raspbian:
-  stage: build
-  tags:
-    - docker
-    - raspbian
-    - build
-  image: inivation/raspbian:buster
-  variables:
-    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
-    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
-    CCACHE_COMPILERCHECK: "content"
-  script:
-    - *change_build_dir
-    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - make -j4
-    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] && [[ -z "$CI_COMMIT_TAG" ]] ; then exit 0; fi
-    # Package artifact using CPack
-    - cpack -G DEB
-    - mv "libcaer.armv7l.deb" "libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
-    - aws s3 cp "libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb" "s3://release.inivation.com/libcaer/raspbian/libcaer-raspbian-buster-$CI_COMMIT_REF_NAME.deb"
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_COMMIT_TAG
-  cache:
-    key: "${CI_JOB_NAME}-${CI_COMMIT_REF_SLUG}"
-    paths:
-      - .ccache
-    policy: pull-push
-
 build_ubuntu_1604:
   variables:
-    CC: gcc-7
-    CXX: g++-7
+    CC: gcc-8
+    CXX: g++-8
   <<: *ubuntu_curr_builder
   image: inivation/ubuntu:16.04
   script:
@@ -149,14 +119,18 @@ build_ubuntu_1604:
     - make -j1 -s
 
 build_ubuntu_1804:
+  variables:
+    CC: gcc-8
+    CXX: g++-8
   <<: *ubuntu_curr_builder
   image: inivation/ubuntu:18.04
 
-build_ubuntu_curr_gcc7:
+build_ubuntu_2004:
   variables:
-    CC: gcc-7
-    CXX: g++-7
+    CC: gcc-10
+    CXX: g++-10
   <<: *ubuntu_curr_builder
+  image: inivation/ubuntu:20.04
 
 build_ubuntu_curr_gcc8:
   variables:
@@ -176,12 +150,6 @@ build_ubuntu_curr_gcc10:
     CXX: g++-10
   <<: *ubuntu_curr_builder
 
-build_ubuntu_curr_clang7:
-  variables:
-    CC: clang-7
-    CXX: clang++-7
-  <<: *ubuntu_curr_builder
-
 build_ubuntu_curr_clang8:
   variables:
     CC: clang-8
@@ -198,6 +166,12 @@ build_ubuntu_curr_clang10:
   variables:
     CC: clang-10
     CXX: clang++-10
+  <<: *ubuntu_curr_builder
+
+build_ubuntu_curr_clang11:
+  variables:
+    CC: clang-11
+    CXX: clang++-11
   <<: *ubuntu_curr_builder
 
 pages:
@@ -221,13 +195,13 @@ release_ubuntu:
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
   script:
     - cd packaging/ubuntu-source-package/
-    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro xenial --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
-    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro bionic --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro bionic --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
-    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro eoan --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro focal --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
-    - ./packageUbuntu.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --distro focal --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro groovy --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
   rules:
     - if: $CI_COMMIT_TAG
 
@@ -239,8 +213,8 @@ release_fedora:
     - cp "${COPR_API_KEY}" ~/.config/copr
   script:
     - cd packaging/fedora-source-package/
-    - ./packageFedora.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
-    - copr-cli build --nowait inivation/inivation "libcaer-${CI_COMMIT_TAG}-0.fc31.src.rpm"
+    - ./packageFedora.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}"
+    - copr-cli build --nowait inivation/inivation "${CI_PROJECT_NAME}-${CI_COMMIT_TAG}-0.fc31.src.rpm"
   rules:
     - if: $CI_COMMIT_TAG
 
@@ -257,10 +231,10 @@ release_gentoo_arch_brew:
   script:
     - cd packaging/linux/
     # Gentoo release
-    - ./gentoo-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}" --pkg-category dev-libs
+    - ./gentoo-release.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --pkg-category dev-libs
     # Arch release
-    - ./arch-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
+    - ./arch-release.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}"
     # Brew release
-    - ./brew-release.sh --pkg-name libcaer --pkg-version "${CI_COMMIT_TAG}"
+    - ./brew-release.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}"
   rules:
     - if: $CI_COMMIT_TAG
