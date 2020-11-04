@@ -189,6 +189,7 @@ build_conan_gcc10:
   before_script:
     - pip3 install -U conan conan-package-tools
     - conan user
+    - mkdir -p "${CI_PROJECT_DIR}/.conan/profiles/"
     - |
       cat > "${CI_PROJECT_DIR}/.conan/profiles/default" << EOF
       [settings]

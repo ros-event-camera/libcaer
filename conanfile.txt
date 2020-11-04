@@ -6,3 +6,6 @@ opencv/4.3.0@conan/stable
 
 [generators]
 cmake
+
+[imports]
+., license* -> ./licenses @ folder=True, ignore_case=True
