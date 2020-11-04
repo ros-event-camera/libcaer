@@ -180,7 +180,7 @@ build_ubuntu_curr_clang11:
 
 build_conan_gcc10:
   stage: build
-  image: conanio/gcc10:latest
+  image: inivation/conan:latest
   tags:
     - docker
     - ubuntu
@@ -191,7 +191,6 @@ build_conan_gcc10:
     CCACHE_COMPILERCHECK: "content"
     CONAN_USER_HOME: "${CI_PROJECT_DIR}"
   before_script:
-    - pip3 install -U conan conan-package-tools
     - conan user
     - mkdir -p "${CI_PROJECT_DIR}/.conan/profiles/"
     - |
