@@ -3,6 +3,8 @@ libusb/1.0.23@bincrafters/stable
 opencv/4.3.0@conan/stable
 
 [options]
+libusb:shared=True
+opencv:shared=True
 
 [generators]
 cmake
