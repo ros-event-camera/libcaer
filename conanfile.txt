@@ -5,6 +5,9 @@ opencv/4.3.0@conan/stable
 [options]
 libusb:shared=True
 opencv:shared=True
+opencv:contrib=True
+opencv:ffmpeg=True
+opencv:tiff=False
 
 [generators]
 cmake
