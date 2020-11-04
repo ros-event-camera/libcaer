@@ -17,3 +17,8 @@ cmake_install.cmake
 /*.rpm
 /*.deb
 *.user
+/conan.lock
+/conanbuildinfo.cmake
+/conanbuildinfo.txt
+/conaninfo.txt
+/graph_info.json
