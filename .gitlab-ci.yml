@@ -181,6 +181,10 @@ build_ubuntu_curr_clang11:
 build_conan_gcc10:
   stage: build
   image: conanio/gcc10:latest
+  tags:
+    - docker
+    - ubuntu
+    - build
   variables:
     CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
     CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
@@ -209,7 +213,7 @@ build_conan_gcc10:
     - *change_build_dir
     - conan install --build=missing ..
     - cmake -DUSE_CONAN_DEPS=1 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=0 -DEXAMPLES_INSTALL=1 ..
-    - make -j1 -s
+    - make -j4 -s
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
