@@ -36,10 +36,6 @@ IF (NOT EXAMPLES_INSTALL)
 	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
 ENDIF()
 
-IF (NOT USE_CONAN_DEPS)
-	SET(USE_CONAN_DEPS 0 CACHE BOOL "Get dependencies from Conan package manager")
-ENDIF()
-
 # Project name and version
 PROJECT(libcaer
 	VERSION 3.3.8
@@ -48,12 +44,6 @@ SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Conan support
-IF (USE_CONAN_DEPS)
-	INCLUDE(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-	CONAN_BASIC_SETUP()
-ENDIF()
 
 # Define installation paths
 INCLUDE(GNUInstallDirs)

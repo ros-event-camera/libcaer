@@ -1,7 +1,3 @@
-include:
-  - template: Security/Dependency-Scanning.gitlab-ci.yml
-  - template: Security/License-Scanning.gitlab-ci.yml
-
 .change_build_dir: &change_build_dir
   - rm -Rf build
   - mkdir build
@@ -177,51 +173,6 @@ build_ubuntu_curr_clang11:
     CC: clang-11
     CXX: clang++-11
   <<: *ubuntu_curr_builder
-
-build_conan_gcc10:
-  stage: build
-  image: inivation/conan:latest
-  tags:
-    - docker
-    - ubuntu
-    - build
-  variables:
-    CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
-    CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
-    CCACHE_COMPILERCHECK: "content"
-    CONAN_USER_HOME: "${CI_PROJECT_DIR}"
-  before_script:
-    - conan user
-    - mkdir -p "${CI_PROJECT_DIR}/.conan/profiles/"
-    - |
-      cat > "${CI_PROJECT_DIR}/.conan/profiles/default" << EOF
-      [settings]
-      os=Linux
-      os_build=Linux
-      arch=x86_64
-      arch_build=x86_64
-      compiler=gcc
-      compiler.version=10
-      compiler.libcxx=libstdc++11
-      build_type=Release
-      [options]
-      [build_requires]
-      [env]
-      EOF
-  script:
-    - *change_build_dir
-    - conan install --build=missing ..
-    - cmake -DUSE_CONAN_DEPS=1 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=0 -DEXAMPLES_INSTALL=1 ..
-    - make -j4 -s
-  rules:
-    - if: $CI_MERGE_REQUEST_ID
-    - if: $CI_COMMIT_BRANCH
-  cache:
-    key: "${CI_JOB_NAME}"
-    paths:
-      - .ccache
-      - .conan
-    policy: pull-push
 
 pages:
   image: inivation/ubuntu:rolling
