@@ -129,6 +129,7 @@ struct dvxplorer_state {
 		bool invertXY;
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
+		bool dualBinning;
 	} dvs;
 	struct {
 		// IMU specific fields
