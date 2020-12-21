@@ -1,3 +1,10 @@
+Release 3.3.9 - 21.12.2020
+
+BUG FIXES
+- DVXplorer: fix mapping of events when dual-binning is
+  enabled (issue #119).
+
+
 Release 3.3.8 - 15.09.2020
 
 NEW FEATURES
