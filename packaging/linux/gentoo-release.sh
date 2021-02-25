@@ -20,7 +20,7 @@ do
     shift
 done
 
-emerge --sync
+emerge --sync --quiet
 
 git clone "git@gitlab.com:inivation/gentoo-inivation.git"
 

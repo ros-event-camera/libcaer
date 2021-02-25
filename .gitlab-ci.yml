@@ -5,7 +5,7 @@
 
 .ubuntu_curr_builder: &ubuntu_curr_builder
   stage: build
-  image: inivation/ubuntu_base:rolling
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
   # Variables is not getting merged, so we use before_script to set CCACHE vars.
   before_script:
     - export CCACHE_DIR="${CI_PROJECT_DIR}/.ccache"
@@ -26,7 +26,7 @@
 
 sonarcloud_analysis:
   <<: *ubuntu_curr_builder
-  image: inivation/ubuntu:rolling
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
   tags:
     - docker
     - ubuntu
@@ -111,7 +111,7 @@ build_ubuntu_1604:
     CC: gcc-8
     CXX: g++-8
   <<: *ubuntu_curr_builder
-  image: inivation/ubuntu:16.04
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:16.04
   script:
     - *change_build_dir
     # libserialport on Ubuntu 16.04 too old, disable serial devices support.
@@ -123,14 +123,14 @@ build_ubuntu_1804:
     CC: gcc-8
     CXX: g++-8
   <<: *ubuntu_curr_builder
-  image: inivation/ubuntu:18.04
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:18.04
 
 build_ubuntu_2004:
   variables:
     CC: gcc-10
     CXX: g++-10
   <<: *ubuntu_curr_builder
-  image: inivation/ubuntu:20.04
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:20.04
 
 build_ubuntu_curr_gcc8:
   variables:
@@ -174,8 +174,104 @@ build_ubuntu_curr_clang11:
     CXX: clang++-11
   <<: *ubuntu_curr_builder
 
+build_ubuntu_curr_gcc10_arm64:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: gcc-10
+    CXX: g++-10
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm64
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
+build_ubuntu_curr_clang11_arm64:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: clang-11
+    CXX: clang++-11
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm64
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
+build_ubuntu_curr_gcc10_arm32:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: gcc-10
+    CXX: g++-10
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm32
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
+build_ubuntu_curr_clang11_arm32:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: clang-11
+    CXX: clang++-11
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm32
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
+build_ubuntu_curr_gcc10_ppc64:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: gcc-10
+    CXX: g++-10
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_ppc64
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
+build_ubuntu_curr_clang11_ppc64:
+  <<: *ubuntu_curr_builder
+  tags:
+    - docker
+    - ubuntu
+    - build
+    - qemu
+  variables:
+    CC: clang-11
+    CXX: clang++-11
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_ppc64
+  script:
+    - *change_build_dir
+    - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - make -j4 -s
+
 pages:
-  image: inivation/ubuntu:rolling
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
   script:
     - *change_build_dir
     - cmake -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 ..
@@ -189,7 +285,7 @@ pages:
 
 release_ubuntu:
   stage: deploy
-  image: inivation/ubuntu:rolling
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
   before_script:
     - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
@@ -207,7 +303,7 @@ release_ubuntu:
 
 release_fedora:
   stage: deploy
-  image: inivation/fedora:latest
+  image: registry.gitlab.com/inivation/infra/docker-files/fedora:latest
   before_script:
     - mkdir -p ~/.config/
     - cp "${COPR_API_KEY}" ~/.config/copr
@@ -220,7 +316,7 @@ release_fedora:
 
 release_gentoo_arch_brew:
   stage: deploy
-  image: inivation/gentoo:latest
+  image: registry.gitlab.com/inivation/infra/docker-files/gentoo:latest
   before_script:
     - mkdir -p ~/.ssh/
     - cp "${GITCI_SSH_KEY}" ~/.ssh/id_ed25519

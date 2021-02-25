@@ -744,6 +744,8 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 						return (false);
 					}
 
+					state->dvs.dualBinning = param;
+
 					return (spiConfigSend(
 						&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_DUAL_BINNING, (param) ? (0x01) : (0x00)));
 					break;
@@ -2762,6 +2764,23 @@ static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bu
 							continue;
 						}
 
+						uint16_t xAddr = state->dvs.lastX;
+						uint16_t yAddr = lastY + i;
+
+						if (state->dvs.dualBinning) {
+							if (state->dvs.flipX && (xAddr >= U16T(state->dvs.sizeX / 2))) {
+								xAddr -= U16T(state->dvs.sizeX / 2);
+							}
+
+							if (state->dvs.flipY && (yAddr >= U16T(state->dvs.sizeY / 2))) {
+								yAddr -= U16T(state->dvs.sizeY / 2);
+							}
+						}
+
+						if (state->dvs.invertXY) {
+							SWAP_VAR(uint16_t, xAddr, yAddr);
+						}
+
 						// Received event!
 						caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
 							state->currentPackets.polarity, state->currentPackets.polarityPosition);
@@ -2769,14 +2788,8 @@ static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bu
 						// Timestamp at event-stream insertion point.
 						caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
 						caerPolarityEventSetPolarity(currentPolarityEvent, polarity);
-						if (state->dvs.invertXY) {
-							caerPolarityEventSetX(currentPolarityEvent, lastY + i);
-							caerPolarityEventSetY(currentPolarityEvent, state->dvs.lastX);
-						}
-						else {
-							caerPolarityEventSetX(currentPolarityEvent, state->dvs.lastX);
-							caerPolarityEventSetY(currentPolarityEvent, lastY + i);
-						}
+						caerPolarityEventSetX(currentPolarityEvent, xAddr);
+						caerPolarityEventSetY(currentPolarityEvent, yAddr);
 						caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
 						state->currentPackets.polarityPosition++;
 					}
