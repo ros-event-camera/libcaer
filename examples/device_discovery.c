@@ -106,6 +106,51 @@ int main(void) {
 				printf("\n");
 				break;
 
+			case CAER_DEVICE_DVXPLORER:
+				printf("- DVXplorer (type %u)\n", discovered[i].deviceType);
+				printf("  - USB busNum:devAddr: %d:%d\n", discovered[i].deviceInfo.dvXplorerInfo.deviceUSBBusNumber,
+					discovered[i].deviceInfo.dvXplorerInfo.deviceUSBDeviceAddress);
+				printf("  - Device can be opened: %d\n", !discovered[i].deviceErrorOpen);
+				if (!discovered[i].deviceErrorOpen) {
+					printf("  - USB serial number: %s\n", discovered[i].deviceInfo.dvXplorerInfo.deviceSerialNumber);
+					printf("  - Device needs firmware update: %d\n", discovered[i].deviceErrorVersion);
+
+					if (!discovered[i].deviceErrorVersion) {
+						printf("  - Timestamp Master: %d\n", discovered[i].deviceInfo.dvXplorerInfo.deviceIsMaster);
+						printf("  - Firmware Version: %d\n", discovered[i].deviceInfo.dvXplorerInfo.firmwareVersion);
+						printf("  - Logic Version: %d\n", discovered[i].deviceInfo.dvXplorerInfo.logicVersion);
+						printf("  - Chip ID: %d\n", discovered[i].deviceInfo.dvXplorerInfo.chipID);
+						printf("  - DVS Size X: %d\n", discovered[i].deviceInfo.dvXplorerInfo.dvsSizeX);
+						printf("  - DVS Size Y: %d\n", discovered[i].deviceInfo.dvXplorerInfo.dvsSizeY);
+						printf("  - DVS Statistics: %d\n", discovered[i].deviceInfo.dvXplorerInfo.dvsHasStatistics);
+						printf("  - External IO Generator: %d\n",
+							discovered[i].deviceInfo.dvXplorerInfo.extInputHasGenerator);
+						printf("  - Multiplexer Statistics: %d\n",
+							discovered[i].deviceInfo.dvXplorerInfo.muxHasStatistics);
+					}
+				}
+				printf("\n");
+				break;
+
+			case CAER_DEVICE_SAMSUNG_EVK:
+				printf("- Samsung EVK (type %u)\n", discovered[i].deviceType);
+				printf("  - USB busNum:devAddr: %d:%d\n", discovered[i].deviceInfo.samsungEVKInfo.deviceUSBBusNumber,
+					discovered[i].deviceInfo.samsungEVKInfo.deviceUSBDeviceAddress);
+				printf("  - Device can be opened: %d\n", !discovered[i].deviceErrorOpen);
+				if (!discovered[i].deviceErrorOpen) {
+					printf("  - USB serial number: %s\n", discovered[i].deviceInfo.samsungEVKInfo.deviceSerialNumber);
+					printf("  - Device needs firmware update: %d\n", discovered[i].deviceErrorVersion);
+
+					if (!discovered[i].deviceErrorVersion) {
+						printf("  - Firmware Version: %d\n", discovered[i].deviceInfo.samsungEVKInfo.firmwareVersion);
+						printf("  - Chip ID: %d\n", discovered[i].deviceInfo.samsungEVKInfo.chipID);
+						printf("  - DVS Size X: %d\n", discovered[i].deviceInfo.samsungEVKInfo.dvsSizeX);
+						printf("  - DVS Size Y: %d\n", discovered[i].deviceInfo.samsungEVKInfo.dvsSizeY);
+					}
+				}
+				printf("\n");
+				break;
+
 			default:
 				printf("- Unknown device type!\n");
 				printf("\n");
