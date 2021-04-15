@@ -1,3 +1,13 @@
+Release 3.3.10 - 16.04.2021
+
+BUG FIXES
+- USB: when serial number cannot be determined, use all bits from
+  USB bus-number/dev-address to construct the fake name (issue #123).
+- Examples Device Discovery: add support for DVXplorer and EVK.
+  Serial Number in Device Discovery can only be used if the
+  device could be opened correctly (deviceErrorOpen == false).
+
+
 Release 3.3.9 - 21.12.2020
 
 BUG FIXES
