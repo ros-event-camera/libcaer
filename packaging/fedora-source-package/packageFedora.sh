@@ -7,7 +7,7 @@ set -e
 
 PKG_NAME=
 PKG_VERSION=0
-FEDORA_RELEASE=f31
+FEDORA_RELEASE=f34
 
 while test $# -gt 0
 do
