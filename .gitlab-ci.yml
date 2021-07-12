@@ -89,9 +89,10 @@ build_macos_arm:
     CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
     CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
     CCACHE_COMPILERCHECK: "content"
+    PATH: "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin"
   script:
     - *change_build_dir
-    - cmake -DCMAKE_INSTALL_PREFIX=/opt/homebrew -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
+    - /opt/homebrew/cmake -DCMAKE_INSTALL_PREFIX=/opt/homebrew -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j4
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
     - rm -Rf /opt/homebrew/lib/libcaer.so* /opt/homebrew/include/libcaer/ /opt/homebrew/include/libcaercpp/ /opt/homebrew/share/caer/
