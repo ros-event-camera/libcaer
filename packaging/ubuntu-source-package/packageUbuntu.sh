@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 # Requirements: Ubuntu, GPG key (seahorse), devscripts, build-essential
 
