@@ -79,12 +79,12 @@ build_macos_intel:
       - .ccache
     policy: pull-push
 
-build_macos_arm64:
+build_macos_arm:
   stage: build
   tags:
     - macos
     - build
-    - arm64
+    - arm
   variables:
     CCACHE_DIR: "${CI_PROJECT_DIR}/.ccache"
     CCACHE_BASEDIR: "${CI_PROJECT_DIR}"
