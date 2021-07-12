@@ -66,10 +66,10 @@ build_macos_intel:
   script:
     - *change_build_dir
     - arch -x86_64 /usr/local/bin/cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
-    - arch -x86_64 /usr/local/bin/make -j4
+    - make -j4
     - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
     - rm -Rf /usr/local/lib/libcaer.so* /usr/local/include/libcaer/ /usr/local/include/libcaercpp/ /usr/local/share/caer/
-    - arch -x86_64 /usr/local/bin/make install
+    - make install
   rules:
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
