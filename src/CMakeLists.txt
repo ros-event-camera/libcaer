@@ -12,8 +12,7 @@ SET(LIBCAER_SOURCES
 	dynapse.c
 	dvs132s.c
 	dvxplorer.c
-	samsung_evk.c
-	mipi_cx3.c)
+	samsung_evk.c)
 
 # This is often the case due to how we try to have multiple compatible
 # definitions of functions in C.

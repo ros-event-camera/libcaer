@@ -10,7 +10,6 @@
 #include "dvxplorer.hpp"
 #include "dynapse.hpp"
 #include "edvs.hpp"
-#include "mipi_cx3.hpp"
 #include "samsung_evk.hpp"
 
 #include <memory>
@@ -112,13 +111,6 @@ public:
 			case CAER_DEVICE_SAMSUNG_EVK: {
 				const struct caer_samsung_evk_info *info = &discoveredDevice.deviceInfo.samsungEVKInfo;
 				return (std::unique_ptr<libcaer::devices::samsungEVK>(new libcaer::devices::samsungEVK(
-					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
-				break;
-			}
-
-			case CAER_DEVICE_MIPI_CX3: {
-				const struct caer_mipi_cx3_info *info = &discoveredDevice.deviceInfo.mipiCx3Info;
-				return (std::unique_ptr<libcaer::devices::mipiCx3>(new libcaer::devices::mipiCx3(
 					deviceID, info->deviceUSBBusNumber, info->deviceUSBDeviceAddress, "")));
 				break;
 			}

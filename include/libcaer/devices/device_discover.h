@@ -14,7 +14,6 @@
 #include "dvxplorer.h"
 #include "dynapse.h"
 #include "edvs.h"
-#include "mipi_cx3.h"
 #include "samsung_evk.h"
 
 #ifdef __cplusplus
@@ -41,7 +40,6 @@ struct caer_device_discovery_result {
 		struct caer_dvs132s_info dvs132sInfo;
 		struct caer_dvx_info dvXplorerInfo;
 		struct caer_samsung_evk_info samsungEVKInfo;
-		struct caer_mipi_cx3_info mipiCx3Info;
 	} deviceInfo;
 };
 

@@ -29,9 +29,8 @@ extern "C" {
  * 7 - CAER_DEVICE_DVS132S
  * 8 - CAER_DEVICE_DVXPLORER
  * 9 - CAER_DEVICE_SAMSUNG_EVK
- * 10 - CAER_DEVICE_MIPI_CX3
  */
-#define CAER_SUPPORTED_DEVICES_NUMBER 11
+#define CAER_SUPPORTED_DEVICES_NUMBER 10
 
 /**
  * Pointer to an open device on which to operate.
