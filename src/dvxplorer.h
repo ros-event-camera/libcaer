@@ -31,6 +31,8 @@
 #define DEBUG_TRANSFER_NUM  4
 #define DEBUG_TRANSFER_SIZE 64
 
+#define DEVICE_MIPI 4
+
 #define DEVICE_DVS 5
 
 #define REGISTER_BIAS_CURRENT_RANGE_SELECT_LOGSFONREST      0x000B
@@ -118,6 +120,16 @@ struct dvxplorer_state {
 	// Timestamp fields
 	struct timestamps_state_new_logic timestamps;
 	struct {
+		// evk timestamping.
+		int64_t reference;
+		int64_t referenceOverflow;
+		int32_t lastReference;
+		int32_t lastUsedSub;
+		int64_t lastUsedReference;
+		int64_t currTimestamp;
+		int64_t lastTimestamp;
+	} timestampsMIPI;
+	struct {
 		// DVS specific fields
 		uint16_t lastX;
 		uint16_t lastYG1;
@@ -130,6 +142,8 @@ struct dvxplorer_state {
 		uint16_t cropperYStart;
 		uint16_t cropperYEnd;
 		bool dualBinning;
+		// MIPI CX3.
+		int16_t lastColumn;
 	} dvs;
 	struct {
 		// IMU specific fields
@@ -171,6 +185,7 @@ struct dvxplorer_state {
 		struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
 		atomic_uint_fast32_t activeDebugTransfers;
 	} fx3Support;
+	bool isMipiCX3Device;
 };
 
 typedef struct dvxplorer_state *dvXplorerState;
