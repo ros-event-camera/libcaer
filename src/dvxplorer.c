@@ -3593,7 +3593,7 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_t bytesSent) {
 	dvXplorerState state = &handle->state;
 
-	if ((bytesSent == 16) && (buffer[0] == 0x01)) {
+	if ((bytesSent == 16) && (buffer[0] == 0x01) && (state->currentPackets.imu6 != NULL)) {
 		memset(&state->imu.currentEvent, 0, sizeof(struct caer_imu6_event));
 
 		// IMU message.
