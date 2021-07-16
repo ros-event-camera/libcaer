@@ -3593,7 +3593,11 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_t bytesSent) {
 	dvXplorerState state = &handle->state;
 
-	if ((bytesSent == 16) && (buffer[0] == 0x01) && (state->currentPackets.imu6 != NULL)) {
+	if ((bytesSent == 16) && (buffer[0] == 0x01)) {
+		if (state->currentPackets.imu6 == NULL) {
+			return;
+		}
+
 		memset(&state->imu.currentEvent, 0, sizeof(struct caer_imu6_event));
 
 		// IMU message.
@@ -3601,26 +3605,28 @@ static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_
 
 		// Set correct IMU accel and gyro scales, used to interpret subsequent
 		// IMU samples from the device.
-		state->imu.accelScale = calculateIMUAccelScale(U16T(buffer[1] >> 3) & 0x03);
+		state->imu.accelScale = calculateIMUAccelScale(U8T(buffer[1] >> 3) & 0x03);
 		state->imu.gyroScale  = calculateIMUGyroScale(buffer[1] & 0x07);
 
 		// Set expected type of data to come from IMU (accel, gyro, temp).
 		state->imu.type = U8T(buffer[1] >> 5) & 0x07;
 
 		if (state->imu.type & 0x04) {
-			int16_t accelX = I16T((buffer[8] << 8) | buffer[9]);
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t accelX = I16T((buffer[13] << 8) | buffer[12]);
 			if (state->imu.flipX) {
 				accelX = I16T(-accelX);
 			}
 			caerIMU6EventSetAccelX(&state->imu.currentEvent, accelX / state->imu.accelScale);
 
-			int16_t accelY = I16T((buffer[10] << 8) | buffer[11]);
+			int16_t accelY = I16T((buffer[11] << 8) | buffer[10]);
 			if (state->imu.flipY) {
 				accelY = I16T(-accelY);
 			}
 			caerIMU6EventSetAccelY(&state->imu.currentEvent, accelY / state->imu.accelScale);
 
-			int16_t accelZ = I16T((buffer[12] << 8) | buffer[13]);
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t accelZ = I16T((buffer[9] << 8) | buffer[8]);
 			if (state->imu.flipZ) {
 				accelZ = I16T(-accelZ);
 			}
@@ -3628,19 +3634,21 @@ static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_
 		}
 
 		if (state->imu.type & 0x02) {
-			int16_t gyroX = I16T((buffer[2] << 8) | buffer[3]);
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t gyroX = I16T((buffer[7] << 8) | buffer[6]);
 			if (state->imu.flipX) {
 				gyroX = I16T(-gyroX);
 			}
 			caerIMU6EventSetGyroX(&state->imu.currentEvent, gyroX / state->imu.gyroScale);
 
-			int16_t gyroY = I16T((buffer[4] << 8) | buffer[5]);
+			int16_t gyroY = I16T((buffer[5] << 8) | buffer[4]);
 			if (state->imu.flipY) {
 				gyroY = I16T(-gyroY);
 			}
 			caerIMU6EventSetGyroY(&state->imu.currentEvent, gyroY / state->imu.gyroScale);
 
-			int16_t gyroZ = I16T((buffer[6] << 8) | buffer[7]);
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t gyroZ = I16T((buffer[3] << 8) | buffer[2]);
 			if (state->imu.flipZ) {
 				gyroZ = I16T(-gyroZ);
 			}
@@ -3650,7 +3658,7 @@ static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_
 		if (state->imu.type & 0x01) {
 			// Temperature is signed. Formula for converting to °C:
 			// (SIGNED_VAL / 512) + 23
-			int16_t temp = I16T((buffer[14] << 8) | buffer[15]);
+			int16_t temp = I16T((buffer[15] << 8) | buffer[14]);
 			caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 512.0F) + 23.0F);
 		}
 
