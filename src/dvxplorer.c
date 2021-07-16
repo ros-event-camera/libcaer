@@ -3369,9 +3369,10 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 
 					// Get timestamp for rest of this frame.
 					state->timestamps.last    = state->timestamps.current;
-					state->timestamps.current = (state->timestampsMIPI.currTimestamp & 0x7FFFFFFF);
+					state->timestamps.current = (U32T(state->timestampsMIPI.currTimestamp) & 0x7FFFFFFF);
 
-					int32_t currOverflow = ((state->timestampsMIPI.currTimestamp >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					int32_t currOverflow
+						= ((U32T(state->timestampsMIPI.currTimestamp) >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
 					if (currOverflow != state->timestamps.wrapOverflow) {
 						state->timestamps.wrapOverflow = currOverflow;
 						state->timestamps.last         = 0;
@@ -3414,7 +3415,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 				state->timestampsMIPI.lastReference = timestampRef;
 
 				// Generate full 64bit reference timestamp, with overflow added.
-				state->timestampsMIPI.reference = ((state->timestampsMIPI.referenceOverflow << 22) + timestampRef);
+				state->timestampsMIPI.reference
+					= ((U64T(state->timestampsMIPI.referenceOverflow) << 22) + timestampRef);
 
 				// In ms, convert to µs.
 				state->timestampsMIPI.reference *= 1000;
