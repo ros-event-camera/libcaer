@@ -149,7 +149,7 @@ static ssize_t davisFindInternal(uint16_t deviceType, caerDeviceDiscoveryResult 
 		return (-1);
 	}
 
-	size_t resultAll = (size_t)(resultFX2 + resultFX3);
+	size_t resultAll = (size_t) (resultFX2 + resultFX3);
 
 	if (resultAll == 0) {
 		// Nothing found. No devices to free.

@@ -73,10 +73,10 @@ int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame
 
 	// Calculate statistics on pixel histogram. Sum of histogram is always equal
 	// to the number of pixels in the camera.
-	size_t pixelsSum = (size_t)(frameSizeX * frameSizeY);
+	size_t pixelsSum = (size_t) (frameSizeX * frameSizeY);
 
-	size_t pixelsBinLow  = (size_t)(AUTOEXPOSURE_LOW_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
-	size_t pixelsBinHigh = (size_t)(AUTOEXPOSURE_HIGH_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
+	size_t pixelsBinLow  = (size_t) (AUTOEXPOSURE_LOW_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
+	size_t pixelsBinHigh = (size_t) (AUTOEXPOSURE_HIGH_BOUNDARY * (float) AUTOEXPOSURE_HISTOGRAM_PIXELS);
 
 	size_t pixelsSumLow  = 0;
 	size_t pixelsSumHigh = 0;
