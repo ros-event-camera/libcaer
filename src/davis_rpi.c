@@ -676,8 +676,8 @@ static void shutdownGPIOTest(davisRPiHandle handle) {
 	}
 
 	// Calculate bandwidth.
-	uint64_t diffNanoTime = (uint64_t)(((int64_t)(endTime.tv_sec - handle->benchmark.startTime.tv_sec) * 1000000000LL)
-									   + (int64_t)(endTime.tv_nsec - handle->benchmark.startTime.tv_nsec));
+	uint64_t diffNanoTime = (uint64_t) (((int64_t) (endTime.tv_sec - handle->benchmark.startTime.tv_sec) * 1000000000LL)
+										+ (int64_t) (endTime.tv_nsec - handle->benchmark.startTime.tv_nsec));
 
 	double diffSecondTime = ((double) diffNanoTime) / ((double) 1000000000ULL);
 
@@ -762,10 +762,10 @@ static bool spiSend(davisRPiGPIO gpio, uint8_t moduleAddr, uint8_t paramAddr, ui
 	// Highest bit of first byte is zero to indicate write operation.
 	spiOutput[0] = (moduleAddr & 0x7F);
 	spiOutput[1] = paramAddr;
-	spiOutput[2] = (uint8_t)(param >> 24);
-	spiOutput[3] = (uint8_t)(param >> 16);
-	spiOutput[4] = (uint8_t)(param >> 8);
-	spiOutput[5] = (uint8_t)(param >> 0);
+	spiOutput[2] = (uint8_t) (param >> 24);
+	spiOutput[3] = (uint8_t) (param >> 16);
+	spiOutput[4] = (uint8_t) (param >> 8);
+	spiOutput[5] = (uint8_t) (param >> 0);
 
 	return (spiTransfer(gpio, spiOutput, NULL));
 }
@@ -829,9 +829,9 @@ static bool handleChipBiasSend(davisRPiHandle state, uint8_t paramAddr, uint32_t
 		if (paramAddr < 8) {
 			// Flip and reverse coarse bits, due to an on-chip routing mistake.
 			biasVal0 = ((((state->biasing.currentBiasArray[paramAddr][0] & 0x01) ^ 0x01) << 4) & 0x10);
-			biasVal0
-				= (uint8_t)(biasVal0 | ((((state->biasing.currentBiasArray[paramAddr][1] & 0x80) ^ 0x80) >> 2) & 0x20));
-			biasVal0 = (uint8_t)(biasVal0 | (((state->biasing.currentBiasArray[paramAddr][1] & 0x40) ^ 0x40) & 0x40));
+			biasVal0 = (uint8_t) (biasVal0
+								  | ((((state->biasing.currentBiasArray[paramAddr][1] & 0x80) ^ 0x80) >> 2) & 0x20));
+			biasVal0 = (uint8_t) (biasVal0 | (((state->biasing.currentBiasArray[paramAddr][1] & 0x40) ^ 0x40) & 0x40));
 
 			biasVal1 = state->biasing.currentBiasArray[paramAddr][1] & 0x3F;
 		}
@@ -839,7 +839,7 @@ static bool handleChipBiasSend(davisRPiHandle state, uint8_t paramAddr, uint32_t
 			// The first byte of a coarse/fine bias needs to have the coarse bits
 			// flipped and reversed, due to an on-chip routing mistake.
 			biasVal0 = state->biasing.currentBiasArray[paramAddr][0] ^ 0x70;
-			biasVal0 = (uint8_t)((biasVal0 & ~0x50) | ((biasVal0 & 0x40) >> 2) | ((biasVal0 & 0x10) << 2));
+			biasVal0 = (uint8_t) ((biasVal0 & ~0x50) | ((biasVal0 & 0x40) >> 2) | ((biasVal0 & 0x10) << 2));
 
 			biasVal1 = state->biasing.currentBiasArray[paramAddr][1];
 		}
@@ -873,42 +873,42 @@ static bool handleChipBiasSend(davisRPiHandle state, uint8_t paramAddr, uint32_t
 		switch (paramAddr) {
 			case 128: // DigitalMux0
 				state->biasing.currentChipRegister[5]
-					= (uint8_t)((state->biasing.currentChipRegister[5] & 0xF0) | (U8T(param) & 0x0F));
+					= (uint8_t) ((state->biasing.currentChipRegister[5] & 0xF0) | (U8T(param) & 0x0F));
 				break;
 
 			case 129: // DigitalMux1
 				state->biasing.currentChipRegister[5]
-					= (uint8_t)((state->biasing.currentChipRegister[5] & 0x0F) | ((U8T(param) << 4) & 0xF0));
+					= (uint8_t) ((state->biasing.currentChipRegister[5] & 0x0F) | ((U8T(param) << 4) & 0xF0));
 				break;
 
 			case 130: // DigitalMux2
 				state->biasing.currentChipRegister[6]
-					= (uint8_t)((state->biasing.currentChipRegister[6] & 0xF0) | (U8T(param) & 0x0F));
+					= (uint8_t) ((state->biasing.currentChipRegister[6] & 0xF0) | (U8T(param) & 0x0F));
 				break;
 
 			case 131: // DigitalMux3
 				state->biasing.currentChipRegister[6]
-					= (uint8_t)((state->biasing.currentChipRegister[6] & 0x0F) | ((U8T(param) << 4) & 0xF0));
+					= (uint8_t) ((state->biasing.currentChipRegister[6] & 0x0F) | ((U8T(param) << 4) & 0xF0));
 				break;
 
 			case 132: // AnalogMux0
 				state->biasing.currentChipRegister[0]
-					= (uint8_t)((state->biasing.currentChipRegister[0] & 0x0F) | ((U8T(param) << 4) & 0xF0));
+					= (uint8_t) ((state->biasing.currentChipRegister[0] & 0x0F) | ((U8T(param) << 4) & 0xF0));
 				break;
 
 			case 133: // AnalogMux1
 				state->biasing.currentChipRegister[1]
-					= (uint8_t)((state->biasing.currentChipRegister[1] & 0xF0) | (U8T(param) & 0x0F));
+					= (uint8_t) ((state->biasing.currentChipRegister[1] & 0xF0) | (U8T(param) & 0x0F));
 				break;
 
 			case 134: // AnalogMux2
 				state->biasing.currentChipRegister[1]
-					= (uint8_t)((state->biasing.currentChipRegister[1] & 0x0F) | ((U8T(param) << 4) & 0xF0));
+					= (uint8_t) ((state->biasing.currentChipRegister[1] & 0x0F) | ((U8T(param) << 4) & 0xF0));
 				break;
 
 			case 135: // BiasMux0
 				state->biasing.currentChipRegister[0]
-					= (uint8_t)((state->biasing.currentChipRegister[0] & 0xF0) | (U8T(param) & 0x0F));
+					= (uint8_t) ((state->biasing.currentChipRegister[0] & 0xF0) | (U8T(param) & 0x0F));
 				break;
 
 			case 136: // ResetCalibNeuron

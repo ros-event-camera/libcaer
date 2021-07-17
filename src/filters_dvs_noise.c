@@ -97,8 +97,8 @@ static inline size_t doBackgroundActivityLookup(caerFilterDVSNoise noiseFilter, 
 	int64_t timestamp, bool polarity, size_t *supportIndexes) {
 	// Compute map limits.
 	bool notBorderLeft  = (x != 0);
-	bool notBorderDown  = (y != (size_t)(noiseFilter->sizeY - 1));
-	bool notBorderRight = (x != (size_t)(noiseFilter->sizeX - 1));
+	bool notBorderDown  = (y != (size_t) (noiseFilter->sizeY - 1));
+	bool notBorderRight = (x != (size_t) (noiseFilter->sizeX - 1));
 	bool notBorderUp    = (y != 0);
 
 	// Background Activity filter: if difference between current timestamp
@@ -650,7 +650,7 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 		noiseFilter->hotPixelArraySize = 0;
 	}
 
-	size_t pixelNumber = (size_t)(noiseFilter->sizeX * noiseFilter->sizeY);
+	size_t pixelNumber = (size_t) (noiseFilter->sizeX * noiseFilter->sizeY);
 
 	// Count number of hot pixels.
 	size_t hotPixelsNumber = 0;

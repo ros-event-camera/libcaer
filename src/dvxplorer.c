@@ -2466,9 +2466,10 @@ bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *p
 			// Wait 50 ms for data transfer to be ready.
 			struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
 			thrd_sleep(&noDataSleep, NULL);
+
+			dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, true);
 		}
 
-		dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, true);
 		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, true);
 		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_GYROSCOPE, true);
 		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, true);
@@ -3369,10 +3370,10 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 
 					// Get timestamp for rest of this frame.
 					state->timestamps.last    = state->timestamps.current;
-					state->timestamps.current = (U32T(state->timestampsMIPI.currTimestamp) & 0x7FFFFFFF);
+					state->timestamps.current = (U64T(state->timestampsMIPI.currTimestamp) & 0x7FFFFFFF);
 
 					int32_t currOverflow
-						= ((U32T(state->timestampsMIPI.currTimestamp) >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+						= ((U64T(state->timestampsMIPI.currTimestamp) >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
 					if (currOverflow != state->timestamps.wrapOverflow) {
 						state->timestamps.wrapOverflow = currOverflow;
 						state->timestamps.last         = 0;

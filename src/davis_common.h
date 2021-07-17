@@ -361,7 +361,7 @@ static inline void apsUpdateFrame(davisCommonHandle handle, uint16_t data) {
 		SWAP_VAR(uint16_t, xPos, yPos);
 	}
 
-	size_t pixelPosition = (size_t)(yPos * state->aps.roi.sizeX) + xPos;
+	size_t pixelPosition = (size_t) (yPos * state->aps.roi.sizeX) + xPos;
 
 	// Standard CDS support.
 	bool isCDavisGS = (IS_DAVIS640H(handle->info.chipID) && state->aps.globalShutter);
@@ -2162,7 +2162,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 	caerFrameEventSetROIIdentifier(state->aps.frame.currentEvent, 0);
 
 #if APS_DEBUG_FRAME == 1
-	state->aps.frame.resetPixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
+	state->aps.frame.resetPixels = calloc((size_t) (state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
 	if (state->aps.frame.resetPixels == NULL) {
 		freeAllDataMemory(state);
 
@@ -2170,7 +2170,7 @@ static bool davisCommonDataStart(davisCommonHandle handle, void (*dataNotifyIncr
 		return (false);
 	}
 
-	state->aps.frame.signalPixels = calloc((size_t)(state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
+	state->aps.frame.signalPixels = calloc((size_t) (state->aps.sizeX * state->aps.sizeY), sizeof(uint16_t));
 	if (state->aps.frame.signalPixels == NULL) {
 		freeAllDataMemory(state);
 
