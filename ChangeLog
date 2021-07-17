@@ -1,3 +1,13 @@
+Release 3.3.11 - 16.07.2021
+
+NEW FEATURES
+- Native MacOS ARM (M1) builds, Big Sur compatibility.
+- Ubuntu 21.04 Hirsute support.
+- Fedora 34 support.
+- Ubuntu 16.04 Xenial is no longer supported!
+- Cameras: added support for new DVXplorer Mini camera model.
+
+
 Release 3.3.10 - 16.04.2021
 
 BUG FIXES

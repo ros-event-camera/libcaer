@@ -6,6 +6,8 @@ static void dvXplorerLog(enum caer_log_level logLevel, dvXplorerHandle handle, c
 	ATTRIBUTE_FORMAT(3);
 static void dvXplorerEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSent);
 static void dvXplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32_t param);
+static void resetParser(dvXplorerHandle handle, const char *reason);
+static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize);
 
 // FX3 Debug Transfer Support
 static void allocateDebugTransfers(dvXplorerHandle handle);
@@ -223,8 +225,30 @@ caerDeviceHandle dvXplorerOpen(
 		deviceInfo.deviceInfo.dvXplorerInfo.deviceUSBBusNumber,
 		deviceInfo.deviceInfo.dvXplorerInfo.deviceUSBDeviceAddress);
 
+	// Grab device descriptor to extract device type (MIPI?).
+	struct libusb_device_descriptor devDesc;
+
+	if (libusb_get_device_descriptor(libusb_get_device(handle->state.usbState.deviceHandle), &devDesc)
+		!= LIBUSB_SUCCESS) {
+		usbDeviceClose(&state->usbState);
+		free(usbInfoString);
+		free(handle);
+
+		errno = CAER_ERROR_COMMUNICATION;
+		return (NULL);
+	}
+
+	uint8_t deviceType            = U8T((devDesc.bcdDevice >> 8) & 0x00FF);
+	handle->state.isMipiCX3Device = (deviceType == DEVICE_MIPI);
+
 	// Setup USB.
-	usbSetDataCallback(&state->usbState, &dvXplorerEventTranslator, handle);
+	if (handle->state.isMipiCX3Device) {
+		usbSetDataCallback(&state->usbState, &mipiCx3EventTranslator, handle);
+	}
+	else {
+		usbSetDataCallback(&state->usbState, &dvXplorerEventTranslator, handle);
+	}
+
 	usbSetDataEndpoint(&state->usbState, USB_DEFAULT_DATA_ENDPOINT);
 	usbSetTransfersNumber(&state->usbState, 8);
 	usbSetTransfersSize(&state->usbState, 8192);
@@ -247,21 +271,23 @@ caerDeviceHandle dvXplorerOpen(
 
 	uint32_t param32 = 0;
 
-	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_LOGIC_CLOCK, &param32);
-	state->deviceClocks.logicClock = U16T(param32);
-	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_USB_CLOCK, &param32);
-	state->deviceClocks.usbClock = U16T(param32);
-	spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_CLOCK_DEVIATION, &param32);
-	state->deviceClocks.clockDeviationFactor = U16T(param32);
+	if (!handle->state.isMipiCX3Device) {
+		spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_LOGIC_CLOCK, &param32);
+		state->deviceClocks.logicClock = U16T(param32);
+		spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_USB_CLOCK, &param32);
+		state->deviceClocks.usbClock = U16T(param32);
+		spiConfigReceive(&state->usbState, DVX_SYSINFO, DVX_SYSINFO_CLOCK_DEVIATION, &param32);
+		state->deviceClocks.clockDeviationFactor = U16T(param32);
 
-	// Calculate actual clock frequencies.
-	state->deviceClocks.logicClockActual = (float) ((double) state->deviceClocks.logicClock
-													* ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
-	state->deviceClocks.usbClockActual   = (float) ((double) state->deviceClocks.usbClock
-                                                  * ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
+		// Calculate actual clock frequencies.
+		state->deviceClocks.logicClockActual = (float) ((double) state->deviceClocks.logicClock
+														* ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
+		state->deviceClocks.usbClockActual   = (float) ((double) state->deviceClocks.usbClock
+                                                      * ((double) state->deviceClocks.clockDeviationFactor / 1000.0));
 
-	dvXplorerLog(CAER_LOG_DEBUG, handle, "Clock frequencies: LOGIC %f, USB %f.",
-		(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.usbClockActual);
+		dvXplorerLog(CAER_LOG_DEBUG, handle, "Clock frequencies: LOGIC %f, USB %f.",
+			(double) state->deviceClocks.logicClockActual, (double) state->deviceClocks.usbClockActual);
+	}
 
 	spiConfigReceive(&state->usbState, DVX_DVS, DVX_DVS_SIZE_COLUMNS, &param32);
 	state->dvs.sizeX = I16T(param32);
@@ -284,44 +310,46 @@ caerDeviceHandle dvXplorerOpen(
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU Flip X: %d, Flip Y: %d, Flip Z: %d.", state->imu.flipX, state->imu.flipY,
 		state->imu.flipZ);
 
-	// Initialize Samsung DVS chip.
-	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, true); // Take DVS out of reset.
+	if (!handle->state.isMipiCX3Device) {
+		// Initialize Samsung DVS chip.
+		spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, true); // Take DVS out of reset.
 
-	// Wait 10ms for DVS to start.
-	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
-	thrd_sleep(&dvsSleep, NULL);
+		// Wait 10ms for DVS to start.
+		struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
+		thrd_sleep(&dvsSleep, NULL);
 
-	// Bias reset.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
+		// Bias reset.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);
 
-	// Bias enable.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGP, 0x07);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGN, 0xFF);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFP, 0x03);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
+		// Bias enable.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGP, 0x07);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DBGN, 0xFF);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFP, 0x03);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_BUFN, 0x7F);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_PINS_DOB, 0x00);
 
-	dvXplorerConfigSet(
-		(caerDeviceHandle) handle, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
+		dvXplorerConfigSet(
+			(caerDeviceHandle) handle, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
 
-	// System settings.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x80); // Enable MGROUP compression.
+		// System settings.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_CLOCK_DIVIDER_SYS, 0xA0); // Divide freq by 10.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_CONTROL, 0x00);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PARALLEL_OUT_ENABLE, 0x01);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x80); // Enable MGROUP compression.
 
-	// Digital settings.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
+		// Digital settings.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
 
-	// Fine clock counts based on clock frequency.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
+		// Fine clock counts based on clock frequency.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
 
-	// Disable histogram, not currently used/mapped.
-	spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
+		// Disable histogram, not currently used/mapped.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
+	}
 
 	// On FX3, start the debug transfers once everything else is ready.
 	allocateDebugTransfers(handle);
@@ -338,7 +366,9 @@ bool dvXplorerClose(caerDeviceHandle cdh) {
 
 	dvXplorerLog(CAER_LOG_DEBUG, handle, "Shutting down ...");
 
-	spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, false); // Put DVS in reset.
+	if (!handle->state.isMipiCX3Device) {
+		spiConfigSend(&state->usbState, DVX_MUX, DVX_MUX_RUN_CHIP, false); // Put DVS in reset.
+	}
 
 	// Stop debug transfers on FX3 devices.
 	cancelAndDeallocateDebugTransfers(handle);
@@ -380,9 +410,11 @@ struct caer_dvx_info caerDVXplorerInfoGet(caerDeviceHandle cdh) {
 bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvXplorerHandle handle = (dvXplorerHandle) cdh;
 
-	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RESET, false);
-	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
-	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_DVS_ON_TRANSFER_STALL, false);
+	if (!handle->state.isMipiCX3Device) {
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RESET, false);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_EXTINPUT_ON_TRANSFER_STALL, true);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_DROP_DVS_ON_TRANSFER_STALL, false);
+	}
 
 	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_DATA_RATE, BOSCH_ACCEL_800HZ); // 800 Hz.
 	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_ACCEL_FILTER, BOSCH_ACCEL_NORMAL);   // Normal mode.
@@ -391,27 +423,29 @@ bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_FILTER, BOSCH_GYRO_NORMAL);     // Normal mode.
 	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_GYRO_RANGE, BOSCH_GYRO_500DPS);      // +- 500 °/s
 
-	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_RISING_EDGES, false);
-	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_FALLING_EDGES, false);
-	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSES, true);
-	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_POLARITY, true);
-	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_LENGTH,
-		10); // in µs, converted to cycles @ LogicClock later
-
-	if (handle->info.extInputHasGenerator) {
-		// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_GENERATOR, false);
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_POLARITY, true);
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_INTERVAL,
+	if (!handle->state.isMipiCX3Device) {
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_RISING_EDGES, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_FALLING_EDGES, false);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSES, true);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_POLARITY, true);
+		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_DETECT_PULSE_LENGTH,
 			10); // in µs, converted to cycles @ LogicClock later
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_LENGTH,
-			5); // in µs, converted to cycles @ LogicClock later
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE, false);
-		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE, false);
-	}
 
-	dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_EARLY_PACKET_DELAY,
-		8); // in 125µs time-slices (defaults to 1ms)
+		if (handle->info.extInputHasGenerator) {
+			// Disable generator by default. Has to be enabled manually after sendDefaultConfig() by user!
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_GENERATOR, false);
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_POLARITY, true);
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_INTERVAL,
+				10); // in µs, converted to cycles @ LogicClock later
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_PULSE_LENGTH,
+				5); // in µs, converted to cycles @ LogicClock later
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_RISING_EDGE, false);
+			dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_GENERATE_INJECT_ON_FALLING_EDGE, false);
+		}
+
+		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_EARLY_PACKET_DELAY,
+			8); // in 125µs time-slices (defaults to 1ms)
+	}
 
 	// Set default biases.
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_BIAS, DVX_DVS_CHIP_BIAS_SIMPLE, DVX_DVS_CHIP_BIAS_SIMPLE_DEFAULT);
@@ -526,6 +560,10 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_MUX:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_MUX_RUN:
 				case DVX_MUX_TIMESTAMP_RUN:
@@ -593,6 +631,10 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_EXTINPUT:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_EXTINPUT_RUN_DETECTOR:
 				case DVX_EXTINPUT_DETECT_RISING_EDGES:
@@ -648,6 +690,10 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_USB:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_USB_RUN:
 					return (spiConfigSend(&state->usbState, DVX_USB, paramAddr, param));
@@ -1427,6 +1473,10 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_MUX:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_MUX_RUN:
 				case DVX_MUX_TIMESTAMP_RUN:
@@ -1508,6 +1558,10 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_EXTINPUT:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_EXTINPUT_RUN_DETECTOR:
 				case DVX_EXTINPUT_DETECT_RISING_EDGES:
@@ -1577,6 +1631,10 @@ bool dvXplorerConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 			break;
 
 		case DVX_USB:
+			if (handle->state.isMipiCX3Device) {
+				return false;
+			}
+
 			switch (paramAddr) {
 				case DVX_USB_RUN:
 					return (spiConfigReceive(&state->usbState, DVX_USB, paramAddr, param));
@@ -2378,9 +2436,11 @@ bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *p
 	dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
 	dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
 
-	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
-	dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
-	dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+	if (!handle->state.isMipiCX3Device) {
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
+		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+	}
 
 	// Then wait 10ms for FPGA device side buffers to clear.
 	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
@@ -2397,14 +2457,16 @@ bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *p
 	}
 
 	if (dataExchangeStartProducers(&state->dataExchange)) {
-		// Enable data transfer on USB end-point 2.
-		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, true);
-		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, true);
-		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, true);
+		if (!handle->state.isMipiCX3Device) {
+			// Enable data transfer on USB end-point 2.
+			dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, true);
+			dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, true);
+			dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, true);
 
-		// Wait 50 ms for data transfer to be ready.
-		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
-		thrd_sleep(&noDataSleep, NULL);
+			// Wait 50 ms for data transfer to be ready.
+			struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
+			thrd_sleep(&noDataSleep, NULL);
+		}
 
 		dvXplorerConfigSet(cdh, DVX_DVS, DVX_DVS_RUN, true);
 		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_ACCELEROMETER, true);
@@ -2413,6 +2475,7 @@ bool dvXplorerDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *p
 		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, true);
 
 		// Enable streaming from DVS chip.
+		dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMESTAMP_RESET, true);
 		dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_MODE, DVX_DVS_CHIP_MODE_STREAM);
 	}
 
@@ -2434,9 +2497,11 @@ bool dvXplorerDataStop(caerDeviceHandle cdh) {
 		dvXplorerConfigSet(cdh, DVX_IMU, DVX_IMU_RUN_TEMPERATURE, false);
 		dvXplorerConfigSet(cdh, DVX_EXTINPUT, DVX_EXTINPUT_RUN_DETECTOR, false);
 
-		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
-		dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
-		dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+		if (!handle->state.isMipiCX3Device) {
+			dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_RUN, false);
+			dvXplorerConfigSet(cdh, DVX_MUX, DVX_MUX_TIMESTAMP_RUN, false);
+			dvXplorerConfigSet(cdh, DVX_USB, DVX_USB_RUN, false);
+		}
 	}
 
 	usbDataTransfersStop(&state->usbState);
@@ -3098,6 +3163,322 @@ static void dvXplorerTSMasterStatusUpdater(void *userDataPtr, int status, uint32
 	atomic_thread_fence(memory_order_seq_cst);
 }
 
+static void resetParser(dvXplorerHandle handle, const char *reason) {
+	dvXplorerState state = &handle->state;
+
+	state->dvs.lastColumn           = -1;
+	state->timestampsMIPI.reference = -1;
+
+	state->timestampsMIPI.lastUsedSub       = -1;
+	state->timestampsMIPI.lastUsedReference = -1;
+
+	dvXplorerLog(CAER_LOG_INFO, handle, "Parser reset, reason: %s.", reason);
+}
+
+static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_t bufferSize) {
+	dvXplorerHandle handle = vhd;
+	dvXplorerState state   = &handle->state;
+
+	// Return right away if not running anymore. This prevents useless work if many
+	// buffers are still waiting when shut down, as well as incorrect event sequences
+	// if a TS_RESET is stuck on ring-buffer commit further down, and detects shut-down;
+	// then any subsequent buffers should also detect shut-down and not be handled.
+	if (!usbDataTransfersAreRunning(&state->usbState)) {
+		return;
+	}
+
+	// Discard buffers with incorrect lengths.
+	if ((bufferSize & 0x03) != 0) {
+		dvXplorerLog(
+			CAER_LOG_ALERT, handle, "%zu bytes received via USB, which is not a multiple of four.", bufferSize);
+		return;
+	}
+
+	for (size_t bufferPos = 0; bufferPos < bufferSize; bufferPos += 4) {
+		const uint32_t event = le32toh(*((const uint32_t *) (&buffer[bufferPos])));
+
+		if (event == 0) {
+			// Padding event for MIPI, discard.
+			continue;
+		}
+
+		// Allocate new packets for next iteration as needed.
+		if (!containerGenerationAllocate(&state->container, DVXPLORER_EVENT_TYPES)) {
+			dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate event packet container.");
+			return;
+		}
+
+		if (state->currentPackets.special == NULL) {
+			state->currentPackets.special = caerSpecialEventPacketAllocate(
+				DVXPLORER_SPECIAL_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			if (state->currentPackets.special == NULL) {
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate special event packet.");
+				return;
+			}
+		}
+
+		if (state->currentPackets.polarity == NULL) {
+			state->currentPackets.polarity = caerPolarityEventPacketAllocate(
+				DVXPLORER_POLARITY_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			if (state->currentPackets.polarity == NULL) {
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate polarity event packet.");
+				return;
+			}
+		}
+
+		if (state->currentPackets.imu6 == NULL) {
+			state->currentPackets.imu6 = caerIMU6EventPacketAllocate(
+				DVXPLORER_IMU_DEFAULT_SIZE, I16T(handle->info.deviceID), state->timestamps.wrapOverflow);
+			if (state->currentPackets.imu6 == NULL) {
+				dvXplorerLog(CAER_LOG_CRITICAL, handle, "Failed to allocate IMU6 event packet.");
+				return;
+			}
+		}
+
+		bool tsReset   = false;
+		bool tsBigWrap = false;
+
+		if (event & 0x80000000) {
+			if (state->dvs.lastColumn < 0) {
+				// Wait until first column start has come in, so that lastColumn
+				// and timestamps have been initialized properly.
+				continue;
+			}
+
+			// SGROUP or MGROUP event.
+			// Decode address.
+			int32_t group1Address = (event >> 18) & 0x003F;
+			int32_t group2Address = group1Address + I16T((event >> 26) & 0x001F);
+
+			// 8 pixels per group.
+			group1Address *= 8;
+			group2Address *= 8;
+
+			// Check range conformity.
+			if (group1Address >= handle->info.dvsSizeY) {
+				dvXplorerLog(CAER_LOG_ERROR, handle, "DVS: Group1 Y address out of range (0-%d): %u.",
+					handle->info.dvsSizeY - 1, group1Address);
+				continue; // Skip invalid G1 Y address.
+			}
+
+			if (group2Address >= handle->info.dvsSizeY) {
+				dvXplorerLog(CAER_LOG_ERROR, handle, "DVS: Group2 Y address out of range (0-%d): %u.",
+					handle->info.dvsSizeY - 1, group2Address);
+				continue; // Skip invalid G2 Y address.
+			}
+
+			// Group addresses can happen out of order when MGROUP compression is enabled.
+			// No extra checks can thus be done, and reordering may be required.
+
+			// Two 8-pixel groups, up to 16 events can be generated.
+			if (!ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.polarity,
+					(size_t) state->currentPackets.polarityPosition, 16, handle)) {
+				continue;
+			}
+
+			uint8_t group1Events = (event >> 0) & 0x00FF;
+			bool group1Polarity  = (event >> 16) & 0x01;
+
+			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
+				// Check if event present first.
+				if ((group1Events & mask) == 0) {
+					continue;
+				}
+
+				// Received event!
+				caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
+					state->currentPackets.polarity, state->currentPackets.polarityPosition);
+
+				// Timestamp at event-stream insertion point.
+				caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
+				caerPolarityEventSetPolarity(currentPolarityEvent, group1Polarity);
+				caerPolarityEventSetX(currentPolarityEvent, U16T(state->dvs.lastColumn));
+				caerPolarityEventSetY(currentPolarityEvent, U16T(group1Address + i));
+				caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
+				state->currentPackets.polarityPosition++;
+			}
+
+			uint8_t group2Events = (event >> 8) & 0x00FF;
+			bool group2Polarity  = (event >> 17) & 0x01;
+
+			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
+				// Check if event present first.
+				if ((group2Events & mask) == 0) {
+					continue;
+				}
+
+				// Received event!
+				caerPolarityEvent currentPolarityEvent = caerPolarityEventPacketGetEvent(
+					state->currentPackets.polarity, state->currentPackets.polarityPosition);
+
+				// Timestamp at event-stream insertion point.
+				caerPolarityEventSetTimestamp(currentPolarityEvent, state->timestamps.current);
+				caerPolarityEventSetPolarity(currentPolarityEvent, group2Polarity);
+				caerPolarityEventSetX(currentPolarityEvent, U16T(state->dvs.lastColumn));
+				caerPolarityEventSetY(currentPolarityEvent, U16T(group2Address + i));
+				caerPolarityEventValidate(currentPolarityEvent, state->currentPackets.polarity);
+				state->currentPackets.polarityPosition++;
+			}
+		}
+		else {
+			// COLUMN event.
+			if (event & 0x04000000) {
+				if (state->timestampsMIPI.reference < 0) {
+					// Wait until first timestamp reference in (every 1ms),
+					// so that time-relative fields have been initialized properly.
+					continue;
+				}
+
+				bool startOfFrame  = (event >> 21) & 0x01;
+				int16_t columnAddr = event & 0x03FF;
+
+				if (columnAddr >= handle->info.dvsSizeX) {
+					dvXplorerLog(CAER_LOG_ERROR, handle, "DVS: X address out of range (0-%d): %u.",
+						handle->info.dvsSizeX - 1, columnAddr);
+					continue; // Skip invalid X address (don't update lastX).
+				}
+
+				if (startOfFrame) {
+					int16_t timestampSub = (event >> 11) & 0x03FF;
+
+					if (state->timestampsMIPI.reference == state->timestampsMIPI.lastUsedReference
+						&& timestampSub <= state->timestampsMIPI.lastUsedSub) {
+						// Reference did not change, but sub-timestamp did wrap around.
+						// We must have lost a main reference timestamp due to high traffic.
+						// So we wait until the next reference timestamp comes in.
+						resetParser(handle, "timestamp reference lost");
+						continue;
+					}
+
+					// Get timestamp for rest of this frame.
+					state->timestampsMIPI.lastTimestamp = state->timestampsMIPI.currTimestamp;
+					state->timestampsMIPI.currTimestamp = state->timestampsMIPI.reference + timestampSub;
+
+					if (state->timestampsMIPI.lastTimestamp >= state->timestampsMIPI.currTimestamp) {
+						// This should be impossible, since offset and reference are always
+						// increasing, and timestampSub wraps are handled above.
+						dvXplorerLog(CAER_LOG_ERROR, handle,
+							"non strictly-monotonic timestamp detected: lastTimestamp=%ld, "
+							"currentTimestamp=%ld, difference=%ld.",
+							state->timestampsMIPI.lastTimestamp, state->timestampsMIPI.currTimestamp,
+							(state->timestampsMIPI.lastTimestamp - state->timestampsMIPI.currTimestamp));
+					}
+
+					state->timestampsMIPI.lastUsedReference = state->timestampsMIPI.reference;
+					state->timestampsMIPI.lastUsedSub       = timestampSub;
+
+					// Get timestamp for rest of this frame.
+					state->timestamps.last    = state->timestamps.current;
+					state->timestamps.current = (U32T(state->timestampsMIPI.currTimestamp) & 0x7FFFFFFF);
+
+					int32_t currOverflow
+						= ((U32T(state->timestampsMIPI.currTimestamp) >> TS_OVERFLOW_SHIFT) & 0x7FFFFFFF);
+					if (currOverflow != state->timestamps.wrapOverflow) {
+						state->timestamps.wrapOverflow = currOverflow;
+						state->timestamps.last         = 0;
+						tsBigWrap                      = true;
+					}
+
+					// Check monotonicity of timestamps.
+					checkMonotonicTimestamp(state->timestamps.current, state->timestamps.last,
+						handle->info.deviceString, &state->deviceLogLevel);
+
+					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
+
+					dvXplorerLog(CAER_LOG_DEBUG, handle, "Start of Frame detected.");
+				}
+				// Start-of-frame not yet seen, ignore.
+				else if (state->dvs.lastColumn < 0) {
+					continue;
+				}
+				else {
+					// If not a start-of-frame column, address must always increase.
+					// If it jumps back, we must have lost data due to high traffic.
+					// So we reset and wait to re-sync time and data.
+					if (columnAddr <= state->dvs.lastColumn) {
+						resetParser(handle, "column address illegal jump");
+						continue;
+					}
+				}
+
+				state->dvs.lastColumn = columnAddr;
+			}
+			// TIMESTAMP event.
+			else if (event & 0x08000000) {
+				int32_t timestampRef = event & 0x003FFFFF;
+
+				// New reference timestamp is smaller, must have overflown its 22 bits.
+				if (timestampRef <= state->timestampsMIPI.lastReference) {
+					state->timestampsMIPI.referenceOverflow++;
+				}
+
+				state->timestampsMIPI.lastReference = timestampRef;
+
+				// Generate full 64bit reference timestamp, with overflow added.
+				state->timestampsMIPI.reference
+					= ((U64T(state->timestampsMIPI.referenceOverflow) << 22) + timestampRef);
+
+				// In ms, convert to µs.
+				state->timestampsMIPI.reference *= 1000;
+			}
+			else {
+				dvXplorerLog(CAER_LOG_ERROR, handle, "Unknown event = %X.", event);
+			}
+		}
+
+		// Thresholds on which to trigger packet container commit.
+		// tsReset and tsBigWrap are already defined above.
+		// Trigger if any of the global container-wide thresholds are met.
+		int32_t currentPacketContainerCommitSize = containerGenerationGetMaxPacketSize(&state->container);
+		bool containerSizeCommit                 = (currentPacketContainerCommitSize > 0)
+								   && ((state->currentPackets.polarityPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.specialPosition >= currentPacketContainerCommitSize)
+									   || (state->currentPackets.imu6Position >= currentPacketContainerCommitSize));
+
+		bool containerTimeCommit = containerGenerationIsCommitTimestampElapsed(
+			&state->container, state->timestamps.wrapOverflow, state->timestamps.current);
+
+		// Commit packet containers to the ring-buffer, so they can be processed by the
+		// main-loop, when any of the required conditions are met.
+		if (tsReset || tsBigWrap || containerSizeCommit || containerTimeCommit) {
+			// One or more of the commit triggers are hit. Set the packet container up to contain
+			// any non-empty packets. Empty packets are not forwarded to save memory.
+			bool emptyContainerCommit = true;
+
+			if (state->currentPackets.polarityPosition > 0) {
+				containerGenerationSetPacket(
+					&state->container, POLARITY_EVENT, (caerEventPacketHeader) state->currentPackets.polarity);
+
+				state->currentPackets.polarity         = NULL;
+				state->currentPackets.polarityPosition = 0;
+				emptyContainerCommit                   = false;
+			}
+
+			if (state->currentPackets.specialPosition > 0) {
+				containerGenerationSetPacket(
+					&state->container, SPECIAL_EVENT, (caerEventPacketHeader) state->currentPackets.special);
+
+				state->currentPackets.special         = NULL;
+				state->currentPackets.specialPosition = 0;
+				emptyContainerCommit                  = false;
+			}
+
+			if (state->currentPackets.imu6Position > 0) {
+				containerGenerationSetPacket(
+					&state->container, IMU6_EVENT_PKT_POS, (caerEventPacketHeader) state->currentPackets.imu6);
+
+				state->currentPackets.imu6         = NULL;
+				state->currentPackets.imu6Position = 0;
+				emptyContainerCommit               = false;
+			}
+
+			containerGenerationExecute(&state->container, emptyContainerCommit, tsReset, state->timestamps.wrapOverflow,
+				state->timestamps.current, &state->dataExchange, &state->usbState.dataTransfersRun,
+				handle->info.deviceID, handle->info.deviceString, &state->deviceLogLevel);
+		}
+	}
+}
+
 //////////////////////////////////
 /// FX3 Debug Transfer Support ///
 //////////////////////////////////
@@ -3212,9 +3593,102 @@ static void LIBUSB_CALL libUsbDebugCallback(struct libusb_transfer *transfer) {
 }
 
 static void debugTranslator(dvXplorerHandle handle, const uint8_t *buffer, size_t bytesSent) {
-	// Check if this is a debug message (length 7-64 bytes).
-	if ((bytesSent >= 7) && (buffer[0] == 0x00)) {
-		// Debug message, log this.
+	dvXplorerState state = &handle->state;
+
+	if ((bytesSent == 16) && (buffer[0] == 0x01)) {
+		if (state->currentPackets.imu6 == NULL) {
+			return;
+		}
+
+		memset(&state->imu.currentEvent, 0, sizeof(struct caer_imu6_event));
+
+		// IMU message.
+		dvXplorerLog(CAER_LOG_DEBUG, handle, "IMU Scale Config event (%" PRIu8 ") received.", buffer[1]);
+
+		// Set correct IMU accel and gyro scales, used to interpret subsequent
+		// IMU samples from the device.
+		state->imu.accelScale = calculateIMUAccelScale(U8T(buffer[1] >> 3) & 0x03);
+		state->imu.gyroScale  = calculateIMUGyroScale(buffer[1] & 0x07);
+
+		// Set expected type of data to come from IMU (accel, gyro, temp).
+		state->imu.type = U8T(buffer[1] >> 5) & 0x07;
+
+		if (state->imu.type & 0x04) {
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t accelX = I16T((buffer[13] << 8) | buffer[12]);
+			if (state->imu.flipX) {
+				accelX = I16T(-accelX);
+			}
+			caerIMU6EventSetAccelX(&state->imu.currentEvent, accelX / state->imu.accelScale);
+
+			int16_t accelY = I16T((buffer[11] << 8) | buffer[10]);
+			if (state->imu.flipY) {
+				accelY = I16T(-accelY);
+			}
+			caerIMU6EventSetAccelY(&state->imu.currentEvent, accelY / state->imu.accelScale);
+
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t accelZ = I16T((buffer[9] << 8) | buffer[8]);
+			if (state->imu.flipZ) {
+				accelZ = I16T(-accelZ);
+			}
+			caerIMU6EventSetAccelZ(&state->imu.currentEvent, accelZ / state->imu.accelScale);
+		}
+
+		if (state->imu.type & 0x02) {
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t gyroX = I16T((buffer[7] << 8) | buffer[6]);
+			if (state->imu.flipX) {
+				gyroX = I16T(-gyroX);
+			}
+			caerIMU6EventSetGyroX(&state->imu.currentEvent, gyroX / state->imu.gyroScale);
+
+			int16_t gyroY = I16T((buffer[5] << 8) | buffer[4]);
+			if (state->imu.flipY) {
+				gyroY = I16T(-gyroY);
+			}
+			caerIMU6EventSetGyroY(&state->imu.currentEvent, gyroY / state->imu.gyroScale);
+
+			// X and Z axes are swapped due to IMU chip position.
+			int16_t gyroZ = I16T((buffer[3] << 8) | buffer[2]);
+			if (state->imu.flipZ) {
+				gyroZ = I16T(-gyroZ);
+			}
+			caerIMU6EventSetGyroZ(&state->imu.currentEvent, gyroZ / state->imu.gyroScale);
+		}
+
+		if (state->imu.type & 0x01) {
+			// Temperature is signed. Formula for converting to °C:
+			// (SIGNED_VAL / 512) + 23
+			int16_t temp = I16T((buffer[15] << 8) | buffer[14]);
+			caerIMU6EventSetTemp(&state->imu.currentEvent, (temp / 512.0F) + 23.0F);
+		}
+
+		// Timestamp at event-stream insertion point.
+		caerIMU6EventSetTimestamp(&state->imu.currentEvent, state->timestamps.current);
+
+		caerIMU6EventValidate(&state->imu.currentEvent, state->currentPackets.imu6);
+
+		// IMU6 and APS operate on an internal event and copy that to the actual output
+		// packet here, in the END state, for a reason: if a packetContainer, with all its
+		// packets, is committed due to hitting any of the triggers that are not TS reset
+		// or TS wrap-around related, like number of polarity events, the event in the packet
+		// would be left incomplete, and the event in the new packet would be corrupted.
+		// We could avoid this like for the TS reset/TS wrap-around case (see forceCommit) by
+		// just deleting that event, but these kinds of commits happen much more often and the
+		// possible data loss would be too significant. So instead we keep a private event,
+		// fill it, and then only copy it into the packet here in the END state, at which point
+		// the whole event is ready and cannot be broken/corrupted in any way anymore.
+		if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.imu6,
+				(size_t) state->currentPackets.imu6Position, 1, handle)) {
+			caerIMU6Event imuCurrentEvent
+				= caerIMU6EventPacketGetEvent(state->currentPackets.imu6, state->currentPackets.imu6Position);
+			memcpy(imuCurrentEvent, &state->imu.currentEvent, sizeof(struct caer_imu6_event));
+			state->currentPackets.imu6Position++;
+		}
+	}
+	else if ((bytesSent >= 7) && (buffer[0] == 0x00)) {
+		// Debug message (length 7-64 bytes), log this.
 		dvXplorerLog(CAER_LOG_ERROR, handle, "Error message: '%s' (code %u at time %u).", &buffer[6], buffer[1],
 			*((const uint32_t *) &buffer[2]));
 	}

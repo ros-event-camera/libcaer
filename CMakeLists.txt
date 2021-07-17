@@ -4,41 +4,41 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 # General build settings
 IF (NOT CMAKE_BUILD_TYPE)
 	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
-ENDIF()
+ENDIF ()
 
 IF (NOT CMAKE_INSTALL_PREFIX)
 	IF (UNIX AND NOT APPLE)
 		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
 	ELSEIF (APPLE)
 		SET(CMAKE_INSTALL_PREFIX "/usr/local" CACHE STRING "CMake default install prefix, set to /usr/local on macOS")
-	ELSE()
+	ELSE ()
 		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
-	ENDIF()
-ENDIF()
+	ENDIF ()
+ENDIF ()
 
 IF (NOT ENABLE_STATIC)
 	SET(ENABLE_STATIC 0 CACHE BOOL "Build and install static library in addition to default shared library")
-ENDIF()
+ENDIF ()
 
 IF (NOT ENABLE_SERIALDEV)
 	SET(ENABLE_SERIALDEV 0 CACHE BOOL "Enable support for serial port devices using libserialport")
-ENDIF()
+ENDIF ()
 
 IF (NOT ENABLE_OPENCV)
 	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
-ENDIF()
+ENDIF ()
 
 IF (NOT UDEV_INSTALL)
 	SET(UDEV_INSTALL 1 CACHE BOOL "Install udev rules on Linux")
-ENDIF()
+ENDIF ()
 
 IF (NOT EXAMPLES_INSTALL)
 	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
-ENDIF()
+ENDIF ()
 
 # Project name and version
 PROJECT(libcaer
-	VERSION 3.3.10
+	VERSION 3.3.11
 	LANGUAGES C CXX)
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
@@ -66,7 +66,7 @@ SET(LIBCAER_PKGCONFIG_LIBS_PRIVATE "${LIBCAER_PKGCONFIG_LIBS_PRIVATE} ${SYSTEM_T
 # Windows needs extra winsock library for portable endian functions.
 IF (OS_WINDOWS)
 	SET(BASE_LIBS ${BASE_LIBS} ws2_32)
-ENDIF()
+ENDIF ()
 
 MESSAGE(STATUS "Base libraries: ${BASE_LIBS}")
 
@@ -82,7 +82,7 @@ IF (ENABLE_SERIALDEV)
 	# Require libserialport, minimum 0.1.1 version.
 	PKG_CHECK_MODULES(libserialport REQUIRED IMPORTED_TARGET libserialport>=0.1.1)
 	SET(LIBCAER_PKGCONFIG_REQUIRES_PRIVATE "${LIBCAER_PKGCONFIG_REQUIRES_PRIVATE}, libserialport >= 0.1.1")
-ENDIF()
+ENDIF ()
 
 # Optional: OpenCV support for frame enhancement
 IF (ENABLE_OPENCV)
@@ -90,8 +90,8 @@ IF (ENABLE_OPENCV)
 	FIND_PACKAGE(OpenCV REQUIRED COMPONENTS core imgproc)
 	IF (OpenCV_VERSION VERSION_LESS "3.1.0")
 		MESSAGE(FATAL_ERROR "Cannot find OpenCV 3.1.0 or newer.")
-	ENDIF()
-ENDIF()
+	ENDIF ()
+ENDIF ()
 
 # Add main include dir for all targets
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include/)
@@ -135,19 +135,19 @@ IF (OS_LINUX AND UDEV_INSTALL)
 	INSTALL(FILES
 		docs/65-inivation.rules
 		DESTINATION "/lib/udev/rules.d/")
-ENDIF()
+ENDIF ()
 
 # Automatic documentation generation support
 FIND_PACKAGE(Doxygen)
 
 IF (DOXYGEN_FOUND)
 	ADD_SUBDIRECTORY(docs)
-ENDIF()
+ENDIF ()
 
 # Compile all examples
 IF (EXAMPLES_INSTALL)
 	ADD_SUBDIRECTORY(examples)
-ENDIF()
+ENDIF ()
 
 # Support automatic RPM generation
 SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
