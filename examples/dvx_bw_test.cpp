@@ -90,12 +90,12 @@ int main() {
 		cv::WindowFlags::WINDOW_AUTOSIZE | cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
 
 	// Calculate event bandwidth statistics.
-	int64_t smallTick         = 10; // Every 10us.
+	const int64_t smallTick   = 1000; // Every 1ms.
 	int64_t nextSmallTick     = -1;
 	uint64_t smallAccumulator = 0;
 	float maxSmallMevts       = 0;
 
-	int64_t bigTick         = 1000000; // Every 1s.
+	const int64_t bigTick   = 1000000; // Every 1s.
 	int64_t nextBigTick     = -1;
 	uint64_t bigAccumulator = 0;
 	float maxBigMevts       = 0;
@@ -132,7 +132,7 @@ int main() {
 
 					if (ts >= nextSmallTick) {
 						// Calculate statistics on last sample.
-						float mevts = static_cast<float>(smallAccumulator) / 10.0F;
+						float mevts = static_cast<float>(smallAccumulator) / static_cast<float>(smallTick);
 						if (mevts > maxSmallMevts) {
 							maxSmallMevts = mevts;
 						}
@@ -149,7 +149,7 @@ int main() {
 
 					if (ts >= nextBigTick) {
 						// Calculate statistics on last sample.
-						float mevts = static_cast<float>(bigAccumulator) / 1000000.0F;
+						float mevts = static_cast<float>(bigAccumulator) / static_cast<float>(bigTick);
 						if (mevts > maxBigMevts) {
 							maxBigMevts = mevts;
 						}
