@@ -1,20 +1,18 @@
 # Init CMake (require at least version 3.10.0)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 
-# General build settings
-IF (NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
-ENDIF ()
+# Project name and version
+PROJECT(libcaer
+	VERSION 3.3.11
+	LANGUAGES C CXX)
 
-IF (NOT CMAKE_INSTALL_PREFIX)
-	IF (UNIX AND NOT APPLE)
-		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
-	ELSEIF (APPLE)
-		SET(CMAKE_INSTALL_PREFIX "/usr/local" CACHE STRING "CMake default install prefix, set to /usr/local on macOS")
-	ELSE ()
-		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
-	ENDIF ()
-ENDIF ()
+# Basic setup, useful variables, see docs.
+SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})
+INCLUDE(inivation-setup)
+
+# Override default settings
+SET(CMAKE_C_VISIBILITY_PRESET default)
+SET(CMAKE_CXX_STANDARD 11)
 
 IF (NOT ENABLE_STATIC)
 	SET(ENABLE_STATIC 0 CACHE BOOL "Build and install static library in addition to default shared library")
@@ -36,25 +34,10 @@ IF (NOT EXAMPLES_INSTALL)
 	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
 ENDIF ()
 
-# Project name and version
-PROJECT(libcaer
-	VERSION 3.3.11
-	LANGUAGES C CXX)
-SET(CMAKE_C_STANDARD 11)
-SET(CMAKE_C_STANDARD_REQUIRED ON)
-SET(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Define installation paths
-INCLUDE(GNUInstallDirs)
-
-# Custom CMake base module
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmakemod)
-INSTALL(FILES cmakemod/caer-base.cmake DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer)
-
-# Basic setup for cAER
-INCLUDE(caer-base)
-CAER_SETUP()
+# Cross-compile support
+IF (NOT USER_LOCAL_PREFIX)
+	SET(USER_LOCAL_PREFIX ${CMAKE_INSTALL_PREFIX})
+ENDIF ()
 
 # Required: threads, math
 SET(BASE_LIBS m)
@@ -69,9 +52,6 @@ IF (OS_WINDOWS)
 ENDIF ()
 
 MESSAGE(STATUS "Base libraries: ${BASE_LIBS}")
-
-# Search for external libraries with pkg-config.
-INCLUDE(FindPkgConfig)
 
 # Required: basic USB devices support
 PKG_CHECK_MODULES(libusb REQUIRED IMPORTED_TARGET libusb-1.0>=1.0.17)
