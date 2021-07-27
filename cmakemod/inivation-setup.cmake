@@ -60,8 +60,8 @@ INCLUDE(FindPkgConfig)
 # Compiler cache support
 FIND_PROGRAM(CCACHE_FOUND ccache)
 IF (CCACHE_FOUND)
-	MESSAGE(STATUS "Compiler cache enabled")
-	SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+	MESSAGE(STATUS "Compiler cache enabled: ${CCACHE_FOUND}")
+	SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_FOUND})
 ENDIF ()
 
 # Set compiler info
