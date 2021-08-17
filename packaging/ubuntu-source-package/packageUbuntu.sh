@@ -36,6 +36,10 @@ done
 SRC_URI="https://gitlab.com/inivation/dv/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
 PPA_REPO="inivation-ppa/inivation"
 
+if [ "${DISTRO}" = "bionic" ] ; then
+	PPA_REPO="inivation-ppa/inivation-bionic"
+fi
+
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
 CUR_DIR=$(pwd)
 BASE_DIR="$CUR_DIR/../../"

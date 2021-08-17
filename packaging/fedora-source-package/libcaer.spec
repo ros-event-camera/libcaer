@@ -10,7 +10,7 @@ Vendor:  iniVation AG
 
 Source0: https://gitlab.com/inivation/dv/%{name}/-/archive/%{version}/%{name}-%{version}.tar.gz
 
-BuildRequires: gcc >= 8.0, gcc-c++ >= 8.0, cmake >= 3.10, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.2.0
+BuildRequires: gcc >= 10.0, gcc-c++ >= 10.0, cmake >= 3.10, pkgconfig >= 0.29.0, libusbx-devel >= 1.0.17, libserialport-devel >= 0.1.1, opencv-devel >= 3.2.0
 Requires: libusbx >= 1.0.17, libserialport >= 0.1.1, opencv >= 3.2.0
 
 %description
