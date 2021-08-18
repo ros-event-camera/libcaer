@@ -33,6 +33,7 @@ Development files for libcaer, such as headers, pkg-config files, etc..
 %cmake_build
 
 %install
+export QA_RPATHS=$(( 0x0001|0x0010 ))
 %cmake_install
 
 %files
