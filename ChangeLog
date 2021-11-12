@@ -1,3 +1,12 @@
+Release 3.3.12 - 12.11.2021
+
+BUG FIXES
+- DVXplorer Mini: fix inverted polarity.
+- dvx_bw_test example: fix length of time interval for
+  bandwidth estimation.
+- Fedora/Ubuntu: fix packaging, use at least GCC-10 to compile.
+
+
 Release 3.3.11 - 16.07.2021
 
 NEW FEATURES
