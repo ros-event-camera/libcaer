@@ -3277,8 +3277,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 				continue;
 			}
 
-			uint8_t group1Events = (event >> 0) & 0x00FF;
-			bool group1Polarity  = (event >> 16) & 0x01;
+			const uint8_t group1Events = (event >> 0) & 0x00FF;
+			const bool group1Polarity  = (((event >> 16) & 0x01) == 0); // ON polarity is 0 here.
 
 			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
 				// Check if event present first.
@@ -3299,8 +3299,8 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 				state->currentPackets.polarityPosition++;
 			}
 
-			uint8_t group2Events = (event >> 8) & 0x00FF;
-			bool group2Polarity  = (event >> 17) & 0x01;
+			const uint8_t group2Events = (event >> 8) & 0x00FF;
+			const bool group2Polarity  = (((event >> 17) & 0x01) == 0); // ON polarity is 0 here.
 
 			for (uint8_t i = 0, mask = 0x01; i < 8; i++, mask <<= 1) {
 				// Check if event present first.
