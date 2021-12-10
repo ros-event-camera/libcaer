@@ -12,7 +12,7 @@ SRC_URI="https://gitlab.com/inivation/dv/${PN}/-/archive/${PV}/${P}.tar.gz"
 
 LICENSE="BSD-2"
 SLOT="0"
-KEYWORDS="amd64 arm x86"
+KEYWORDS="amd64 x86 arm64 arm"
 IUSE="debug +serialdev +opencv static-libs"
 
 RDEPEND=">=dev-libs/libusb-1.0.17
