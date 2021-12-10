@@ -280,7 +280,7 @@ release_ubuntu:
     - sleep 60 # rate-limit connections to PPA upload server
     - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro focal --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
     - sleep 60 # rate-limit connections to PPA upload server
-    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro hirsute --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
+    - ./packageUbuntu.sh --pkg-name ${CI_PROJECT_NAME} --pkg-version "${CI_COMMIT_TAG}" --distro impish --gpg-key-id "${PPA_GPG_KEY_ID}" --gpg-key-pass "${PPA_GPG_KEY_PASS}" --upload
   rules:
     - if: $CI_COMMIT_TAG
 
