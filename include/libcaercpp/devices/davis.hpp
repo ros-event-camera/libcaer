@@ -6,7 +6,7 @@
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
 
-#include <libcaer/devices/davis.h>
+#include "../../libcaer/devices/davis.h"
 
 #include "usb.hpp"
 

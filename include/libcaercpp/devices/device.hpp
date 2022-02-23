@@ -6,7 +6,7 @@
 #include "../events/packetContainer.hpp"
 #include "../events/utils.hpp"
 
-#include <libcaer/devices/device.h>
+#include "../../libcaer/devices/device.h"
 
 #include <memory>
 #include <string>

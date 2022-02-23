@@ -1,7 +1,7 @@
 #ifndef LIBCAER_EVENTS_SPIKE_HPP_
 #define LIBCAER_EVENTS_SPIKE_HPP_
 
-#include <libcaer/events/spike.h>
+#include "../../libcaer/events/spike.h"
 
 #include "common.hpp"
 

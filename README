@@ -45,11 +45,6 @@ DOCUMENTATION:
 Online HTML documentation is available at https://inivation.gitlab.io/dv/libcaer/
 Also check the examples/ directory and the iniVation Support website.
 
-For the development tree, you can generate the documentation using:
-
-$ make doc - to generate docs/latex/ and docs/html/ documentation files.
-$ make pdf - to generate a PDF from the LaTeX sources at docs/latex/refman.pdf.
-
 USAGE:
 
 See the examples/ directory. Each example shows minimal working code

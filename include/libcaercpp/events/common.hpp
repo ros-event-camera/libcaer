@@ -3,7 +3,7 @@
 
 #include "../libcaer.hpp"
 
-#include <libcaer/events/common.h>
+#include "../../libcaer/events/common.h"
 
 #include <cassert>
 #include <memory>

@@ -2,10 +2,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 
 # Project name and version
-PROJECT(libcaer VERSION 3.3.12 LANGUAGES C CXX)
+PROJECT(libcaer VERSION 3.3.13 LANGUAGES C CXX)
 
 # Basic setup, useful variables, see docs.
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})
+SET(ENABLE_ALL_WARNINGS ON CACHE BOOL "Turn on all warnings for build" FORCE)
 INCLUDE(inivation-setup)
 
 # Legacy cmake support.
@@ -15,25 +16,11 @@ INSTALL(FILES cmakemod/caer-base.cmake DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/
 SET(CMAKE_C_VISIBILITY_PRESET default)
 SET(CMAKE_CXX_STANDARD 11)
 
-IF(NOT ENABLE_STATIC)
-	SET(ENABLE_STATIC 0 CACHE BOOL "Build and install static library in addition to default shared library")
-ENDIF()
-
-IF(NOT ENABLE_SERIALDEV)
-	SET(ENABLE_SERIALDEV 0 CACHE BOOL "Enable support for serial port devices using libserialport")
-ENDIF()
-
-IF(NOT ENABLE_OPENCV)
-	SET(ENABLE_OPENCV 0 CACHE BOOL "Enable support for frame enhancements using OpenCV")
-ENDIF()
-
-IF(NOT UDEV_INSTALL)
-	SET(UDEV_INSTALL 1 CACHE BOOL "Install udev rules on Linux")
-ENDIF()
-
-IF(NOT EXAMPLES_INSTALL)
-	SET(EXAMPLES_INSTALL 0 CACHE BOOL "Build and install examples")
-ENDIF()
+OPTION(ENABLE_STATIC "Build and install static library in addition to default shared library" OFF)
+OPTION(ENABLE_SERIALDEV "Enable support for serial port devices using libserialport" OFF)
+OPTION(ENABLE_OPENCV "Enable support for frame enhancements using OpenCV" OFF)
+OPTION(UDEV_INSTALL "Install udev rules on Linux" ON)
+OPTION(EXAMPLES_INSTALL "Build and install examples" OFF)
 
 # Cross-compile support
 IF(NOT USER_LOCAL_PREFIX)
@@ -114,16 +101,9 @@ UNSET(export_destination)
 
 # Install udev rules
 IF(OS_LINUX AND UDEV_INSTALL)
-	MESSAGE(STATUS "Installing global udev rules into /lib/udev/rules.d/")
+	MESSAGE(STATUS "Installing global udev rules into ${CMAKE_INSTALL_PREFIX}/lib/udev/rules.d/")
 
-	INSTALL(FILES docs/65-inivation.rules DESTINATION "/lib/udev/rules.d/")
-ENDIF()
-
-# Automatic documentation generation support
-FIND_PACKAGE(Doxygen)
-
-IF(DOXYGEN_FOUND)
-	ADD_SUBDIRECTORY(docs)
+	INSTALL(FILES docs/65-inivation.rules DESTINATION lib/udev/rules.d/)
 ENDIF()
 
 # Compile all examples

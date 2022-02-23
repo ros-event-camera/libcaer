@@ -4,7 +4,7 @@
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
 
-#include <libcaer/devices/edvs.h>
+#include "../../libcaer/devices/edvs.h"
 
 #include "serial.hpp"
 

@@ -1,7 +1,7 @@
 #ifndef LIBCAER_EVENTS_IMU6_HPP_
 #define LIBCAER_EVENTS_IMU6_HPP_
 
-#include <libcaer/events/imu6.h>
+#include "../../libcaer/events/imu6.h"
 
 #include "common.hpp"
 

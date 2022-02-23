@@ -1,7 +1,7 @@
 #ifndef LIBCAER_HPP_
 #define LIBCAER_HPP_
 
-#include <libcaer/libcaer.h>
+#include "../libcaer/libcaer.h"
 
 #include <stdexcept>
 #include <type_traits>

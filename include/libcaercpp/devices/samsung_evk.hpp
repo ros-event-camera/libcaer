@@ -4,7 +4,7 @@
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
 
-#include <libcaer/devices/samsung_evk.h>
+#include "../../libcaer/devices/samsung_evk.h"
 
 #include "usb.hpp"
 

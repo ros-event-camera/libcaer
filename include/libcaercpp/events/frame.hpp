@@ -1,11 +1,10 @@
 #ifndef LIBCAER_EVENTS_FRAME_HPP_
 #define LIBCAER_EVENTS_FRAME_HPP_
 
-#include <libcaer/events/frame.h>
+#include "../../libcaer/events/frame.h"
 
+#include "../../libcaer/frame_utils.h"
 #include "common.hpp"
-
-#include <libcaer/frame_utils.h>
 
 // Separate define for getOpenCVMat() from main LIBCAER_HAVE_OPENCV,
 // which is for the frame utils support. LIBCAER_FRAMECPP_OPENCV_INSTALLED

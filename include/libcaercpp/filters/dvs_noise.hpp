@@ -3,7 +3,7 @@
 
 #include "../events/polarity.hpp"
 
-#include <libcaer/filters/dvs_noise.h>
+#include "../../libcaer/filters/dvs_noise.h"
 
 #include <memory>
 #include <string>

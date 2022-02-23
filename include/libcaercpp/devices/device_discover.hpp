@@ -1,7 +1,7 @@
 #ifndef LIBCAER_DEVICES_DEVICE_DISCOVER_HPP_
 #define LIBCAER_DEVICES_DEVICE_DISCOVER_HPP_
 
-#include <libcaer/devices/device_discover.h>
+#include "../../libcaer/devices/device_discover.h"
 
 #include "davis.hpp"
 #include "device.hpp"

@@ -4,7 +4,7 @@
 #include "../events/special.hpp"
 #include "../events/spike.hpp"
 
-#include <libcaer/devices/dynapse.h>
+#include "../../libcaer/devices/dynapse.h"
 
 #include "usb.hpp"
 

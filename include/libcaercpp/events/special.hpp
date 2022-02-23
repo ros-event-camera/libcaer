@@ -1,7 +1,7 @@
 #ifndef LIBCAER_EVENTS_SPECIAL_HPP_
 #define LIBCAER_EVENTS_SPECIAL_HPP_
 
-#include <libcaer/events/special.h>
+#include "../../libcaer/events/special.h"
 
 #include "common.hpp"
 
