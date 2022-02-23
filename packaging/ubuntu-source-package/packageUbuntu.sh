@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/bash
 
 # Requirements: Ubuntu, GPG key (seahorse), devscripts, build-essential
 
@@ -11,8 +11,10 @@ PKG_NAME=
 PKG_VERSION=0
 PKG_RELEASE=1
 DISTRO=focal
-UPLOAD="false"
+UPLOAD=0
 DEBUILD_ARGS="-S -sa -d -us -uc"
+INTERNAL=0
+PPA_BASE="inivation-ppa"
 
 while test $# -gt 0
 do
@@ -21,23 +23,30 @@ do
             ;;
         --pkg-version) PKG_VERSION="$2"
             ;;
+        --internal) INTERNAL=1
+            ;;
         --distro) DISTRO="$2"
             ;;
         --gpg-key-id) GPG_KEY_ID="$2"
             ;;
         --gpg-key-pass) GPG_KEY_PASS="$2"
             ;;
-        --upload) UPLOAD="true"
+        --upload) UPLOAD=1
             ;;
     esac
     shift
 done
 
-SRC_URI="https://gitlab.com/inivation/dv/$PKG_NAME/-/archive/$PKG_VERSION/$PKG_NAME-$PKG_VERSION.tar.gz"
-PPA_REPO="inivation-ppa/inivation"
+if [[ $INTERNAL = 1 ]] ; then
+	PPA_BASE="inivation-internal"
+	PKG_VERSION="${PKG_VERSION/_/\~}"
+fi
 
-if [ "${DISTRO}" = "bionic" ] ; then
-	PPA_REPO="inivation-ppa/inivation-bionic"
+SRC_URI="https://release.inivation.com/libcaer/$PKG_NAME-$PKG_VERSION.tar.gz"
+PPA_REPO="${PPA_BASE}/inivation"
+
+if [[ "${DISTRO}" = "bionic" ]] ; then
+	PPA_REPO="${PPA_BASE}/inivation-bionic"
 fi
 
 DATE=$(LC_ALL=C date +'%a, %d %b %Y %T %z')
@@ -54,7 +63,11 @@ mkdir -p "$BUILD_DIR"
 
 # Get and extract the tar.gz containing the source
 cd "$BUILD_DIR"
-wget "$SRC_URI" -O "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
+if [[ $INTERNAL = 1 ]] ; then
+	cp "$BASE_DIR/"*.tar.gz "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
+else
+	wget "$SRC_URI" -O "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
+fi
 tar -xvzf "${PKG_NAME}_${PKG_VERSION}.orig.tar.gz"
 
 mkdir -p "$DEBIAN_DIR"
@@ -63,7 +76,7 @@ mkdir -p "$DEBIAN_DIR"
 cp "$CUR_DIR/$DISTRO/"* "$DEBIAN_DIR/"
 
 # Copy copyright file (use main license)
-cp "$BASE_DIR/COPYING" "$DEBIAN_DIR/copyright"
+cp "$BASE_DIR/LICENSE" "$DEBIAN_DIR/copyright"
 
 # Formats file
 mkdir -p "$DEBIAN_DIR/source/"
@@ -87,6 +100,6 @@ debsign -p"gpg --pinentry-mode loopback --passphrase $GPG_KEY_PASS" -S -k"$GPG_K
   "${PKG_NAME}_${PKG_VERSION}-${PKG_RELEASE}~${DISTRO}_source.changes"
 
 # Send to Launchpad PPA
-if [ "$UPLOAD" = "true" ]; then
+if [[ $UPLOAD = 1 ]] ; then
 	dput "ppa:$PPA_REPO" "${PKG_NAME}_${PKG_VERSION}-${PKG_RELEASE}~${DISTRO}_source.changes"
-fi;
+fi

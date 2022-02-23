@@ -11,11 +11,13 @@
 
 #	include <cstdarg>
 #	include <cstdint>
+#	include <cstddef>
 
 #else
 
 #	include <stdarg.h>
 #	include <stdint.h>
+#	include <stddef.h>
 
 #endif
 

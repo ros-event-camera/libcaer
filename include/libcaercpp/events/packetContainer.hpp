@@ -1,7 +1,7 @@
 #ifndef LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 #define LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 
-#include <libcaer/events/packetContainer.h>
+#include "../../libcaer/events/packetContainer.h"
 
 #include "common.hpp"
 #include "utils.hpp"

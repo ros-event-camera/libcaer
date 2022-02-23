@@ -338,14 +338,19 @@ caerDeviceHandle dvXplorerOpen(
 		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_CONTROL_PACKET_FORMAT, 0x80); // Enable MGROUP compression.
 
 		// Digital settings.
-		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, 0x31);
 		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_MODE_CONTROL, 0x0C); // R/AY signals enable.
 		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_BOOT_SEQUENCE, 0x08);
 
+		// 1000µs = 1ms -> value is 999 (1000-1), 999 in hex is 0x03E7.
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_REFUNIT, 0x03);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_REFUNIT + 1, 0xE7);
+
 		// Fine clock counts based on clock frequency.
-		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, 50);
-		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, 50);
-		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, 50);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_TIMESTAMP_SUBUNIT, (DVX_SYS_CLK_FREQ - 1));
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_DTAG_REFERENCE, DVX_SYS_CLK_FREQ);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT_FINE, DVX_SYS_CLK_FREQ);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT_FINE, DVX_SYS_CLK_FREQ);
+		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END_FINE, DVX_SYS_CLK_FREQ);
 
 		// Disable histogram, not currently used/mapped.
 		spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_SPATIAL_HISTOGRAM_OFF, 0x01);
@@ -501,8 +506,8 @@ bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_R, 8);
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_SEL2R_F, 10);
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_SEL, 15);
-	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_GH, 10);
-	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_READ_FIXED, 48000);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_NEXT_GH, 4);
+	dvXplorerConfigSet(cdh, DVX_DVS_CHIP, DVX_DVS_CHIP_TIMING_READ_FIXED, 45000);
 
 	// Crop block.
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_CROPPER, DVX_DVS_CHIP_CROPPER_ENABLE, false);
@@ -522,7 +527,7 @@ bool dvXplorerSendDefaultConfig(caerDeviceHandle cdh) {
 	dvXplorerConfigSet(cdh, DVX_DVS_CHIP_ACTIVITY_DECISION, DVX_DVS_CHIP_ACTIVITY_DECISION_POS_MAX_COUNT, 300);
 
 	// DTAG restart after config.
-	spiConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, 0x02);
+	spiConfigSend(&handle->state.usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, DVX_DVS_CHIP_DTAG_CONTROL_RESTART);
 
 	return (true);
 }
@@ -715,6 +720,15 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 
 		case DVX_DVS_CHIP:
 			switch (paramAddr) {
+				case DVX_DVS_CHIP_DTAG_CONTROL: {
+					if (param >= 3) {
+						return (false);
+					}
+
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_DIGITAL_RESTART, U8T(param)));
+					break;
+				}
+
 				case DVX_DVS_CHIP_MODE: {
 					if (param >= 3) {
 						return (false);
@@ -929,9 +943,13 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 						return (false);
 					}
 
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, 0x00);
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, 0x00);
-					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, 0x02));
+					uint32_t msec = param / 1000;
+					uint32_t usec = param % 1000;
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT, U8T(msec));
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 1, U8T(usec >> 8));
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GH_COUNT + 2, U8T(usec)));
 					break;
 				}
 
@@ -941,9 +959,13 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 						return (false);
 					}
 
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, 0x00);
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, 0x00);
-					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, 0x00));
+					uint32_t msec = param / 1000;
+					uint32_t usec = param % 1000;
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT, U8T(msec));
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 1, U8T(usec >> 8));
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_COUNT + 2, U8T(usec)));
 					break;
 				}
 
@@ -953,9 +975,13 @@ bool dvXplorerConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr,
 						return (false);
 					}
 
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, 0x00);
-					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, 0x00);
-					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, 0x01));
+					uint32_t msec = param / 1000;
+					uint32_t usec = param % 1000;
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END, U8T(msec));
+
+					spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 1, U8T(usec >> 8));
+					return (spiConfigSend(&state->usbState, DEVICE_DVS, REGISTER_TIMING_GRS_END + 2, U8T(usec)));
 					break;
 				}
 
@@ -3387,6 +3413,16 @@ static void mipiCx3EventTranslator(void *vhd, const uint8_t *buffer, const size_
 					containerGenerationCommitTimestampInit(&state->container, state->timestamps.current);
 
 					dvXplorerLog(CAER_LOG_DEBUG, handle, "Start of Frame detected.");
+
+					if (ensureSpaceForEvents((caerEventPacketHeader *) &state->currentPackets.special,
+							(size_t) state->currentPackets.specialPosition, 1, handle)) {
+						caerSpecialEvent currentSpecialEvent = caerSpecialEventPacketGetEvent(
+							state->currentPackets.special, state->currentPackets.specialPosition);
+						caerSpecialEventSetTimestamp(currentSpecialEvent, state->timestamps.current);
+						caerSpecialEventSetType(currentSpecialEvent, EVENT_READOUT_START);
+						caerSpecialEventValidate(currentSpecialEvent, state->currentPackets.special);
+						state->currentPackets.specialPosition++;
+					}
 				}
 				// Start-of-frame not yet seen, ignore.
 				else if (state->dvs.lastColumn < 0) {

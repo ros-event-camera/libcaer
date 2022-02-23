@@ -1,7 +1,7 @@
 #ifndef LIBCAER_DEVICES_SERIAL_HPP_
 #define LIBCAER_DEVICES_SERIAL_HPP_
 
-#include <libcaer/devices/serial.h>
+#include "../../libcaer/devices/serial.h"
 
 #include "device.hpp"
 

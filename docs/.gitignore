@@ -1,3 +1,5 @@
-/libcaer_api.doxy
-/latex/
-/html/
+doxy-html/
+doxy-xml/
+sphinx-build/
+build/
+source/version.py

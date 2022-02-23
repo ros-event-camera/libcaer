@@ -4,7 +4,7 @@
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
 
-#include <libcaer/devices/dvs128.h>
+#include "../../libcaer/devices/dvs128.h"
 
 #include "usb.hpp"
 

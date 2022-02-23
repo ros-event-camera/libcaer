@@ -5,7 +5,7 @@
 #include "../events/polarity.hpp"
 #include "../events/special.hpp"
 
-#include <libcaer/devices/dvxplorer.h>
+#include "../../libcaer/devices/dvxplorer.h"
 
 #include "usb.hpp"
 

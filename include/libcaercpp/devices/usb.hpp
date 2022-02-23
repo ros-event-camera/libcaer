@@ -1,7 +1,7 @@
 #ifndef LIBCAER_DEVICES_USB_HPP_
 #define LIBCAER_DEVICES_USB_HPP_
 
-#include <libcaer/devices/usb.h>
+#include "../../libcaer/devices/usb.h"
 
 #include "device.hpp"
 

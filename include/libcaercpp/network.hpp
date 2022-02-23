@@ -1,8 +1,8 @@
 #ifndef LIBCAER_NETWORK_HPP_
 #define LIBCAER_NETWORK_HPP_
 
+#include "../libcaer/network.h"
 #include "libcaer.hpp"
-#include <libcaer/network.h>
 
 namespace libcaer {
 namespace network {

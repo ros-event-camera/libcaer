@@ -1,7 +1,7 @@
 #ifndef LIBCAER_EVENTS_POLARITY_HPP_
 #define LIBCAER_EVENTS_POLARITY_HPP_
 
-#include <libcaer/events/polarity.h>
+#include "../../libcaer/events/polarity.h"
 
 #include "common.hpp"
 

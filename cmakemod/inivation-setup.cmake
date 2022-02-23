@@ -13,22 +13,32 @@
 
 # General build settings
 IF(NOT CMAKE_BUILD_TYPE)
-	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel")
+	SET(CMAKE_BUILD_TYPE "Release" CACHE STRING "Possible build types: None Debug Release RelWithDebInfo MinSizeRel"
+										 FORCE)
+	# Set the possible values of build type for cmake-gui
+	SET_PROPERTY(
+		CACHE CMAKE_BUILD_TYPE
+		PROPERTY STRINGS
+				 "Debug"
+				 "Release"
+				 "MinSizeRel"
+				 "RelWithDebInfo")
 ENDIF()
 
 IF(NOT CMAKE_INSTALL_PREFIX)
 	IF(UNIX AND NOT APPLE)
-		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux")
+		SET(CMAKE_INSTALL_PREFIX "/usr" CACHE STRING "CMake default install prefix, set to /usr on Unix/Linux" FORCE)
 	ELSEIF(APPLE)
-		SET(CMAKE_INSTALL_PREFIX "/usr/local" CACHE STRING "CMake default install prefix, set to /usr/local on macOS")
+		SET(CMAKE_INSTALL_PREFIX "/usr/local" CACHE STRING "CMake default install prefix, set to /usr/local on macOS"
+													FORCE)
 	ELSE()
 		MESSAGE(FATAL_ERROR "CMAKE_INSTALL_PREFIX is not set")
 	ENDIF()
 ENDIF()
 
-IF(NOT USE_CLANG_LIBCPP)
-	SET(USE_CLANG_LIBCPP 0 CACHE BOOL "Use and link to LLVM's libc++ instead of GCC's libstdc++.")
-ENDIF()
+# Extra options.
+OPTION(USE_CLANG_LIBCPP "Use and link to LLVM's libc++ instead of GCC's libstdc++." OFF)
+OPTION(ENABLE_ALL_WARNINGS "Enable all possible compiler warnings." OFF)
 
 # C/C++ basic setup
 SET(CMAKE_C_STANDARD 11)
@@ -165,7 +175,7 @@ IF(OS_WINDOWS AND (CC_GCC OR CC_CLANG))
 ENDIF()
 
 # Enable C/C++ compiler warnings
-IF(CC_GCC OR CC_CLANG)
+IF(ENABLE_ALL_WARNINGS AND (CC_GCC OR CC_CLANG))
 	# Enable all warnings for GCC / Clang
 	SET(WARN_COMMON_FLAGS "-pedantic -Wall -Wextra")
 	SET(WARN_C_FLAGS "")
