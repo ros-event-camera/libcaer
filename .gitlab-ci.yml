@@ -53,7 +53,7 @@ sonarcloud_analysis:
     - cd ..
     - /sonar-scanner/bin/sonar-scanner
   rules:
-    - if: $CI_PROJECT_NAME != "${PROJECT_NAME}-internal"
+    - if: $CI_PROJECT_NAME != "$PROJECT_NAME-internal"
       when: never
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
@@ -82,8 +82,8 @@ build_macos_intel:
     - *change_build_dir
     - arch -x86_64 /usr/local/bin/cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j4
-    - if [[ "$CI_PROJECT_NAME" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
-    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
+    - if [[ "${CI_PROJECT_NAME}" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
+    - if [[ "${CI_COMMIT_BRANCH}" != "master" ]] ; then exit 0; fi
     - rm -Rf /usr/local/lib/${PROJECT_NAME}.so* /usr/local/include/${PROJECT_NAME}/ /usr/local/include/${PROJECT_NAME}cpp/ /usr/local/lib/cmake/${PROJECT_NAME}/ /usr/local/share/caer/
     - make install
   rules:
@@ -112,8 +112,8 @@ build_macos_arm:
     - *change_build_dir
     - /opt/homebrew/bin/cmake -DCMAKE_INSTALL_PREFIX=/opt/homebrew -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j4
-    - if [[ "$CI_PROJECT_NAME" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
-    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
+    - if [[ "${CI_PROJECT_NAME}" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
+    - if [[ "${CI_COMMIT_BRANCH}" != "master" ]] ; then exit 0; fi
     - rm -Rf /opt/homebrew/lib/${PROJECT_NAME}.so* /opt/homebrew/include/${PROJECT_NAME}/ /opt/homebrew/include/${PROJECT_NAME}cpp/ /opt/homebrew/lib/cmake/${PROJECT_NAME}/ /opt/homebrew/share/caer/
     - make install
   rules:
@@ -144,8 +144,8 @@ build_windows:
     - *change_build_dir
     - cmake -G "MSYS Makefiles" -DCMAKE_INSTALL_PREFIX=/mingw64 -DENABLE_STATIC=1 -DENABLE_OPENCV=1 -DENABLE_SERIALDEV=1 -DEXAMPLES_INSTALL=1 ..
     - make -j8
-    - if [[ "$CI_PROJECT_NAME" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
-    - if [[ "$CI_COMMIT_BRANCH" != "master" ]] ; then exit 0; fi
+    - if [[ "${CI_PROJECT_NAME}" != "${PROJECT_NAME}-internal" ]] ; then exit 0; fi
+    - if [[ "${CI_COMMIT_BRANCH}" != "master" ]] ; then exit 0; fi
     - rm -Rf /mingw64/lib/${PROJECT_NAME}.dll* /mingw64/include/${PROJECT_NAME}/ /mingw64/include/${PROJECT_NAME}cpp/ /mingw64/lib/cmake/${PROJECT_NAME}/ /mingw64/share/caer/
     - make install
   rules:
