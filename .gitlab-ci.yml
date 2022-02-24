@@ -53,7 +53,7 @@ sonarcloud_analysis:
     - cd ..
     - /sonar-scanner/bin/sonar-scanner
   rules:
-    - if: $CI_PROJECT_NAME != "$PROJECT_NAME-internal"
+    - if: $CI_PROJECT_NAME != $PROJECT_NAME-internal
       when: never
     - if: $CI_MERGE_REQUEST_ID
     - if: $CI_COMMIT_BRANCH
