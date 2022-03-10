@@ -1,0 +1,3 @@
+[submodule "thirdparty/simple-stdatomic"]
+	path = thirdparty/simple-stdatomic
+	url = https://github.com/zenny-chen/simple-stdatomic-for-VS-Clang
