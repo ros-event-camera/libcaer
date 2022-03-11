@@ -15,7 +15,9 @@ SET(LIBCAER_SOURCES
 	samsung_evk.c)
 
 # This is often the case due to how we try to have multiple compatible definitions of functions in C.
-SET(LIBCAER_COMPILE_OPTIONS "-Wno-unused-function")
+IF(NOT CC_MSVC)
+	SET(LIBCAER_COMPILE_OPTIONS "-Wno-unused-function")
+ENDIF()
 
 SET(LIBCAER_LINK_LIBRARIES_PRIVATE PkgConfig::libusb ${BASE_LIBS})
 
@@ -48,8 +50,9 @@ IF(ENABLE_OPENCV)
 	ENDIF()
 ENDIF()
 
-IF (CC_MSVC)
-	LIST(APPEND LIBCAER_LINK_LIBRARIES_PUBLIC stdatomic)
+IF(CC_MSVC)
+	LIST(APPEND LIBCAER_SOURCES ../thirdparty/simple-stdatomic/stdatomic.c)
+	INCLUDE_DIRECTORIES(../thirdparty/simple-stdatomic/)
 ENDIF()
 
 # Set full RPATH
