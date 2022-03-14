@@ -13,7 +13,7 @@
 typedef void *thrd_t;
 typedef HANDLE mtx_t;
 
-#elif defined(__linux__)
+#else
 #	include <pthread.h>
 #	include <sched.h>
 #	include <sys/prctl.h>
