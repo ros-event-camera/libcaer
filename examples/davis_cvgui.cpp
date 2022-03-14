@@ -76,35 +76,6 @@ int main(void) {
 	// No configuration is sent automatically!
 	davisHandle.sendDefaultConfig();
 
-	// Tweak some biases, to increase bandwidth in this case.
-	struct caer_bias_coarsefine coarseFineBias;
-
-	coarseFineBias.coarseValue        = 2;
-	coarseFineBias.fineValue          = 116;
-	coarseFineBias.enabled            = true;
-	coarseFineBias.sexN               = false;
-	coarseFineBias.typeNormal         = true;
-	coarseFineBias.currentLevelNormal = true;
-
-	davisHandle.configSet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP, caerBiasCoarseFineGenerate(coarseFineBias));
-
-	coarseFineBias.coarseValue        = 1;
-	coarseFineBias.fineValue          = 33;
-	coarseFineBias.enabled            = true;
-	coarseFineBias.sexN               = false;
-	coarseFineBias.typeNormal         = true;
-	coarseFineBias.currentLevelNormal = true;
-
-	davisHandle.configSet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP, caerBiasCoarseFineGenerate(coarseFineBias));
-
-	// Let's verify they really changed!
-	uint32_t prBias   = davisHandle.configGet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRBP);
-	uint32_t prsfBias = davisHandle.configGet(DAVIS_CONFIG_BIAS, DAVIS240_CONFIG_BIAS_PRSFBP);
-
-	printf("New bias values --- PR-coarse: %d, PR-fine: %d, PRSF-coarse: %d, PRSF-fine: %d.\n",
-		caerBiasCoarseFineParse(prBias).coarseValue, caerBiasCoarseFineParse(prBias).fineValue,
-		caerBiasCoarseFineParse(prsfBias).coarseValue, caerBiasCoarseFineParse(prsfBias).fineValue);
-
 	// Now let's get start getting some data from the device. We just loop in blocking mode,
 	// no notification needed regarding new events. The shutdown notification, for example if
 	// the device is disconnected, should be listened to.
@@ -112,10 +83,6 @@ int main(void) {
 
 	// Let's turn on blocking data-get mode to avoid wasting resources.
 	davisHandle.configSet(CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
-
-	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_GLOBAL_SHUTTER, false);
-	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, false);
-	davisHandle.configSet(DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_EXPOSURE, 4200);
 
 	cv::namedWindow("PLOT_EVENTS",
 		cv::WindowFlags::WINDOW_AUTOSIZE | cv::WindowFlags::WINDOW_KEEPRATIO | cv::WindowFlags::WINDOW_GUI_EXPANDED);
@@ -182,7 +149,7 @@ int main(void) {
 				printf("First frame event - ts: %d, sum: %" PRIu64 ".\n", ts, sum);
 
 				for (const auto &f : *frame) {
-					if (f.getROIIdentifier() != 0) {
+					if ((!f.isValid()) || (f.getROIIdentifier() != 0)) {
 						continue;
 					}
 
