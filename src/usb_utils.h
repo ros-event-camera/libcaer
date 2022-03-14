@@ -9,9 +9,7 @@
 #include <libusb.h>
 #include <stdatomic.h>
 
-#if defined(HAVE_PTHREADS)
-#	include "c11threads_posix.h"
-#endif
+#include "c11threads_posix.h"
 
 #define MAX_SERIAL_NUMBER_LENGTH 8
 

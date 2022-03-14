@@ -3,6 +3,22 @@
 #include <stdio.h>
 #include <intrin.h>
 
+#ifndef _WIN64
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+__int64 _InterlockedCompareExchange64(__int64 volatile* Destination, __int64 Exchange, __int64 Comperand);
+#pragma intrinsic(_InterlockedCompareExchange64)
+#define _InterlockedIncrement64    InterlockedIncrement64
+#define _InterlockedDecrement64    InterlockedDecrement64
+#define _InterlockedExchangeAdd64  InterlockedExchangeAdd64
+#define _InterlockedOr64           InterlockedOr64
+#define _InterlockedAnd64          InterlockedAnd64
+#define _InterlockedXor64          InterlockedXor64
+#define _InterlockedExchange64     InterlockedExchange64
+#else
+#include <windows.h>
+#endif
+
 #include "stdatomic.h"
 
 int8_t zenny_atomic_fetch_add8(volatile atomic_schar* object, int8_t operand)
@@ -276,6 +292,10 @@ void atomic_flag_clear(volatile atomic_flag *flag)
 void atomic_flag_clear_explicit(volatile atomic_flag* object, memory_order order)
 {
     atomic_flag_clear(object);
+}
+
+void atomic_thread_fence(memory_order order) {
+	MemoryBarrier();
 }
 
 #endif

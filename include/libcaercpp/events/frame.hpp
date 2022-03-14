@@ -356,7 +356,7 @@ struct FrameEvent : public caer_frame_event {
 #endif
 };
 
-static_assert(std::is_pod<FrameEvent>::value, "FrameEvent is not POD.");
+static_assert(std::is_standard_layout<FrameEvent>::value, "FrameEvent is not of standard layout.");
 
 class FrameEventPacket : public EventPacketCommon<FrameEventPacket, FrameEvent> {
 public:

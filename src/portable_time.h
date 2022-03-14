@@ -81,6 +81,27 @@ static inline bool portable_clock_gettime_monotonic(struct timespec *monoTime) {
 static inline bool portable_clock_gettime_realtime(struct timespec *realTime) {
 	return (clock_gettime(CLOCK_REALTIME, realTime) == 0);
 }
+#elif defined(__WINDOWS__)
+#include <stdint.h>
+#include <time.h>
+
+static inline int clock_gettime(struct timespec *spec) {
+	int64_t wintime;
+	GetSystemTimeAsFileTime((FILETIME *) &wintime);
+	wintime -= 116444736000000000i64;            // 1jan1601 to 1jan1970
+	spec->tv_sec  = wintime / 10000000i64;       // seconds
+	spec->tv_nsec = wintime % 10000000i64 * 100; // nano-seconds
+	return 0;
+}
+
+static inline bool portable_clock_gettime_monotonic(struct timespec *monoTime) {
+	return (clock_gettime(monoTime) == 0);
+}
+
+static inline bool portable_clock_gettime_realtime(struct timespec *realTime) {
+	return (clock_gettime(realTime) == 0);
+}
+
 #else
 #	error "No portable way of getting absolute monotonic time found."
 #endif

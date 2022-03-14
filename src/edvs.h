@@ -10,9 +10,7 @@
 #include <libserialport.h>
 #include <stdatomic.h>
 
-#if defined(HAVE_PTHREADS)
-#	include "c11threads_posix.h"
-#endif
+#include "c11threads_posix.h"
 
 #define EDVS_DEVICE_NAME      "EDVS-4337"
 #define MINI_EDVS_DEVICE_NAME "meDVS128"

@@ -8,9 +8,7 @@
 
 #include <stdatomic.h>
 
-#if defined(HAVE_PTHREADS)
-#	include "c11threads_posix.h"
-#endif
+#include "c11threads_posix.h"
 
 enum { THR_IDLE = 0, THR_RUNNING = 1, THR_EXITED = 2 };
 
@@ -75,8 +73,7 @@ retry:
 		&& (sleepCounter < 1000)) {
 		// Don't retry right away in a tight loop, back off and wait a little.
 		// If no data is available, sleep for a millisecond to avoid wasting resources.
-		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 1000000};
-		if (thrd_sleep(&noDataSleep, NULL) == 0) {
+		if (thrd_sleep(1000) == 0) {
 			sleepCounter++;
 			goto retry;
 		}

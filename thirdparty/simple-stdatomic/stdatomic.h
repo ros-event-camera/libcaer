@@ -57,6 +57,16 @@ typedef char16_t            atomic_char16_t;
 typedef char32_t            atomic_char32_t;
 typedef wchar_t             atomic_wchar_t;
 
+typedef int_fast8_t         atomic_int_fast8_t;
+typedef uint_fast8_t        atomic_uint_fast8_t;
+typedef int_fast16_t        atomic_int_fast16_t;
+typedef uint_fast16_t       atomic_uint_fast16_t;
+typedef int_fast32_t        atomic_int_fast32_t;
+typedef uint_fast32_t       atomic_uint_fast32_t;
+typedef int_fast64_t        atomic_int_fast64_t;
+typedef uint_fast64_t       atomic_uint_fast64_t;
+
+void atomic_thread_fence(memory_order order);
 
 extern bool atomic_flag_test_and_set(volatile atomic_flag * object);
 extern bool atomic_flag_test_and_set_explicit(volatile atomic_flag* object, memory_order order);

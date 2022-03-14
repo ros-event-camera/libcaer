@@ -941,8 +941,6 @@ static bool usbAllocateTransfers(usbState state) {
 // MUST LOCK ON 'dataTransfersLock'.
 static void usbCancelAndDeallocateTransfers(usbState state) {
 	// Wait for all transfers to go away.
-	struct timespec waitForTerminationSleep = {.tv_sec = 0, .tv_nsec = 1000000};
-
 	while (atomic_load(&state->activeDataTransfers) > 0) {
 		// Continue trying to cancel all transfers until there are none left.
 		// It seems like one cancel pass is not enough and some hang around.
@@ -958,7 +956,7 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 		}
 
 		// Sleep for 1ms to avoid busy loop.
-		thrd_sleep(&waitForTerminationSleep, NULL);
+		thrd_sleep(1000);
 	}
 
 	// No more transfers in flight, deallocate them all here.
@@ -1167,11 +1165,9 @@ bool usbControlTransferOut(
 	}
 
 	// Request is out and will be handled at some point by USB thread, wait on that.
-	struct timespec waitForCompletionSleep = {.tv_sec = 0, .tv_nsec = 100000};
-
 	while (!atomic_load(&completed)) {
 		// Sleep for 100µs to avoid busy loop.
-		thrd_sleep(&waitForCompletionSleep, NULL);
+		thrd_sleep(100);
 	}
 
 	if (atomic_load(&completed) == 1) {
@@ -1196,11 +1192,9 @@ bool usbControlTransferIn(
 	}
 
 	// Request is out and will be handled at some point by USB thread, wait on that.
-	struct timespec waitForCompletionSleep = {.tv_sec = 0, .tv_nsec = 100000};
-
 	while (!atomic_load(&dataCompletion.completed)) {
 		// Sleep for 100µs to avoid busy loop.
-		thrd_sleep(&waitForCompletionSleep, NULL);
+		thrd_sleep(100);
 	}
 
 	if (atomic_load(&dataCompletion.completed) == 1) {

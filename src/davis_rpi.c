@@ -503,16 +503,14 @@ bool davisRPiDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *pt
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, true);
 
 		// Wait 200 ms for biases to stabilize.
-		struct timespec biasEnSleep = {.tv_sec = 0, .tv_nsec = 200000000};
-		thrd_sleep(&biasEnSleep, NULL);
+		thrd_sleep(200000);
 
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DDRAER, DAVIS_CONFIG_DDRAER_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
 
 		// Wait 50 ms for data transfer to be ready.
-		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
-		thrd_sleep(&noDataSleep, NULL);
+		thrd_sleep(50000);
 
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisRPiConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
