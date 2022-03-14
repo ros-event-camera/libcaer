@@ -19,6 +19,7 @@ typedef HANDLE mtx_t;
 #	include <sys/prctl.h>
 #	include <sys/resource.h>
 #	include <sys/time.h>
+#	include <unistd.h>
 
 typedef pthread_t thrd_t;
 // typedef pthread_once_t once_flag;
@@ -115,6 +116,7 @@ static inline int thrd_sleep(const int64_t usec) {
 	if (usec == 0) {
 		return (0); // Successful sleep.
 	}
+	usleep((__useconds_t) usec);
 
 	if (errno == EINTR) {
 		return (-1); // C11: a signal occurred.

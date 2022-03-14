@@ -289,8 +289,7 @@ caerDeviceHandle edvsOpen(uint16_t deviceID, const char *serialPortName, uint32_
 	}
 
 	// Wait for reset to happen.
-	struct timespec waitResetSleep = {.tv_sec = 0, .tv_nsec = 400000000};
-	thrd_sleep(&waitResetSleep, NULL);
+	thrd_sleep(400000);
 
 	// Get startup message.
 	char startMessage[1024];

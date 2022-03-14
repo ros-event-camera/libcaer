@@ -209,4 +209,6 @@ void caerLogVAFull(
 	if (logCallbackPtr != NULL) {
 		(*logCallbackPtr)(logString, logLength);
 	}
+
+	free(logString);
 }
