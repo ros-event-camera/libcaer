@@ -22,11 +22,14 @@ typedef HANDLE mtx_t;
 #	include <sys/prctl.h>
 #	include <sys/resource.h>
 #	include <sys/time.h>
-#	include <unistd.h>
 
 typedef pthread_t thrd_t;
 // typedef pthread_once_t once_flag;
 typedef pthread_mutex_t mtx_t;
+#endif
+
+#if !defined(__WINDOWS__) && !defined(__APPLE__)
+#include <unistd.h>
 #endif
 
 typedef int (*thrd_start_t)(void *);
@@ -115,6 +118,17 @@ static inline int thrd_sleep(const int64_t usec) {
 	WaitForSingleObject(timer, INFINITE);
 	CloseHandle(timer);
 	return (0);
+#elif defined(__APPLE__)
+	struct timespec time_point = {.tv_sec = usec / 1000000LL, .tv_nsec = (usec % 1000000LL) * 1000LL};
+	if (nanosleep(time_point, NULL) == 0) {
+		return (0); // Successful sleep.
+	}
+
+	if (errno == EINTR) {
+		return (-1); // C11: a signal occurred.
+	}
+
+	return (-2); // C11: other negative value if an error occurred.
 #else
 	if (usec == 0) {
 		return (0); // Successful sleep.
