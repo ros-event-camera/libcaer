@@ -120,7 +120,7 @@ static inline int thrd_sleep(const int64_t usec) {
 	return (0);
 #elif defined(__APPLE__)
 	struct timespec time_point = {.tv_sec = usec / 1000000LL, .tv_nsec = (usec % 1000000LL) * 1000LL};
-	if (nanosleep(time_point, NULL) == 0) {
+	if (nanosleep(&time_point, NULL) == 0) {
 		return (0); // Successful sleep.
 	}
 
