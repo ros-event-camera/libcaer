@@ -624,8 +624,6 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
 	memcpy(
 		*hotPixels, noiseFilter->hotPixelArray, noiseFilter->hotPixelArraySize * sizeof(struct caer_filter_dvs_pixel));
 
-	free(hotPixels);
-
 	return ((ssize_t) noiseFilter->hotPixelArraySize);
 }
 
@@ -699,4 +697,6 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 		noiseFilter->hotPixelArray[i].x = hotPixels[i].address.x;
 		noiseFilter->hotPixelArray[i].y = hotPixels[i].address.y;
 	}
+
+	free(hotPixels);
 }
