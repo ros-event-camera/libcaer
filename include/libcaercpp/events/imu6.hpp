@@ -95,7 +95,7 @@ struct IMU6Event : public caer_imu6_event {
 	}
 };
 
-static_assert(std::is_pod<IMU6Event>::value, "IMU6Event is not POD.");
+static_assert(std::is_standard_layout<IMU6Event>::value, "IMU6Event is not standard layout.");
 
 class IMU6EventPacket : public EventPacketCommon<IMU6EventPacket, IMU6Event> {
 public:

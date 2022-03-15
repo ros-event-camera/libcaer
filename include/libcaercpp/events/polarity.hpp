@@ -63,7 +63,7 @@ struct PolarityEvent : public caer_polarity_event {
 	}
 };
 
-static_assert(std::is_pod<PolarityEvent>::value, "PolarityEvent is not POD.");
+static_assert(std::is_standard_layout<PolarityEvent>::value, "PolarityEvent is not standard layout.");
 
 class PolarityEventPacket : public EventPacketCommon<PolarityEventPacket, PolarityEvent> {
 public:

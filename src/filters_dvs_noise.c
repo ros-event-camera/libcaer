@@ -624,6 +624,8 @@ ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilte
 	memcpy(
 		*hotPixels, noiseFilter->hotPixelArray, noiseFilter->hotPixelArraySize * sizeof(struct caer_filter_dvs_pixel));
 
+	free(hotPixels);
+
 	return ((ssize_t) noiseFilter->hotPixelArraySize);
 }
 
