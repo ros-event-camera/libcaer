@@ -23,7 +23,6 @@ typedef HANDLE mtx_t;
 #	include <sys/time.h>
 
 typedef pthread_t thrd_t;
-// typedef pthread_once_t once_flag;
 typedef pthread_mutex_t mtx_t;
 #endif
 
