@@ -4,7 +4,9 @@
 #include <intrin.h>
 
 #ifndef _WIN64
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 __int64 _InterlockedCompareExchange64(__int64 volatile* Destination, __int64 Exchange, __int64 Comperand);
 #pragma intrinsic(_InterlockedCompareExchange64)
@@ -16,6 +18,9 @@ __int64 _InterlockedCompareExchange64(__int64 volatile* Destination, __int64 Exc
 #define _InterlockedXor64          InterlockedXor64
 #define _InterlockedExchange64     InterlockedExchange64
 #else
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #endif
 
@@ -64,7 +69,7 @@ int32_t zenny_atomic_fetch_add32(volatile atomic_long* object, int32_t operand)
         desired = expected + operand;
     }
     while ((success = zenny_atomic_compare_exchange32(object, &expected, desired)),
-        (success? (void)0 : _mm_pause()), 
+        (success? (void)0 : _mm_pause()),
         !success);
 
     return expected;

@@ -7,6 +7,9 @@
 #include <time.h>
 
 #if defined(__WINDOWS__)
+#	ifndef WIN32_LEAN_AND_MEAN
+#		define WIN32_LEAN_AND_MEAN
+#	endif
 #	include <windows.h>
 #	include <synchapi.h>
 
@@ -105,7 +108,7 @@ static inline int thrd_sleep(const int64_t usec) {
 	HANDLE timer;
 	LARGE_INTEGER ft;
 
-	ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+	ft.QuadPart = -(10 * usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
 	timer = CreateWaitableTimer(NULL, TRUE, NULL);
 	SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);

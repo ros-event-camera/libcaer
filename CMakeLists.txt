@@ -99,7 +99,11 @@ INCLUDE(CMakePackageConfigHelpers)
 WRITE_BASIC_CONFIG_VERSION_FILE(${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake VERSION ${PROJECT_VERSION}
 								COMPATIBILITY SameMajorVersion)
 SET(include_dirs ${CMAKE_INSTALL_INCLUDEDIR})
-SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+IF (CC_MSVC)
+	SET(export_destination ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+ELSE()
+	SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+ENDIF()
 CONFIGURE_PACKAGE_CONFIG_FILE(
 	${PROJECT_SOURCE_DIR}/cmakemod/${PROJECT_NAME}Config.cmake.in ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
 	INSTALL_DESTINATION ${export_destination} PATH_VARS include_dirs export_destination)

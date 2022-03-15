@@ -4,13 +4,12 @@
 #include "libcaer/devices/device_discover.h"
 #include "libcaer/devices/edvs.h"
 
+#include "c11threads_posix.h"
 #include "container_generation.h"
 #include "data_exchange.h"
 
 #include <libserialport.h>
 #include <stdatomic.h>
-
-#include "c11threads_posix.h"
 
 #define EDVS_DEVICE_NAME      "EDVS-4337"
 #define MINI_EDVS_DEVICE_NAME "meDVS128"
