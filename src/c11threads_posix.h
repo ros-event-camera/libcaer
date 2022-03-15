@@ -99,7 +99,7 @@ static inline int thrd_sleep(const int64_t usec) {
 
 #if defined(__WINDOWS__)
 	HANDLE timer;
-	LARGE_INTEGER ft = 0;
+	LARGE_INTEGER ft = {0};
 
 	ft.QuadPart = -(10 * usec); // Convert to 100 nanosecond interval, negative value indicates relative time
 
