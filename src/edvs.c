@@ -6,7 +6,6 @@
 #if defined(OS_UNIX)
 #	include <sys/ioctl.h>
 #	include <termios.h>
-#	include <unistd.h>
 #endif
 
 static void edvsLog(enum caer_log_level logLevel, edvsHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
