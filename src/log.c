@@ -8,7 +8,6 @@
 #	include <io.h>
 #	define thread_local __declspec(thread)
 #else
-#	include <unistd.h>
 #	define thread_local _Thread_local
 #endif
 
