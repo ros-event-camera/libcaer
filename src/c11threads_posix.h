@@ -19,7 +19,6 @@ typedef HANDLE mtx_t;
 #else
 #	include <pthread.h>
 #	include <sched.h>
-#	include <sys/prctl.h>
 #	include <sys/resource.h>
 #	include <sys/time.h>
 
@@ -30,6 +29,7 @@ typedef pthread_mutex_t mtx_t;
 
 #if !defined(__WINDOWS__) && !defined(__APPLE__)
 #include <unistd.h>
+#include <sys/prctl.h>
 #endif
 
 typedef int (*thrd_start_t)(void *);
