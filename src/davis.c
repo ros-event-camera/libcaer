@@ -779,7 +779,9 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 		}
 	}
 
-	return (spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, commandsNumber));
+	bool result = spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, commandsNumber);
+	free(spiMultiConfig);
+	return (result);
 }
 
 uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias) {
