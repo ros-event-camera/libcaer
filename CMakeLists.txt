@@ -13,7 +13,6 @@ INCLUDE(inivation-setup)
 INSTALL(FILES cmakemod/caer-base.cmake DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer)
 
 # Override default settings
-SET(CMAKE_C_VISIBILITY_PRESET default)
 SET(CMAKE_CXX_STANDARD 11)
 
 OPTION(ENABLE_STATIC "Build and install static library in addition to default shared library" OFF)
@@ -51,8 +50,8 @@ MESSAGE(STATUS "Base libraries: ${BASE_LIBS}")
 INCLUDE(FindPkgConfig)
 
 # Required: basic USB devices support
-IF (CC_MSVC)
-	find_package(libusb CONFIG REQUIRED)
+IF(CC_MSVC)
+	FIND_PACKAGE(libusb CONFIG REQUIRED)
 ELSE()
 	PKG_CHECK_MODULES(
 		libusb
@@ -99,7 +98,7 @@ INCLUDE(CMakePackageConfigHelpers)
 WRITE_BASIC_CONFIG_VERSION_FILE(${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake VERSION ${PROJECT_VERSION}
 								COMPATIBILITY SameMajorVersion)
 SET(include_dirs ${CMAKE_INSTALL_INCLUDEDIR})
-IF (CC_MSVC)
+IF(CC_MSVC)
 	SET(export_destination ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
 ELSE()
 	SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})

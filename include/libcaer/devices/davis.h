@@ -1607,7 +1607,7 @@ struct caer_davis_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_davis_info caerDavisInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_davis_info caerDavisInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip voltage digital-to-analog converter configuration.
@@ -1628,7 +1628,8 @@ struct caer_bias_vdac {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias);
+
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a VDAC bias structure, for easier
@@ -1638,7 +1639,7 @@ uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias);
  *
  * @return VDAC bias structure.
  */
-struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_vdac caerBiasVDACParse(const uint16_t vdacBias);
 
 /**
  * On-chip coarse-fine bias current configuration.
@@ -1667,7 +1668,7 @@ struct caer_bias_coarsefine {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFineBias);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFineBias);
 
 /**
  * Transform internal integer representation, as received by calls to
@@ -1678,7 +1679,7 @@ uint16_t caerBiasCoarseFineGenerate(const struct caer_bias_coarsefine coarseFine
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBias);
 
 /**
  * Transform current value in pico-Ampere to coarse-fine bias structure.
@@ -1688,7 +1689,7 @@ struct caer_bias_coarsefine caerBiasCoarseFineParse(const uint16_t coarseFineBia
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps);
 
 /**
  * Transform coarse-fine bias structure into corresponding current
@@ -1698,7 +1699,7 @@ struct caer_bias_coarsefine caerBiasCoarseFineFromCurrent(uint32_t picoAmps);
  *
  * @return corresponding current value in pico-Ampere.
  */
-uint32_t caerBiasCoarseFineToCurrent(struct caer_bias_coarsefine coarseFineBias);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerBiasCoarseFineToCurrent(struct caer_bias_coarsefine coarseFineBias);
 
 /**
  * Shifted-source bias operating mode.
@@ -1747,7 +1748,9 @@ struct caer_bias_shiftedsource {
  *
  * @return internal integer representation for device configuration.
  */
-uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shiftedSourceBias);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerBiasShiftedSourceGenerate(
+	const struct caer_bias_shiftedsource shiftedSourceBias);
+
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a shifted-source bias structure, for easier
@@ -1757,7 +1760,7 @@ uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shif
  *
  * @return shifted-source bias structure.
  */
-struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
 
 /**
  * Configure the APS ROI region in one step. This function guarantees efficiency and
@@ -1771,7 +1774,8 @@ struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shifted
  *
  * @return true on success, false otherwise.
  */
-bool caerDavisROIConfigure(caerDeviceHandle handle, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY);
+LIBRARY_PUBLIC_VISIBILITY bool caerDavisROIConfigure(
+	caerDeviceHandle handle, uint16_t startX, uint16_t startY, uint16_t endX, uint16_t endY);
 
 #ifdef __cplusplus
 }

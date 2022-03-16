@@ -39,10 +39,10 @@ IF(ENABLE_OPENCV)
 
 	SET(LIBCAER_LINK_LIBRARIES_PUBLIC ${OpenCV_LIBS})
 
-	IF (NOT CC_MSVC)
+	IF(NOT CC_MSVC)
 		# The included C headers need to do this (NULL is 0, nullptr not available).
 		SET(LIBCAER_COMPILE_OPTIONS ${LIBCAER_COMPILE_OPTIONS}
-			$<$<COMPILE_LANGUAGE:CXX>:-Wno-zero-as-null-pointer-constant>)
+									$<$<COMPILE_LANGUAGE:CXX>:-Wno-zero-as-null-pointer-constant>)
 	ENDIF()
 
 	# Clang weirdness: also looks into the C code, which of course will use old-style casts (the only cast available
@@ -63,12 +63,10 @@ ENDIF()
 # Set full RPATH
 SET(CMAKE_INSTALL_RPATH ${USER_LOCAL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
+ADD_LIBRARY(caer SHARED ${LIBCAER_SOURCES})
 IF(CC_MSVC)
-	ADD_LIBRARY(caer STATIC ${LIBCAER_SOURCES})
 	# This flag needs to be propagated down to depending targets to avoid compilation errors
 	TARGET_COMPILE_OPTIONS(caer INTERFACE -DWIN32_LEAN_AND_MEAN=ON)
-ELSE()
-	ADD_LIBRARY(caer SHARED ${LIBCAER_SOURCES})
 ENDIF()
 TARGET_COMPILE_OPTIONS(caer PRIVATE ${LIBCAER_COMPILE_OPTIONS})
 TARGET_LINK_LIBRARIES(caer PRIVATE ${LIBCAER_LINK_LIBRARIES_PRIVATE})

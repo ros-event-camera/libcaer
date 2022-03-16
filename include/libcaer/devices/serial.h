@@ -51,7 +51,7 @@ extern "C" {
  *         or NULL on error. Always check for this! On error, errno is also set to
  *         provide more precise information about the failure cause.
  */
-caerDeviceHandle caerDeviceOpenSerial(
+LIBRARY_PUBLIC_VISIBILITY caerDeviceHandle caerDeviceOpenSerial(
 	uint16_t deviceID, uint16_t deviceType, const char *serialPortName, uint32_t serialBaudRate);
 
 #ifdef __cplusplus

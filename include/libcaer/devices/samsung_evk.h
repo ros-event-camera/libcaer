@@ -182,7 +182,7 @@ struct caer_samsung_evk_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_samsung_evk_info caerSamsungEVKInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_samsung_evk_info caerSamsungEVKInfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus
 }

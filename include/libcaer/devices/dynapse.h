@@ -748,7 +748,7 @@ struct caer_dynapse_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip coarse-fine bias current configuration for Dynap-se.
@@ -780,7 +780,8 @@ struct caer_bias_dynapse {
  *
  * @return internal integer representation for device configuration.
  */
-uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
+
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a coarse-fine bias structure, for easier
@@ -790,7 +791,7 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
 
 /**
  * Transfer 16bit words from memory to device SRAM, with configurable
@@ -803,7 +804,8 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSramWords(
+	caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
 
 /**
  * Specifies the poisson spike generator's spike rate.
@@ -815,7 +817,8 @@ bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, ui
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWritePoissonSpikeRate(
+	caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
 
 /**
  * THIS FUNCTION IS DEPRECATED. USE caerDynapseWriteSramN() INSTEAD!
@@ -843,8 +846,8 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  * @return true on success, false otherwise.
  */
 DEPRECATED_FUNCTION("Replaced by caerDynapseWriteSramN(), which has an improved interface.")
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId,
-	bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
 
 /**
  * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
@@ -865,8 +868,8 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuro
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Write a single CAM, to specify which spikes are allowed as input into a neuron.
@@ -882,7 +885,7 @@ bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteCam(
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteCam(
 	caerDeviceHandle handle, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
 /**
@@ -896,7 +899,8 @@ bool caerDynapseWriteCam(
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, size_t numConfig);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseSendDataToUSB(
+	caerDeviceHandle handle, const uint32_t *data, size_t numConfig);
 
 /**
  * Generate bits to write a single CAM, to specify which spikes are allowed as input into a neuron.
@@ -910,7 +914,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, siz
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerDynapseGenerateCamBits(
+	uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
 /**
  * Generate bits to write one of the 4 SRAMs of a single neuron.
@@ -929,8 +934,8 @@ uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAdd
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
-	bool sy, uint8_t dy, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Map core ID and column/row address to the correct chip global neuron address.
@@ -941,7 +946,7 @@ uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_
  *
  * @return chip global neuron address.
  */
-uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY);
 
 /**
  * Map core ID and per-core neuron address to the correct chip global neuron address.
@@ -951,7 +956,7 @@ uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t ro
  *
  * @return chip global neuron address.
  */
-uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
 
 /**
  * Get the X (column) address for a spike event, in pixels.
@@ -961,7 +966,7 @@ uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
  *
  * @return the event X address in pixels.
  */
-uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
 
 /**
  * Get the Y (row) address for a spike event, in pixels.
@@ -971,7 +976,7 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
  *
  * @return the event Y address in pixels.
  */
-uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
 
 /**
  * Get the chip ID, core ID and neuron ID from the X and Y
@@ -985,7 +990,7 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
  *
  * @return a SpikeEvent struct holding chip ID, core ID and neuron ID.
  */
-struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
+LIBRARY_PUBLIC_VISIBILITY struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
 
 #ifdef __cplusplus
 }
