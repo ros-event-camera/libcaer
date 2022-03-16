@@ -82,8 +82,8 @@ static inline bool portable_clock_gettime_realtime(struct timespec *realTime) {
 	return (clock_gettime(CLOCK_REALTIME, realTime) == 0);
 }
 #elif defined(__WINDOWS__)
-#include <stdint.h>
-#include <time.h>
+#	include <stdint.h>
+#	include <time.h>
 
 static inline int clock_gettime(struct timespec *spec) {
 	int64_t wintime;

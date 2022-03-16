@@ -741,7 +741,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 	}
 
 	// First disable, then set all four coordinates, then enable again IF requested.
-	struct spi_config_params* spiMultiConfig = malloc(commandsNumber * sizeof(struct spi_config_params));
+	struct spi_config_params *spiMultiConfig = malloc(commandsNumber * sizeof(struct spi_config_params));
 
 	for (size_t i = 0; i < commandsNumber; i++) {
 		spiMultiConfig[i].moduleAddr = DAVIS_CONFIG_APS;

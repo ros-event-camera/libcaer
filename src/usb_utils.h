@@ -6,10 +6,10 @@
 #include "libcaer/devices/device_discover.h"
 #include "libcaer/devices/usb.h"
 
+#include "c11threads_posix.h"
+
 #include <libusb.h>
 #include <stdatomic.h>
-
-#include "c11threads_posix.h"
 
 #define MAX_SERIAL_NUMBER_LENGTH 8
 

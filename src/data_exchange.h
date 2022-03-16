@@ -6,9 +6,9 @@
 
 #include "libcaer/devices/device.h"
 
-#include <stdatomic.h>
-
 #include "c11threads_posix.h"
+
+#include <stdatomic.h>
 
 enum { THR_IDLE = 0, THR_RUNNING = 1, THR_EXITED = 2 };
 
