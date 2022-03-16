@@ -40,7 +40,7 @@
 #	ifdef __GNUC__
 #		define LIBRARY_PUBLIC_VISIBILITY __attribute__((dllexport)) __attribute__((cdecl))
 #	else
-#		define LIBRARY_PUBLIC_VISIBILITY __declspec(dllexport) __cdecl
+#		define LIBRARY_PUBLIC_VISIBILITY __declspec(dllexport)
 #	endif
 #else
 #	define LIBRARY_PUBLIC_VISIBILITY __attribute__((visibility("default")))

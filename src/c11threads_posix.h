@@ -76,7 +76,10 @@ static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 static inline int thrd_join(thrd_t thr, int *res) {
 #if defined(__WINDOWS__)
 	WaitForSingleObject(thr, INFINITE);
-	*res = 0;
+
+	if (res != NULL) {
+		*res = 0;
+	}
 #else
 	void *pthread_res;
 
