@@ -3,9 +3,8 @@
 
 #if defined(_MSC_VER) && !defined(__cplusplus)
 
-#define thread_local    __declspec(thread)
+#	define thread_local __declspec(thread)
 
 #endif
 
 #endif
-
