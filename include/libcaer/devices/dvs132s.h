@@ -636,7 +636,7 @@ struct caer_dvs132s_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dvs132s_info caerDVS132SInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_dvs132s_info caerDVS132SInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip simplified coarse-fine bias current configuration.
@@ -657,7 +657,7 @@ struct caer_bias_coarsefine1024 {
  *
  * @return internal integer representation for device configuration.
  */
-uint32_t caerBiasCoarseFine1024Generate(struct caer_bias_coarsefine1024 coarseFine1024Bias);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerBiasCoarseFine1024Generate(struct caer_bias_coarsefine1024 coarseFine1024Bias);
 
 /**
  * Transform internal integer representation, as received by calls to
@@ -668,7 +668,7 @@ uint32_t caerBiasCoarseFine1024Generate(struct caer_bias_coarsefine1024 coarseFi
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_coarsefine1024 caerBiasCoarseFine1024Parse(uint32_t coarseFine1024Bias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_coarsefine1024 caerBiasCoarseFine1024Parse(uint32_t coarseFine1024Bias);
 
 /**
  * Transform current value in pico-Ampere to coarse-fine bias structure.
@@ -678,7 +678,7 @@ struct caer_bias_coarsefine1024 caerBiasCoarseFine1024Parse(uint32_t coarseFine1
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_coarsefine1024 caerBiasCoarseFine1024FromCurrent(uint32_t picoAmps);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_coarsefine1024 caerBiasCoarseFine1024FromCurrent(uint32_t picoAmps);
 
 /**
  * Transform coarse-fine bias structure into corresponding current
@@ -688,7 +688,7 @@ struct caer_bias_coarsefine1024 caerBiasCoarseFine1024FromCurrent(uint32_t picoA
  *
  * @return corresponding current value in pico-Ampere.
  */
-uint32_t caerBiasCoarseFine1024ToCurrent(struct caer_bias_coarsefine1024 coarseFine1024Bias);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerBiasCoarseFine1024ToCurrent(struct caer_bias_coarsefine1024 coarseFine1024Bias);
 
 #ifdef __cplusplus
 }

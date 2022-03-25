@@ -184,8 +184,7 @@ caerDeviceHandle samsungEVKOpen(
 	usbControlTransferOut(&state->usbState, VENDOR_REQUEST_RESET, 1, 0, NULL, 0); // Reset FX3 FIFO SM.
 
 	// Wait 10ms for FPGA / FX3 to reset.
-	struct timespec resetSleep = {.tv_sec = 0, .tv_nsec = 10000000};
-	thrd_sleep(&resetSleep, NULL);
+	thrd_sleep(10000);
 
 	// FPGA settings.
 	i2cConfigSend(&state->usbState, DEVICE_FPGA, 0x020C, 0x3F); // MI2C
@@ -201,8 +200,7 @@ caerDeviceHandle samsungEVKOpen(
 		&state->usbState, DEVICE_FPGA, 0x0003, 0x81); // bit 7 enable timeout, bits 1-0 are bits 9-8 of timeout.
 
 	// Wait 10ms for DVS to start.
-	struct timespec dvsSleep = {.tv_sec = 0, .tv_nsec = 10000000};
-	thrd_sleep(&dvsSleep, NULL);
+	thrd_sleep(10000);
 
 	// Bias reset.
 	i2cConfigSend(&state->usbState, DEVICE_DVS, REGISTER_BIAS_OTP_TRIM, 0x24);

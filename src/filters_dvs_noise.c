@@ -662,7 +662,7 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 	}
 
 	// Store hot pixels with count, so we can then sort them by activity easily.
-	struct dvs_pixel_with_count hotPixels[hotPixelsNumber];
+	struct dvs_pixel_with_count *hotPixels = calloc(hotPixelsNumber, sizeof(struct dvs_pixel_with_count));
 
 	size_t idx = 0;
 	for (size_t i = 0; i < pixelNumber; i++) {
@@ -697,4 +697,6 @@ static void hotPixelGenerateArray(caerFilterDVSNoise noiseFilter) {
 		noiseFilter->hotPixelArray[i].x = hotPixels[i].address.x;
 		noiseFilter->hotPixelArray[i].y = hotPixels[i].address.y;
 	}
+
+	free(hotPixels);
 }

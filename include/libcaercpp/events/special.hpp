@@ -55,7 +55,7 @@ struct SpecialEvent : public caer_special_event {
 	}
 };
 
-static_assert(std::is_pod<SpecialEvent>::value, "SpecialEvent is not POD.");
+static_assert(std::is_standard_layout<SpecialEvent>::value, "SpecialEvent is not standard layout.");
 
 class SpecialEventPacket : public EventPacketCommon<SpecialEventPacket, SpecialEvent> {
 public:

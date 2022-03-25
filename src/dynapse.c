@@ -1,7 +1,5 @@
 #include "dynapse.h"
 
-#include <unistd.h>
-
 static void dynapseLog(enum caer_log_level logLevel, dynapseHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static bool sendUSBCommandVerifyMultiple(dynapseHandle handle, uint8_t *config, size_t configNum);
 static void dynapseEventTranslator(void *vdh, const uint8_t *buffer, size_t bytesSent);
@@ -738,7 +736,7 @@ bool dynapseSendDefaultConfig(caerDeviceHandle cdh) {
 	dynapseConfigSet(cdh, DYNAPSE_CONFIG_AER, DYNAPSE_CONFIG_AER_RUN, false);
 
 	// Essential: wait for chip to be stable. Some seem to need longer...
-	sleep(4);
+	thrd_sleep(4000000);
 
 	dynapseLog(CAER_LOG_NOTICE, (dynapseHandle) cdh, "Device initialized.");
 

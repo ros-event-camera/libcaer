@@ -481,8 +481,7 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 	davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, false);
 
 	// Then wait 10ms for FPGA device side buffers to clear.
-	struct timespec clearSleep = {.tv_sec = 0, .tv_nsec = 10000000};
-	thrd_sleep(&clearSleep, NULL);
+	thrd_sleep(10000);
 
 	// And reset the USB side of things.
 	usbControlResetDataEndpoint(&handle->usbState, USB_DEFAULT_DATA_ENDPOINT);
@@ -499,16 +498,14 @@ bool davisDataStart(caerDeviceHandle cdh, void (*dataNotifyIncrease)(void *ptr),
 		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN_CHIP, true);
 
 		// Wait 200 ms for biases to stabilize.
-		struct timespec biasEnSleep = {.tv_sec = 0, .tv_nsec = 200000000};
-		thrd_sleep(&biasEnSleep, NULL);
+		thrd_sleep(200000);
 
 		davisConfigSet(cdh, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_RUN, true);
 
 		// Wait 50 ms for data transfer to be ready.
-		struct timespec noDataSleep = {.tv_sec = 0, .tv_nsec = 50000000};
-		thrd_sleep(&noDataSleep, NULL);
+		thrd_sleep(50000);
 
 		davisConfigSet(cdh, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, true);
 		davisConfigSet(cdh, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, true);
@@ -627,8 +624,6 @@ static void allocateDebugTransfers(davisHandle handle) {
 
 static void cancelAndDeallocateDebugTransfers(davisHandle handle) {
 	// Wait for all transfers to go away.
-	struct timespec waitForTerminationSleep = {.tv_sec = 0, .tv_nsec = 1000000};
-
 	while (atomic_load(&handle->fx3Support.activeDebugTransfers) > 0) {
 		// Continue trying to cancel all transfers until there are none left.
 		// It seems like one cancel pass is not enough and some hang around.
@@ -645,7 +640,7 @@ static void cancelAndDeallocateDebugTransfers(davisHandle handle) {
 		}
 
 		// Sleep for 1ms to avoid busy loop.
-		thrd_sleep(&waitForTerminationSleep, NULL);
+		thrd_sleep(1000);
 	}
 
 	// No more transfers in flight, deallocate them all here.
@@ -746,7 +741,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 	}
 
 	// First disable, then set all four coordinates, then enable again IF requested.
-	struct spi_config_params spiMultiConfig[commandsNumber];
+	struct spi_config_params *spiMultiConfig = malloc(commandsNumber * sizeof(struct spi_config_params));
 
 	for (size_t i = 0; i < commandsNumber; i++) {
 		spiMultiConfig[i].moduleAddr = DAVIS_CONFIG_APS;
@@ -784,7 +779,9 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 		}
 	}
 
-	return (spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, commandsNumber));
+	bool result = spiConfigSendMultiple(handle->spiConfigPtr, spiMultiConfig, commandsNumber);
+	free(spiMultiConfig);
+	return (result);
 }
 
 uint16_t caerBiasVDACGenerate(const struct caer_bias_vdac vdacBias) {

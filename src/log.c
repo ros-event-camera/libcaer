@@ -3,13 +3,19 @@
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <time.h>
-#include <unistd.h>
 
-static atomic_uint_fast8_t caerLogLevel     = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
-static atomic_int caerLogFileDescriptor1    = ATOMIC_VAR_INIT(STDERR_FILENO);
-static atomic_int caerLogFileDescriptor2    = ATOMIC_VAR_INIT(-1);
-static atomic_uintptr_t caerLogCallbackPtr  = ATOMIC_VAR_INIT(0);
-static _Thread_local bool caerLogDisabledTL = false;
+#if defined(__WINDOWS__)
+#	include <io.h>
+#	define thread_local __declspec(thread)
+#else
+#	define thread_local _Thread_local
+#endif
+
+static atomic_uint_fast8_t caerLogLevel    = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
+static atomic_int caerLogFileDescriptor1   = ATOMIC_VAR_INIT(2);
+static atomic_int caerLogFileDescriptor2   = ATOMIC_VAR_INIT(-1);
+static atomic_uintptr_t caerLogCallbackPtr = ATOMIC_VAR_INIT(0);
+static thread_local bool caerLogDisabledTL = false;
 
 void caerLogLevelSet(enum caer_log_level logLevel) {
 	atomic_store_explicit(&caerLogLevel, logLevel, memory_order_relaxed);
@@ -100,7 +106,7 @@ void caerLogVAFull(
 	// First prepend the time.
 	time_t currentTimeEpoch = time(NULL);
 
-#if defined(OS_WINDOWS)
+#if defined(__WINDOWS__)
 	// localtime() is thread-safe on Windows (and there is no localtime_r() at all).
 	struct tm *currentTime = localtime(&currentTimeEpoch);
 
@@ -108,7 +114,7 @@ void caerLogVAFull(
 	// Following time format uses exactly 19 characters (5 separators/punctuation,
 	// 4 year, 2 month, 2 day, 2 hours, 2 minutes, 2 seconds).
 	size_t currentTimeStringLength = 19;
-	char currentTimeString[currentTimeStringLength + 1]; // + 1 for terminating NUL byte.
+	char *currentTimeString        = malloc(currentTimeStringLength + 1); // + 1 for terminating NUL byte.
 	strftime(currentTimeString, currentTimeStringLength + 1, "%Y-%m-%d %H:%M:%S", currentTime);
 #else
 	// From localtime_r() man-page: "According to POSIX.1-2004, localtime()
@@ -175,7 +181,7 @@ void caerLogVAFull(
 	// Copy all strings into one and ensure NUL termination.
 	size_t logLength = (size_t) snprintf(
 		NULL, 0, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, logMessageString);
-	char logString[logLength + 1];
+	char *logString = malloc(logLength + 1);
 	snprintf(
 		logString, logLength + 1, "%s: %s: %s: %s\n", currentTimeString, logLevelString, subSystem, logMessageString);
 
@@ -183,15 +189,28 @@ void caerLogVAFull(
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 	if (logFileDescriptor1 >= 0) {
+#if defined(__WINDOWS__)
+		_write(logFileDescriptor1, logString, logLength);
+#else
 		write(logFileDescriptor1, logString, logLength);
+#endif
 	}
 
 	if (logFileDescriptor2 >= 0) {
+#if defined(__WINDOWS__)
+		_write(logFileDescriptor2, logString, logLength);
+#else
 		write(logFileDescriptor2, logString, logLength);
+#endif
 	}
 #pragma GCC diagnostic pop
 
 	if (logCallbackPtr != NULL) {
 		(*logCallbackPtr)(logString, logLength);
 	}
+
+#if defined(__WINDOWS__)
+	free(currentTimeString);
+#endif
+	free(logString);
 }

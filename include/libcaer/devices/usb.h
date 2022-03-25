@@ -53,8 +53,8 @@ extern "C" {
  *         or NULL on error. Always check for this! On error, errno is also set to
  *         provide more precise information about the failure cause.
  */
-caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict);
+LIBRARY_PUBLIC_VISIBILITY caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType,
+	uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
 
 #ifdef __cplusplus
 }

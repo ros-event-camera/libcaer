@@ -298,4 +298,16 @@ static inline uint32_t caerByteArrayToInteger(const uint8_t *byteArray, const ui
 }
 #endif
 
+#ifndef SSIZE_MAX
+
+#if SIZE_MAX == 4294967295
+// ssize_t for 32bit system
+#define ssize_t int32_t
+#else
+// ssize_t for 64bit system
+#define ssize_t int64_t
+#endif
+
+#endif
+
 #endif /* LIBCAER_H_ */

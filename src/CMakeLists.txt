@@ -15,9 +15,11 @@ SET(LIBCAER_SOURCES
 	samsung_evk.c)
 
 # This is often the case due to how we try to have multiple compatible definitions of functions in C.
-SET(LIBCAER_COMPILE_OPTIONS "-Wno-unused-function")
+IF(NOT CC_MSVC)
+	SET(LIBCAER_COMPILE_OPTIONS "-Wno-unused-function")
+ENDIF()
 
-SET(LIBCAER_LINK_LIBRARIES_PRIVATE PkgConfig::libusb ${BASE_LIBS})
+SET(LIBCAER_LINK_LIBRARIES_PRIVATE ${BASE_LIBS})
 
 IF(OS_LINUX)
 	# Raspberry Pi support available only on Linux.
@@ -37,9 +39,11 @@ IF(ENABLE_OPENCV)
 
 	SET(LIBCAER_LINK_LIBRARIES_PUBLIC ${OpenCV_LIBS})
 
-	# The included C headers need to do this (NULL is 0, nullptr not available).
-	SET(LIBCAER_COMPILE_OPTIONS ${LIBCAER_COMPILE_OPTIONS}
-								$<$<COMPILE_LANGUAGE:CXX>:-Wno-zero-as-null-pointer-constant>)
+	IF(NOT CC_MSVC)
+		# The included C headers need to do this (NULL is 0, nullptr not available).
+		SET(LIBCAER_COMPILE_OPTIONS ${LIBCAER_COMPILE_OPTIONS}
+									$<$<COMPILE_LANGUAGE:CXX>:-Wno-zero-as-null-pointer-constant>)
+	ENDIF()
 
 	# Clang weirdness: also looks into the C code, which of course will use old-style casts (the only cast available
 	# there).
@@ -48,10 +52,22 @@ IF(ENABLE_OPENCV)
 	ENDIF()
 ENDIF()
 
+IF(CC_MSVC)
+	LIST(APPEND LIBCAER_SOURCES ../thirdparty/simple-stdatomic/stdatomic.c)
+	INCLUDE_DIRECTORIES(${LIBUSB_INCLUDE_DIRS})
+	LIST(APPEND LIBCAER_LINK_LIBRARIES_PRIVATE ${LIBUSB_LIBRARIES})
+ELSE()
+	LIST(APPEND LIBCAER_LINK_LIBRARIES_PRIVATE PkgConfig::libusb)
+ENDIF()
+
 # Set full RPATH
 SET(CMAKE_INSTALL_RPATH ${USER_LOCAL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
 ADD_LIBRARY(caer SHARED ${LIBCAER_SOURCES})
+IF(CC_MSVC)
+	# This flag needs to be propagated down to depending targets to avoid compilation errors
+	TARGET_COMPILE_OPTIONS(caer INTERFACE -DWIN32_LEAN_AND_MEAN=ON)
+ENDIF()
 TARGET_COMPILE_OPTIONS(caer PRIVATE ${LIBCAER_COMPILE_OPTIONS})
 TARGET_LINK_LIBRARIES(caer PRIVATE ${LIBCAER_LINK_LIBRARIES_PRIVATE})
 TARGET_LINK_LIBRARIES(caer PUBLIC ${LIBCAER_LINK_LIBRARIES_PUBLIC})

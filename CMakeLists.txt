@@ -2,7 +2,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 
 # Project name and version
-PROJECT(libcaer VERSION 3.3.13 LANGUAGES C CXX)
+PROJECT(libcaer VERSION 3.3.14 LANGUAGES C CXX)
 
 # Basic setup, useful variables, see docs.
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})
@@ -13,7 +13,6 @@ INCLUDE(inivation-setup)
 INSTALL(FILES cmakemod/caer-base.cmake DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer)
 
 # Override default settings
-SET(CMAKE_C_VISIBILITY_PRESET default)
 SET(CMAKE_CXX_STANDARD 11)
 
 OPTION(ENABLE_STATIC "Build and install static library in addition to default shared library" OFF)
@@ -28,8 +27,14 @@ IF(NOT USER_LOCAL_PREFIX)
 ENDIF()
 
 # Required: threads, math
-SET(BASE_LIBS m)
-SET(LIBCAER_PKGCONFIG_LIBS_PRIVATE "-lm")
+IF(NOT CC_MSVC)
+	SET(BASE_LIBS m)
+	SET(LIBCAER_PKGCONFIG_LIBS_PRIVATE "-lm")
+ENDIF()
+
+IF(CC_MSVC)
+	INCLUDE_DIRECTORIES(thirdparty/simple-stdatomic/)
+ENDIF()
 
 SET(BASE_LIBS ${BASE_LIBS} ${SYSTEM_THREAD_LIBS})
 SET(LIBCAER_PKGCONFIG_LIBS_PRIVATE "${LIBCAER_PKGCONFIG_LIBS_PRIVATE} ${SYSTEM_THREAD_LIBS}")
@@ -45,12 +50,16 @@ MESSAGE(STATUS "Base libraries: ${BASE_LIBS}")
 INCLUDE(FindPkgConfig)
 
 # Required: basic USB devices support
-PKG_CHECK_MODULES(
-	libusb
-	REQUIRED
-	IMPORTED_TARGET
-	libusb-1.0>=1.0.17)
-SET(LIBCAER_PKGCONFIG_REQUIRES_PRIVATE "libusb-1.0 >= 1.0.17")
+IF(CC_MSVC)
+	FIND_PACKAGE(libusb CONFIG REQUIRED)
+ELSE()
+	PKG_CHECK_MODULES(
+		libusb
+		REQUIRED
+		IMPORTED_TARGET
+		libusb-1.0>=1.0.17)
+	SET(LIBCAER_PKGCONFIG_REQUIRES_PRIVATE "libusb-1.0 >= 1.0.17")
+ENDIF()
 
 # Optional: serial devices support
 IF(ENABLE_SERIALDEV)
@@ -89,7 +98,11 @@ INCLUDE(CMakePackageConfigHelpers)
 WRITE_BASIC_CONFIG_VERSION_FILE(${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake VERSION ${PROJECT_VERSION}
 								COMPATIBILITY SameMajorVersion)
 SET(include_dirs ${CMAKE_INSTALL_INCLUDEDIR})
-SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+IF(CC_MSVC)
+	SET(export_destination ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
+ELSE()
+	SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+ENDIF()
 CONFIGURE_PACKAGE_CONFIG_FILE(
 	${PROJECT_SOURCE_DIR}/cmakemod/${PROJECT_NAME}Config.cmake.in ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
 	INSTALL_DESTINATION ${export_destination} PATH_VARS include_dirs export_destination)

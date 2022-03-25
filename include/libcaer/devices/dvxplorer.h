@@ -690,7 +690,7 @@ struct caer_dvx_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dvx_info caerDVXplorerInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_dvx_info caerDVXplorerInfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus
 }

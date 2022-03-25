@@ -399,7 +399,7 @@ public:
 		}
 	};
 
-	static_assert(std::is_pod<GenericEvent>::value, "GenericEvent is not POD.");
+	static_assert(std::is_standard_layout<GenericEvent>::value, "GenericEvent is not standard layout.");
 
 	// Container traits.
 	using value_type       = GenericEvent;

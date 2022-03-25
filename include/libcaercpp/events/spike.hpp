@@ -63,7 +63,7 @@ struct SpikeEvent : public caer_spike_event {
 	}
 };
 
-static_assert(std::is_pod<SpikeEvent>::value, "SpikeEvent is not POD.");
+static_assert(std::is_standard_layout<SpikeEvent>::value, "SpikeEvent is not standard layout.");
 
 class SpikeEventPacket : public EventPacketCommon<SpikeEventPacket, SpikeEvent> {
 public:
