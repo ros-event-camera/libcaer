@@ -1,3 +1,12 @@
+Release 3.3.14 - 25.03.2022
+
+NEW FEATURES
+- Full native MSVC/Windows build support.
+
+BUG FIXES
+- davis_cvgui example: fix incorrect biasing and APS frame settings.
+
+
 Release 3.3.13 - 25.02.2022
 
 NEW FEATURES
