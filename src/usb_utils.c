@@ -3,8 +3,10 @@
 struct usb_control_struct {
 	union {
 		void (*controlOutCallback)(void *controlOutCallbackPtr, int status);
+
 		void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
 	};
+
 	void *controlCallbackPtr;
 };
 
@@ -19,17 +21,26 @@ struct usb_data_completion_struct {
 typedef struct usb_data_completion_struct *usbDataCompletion;
 
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) ATTRIBUTE_FORMAT(3);
+
 static int usbThreadRun(void *usbStatePtr);
+
 static bool usbAllocateTransfers(usbState state);
+
 static void usbCancelAndDeallocateTransfers(usbState state);
+
 static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer);
+
 static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status),
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlCallbackPtr, bool directionOut);
+
 static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
+
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
+
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
+
 static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
 
 static inline bool checkActiveConfigAndClaim(libusb_device_handle *devHandle) {
@@ -175,7 +186,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 			if (requiredFirmwareVersion >= 0) {
 				uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
 
-				if (firmwareVersion != U8T(requiredFirmwareVersion)) {
+				if (firmwareVersion < U8T(requiredFirmwareVersion)) {
 					firmwareVersionOK        = false;
 					currUSBInfo.errorVersion = true;
 				}
@@ -491,11 +502,12 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 				if (requiredFirmwareVersion >= 0) {
 					uint8_t firmwareVersion = U8T(devDesc.bcdDevice & 0x00FF);
 
-					if (firmwareVersion != U8T(requiredFirmwareVersion)) {
+					if (firmwareVersion < U8T(requiredFirmwareVersion)) {
 						caerUSBLog(CAER_LOG_CRITICAL, state,
-							"Device firmware version incorrect. You have version %" PRIu8 "; but version %" PRIu8
+							"Device firmware version incorrect. You have version %" PRIu8
+							"; but at least version %" PRIu8
 							" is required. Please update by following the Flashy documentation at "
-							"'https://inivation.com/support/software/reflashing/'.",
+							"'https://inivation.gitlab.io/dv/dv-docs/docs/update-firmware/'.",
 							firmwareVersion, U8T(requiredFirmwareVersion));
 
 						firmwareVersionOK = false;
@@ -540,7 +552,7 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device logic version incorrect. You have version %" PRIu32 "; but version %" PRIu32
 							" is required. Please update by following the Flashy documentation at "
-							"'https://inivation.com/support/software/reflashing/'.",
+							"'https://inivation.gitlab.io/dv/dv-docs/docs/update-firmware/'.",
 							param32, U32T(requiredLogicVersion));
 
 						logicVersionOK = false;
@@ -584,9 +596,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					if (param32 < U32T(minimumLogicPatch)) {
 						caerUSBLog(CAER_LOG_CRITICAL, state,
 							"Device logic patch level insufficient. You have patch level %" PRIu32
-							"; but patch level %" PRIu32
+							"; but at least patch level %" PRIu32
 							" is required. Please update by following the Flashy documentation at "
-							"'https://inivation.com/support/software/reflashing/'.",
+							"'https://inivation.gitlab.io/dv/dv-docs/docs/update-firmware/'.",
 							param32, U32T(minimumLogicPatch));
 
 						logicPatchOK = false;
