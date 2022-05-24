@@ -1,7 +1,6 @@
 class Libcaer < Formula
   desc "Minimal C library to access, configure and get data from neuromorphic sensors and processors."
   homepage "https://gitlab.com/inivation/dv/libcaer/"
-  head "https://gitlab.com/inivation/dv/libcaer-internal.git"
   url "https://release.inivation.com/libcaer/libcaer-VERSION_REPLACE.tar.gz"
   sha256 "SHA256SUM_REPLACE"
 
