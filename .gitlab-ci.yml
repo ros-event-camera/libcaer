@@ -299,6 +299,7 @@ release_archive_submodules:
   variables:
     GIT_STRATEGY: clone
   script:
+    - if [[ -n "${RELEASE}" ]] ; then exit 0; fi
     # Archive all the code, including git submodules and upload as generic package.
     - git-archive-all "${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.zip"
     - 'curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.zip" "${PACKAGE_REGISTRY_URL}/${CI_COMMIT_TAG}/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.zip"'
@@ -311,6 +312,7 @@ release_archive_submodules:
     - aws s3 cp "${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.gz" "s3://release.inivation.com/libcaer/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.gz"
   rules:
     - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "web" && $RELEASE && $RELEASE_VERSION
 
 pages:
   stage: deploy
