@@ -38,7 +38,7 @@ export QA_RPATHS=$(( 0x0001|0x0010 ))
 %cmake_install
 
 %files
-%{_libdir}/udev/rules.d/
+%{_udevrulesdir}/*.rules
 %{_libdir}/libcaer.so.*
 
 %files devel
