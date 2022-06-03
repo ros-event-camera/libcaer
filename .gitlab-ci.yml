@@ -161,8 +161,8 @@ build_windows:
 basic_syntax_check_clang:
   variables:
     # Oldest supported clang compiler.
-    CC: clang-9
-    CXX: clang++-9
+    CC: clang-11
+    CXX: clang++-11
   <<: *ubuntu_curr_builder
   script:
     # Generate header files.
@@ -186,12 +186,6 @@ build_ubuntu_2004:
   <<: *ubuntu_curr_builder
   image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:20.04
 
-build_ubuntu_curr_gcc8:
-  variables:
-    CC: gcc-8
-    CXX: g++-8
-  <<: *ubuntu_curr_builder
-
 build_ubuntu_curr_gcc9:
   variables:
     CC: gcc-9
@@ -210,10 +204,10 @@ build_ubuntu_curr_gcc11:
     CXX: g++-11
   <<: *ubuntu_curr_builder
 
-build_ubuntu_curr_clang9:
+build_ubuntu_curr_gcc12:
   variables:
-    CC: clang-9
-    CXX: clang++-9
+    CC: gcc-12
+    CXX: g++-12
   <<: *ubuntu_curr_builder
 
 build_ubuntu_curr_clang11:
@@ -234,7 +228,13 @@ build_ubuntu_curr_clang13:
     CXX: clang++-13
   <<: *ubuntu_curr_builder
 
-build_ubuntu_curr_gcc11_arm64:
+build_ubuntu_curr_clang14:
+  variables:
+    CC: clang-14
+    CXX: clang++-14
+  <<: *ubuntu_curr_builder
+
+build_ubuntu_curr_gcc12_arm64:
   <<: *ubuntu_curr_builder
   tags:
     - docker
@@ -242,8 +242,8 @@ build_ubuntu_curr_gcc11_arm64:
     - build
     - qemu
   variables:
-    CC: gcc-11
-    CXX: g++-11
+    CC: gcc-12
+    CXX: g++-12
   image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm64
   script:
     - *change_build_dir
@@ -252,7 +252,7 @@ build_ubuntu_curr_gcc11_arm64:
   rules:
     - if: $CI_COMMIT_BRANCH == "master"
 
-build_ubuntu_curr_gcc11_arm32:
+build_ubuntu_curr_gcc12_arm32:
   <<: *ubuntu_curr_builder
   tags:
     - docker
@@ -260,8 +260,8 @@ build_ubuntu_curr_gcc11_arm32:
     - build
     - qemu
   variables:
-    CC: gcc-11
-    CXX: g++-11
+    CC: gcc-12
+    CXX: g++-12
     # TCMalloc and libunwind can cause hangs on ARM: https://bugzilla.redhat.com/show_bug.cgi?id=1226806
     UNW_ARM_UNWIND_METHOD: 4
   image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling_arm32
@@ -345,7 +345,7 @@ release_ubuntu:
   stage: deploy
   image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
   interruptible: false
-  needs: ["release_archive_submodules"]
+  needs: [ "release_archive_submodules" ]
   before_script:
     - gpg --pinentry-mode loopback --passphrase "${PPA_GPG_KEY_PASS}" --import "${PPA_GPG_KEY}"
     - echo -e "5\ny\n" | gpg --no-tty --command-fd 0 --edit-key "${PPA_GPG_KEY_ID}" trust quit
@@ -367,7 +367,7 @@ release_fedora:
   stage: deploy
   image: registry.gitlab.com/inivation/infra/docker-files/fedora:latest
   interruptible: false
-  needs: ["release_archive_submodules"]
+  needs: [ "release_archive_submodules" ]
   before_script:
     - mkdir -p ~/.config/
     - cp "${COPR_API_KEY}" ~/.config/copr
@@ -386,7 +386,7 @@ release_gentoo_arch_brew:
   stage: deploy
   image: registry.gitlab.com/inivation/infra/docker-files/gentoo:latest
   interruptible: false
-  needs: ["release_archive_submodules"]
+  needs: [ "release_archive_submodules" ]
   before_script:
     - mkdir -p ~/.ssh/
     - cp "${GITCI_SSH_KEY}" ~/.ssh/id_ed25519
