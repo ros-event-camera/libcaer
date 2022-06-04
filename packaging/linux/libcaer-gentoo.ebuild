@@ -3,7 +3,7 @@
 
 EAPI=6
 
-inherit eutils cmake-utils
+inherit eutils cmake-utils udev
 
 DESCRIPTION="Minimal C library to access, configure and get data from neuromorphic sensors and processors."
 HOMEPAGE="https://gitlab.com/inivation/dv/${PN}/"
@@ -32,4 +32,8 @@ src_configure() {
 	)
 
 	cmake-utils_src_configure
+}
+
+pkg_postinst() {
+	udev_reload
 }
