@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 import os
 import re
 import shutil
@@ -131,7 +132,7 @@ all_buildable_docs = set(git_doc_tags).union(git_doc_branches).union([git_curren
 all_existing_docs = set(existing_docs)
 
 docs_to_remove = all_existing_docs.difference(all_buildable_docs)
-docs_to_build = all_buildable_docs.difference(all_existing_docs)
+docs_to_build = [git_current]  # Only build current doc branch to save time.
 print('Final to remove:')
 print(docs_to_remove)
 print('Final to build:')
