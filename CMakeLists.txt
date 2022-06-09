@@ -20,6 +20,8 @@ OPTION(ENABLE_SERIALDEV "Enable support for serial port devices using libserialp
 OPTION(ENABLE_OPENCV "Enable support for frame enhancements using OpenCV" OFF)
 OPTION(UDEV_INSTALL "Install udev rules on Linux" ON)
 OPTION(EXAMPLES_INSTALL "Build and install examples" OFF)
+OPTION(ENABLE_BINDIR_INSTALLATION "Split archive and binary installation targets [required for vcpkg installation]" OFF)
+OPTION(BUILD_SHARED_LIBS "Build libcaer as a shared library" ON)
 
 # Cross-compile support
 IF(NOT USER_LOCAL_PREFIX)
@@ -98,7 +100,7 @@ INCLUDE(CMakePackageConfigHelpers)
 WRITE_BASIC_CONFIG_VERSION_FILE(${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake VERSION ${PROJECT_VERSION}
 								COMPATIBILITY SameMajorVersion)
 SET(include_dirs ${CMAKE_INSTALL_INCLUDEDIR})
-IF(CC_MSVC)
+IF(ENABLE_BINDIR_INSTALLATION)
 	SET(export_destination ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME})
 ELSE()
 	SET(export_destination ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
