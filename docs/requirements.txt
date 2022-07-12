@@ -1,6 +1,7 @@
 # doxygen>=1.9.3
 sphinx>=4.4.0
 sphinx-sitemap
+sphinx-tabs>=3.4.0
 sphinx_rtd_theme
 myst-parser
 breathe>=4.32.0

@@ -34,7 +34,6 @@ def build_docs(ref):
         return
 
     print('building: ' + ref)
-    call_cmd('git checkout --force --recurse-submodules ' + ref)
 
     if not os.path.isfile(source_dir + os.path.sep + 'conf.py'):
         print('No Sphinx configuration present, skipping: ' + ref)
@@ -143,9 +142,6 @@ for ref in docs_to_remove:
 
 for ref in docs_to_build:
     build_docs(ref)
-
-# reset to original current branch
-call_cmd('git checkout --force --recurse-submodules ' + git_current)
 
 # ensure default branch is always first one, if applicable
 if git_default in git_doc_branches:
