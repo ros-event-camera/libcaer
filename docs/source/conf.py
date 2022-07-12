@@ -19,16 +19,9 @@ release = current_version
 # -- General configuration
 
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.autosectionlabel',
-    'sphinx.ext.intersphinx',
-    'sphinx_sitemap',
-    'sphinx_rtd_theme',
-    'myst_parser',
-    'breathe',
+    'sphinx.ext.duration', 'sphinx.ext.doctest', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary',
+    'sphinx.ext.autosectionlabel', 'sphinx.ext.intersphinx', 'sphinx_sitemap', 'sphinx_rtd_theme', 'myst_parser',
+    'breathe', 'sphinx_tabs.tabs'
 ]
 
 templates_path = ['_templates']
@@ -56,7 +49,7 @@ html_copy_source = False
 
 html_theme_options = {
     'collapse_navigation': True,
-    'navigation_depth': 2,
+    'navigation_depth': 3,
     'includehidden': False,
 }
 

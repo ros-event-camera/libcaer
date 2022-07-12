@@ -1,2 +1,2 @@
-usr/lib/udev/rules.d/65-inivation.rules lib/udev/rules.d/65-inivation.rules
+usr/lib/udev/rules.d/65-inivation.rules lib/udev/rules.d/
 usr/lib/*/libcaer.so.*
