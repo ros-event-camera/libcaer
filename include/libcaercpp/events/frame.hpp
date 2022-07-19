@@ -33,11 +33,11 @@ namespace events {
  * Please use caerGenericEventCopy() to copy frame events!
  */
 struct FrameEvent : public caer_frame_event {
-	FrameEvent()                      = default;
-	FrameEvent(const FrameEvent &rhs) = delete;
+	FrameEvent()                                 = default;
+	FrameEvent(const FrameEvent &rhs)            = delete;
 	FrameEvent &operator=(const FrameEvent &rhs) = delete;
 	FrameEvent(FrameEvent &&rhs)                 = delete;
-	FrameEvent &operator=(FrameEvent &&rhs) = delete;
+	FrameEvent &operator=(FrameEvent &&rhs)      = delete;
 
 	enum class colorChannels {
 		GRAYSCALE = 1, //!< Grayscale, one channel only.
