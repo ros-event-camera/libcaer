@@ -9,6 +9,7 @@
 #	define thread_local __declspec(thread)
 #else
 #	define thread_local _Thread_local
+#	include <unistd.h>
 #endif
 
 static atomic_uint_fast8_t caerLogLevel    = ATOMIC_VAR_INIT(CAER_LOG_ERROR);
