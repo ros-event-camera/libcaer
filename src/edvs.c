@@ -144,14 +144,14 @@ static inline void freeAllDataMemory(edvsState state) {
 	// already assigned to the current packet container, we
 	// free them separately from it.
 	if (state->currentPackets.polarity != NULL) {
-		free(&state->currentPackets.polarity->packetHeader);
+		free(state->currentPackets.polarity);
 		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
 	if (state->currentPackets.special != NULL) {
-		free(&state->currentPackets.special->packetHeader);
+		free(state->currentPackets.special);
 		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
@@ -978,11 +978,11 @@ static void edvsEventTranslator(void *vhd, const uint8_t *buffer, size_t bytesSe
 				}
 				else {
 					if (x >= EDVS_ARRAY_SIZE_X) {
-						edvsLog(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu16 ".",
+						edvsLog(CAER_LOG_ALERT, handle, "X address out of range (0-%d): %" PRIu8 ".",
 							EDVS_ARRAY_SIZE_X - 1, x);
 					}
 					if (y >= EDVS_ARRAY_SIZE_Y) {
-						edvsLog(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu16 ".",
+						edvsLog(CAER_LOG_ALERT, handle, "Y address out of range (0-%d): %" PRIu8 ".",
 							EDVS_ARRAY_SIZE_Y - 1, y);
 					}
 				}

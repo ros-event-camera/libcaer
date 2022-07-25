@@ -55,14 +55,14 @@ static inline void freeAllDataMemory(dvs128State state) {
 	// already assigned to the current packet container, we
 	// free them separately from it.
 	if (state->currentPackets.polarity != NULL) {
-		free(&state->currentPackets.polarity->packetHeader);
+		free(state->currentPackets.polarity);
 		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
 	if (state->currentPackets.special != NULL) {
-		free(&state->currentPackets.special->packetHeader);
+		free(state->currentPackets.special);
 		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);

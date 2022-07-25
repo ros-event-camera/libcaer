@@ -251,14 +251,14 @@ static inline void freeAllDataMemory(dynapseState state) {
 	// already assigned to the current packet container, we
 	// free them separately from it.
 	if (state->currentPackets.spike != NULL) {
-		free(&state->currentPackets.spike->packetHeader);
+		free(state->currentPackets.spike);
 		state->currentPackets.spike = NULL;
 
 		containerGenerationSetPacket(&state->container, DYNAPSE_SPIKE_EVENT_POS, NULL);
 	}
 
 	if (state->currentPackets.special != NULL) {
-		free(&state->currentPackets.special->packetHeader);
+		free(state->currentPackets.special);
 		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);

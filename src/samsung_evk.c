@@ -64,14 +64,14 @@ static inline void freeAllDataMemory(samsungEVKState state) {
 	// already assigned to the current packet container, we
 	// free them separately from it.
 	if (state->currentPackets.polarity != NULL) {
-		free(&state->currentPackets.polarity->packetHeader);
+		free(state->currentPackets.polarity);
 		state->currentPackets.polarity = NULL;
 
 		containerGenerationSetPacket(&state->container, POLARITY_EVENT, NULL);
 	}
 
 	if (state->currentPackets.special != NULL) {
-		free(&state->currentPackets.special->packetHeader);
+		free(state->currentPackets.special);
 		state->currentPackets.special = NULL;
 
 		containerGenerationSetPacket(&state->container, SPECIAL_EVENT, NULL);
@@ -2114,8 +2114,8 @@ static void samsungEVKEventTranslator(void *vhd, const uint8_t *buffer, const si
 						// This should be impossible, since offset and reference are always
 						// increasing, and timestampSub wraps are handled above.
 						samsungEVKLog(CAER_LOG_ERROR, handle,
-							"non strictly-monotonic timestamp detected: lastTimestamp=%ld, "
-							"currentTimestamp=%ld, difference=%ld.",
+							"non strictly-monotonic timestamp detected: lastTimestamp=%" PRIi64 ", "
+							"currentTimestamp=%" PRIi64 ", difference=%" PRIi64 ".",
 							state->timestamps.lastTimestamp, state->timestamps.currTimestamp,
 							(state->timestamps.lastTimestamp - state->timestamps.currTimestamp));
 					}
