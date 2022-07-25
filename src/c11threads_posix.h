@@ -17,7 +17,10 @@ typedef void *thrd_t;
 typedef HANDLE mtx_t;
 
 #else
+#	define _DARWIN_C_SOURCE 1
 #	include <pthread.h>
+#	undef _DARWIN_C_SOURCE
+
 #	include <sched.h>
 #	include <sys/resource.h>
 #	include <sys/time.h>
