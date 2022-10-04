@@ -1,4 +1,4 @@
-﻿#ifndef __MSVC_THREADS_H
+#ifndef __MSVC_THREADS_H
 #define __MSVC_THREADS_H
 
 #if defined(_MSC_VER) && !defined(__cplusplus)

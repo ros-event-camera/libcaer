@@ -166,8 +166,8 @@ IF(OS_UNIX)
 	ADD_DEFINITIONS(-D_DEFAULT_SOURCE=1)
 
 	IF(OS_MACOS)
-		# Use POSIX, not DARWIN_C_SOURCE, as that enables too many extensions
-		# and causes collisions in function names, for example swab().
+		# Use POSIX, not DARWIN_C_SOURCE, as that enables too many extensions and causes collisions in function names,
+		# for example swab().
 		ADD_DEFINITIONS(-D_POSIX_C_SOURCE=200809)
 	ENDIF()
 ENDIF()
