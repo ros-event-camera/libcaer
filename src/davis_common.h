@@ -731,10 +731,8 @@ static bool davisCommonSendDefaultFPGAConfig(davisCommonHandle handle) {
 		.refValue = REF, .regValue = REG, .operatingMode = OPMODE, .voltageLevel = SPLIT_GATE \
 	}
 
-#define VDAC(VOLT, CURR)                           \
-	(struct caer_bias_vdac) {                      \
-		.voltageValue = VOLT, .currentValue = CURR \
-	}
+#define VDAC(VOLT, CURR) \
+	(struct caer_bias_vdac) { .voltageValue = VOLT, .currentValue = CURR }
 
 static bool davisCommonSendDefaultChipConfig(davisCommonHandle handle) {
 	// Default bias configuration.

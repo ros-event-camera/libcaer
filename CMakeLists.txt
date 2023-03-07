@@ -2,7 +2,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 
 # Project name and version
-PROJECT(libcaer VERSION 3.3.14 LANGUAGES C CXX)
+PROJECT(libcaer VERSION 3.3.15 LANGUAGES C CXX)
 
 # Basic setup, useful variables, see docs.
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})

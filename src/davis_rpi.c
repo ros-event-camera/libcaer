@@ -12,9 +12,9 @@
 #define GPIO_REG_LEN     0xB4
 
 // GPIO setup macros. Always use GPIO_INP(x) before using GPIO_OUT(x) or GPIO_ALT(x, y).
-//#define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId) / 10] &= U32T(~(7 << (((gpioId) % 10) * 3)))
-//#define GPIO_OUT(gpioReg, gpioId) gpioReg[(gpioId) / 10] |= U32T(1 << (((gpioId) % 10) * 3))
-//#define GPIO_ALT(gpioReg, gpioId, altFunc) gpioReg[(gpioId) / 10] |= U32T(((altFunc) <= 3 ? (altFunc) + 4 : (altFunc)
+// #define GPIO_INP(gpioReg, gpioId) gpioReg[(gpioId) / 10] &= U32T(~(7 << (((gpioId) % 10) * 3)))
+// #define GPIO_OUT(gpioReg, gpioId) gpioReg[(gpioId) / 10] |= U32T(1 << (((gpioId) % 10) * 3))
+// #define GPIO_ALT(gpioReg, gpioId, altFunc) gpioReg[(gpioId) / 10] |= U32T(((altFunc) <= 3 ? (altFunc) + 4 : (altFunc)
 //== 4 ? 3 : 2) << (((gpioId) % 10) * 3))
 
 #define GPIO_SET(gpioReg, gpioId) gpioReg[7] = U32T(1 << (gpioId))  // sets   bits which are 1 ignores bits which are 0

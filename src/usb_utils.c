@@ -208,7 +208,7 @@ ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicVer
 				// Get serial number.
 				char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
 				int getStringDescResult                         = libusb_get_string_descriptor_ascii(
-											devHandle, devDesc.iSerialNumber, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+                    devHandle, devDesc.iSerialNumber, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 				// Check serial number success and length.
 				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {

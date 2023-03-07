@@ -44,7 +44,7 @@ ssize_t edvsFind(caerDeviceDiscoveryResult *discoveredDevices) {
 	size_t i = 0, matches = 0;
 
 	while (serialPortList[i++] != NULL) {
-		const char *serialPortName = sp_get_port_name(serialPortList[i]);
+		const char *serialPortName = sp_get_port_name(serialPortList[i - 1]);
 
 		// Skip undefined devices.
 		if (serialPortName == NULL || strlen(serialPortName) == 0) {

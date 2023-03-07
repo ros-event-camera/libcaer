@@ -1,3 +1,11 @@
+Release 3.3.15 - 07.03.2023
+
+BUG FIXES
+- eDVS: fix device discovery. Thanks to Benjamin Ward-Cherrier.
+- Windows: control MSVC build with BUILD_CONFIG_VCPKG flag.
+- Devices: fix compiler warnings.
+
+
 Release 3.3.14 - 25.03.2022
 
 NEW FEATURES
