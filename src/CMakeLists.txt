@@ -21,11 +21,6 @@ ENDIF()
 
 SET(LIBCAER_LINK_LIBRARIES_PRIVATE ${BASE_LIBS})
 
-IF(OS_LINUX)
-	# Raspberry Pi support available only on Linux.
-	SET(LIBCAER_SOURCES ${LIBCAER_SOURCES} davis_rpi.c)
-ENDIF()
-
 IF(ENABLE_SERIALDEV)
 	# Add serial devices.
 	SET(LIBCAER_SOURCES ${LIBCAER_SOURCES} edvs.c)

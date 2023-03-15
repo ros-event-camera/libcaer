@@ -48,7 +48,6 @@ int main(void) {
 			case CAER_DEVICE_DAVIS:
 			case CAER_DEVICE_DAVIS_FX2:
 			case CAER_DEVICE_DAVIS_FX3:
-			case CAER_DEVICE_DAVIS_RPI:
 				printf("- DAVIS (type %u)\n", discovered[i].deviceType);
 				printf("  - USB busNum:devAddr: %d:%d\n", discovered[i].deviceInfo.davisInfo.deviceUSBBusNumber,
 					discovered[i].deviceInfo.davisInfo.deviceUSBDeviceAddress);

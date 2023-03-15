@@ -1,7 +1,6 @@
 #include "libcaer/devices/device_discover.h"
 
 #include "davis.h"
-#include "davis_rpi.h"
 #include "dvs128.h"
 #include "dvs132s.h"
 #include "dvxplorer.h"
@@ -26,11 +25,7 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 #else
 	[CAER_DEVICE_EDVS]      = NULL,
 #endif
-#if defined(OS_LINUX)
-	[CAER_DEVICE_DAVIS_RPI] = &davisRPiFind,
-#else
 	[CAER_DEVICE_DAVIS_RPI] = NULL,
-#endif
 	[CAER_DEVICE_DVS132S]     = &dvs132sFind,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerFind,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKFind,
@@ -151,11 +146,6 @@ caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryRe
 			struct caer_edvs_info *info = &discoveredDevice->deviceInfo.edvsInfo;
 			return (caerDeviceOpenSerial(
 				deviceID, discoveredDevice->deviceType, info->serialPortName, info->serialBaudRate));
-			break;
-		}
-
-		case CAER_DEVICE_DAVIS_RPI: {
-			return (caerDeviceOpen(deviceID, discoveredDevice->deviceType, 0, 0, NULL));
 			break;
 		}
 

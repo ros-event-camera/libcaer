@@ -4,6 +4,7 @@ BUG FIXES
 - eDVS: fix device discovery. Thanks to Benjamin Ward-Cherrier.
 - Windows: control MSVC build with BUILD_CONFIG_VCPKG flag.
 - Devices: fix compiler warnings.
+- Removed obsolete DAVIS_RPI device.
 
 
 Release 3.3.14 - 25.03.2022

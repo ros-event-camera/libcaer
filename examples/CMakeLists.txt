@@ -1,17 +1,6 @@
 # Set full RPATH
 SET(CMAKE_INSTALL_RPATH ${USER_LOCAL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/caer/examples)
 
-IF(OS_LINUX)
-	# Raspberry Pi support available only on Linux.
-	ADD_EXECUTABLE(davis_rpi davis_rpi.cpp)
-	TARGET_LINK_LIBRARIES(davis_rpi PRIVATE caer)
-	INSTALL(TARGETS davis_rpi DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer/examples)
-
-	ADD_EXECUTABLE(davis_rpi_benchmark davis_rpi_benchmark.cpp)
-	TARGET_LINK_LIBRARIES(davis_rpi_benchmark PRIVATE caer)
-	INSTALL(TARGETS davis_rpi_benchmark DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/caer/examples)
-ENDIF()
-
 IF(ENABLE_SERIALDEV)
 	ADD_EXECUTABLE(edvs_simple edvs_simple.c)
 	TARGET_LINK_LIBRARIES(edvs_simple PRIVATE caer)

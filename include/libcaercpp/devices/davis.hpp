@@ -105,11 +105,6 @@ public:
 	}
 };
 
-class davisrpi : public davis {
-public:
-	davisrpi(uint16_t deviceID) : davis(deviceID, CAER_DEVICE_DAVIS_RPI) {
-	}
-};
 } // namespace devices
 } // namespace libcaer
 

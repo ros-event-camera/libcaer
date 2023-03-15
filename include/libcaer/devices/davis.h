@@ -36,6 +36,7 @@ extern "C" {
 #define CAER_DEVICE_DAVIS 4
 /**
  * Device type definition for iniVation Raspberry Pi-based DAVIS boards.
+ * REMOVED, OBSOLETE!
  */
 #define CAER_DEVICE_DAVIS_RPI 6
 

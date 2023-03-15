@@ -90,10 +90,6 @@ public:
 				break;
 			}
 
-			case CAER_DEVICE_DAVIS_RPI:
-				return (std::unique_ptr<libcaer::devices::davisrpi>(new libcaer::devices::davisrpi(deviceID)));
-				break;
-
 			case CAER_DEVICE_DVS132S: {
 				const struct caer_dvs132s_info *info = &discoveredDevice.deviceInfo.dvs132sInfo;
 				return (std::unique_ptr<libcaer::devices::dvs132s>(new libcaer::devices::dvs132s(

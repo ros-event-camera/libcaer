@@ -701,7 +701,7 @@ struct caer_davis_info caerDavisInfoGet(caerDeviceHandle cdh) {
 
 	// Check if device type is supported.
 	if ((handle->deviceType != CAER_DEVICE_DAVIS) && (handle->deviceType != CAER_DEVICE_DAVIS_FX2)
-		&& (handle->deviceType != CAER_DEVICE_DAVIS_FX3) && (handle->deviceType != CAER_DEVICE_DAVIS_RPI)) {
+		&& (handle->deviceType != CAER_DEVICE_DAVIS_FX3)) {
 		struct caer_davis_info emptyInfo = {0, .deviceString = NULL};
 		return (emptyInfo);
 	}
@@ -720,7 +720,7 @@ bool caerDavisROIConfigure(caerDeviceHandle cdh, uint16_t startX, uint16_t start
 
 	// Check if device type is supported.
 	if ((handle->deviceType != CAER_DEVICE_DAVIS) && (handle->deviceType != CAER_DEVICE_DAVIS_FX2)
-		&& (handle->deviceType != CAER_DEVICE_DAVIS_FX3) && (handle->deviceType != CAER_DEVICE_DAVIS_RPI)) {
+		&& (handle->deviceType != CAER_DEVICE_DAVIS_FX3)) {
 		return (false);
 	}
 
