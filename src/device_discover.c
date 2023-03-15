@@ -23,9 +23,9 @@ static ssize_t (*deviceFinders[CAER_SUPPORTED_DEVICES_NUMBER])(caerDeviceDiscove
 #if defined(LIBCAER_HAVE_SERIALDEV) && LIBCAER_HAVE_SERIALDEV == 1
 	[CAER_DEVICE_EDVS] = &edvsFind,
 #else
-	[CAER_DEVICE_EDVS]      = NULL,
+	[CAER_DEVICE_EDVS] = NULL,
 #endif
-	[CAER_DEVICE_DAVIS_RPI] = NULL,
+	[CAER_DEVICE_DAVIS_RPI]   = NULL,
 	[CAER_DEVICE_DVS132S]     = &dvs132sFind,
 	[CAER_DEVICE_DVXPLORER]   = &dvXplorerFind,
 	[CAER_DEVICE_SAMSUNG_EVK] = &samsungEVKFind,
