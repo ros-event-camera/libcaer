@@ -31,7 +31,7 @@ src_configure() {
 		-DUDEV_INSTALL=1
 	)
 
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 pkg_postinst() {
