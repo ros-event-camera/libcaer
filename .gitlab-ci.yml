@@ -161,8 +161,8 @@ build_windows:
 basic_syntax_check_clang:
   variables:
     # Oldest supported clang compiler.
-    CC: clang-11
-    CXX: clang++-11
+    CC: clang-12
+    CXX: clang++-12
   <<: *ubuntu_curr_builder
   script:
     # Generate header files.
@@ -210,12 +210,6 @@ build_ubuntu_curr_gcc12:
     CXX: g++-12
   <<: *ubuntu_curr_builder
 
-build_ubuntu_curr_clang11:
-  variables:
-    CC: clang-11
-    CXX: clang++-11
-  <<: *ubuntu_curr_builder
-
 build_ubuntu_curr_clang12:
   variables:
     CC: clang-12
@@ -232,6 +226,12 @@ build_ubuntu_curr_clang14:
   variables:
     CC: clang-14
     CXX: clang++-14
+  <<: *ubuntu_curr_builder
+
+build_ubuntu_curr_clang15:
+  variables:
+    CC: clang-15
+    CXX: clang++-15
   <<: *ubuntu_curr_builder
 
 build_ubuntu_curr_gcc12_arm64:
