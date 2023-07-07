@@ -186,6 +186,13 @@ build_ubuntu_2004:
   <<: *ubuntu_curr_builder
   image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:20.04
 
+build_ubuntu_2204:
+  variables:
+    CC: gcc-12
+    CXX: g++-12
+  <<: *ubuntu_curr_builder
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:22.04
+
 build_ubuntu_curr_gcc9:
   variables:
     CC: gcc-9
@@ -210,6 +217,12 @@ build_ubuntu_curr_gcc12:
     CXX: g++-12
   <<: *ubuntu_curr_builder
 
+build_ubuntu_curr_gcc13:
+  variables:
+    CC: gcc-13
+    CXX: g++-13
+  <<: *ubuntu_curr_builder
+
 build_ubuntu_curr_clang12:
   variables:
     CC: clang-12
@@ -232,6 +245,12 @@ build_ubuntu_curr_clang15:
   variables:
     CC: clang-15
     CXX: clang++-15
+  <<: *ubuntu_curr_builder
+
+build_ubuntu_curr_clang16:
+  variables:
+    CC: clang-16
+    CXX: clang++-16
   <<: *ubuntu_curr_builder
 
 build_ubuntu_curr_gcc12_arm64:
@@ -315,8 +334,8 @@ release_archive_submodules:
     - if: $CI_PIPELINE_SOURCE == "web" && $RELEASE && $RELEASE_VERSION
 
 pages:
-  stage: deploy
-  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:rolling
+  stage: build
+  image: registry.gitlab.com/inivation/infra/docker-files/ubuntu:docs
   interruptible: false
   tags:
     - docker
