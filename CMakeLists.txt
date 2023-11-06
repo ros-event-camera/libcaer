@@ -5,7 +5,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 PROJECT(libcaer VERSION 3.3.15 LANGUAGES C CXX)
 
 # Basic setup, useful variables, see docs.
-SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmakemod ${CMAKE_MODULE_PATH})
 SET(ENABLE_ALL_WARNINGS ON CACHE BOOL "Turn on all warnings for build" FORCE)
 INCLUDE(inivation-setup)
 
@@ -84,7 +84,7 @@ IF(ENABLE_OPENCV)
 ENDIF()
 
 # Add main include dir for all targets
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include/)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include/)
 
 # Subdirectories
 ADD_SUBDIRECTORY(include)
