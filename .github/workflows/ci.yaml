@@ -5,11 +5,11 @@ name: build repo
 
 on:
  push:
-    branches: [ master]
+    branches: [ ros_event_camera ]
  pull_request:
-    branches: [ master]
+    branches: [ ros_event_camera ]
  workflow_dispatch:
-    branches: [ master]
+    branches: [ ros_event_camera ]
 
 jobs:
   build_ros2:
