@@ -2,6 +2,11 @@
 Changelog for package libcaer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* added dependency on cmake
+* Contributors: Bernd Pfrommer
+
 1.1.1 (2024-01-07)
 ------------------
 * added rosdep for pkgconfig
