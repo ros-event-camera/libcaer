@@ -2,8 +2,8 @@
 Changelog for package libcaer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.2 (2024-01-08)
+------------------
 * added dependency on cmake
 * Contributors: Bernd Pfrommer
 
