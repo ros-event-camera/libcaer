@@ -2,8 +2,8 @@
 Changelog for package libcaer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.1 (2024-01-07)
+------------------
 * added rosdep for pkgconfig
 * Contributors: Bernd Pfrommer
 
